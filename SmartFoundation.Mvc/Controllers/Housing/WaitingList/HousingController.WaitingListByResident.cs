@@ -53,6 +53,16 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             //  تقسيم الداتا سيت للجدول الأول + جداول أخرى
             SplitDataSet(ds);
+            ViewBag.DsTablesCount = ds?.Tables?.Count ?? 0;
+            ViewBag.Dt1Count = dt1?.Rows.Count ?? -1;
+            ViewBag.Dt2Count = dt2?.Rows.Count ?? -1;
+            ViewBag.Dt3Count = dt3?.Rows.Count ?? -1;
+            ViewBag.Dt4Count = dt4?.Rows.Count ?? -1;
+
+            ViewBag.Dt1Cols = dt1?.Columns.Count ?? -1;
+            ViewBag.Dt2Cols = dt2?.Columns.Count ?? -1;
+            ViewBag.Dt3Cols = dt3?.Columns.Count ?? -1;
+            ViewBag.Dt4Cols = dt4?.Columns.Count ?? -1;
 
             //  التحقق من الصلاحيات
             if (permissionTable is null || permissionTable.Rows.Count == 0)

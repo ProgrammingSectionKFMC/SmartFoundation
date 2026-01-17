@@ -8,6 +8,8 @@ using System.Text.Json;
 using QuestPDF.Infrastructure;
 using QuestPDF.Drawing;
 using SmartFoundation.Mvc.Services.Exports.Pdf;
+using SmartFoundation.Mvc.Services.AiAssistant;
+
 
 
 
@@ -54,6 +56,25 @@ builder.Services.AddScoped<IPdfExportService, QuestPdfExportService>();
 
 // Application Layer
 builder.Services.AddApplicationServices();
+
+// AI Assistant (offline/on-prem)
+builder.Services.Configure<AiAssistantOptions>(builder.Configuration.GetSection("AiAssistant"));
+builder.Services.AddSingleton<IAiKnowledgeBase, FileAiKnowledgeBase>();
+
+// Select provider
+builder.Services.AddSingleton<IAiChatService>(sp =>
+{
+    var opt = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AiAssistantOptions>>().Value;
+    if (string.Equals(opt.Provider, "EmbeddedLlama", StringComparison.OrdinalIgnoreCase))
+    {
+        return ActivatorUtilities.CreateInstance<EmbeddedLlamaChatService>(sp);
+    }
+
+    // fallback: keep old Ollama if you want (optional)
+    return ActivatorUtilities.CreateInstance<OllamaChatService>(sp);
+});
+
+
 
 var app = builder.Build();
 

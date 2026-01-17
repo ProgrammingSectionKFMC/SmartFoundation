@@ -5,7 +5,15 @@
 
     @await Component.InvokeAsync("SmartRenderer", new { model = Model })
 
-<script>
+<div class="alert alert-info" dir="ltr" style="font-family: monospace;">
+    <div>DsTablesCount: @ViewBag.DsTablesCount</div>
+
+    <div>Dt1Count: @ViewBag.Dt1Count | Dt1Cols: @ViewBag.Dt1Cols</div>
+    <div>Dt2Count: @ViewBag.Dt2Count | Dt2Cols: @ViewBag.Dt2Cols</div>
+    <div>Dt3Count: @ViewBag.Dt3Count | Dt3Cols: @ViewBag.Dt3Cols</div>
+    <div>Dt4Count: @ViewBag.Dt4Count | Dt4Cols: @ViewBag.Dt4Cols</div>
+</div>
+@* <script>
     (function () {
 
 
@@ -13,4 +21,4 @@
         history.replaceState(null, "", location.pathname + location.hash);
       }
     })();
-</script>
+</script> *@

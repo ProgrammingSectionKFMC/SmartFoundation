@@ -19,6 +19,8 @@
     <link rel="stylesheet" href="~/vendor/flatpickr/flatpickr.min.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/lib/select2/css/select2.min.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/SidebarNavbar.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/ai-assistant.css" asp-append-version="true" />
+
 
     <!-- =========================
          CSS (Charts)
@@ -178,6 +180,7 @@
 </head>
 
 <body class="sidebar-pinned bg-gray-50 text-gray-900 transition-colors duration-300 dark:bg-gray-900 dark:text-gray-100">
+    <input type="hidden" id="sf-ai-userid" value="@Context.Session.GetString("usersID")" />
 
     <!-- Navbar + Sidebar -->
     @await Component.InvokeAsync("MenuItems")
@@ -345,6 +348,10 @@
     <script src="~/js/smartcharts.pie3d.js" asp-append-version="true"></script>
     <script src="~/js/smartcharts.opsboard.js" asp-append-version="true"></script>
     <script src="~/js/smartcharts.execwatch.js" asp-append-version="true"></script>
+
+
+    @await Html.PartialAsync("_AiAssistantWidget")
+    <script src="~/js/ai-assistant.js" asp-append-version="true"></script>
 
 </body>
 </html>

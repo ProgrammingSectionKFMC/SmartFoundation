@@ -1,0 +1,337 @@
+﻿/* SmartFoundation AI Assistant Widget (Icon + "المساعد الذكي") */
+
+.sf-ai {
+    position: fixed;
+    bottom: 18px;
+    right: 18px;
+    z-index: 99999;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans Arabic", "Noto Kufi Arabic", sans-serif;
+}
+
+/* =========================
+   Floating Button
+   ========================= */
+
+.sf-ai-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    /* size */
+    height: 56px;
+    padding: 0 16px;
+    /* look */
+    border-radius: 999px;
+    border: 0;
+    cursor: pointer;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.22);
+    background: #111827;
+    color: #fff;
+    /* text */
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+
+    .sf-ai-btn .sf-ai-icon {
+        font-size: 20px;
+        line-height: 1;
+    }
+
+    .sf-ai-btn .sf-ai-text {
+        white-space: nowrap;
+    }
+
+    /* hover/active */
+    .sf-ai-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 14px 30px rgba(0,0,0,0.28);
+    }
+
+    .sf-ai-btn:active {
+        transform: translateY(0px);
+    }
+
+/* Optional: show text only on hover (uncomment if you want)
+.sf-ai-btn .sf-ai-text {
+    max-width: 0;
+    overflow: hidden;
+    transition: max-width .25s ease;
+}
+.sf-ai-btn:hover .sf-ai-text {
+    max-width: 140px;
+}
+*/
+
+/* =========================
+   Panel
+   ========================= */
+
+.sf-ai-panel {
+    position: absolute;
+    bottom: 70px;
+    right: 0;
+    width: 360px;
+    max-width: calc(100vw - 36px);
+    height: 520px;
+    max-height: calc(100vh - 120px);
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 18px 50px rgba(0,0,0,0.28);
+    border: 1px solid rgba(0,0,0,0.08);
+    display: none;
+    overflow: hidden;
+    direction: rtl;
+}
+
+    .sf-ai-panel.open {
+        display: flex;
+        flex-direction: column;
+    }
+
+.sf-ai-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 12px 10px 12px;
+    background: #0f172a;
+    color: #fff;
+}
+
+.sf-ai-title {
+    line-height: 1.15;
+}
+
+.sf-ai-title-main {
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.sf-ai-title-sub {
+    opacity: 0.9;
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+.sf-ai-close {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border: 0;
+    cursor: pointer;
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    font-size: 20px;
+    line-height: 1;
+}
+
+    .sf-ai-close:hover {
+        background: rgba(255,255,255,0.18);
+    }
+
+/* =========================
+   Messages
+   ========================= */
+
+.sf-ai-messages {
+    flex: 1;
+    padding: 12px;
+    overflow: auto;
+    background: #f8fafc;
+}
+
+.sf-ai-msg {
+    margin: 10px 0;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.sf-ai-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    flex: 0 0 auto;
+}
+
+    .sf-ai-avatar.bot {
+        background: #e0f2fe;
+        color: #0c4a6e;
+    }
+
+    .sf-ai-avatar.user {
+        background: #dcfce7;
+        color: #14532d;
+    }
+
+.sf-ai-bubble {
+    max-width: 85%;
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 14px;
+    padding: 10px 12px;
+    font-size: 13px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+    .sf-ai-bubble.user {
+        background: #f0fdf4;
+        border-color: rgba(20, 83, 45, 0.15);
+    }
+
+    .sf-ai-bubble.bot {
+        background: #fff;
+    }
+
+.sf-ai-meta {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #475569;
+}
+
+/* citations (kept) */
+.sf-ai-citations {
+    margin-top: 8px;
+    border-top: 1px dashed rgba(0,0,0,0.12);
+    padding-top: 8px;
+}
+
+.sf-ai-cit-btn {
+    border: 0;
+    background: transparent;
+    color: #0f172a;
+    cursor: pointer;
+    padding: 0;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+.sf-ai-cit-list {
+    margin-top: 8px;
+    display: none;
+    gap: 8px;
+    flex-direction: column;
+}
+
+    .sf-ai-cit-list.open {
+        display: flex;
+    }
+
+.sf-ai-cit-item {
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 12px;
+    padding: 8px 10px;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.sf-ai-cit-src {
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: #0f172a;
+}
+
+/* =========================
+   Footer
+   ========================= */
+
+.sf-ai-footer {
+    padding: 10px;
+    display: flex;
+    gap: 8px;
+    background: #fff;
+    border-top: 1px solid rgba(0,0,0,0.08);
+}
+
+.sf-ai-input {
+    flex: 1;
+    border: 1px solid rgba(0,0,0,0.14);
+    border-radius: 12px;
+    padding: 10px 10px;
+    font-size: 13px;
+    outline: none;
+}
+
+    .sf-ai-input:focus {
+        border-color: rgba(2,132,199,0.55);
+        box-shadow: 0 0 0 4px rgba(2,132,199,0.12);
+    }
+
+.sf-ai-send {
+    border: 0;
+    cursor: pointer;
+    border-radius: 12px;
+    padding: 10px 12px;
+    background: #0284c7;
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+    .sf-ai-send:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+.sf-ai-hint {
+    padding: 6px 12px 10px 12px;
+    font-size: 11px;
+    color: #64748b;
+    background: #fff;
+    border-top: 1px solid rgba(0,0,0,0.06);
+}
+
+/* =========================
+   Mobile tweaks
+   ========================= */
+
+@media (max-width: 480px) {
+    .sf-ai {
+        right: 12px;
+        bottom: 12px;
+    }
+
+    /* on mobile: show icon only to save space */
+    .sf-ai-btn {
+        width: 56px;
+        padding: 0;
+        justify-content: center;
+        border-radius: 50%;
+    }
+
+        .sf-ai-btn .sf-ai-text {
+            display: none;
+        }
+
+    .sf-ai-panel {
+        width: 94vw;
+        height: 70vh;
+    }
+
+    /* Optional: subtle attention pulse on first load */
+    @keyframes sf-ai-pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(17,24,39,0.55);
+        }
+
+        70% {
+            box-shadow: 0 0 0 14px rgba(17,24,39,0);
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 rgba(17,24,39,0);
+        }
+    }
+
+    .sf-ai-btn.sf-ai-pulse {
+        animation: sf-ai-pulse 1.6s ease-out 2;
+    }
+
+}
