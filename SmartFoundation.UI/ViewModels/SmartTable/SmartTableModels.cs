@@ -109,6 +109,8 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         public bool StopOnMatch { get; set; } = false;
     }
 
+
+
     public class TableColumn
     {
         public string Field { get; set; } = string.Empty;

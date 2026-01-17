@@ -53,16 +53,6 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             //  تقسيم الداتا سيت للجدول الأول + جداول أخرى
             SplitDataSet(ds);
-            ViewBag.DsTablesCount = ds?.Tables?.Count ?? 0;
-            ViewBag.Dt1Count = dt1?.Rows.Count ?? -1;
-            ViewBag.Dt2Count = dt2?.Rows.Count ?? -1;
-            ViewBag.Dt3Count = dt3?.Rows.Count ?? -1;
-            ViewBag.Dt4Count = dt4?.Rows.Count ?? -1;
-
-            ViewBag.Dt1Cols = dt1?.Columns.Count ?? -1;
-            ViewBag.Dt2Cols = dt2?.Columns.Count ?? -1;
-            ViewBag.Dt3Cols = dt3?.Columns.Count ?? -1;
-            ViewBag.Dt4Cols = dt4?.Columns.Count ?? -1;
 
             //  التحقق من الصلاحيات
             if (permissionTable is null || permissionTable.Rows.Count == 0)
@@ -184,8 +174,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                     Name="NationalID",
                                     Type="text",
                                     ColCss="3",
-                                    Icon="fa-solid fa-id-card",
+                                    Icon="fa-solid fa-address-card",
                                     Placeholder="1xxxxxxxxx",
+                                    //HelpText="عشرةأرقام فقط*",
                                     Value= NationalID_,                 // القيمة الافتراضية (من السيرفر)
                                     MaxLength=10,
                                     Required=true,
@@ -198,7 +189,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                     // ===== زر داخل نفس الحقل =====
                                     InlineButton=true,               // تفعيل زر داخل الحقل
                                     InlineButtonText="بحـث",              // نص الزر
-                                    InlineButtonIcon= "fa-solid fa-search",
+                                    InlineButtonIcon= "fa-solid fa-magnifying-glass",
                                     InlineButtonCss="btn btn-success", 
                                     InlineButtonPosition="end",              // مكان الزر (end / start)
                                     InlineButtonOnClickJs="sfNav(this)",      // استدعاء الدالة العامة )
@@ -631,8 +622,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p04", Label = "رقم القرار", Type = "text", ColCss = "3", MaxLength = 50, TextMode = "number",Required=true},
                 new FieldConfig { Name = "p05", Label = "تاريخ القرار", Type = "date", ColCss = "3", MaxLength = 50, TextMode = "number",Required=true,Placeholder="YYYY-MM-DD"},
 
-                new FieldConfig { Name = "p06", Label = "فئة سجل الانتظار", Type = "select", ColCss = "3", Required = true, Options= waitingClassOptions },
-                new FieldConfig { Name = "p07", Label = "نوع سجل الانتظار", Type = "select", ColCss = "3", Required = true, Options= waitingOrderTypeOptions },
+                new FieldConfig { Name = "p06", Label = "فئة سجل الانتظار", Type = "select", ColCss = "3", Required = true, Options= waitingClassOptions ,Select2=true},
+                new FieldConfig { Name = "p07", Label = "نوع سجل الانتظار", Type = "select", ColCss = "3", Required = true, Options= waitingOrderTypeOptions,Select2=true },
                 new FieldConfig { Name = "p08", Label = "ملاحظات", Type = "textarea", ColCss = "6", Required = false },
                 
             };
@@ -669,7 +660,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p06", Label = "تاريخ قرار النقل", Type = "text", ColCss = "3", MaxLength = 50, TextMode = "number",Required=true,Placeholder="YYYY-MM-DD",Readonly=true},
 
                 
-                new FieldConfig { Name = "p12", Label = "الادارة المراد نقل السراء اليها", Type = "select", ColCss = "6", Required = true, Options= idaraOptions },
+                new FieldConfig { Name = "p12", Label = "الادارة المراد نقل السراء اليها", Type = "select", ColCss = "6", Required = true, Options= idaraOptions,Select2=true },
                 new FieldConfig { Name = "p13", Label = "ملاحظات", Type = "textarea", ColCss = "6", Required = false },
 
 
@@ -746,7 +737,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p06", Label = "تاريخ القرار", Type = "date", ColCss = "3", MaxLength = 50, TextMode = "number",Required=true,Placeholder="YYYY-MM-DD"},
 
                 new FieldConfig { Name = "p07", Label = "فئة سجل الانتظار", Type = "hidden", ColCss = "3", Required = true, Options= waitingClassOptions },
-                new FieldConfig { Name = "p08", Label = "نوع سجل الانتظار", Type = "select", ColCss = "3", Required = true, Options= waitingOrderTypeOptions },
+                new FieldConfig { Name = "p08", Label = "نوع سجل الانتظار", Type = "select", ColCss = "3", Required = true, Options= waitingOrderTypeOptions,Select2=true },
                 new FieldConfig { Name = "p09", Label = "ملاحظات", Type = "textarea", ColCss = "6", Required = false },
             };
 
@@ -880,7 +871,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             };
 
-            
+
 
 
             var dsModel = new SmartTableDsModel
@@ -890,21 +881,44 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 Rows = rowsList,
                 RowIdField = rowIdField,
                 PageSize = 10,
-                PageSizes = new List<int> { 10, 25, 50, 100, },
+                PageSizes = new List<int> { 10, 25, 50, 100 },
                 QuickSearchFields = dynamicColumns.Select(c => c.Field).Take(4).ToList(),
                 Searchable = false,
                 AllowExport = false,
                 PanelTitle = "المستفيدين",
                 ShowFooter = false,
                 Selectable = false,
-                TabelLabel = "بيانات المستفيد",
-                TabelLabelIcon = "fa-solid fa-user",
                 ShowToolbar = false,
-                EnableCellCopy = true, // تفعيل نسخ الخلايا 
+                EnableCellCopy = true,
 
+                // نستبدل هنا عرظ الداتا تيبل لبروفايل لأن مافيه عمليات فقط عرظ اختياري)
+                ViewMode = TableViewMode.Table,
 
+                ProfileIcon = "fa-solid fa-user",    
+                ProfileTitleText = "بيانات المستفيد",
 
+                ProfileFields = new List<string>
+                {
+                    "residentInfoID",
+                    "FullName_A",
+                    "NationalID",
+                    "generalNo_FK",
+                    "rankNameA",
+                    "militaryUnitName_A",
+                    "maritalStatusName_A",
+                    "dependinceCounter",
+                    //"nationalityName_A",
+                    //"genderName_A",
+                    "residentcontactDetails"
+                },
+
+                ProfileColumns = 3, 
+                ProfileShowHeader = true
             };
+
+
+
+
 
             var dsModel1 = new SmartTableDsModel
             {
@@ -915,14 +929,24 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 PageSize = 10,
                 PageSizes = new List<int> { 10, 25, 50, 200, },
                 QuickSearchFields = dynamicColumns_dt2.Select(c => c.Field).Take(4).ToList(),
-                Searchable = true,
+                Searchable = false, // جديد
                 AllowExport = true,
-                ShowRowBorders = false,
+                ShowRowBorders = false, 
                 PanelTitle = "قوائم الانتظار",
-                TabelLabel= "قوائم الانتظار",
-                TabelLabelIcon = "fa-solid fa-list",
+                EnablePagination = false, // جديد
+                ShowPageSizeSelector=false, // جديد
+                //TabelLabel= "قوائم الانتظار",
+                //TabelLabelIcon = "fa-solid fa-list",
                 ShowToolbar =true,
                 EnableCellCopy = false,
+                RenderAsToggle = true,
+                ToggleLabel = "عرض قوائم الانتظار",
+                ToggleIcon = "fa-solid fa-list",
+                ToggleDefaultOpen = false,
+                
+
+
+
                 Toolbar = new TableToolbarConfig
                 {
                     ShowRefresh = false,
@@ -938,10 +962,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                     Add = new TableAction
                     {
-                        Label = "إضافة سجل انتظار جديد",
+                        Label = "إضافة سجل انتظار",
                         Icon = "fa fa-plus",
                         Color = "success",
-                        Placement = TableActionPlacement.ActionsMenu,
+                        //Placement = TableActionPlacement.ActionsMenu,
                         OpenModal = true,
                         ModalTitle = "إدخال بيانات سجل انتظار جديد",
                         //ModalMessage = "ملاحظة: جميع التعديلات مرصودة",
@@ -974,7 +998,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         Label = "تعديل بيانات انتظار",
                         Icon = "fa fa-pen-to-square",
                         Color = "info",
-                        Placement = TableActionPlacement.ActionsMenu,
+                        //Placement = TableActionPlacement.ActionsMenu,
                         IsEdit = true,
                         OpenModal = true,
                         ModalTitle = "تعديل بيانات انتظار",
@@ -1062,14 +1086,21 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 PageSize = 10,
                 PageSizes = new List<int> { 10, 25, 50, 200, },
                 QuickSearchFields = dynamicColumns_dt3.Select(c => c.Field).Take(4).ToList(),
-                Searchable = true,
+                Searchable = false,
                 AllowExport = false,
                 ShowRowBorders = false,
+                EnablePagination = false, // جديد
+                ShowPageSizeSelector = false, // جديد
                 PanelTitle = "خطابات التسكين",
-                TabelLabel = "خطابات التسكين",
-                TabelLabelIcon = "fa-solid fa-list",
+                //TabelLabel = "خطابات التسكين",
+                //TabelLabelIcon = "fa-solid fa-list",
                 ShowToolbar = true,
                 EnableCellCopy = false,
+                RenderAsToggle = true,
+                ToggleLabel = "عرض خطابات التسكين",
+                ToggleIcon = "fa-solid fa-file-signature",
+                ToggleDefaultOpen = false,
+                
 
                 Toolbar = new TableToolbarConfig
                 {
@@ -1088,10 +1119,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                     Add2 = new TableAction
                     {
-                        Label = "إضافة خطاب تسكين جديد",
+                        Label = "إضافة خطاب تسكين",
                         Icon = "fa fa-plus",
                         Color = "success",
-                        Placement = TableActionPlacement.ActionsMenu,
+                        //Placement = TableActionPlacement.ActionsMenu,
                         OpenModal = true,
                         ModalTitle = "إدخال بيانات خطاب تسكين جديد",
                         ModalMessage = "ملاحظة: جميع التعديلات مرصودة",
@@ -1120,13 +1151,13 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         Label = "تعديل خطاب تسكين",
                         Icon = "fa fa-pen-to-square",
                         Color = "info",
-                        Placement = TableActionPlacement.ActionsMenu, 
+                        //Placement = TableActionPlacement.ActionsMenu, 
                         IsEdit = true,
                         OpenModal = true,
                         ModalTitle = "تعديل خطاب تسكين",
                         ModalMessage = "ملاحظة: جميع التعديلات مرصودة",
                         ModalMessageIcon = "fa-solid fa-circle-info",
-                        ModalMessageClass = "bg-sky-100 border border-sky-200 text-sky-700",
+                        ModalMessageClass = "bg-sky-100 text-sky-700",
                         OpenForm = new FormConfig
                         {
                             FormId = "BuildingTypeEditForm",
@@ -1155,7 +1186,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         ModalTitle = "تحذير",
                         ModalMessage = "هل أنت متأكد من الغاء بيانات خطاب تسكين؟",
                         ModalMessageIcon = "fa fa-exclamation-triangle text-red-600",
-                        ModalMessageClass = "bg-red-50 border border-red-200 text-red-700",
+                        ModalMessageClass = "bg-red-50 text-red-700",
                         OpenForm = new FormConfig
                         {
                             FormId = "BuildingTypeDeleteForm",

@@ -9,10 +9,95 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             endpoint: cfg.endpoint || "/smart/execute",
             spName: cfg.spName || "",
             operation: cfg.operation || "select",
+            /*operation: cfg.operation || "select",*/
+
+            //  NEW: Profile View — Full block)
+            viewMode: (cfg.viewMode ?? "Table"), // "Table" | "Profile"
+            // إعدادات البروفايل من الكنترول)
+            profileTitleField: (cfg.profileTitleField ?? null),
+            profileSubtitleField: (cfg.profileSubtitleField ?? null),
+            profileMetaFields: Array.isArray(cfg.profileMetaFields) ? cfg.profileMetaFields : [], 
+            profileFields: Array.isArray(cfg.profileFields) ? cfg.profileFields : [],            
+            profileCssClass: (cfg.profileCssClass ?? ""),
+            profileColumns: Number.isFinite(Number(cfg.profileColumns)) ? Number(cfg.profileColumns) : 2,
+            profileShowHeader: (cfg.profileShowHeader !== false),
+            profileIcon: (cfg.profileIcon ?? "fa-solid fa-id-card"),
+            profileTitleText: (cfg.profileTitleText ?? "البيانات الأساسية"),
+            // ===== Helpers =====
+            normalizeFieldName(v) {
+                if (v == null) return "";
+                if (typeof v === "string") return v.trim();
+                // لو جاك object من السيرفر
+                return String(v.field ?? v.Field ?? v.name ?? v.Name ?? "").trim();
+            },
+            getProfileTitle(row) {
+                const f = this.normalizeFieldName(this.profileTitleField);
+                if (f && row?.[f] != null) return String(row[f]);
+                const first = (this.visibleColumns?.() || []).find(c => c?.visible !== false && c?.field);
+                return first ? String(row?.[first.field] ?? "") : "";
+            },
+            getProfileSubtitle(row) {
+                const f = this.normalizeFieldName(this.profileSubtitleField);
+                if (f && row?.[f] != null) return String(row[f]);
+                return "";
+            },
+            profileMetaList() {
+                const cols = (this.visibleColumns?.() || []).filter(c => c && c.visible !== false && c.field);
+                const map = new Map(cols.map(c => [String(c.field), c]));
+
+                const src = Array.isArray(this.profileMetaFields) ? this.profileMetaFields : [];
+                const items = [];
+
+                for (const it of src) {
+                    const field = this.normalizeFieldName(it);
+                    if (!field) continue;
+
+                    const col = map.get(field);
+                    const label =
+                        (typeof it === "object" && (it.label || it.Label)) ||
+                        (col?.label || col?.Label) ||
+                        field;
+
+                    items.push({ field, label });
+                }
+
+                return items;
+            },
+            profileColumnsList() {
+                const cols = (this.visibleColumns?.() || [])
+                    .filter(c => c && c.visible !== false && c.field);
+
+                const titleF = String(this.normalizeFieldName(this.profileTitleField));
+                const subF = String(this.normalizeFieldName(this.profileSubtitleField));
+                if (Array.isArray(this.profileFields) && this.profileFields.length) {
+                    const wanted = this.profileFields.map(f => String(this.normalizeFieldName(f))).filter(Boolean);
+                    const map = new Map(cols.map(c => [String(c.field), c]));
+                    return wanted.map(f => map.get(f)).filter(Boolean);
+                }
+                return cols.filter(c => String(c.field) !== titleF && String(c.field) !== subF);
+            },
+
+            profileGridClass() {
+                const n = Math.max(1, Math.min(3, Number(this.profileColumns) || 2));
+                return `sf-profile__grid sf-profile__grid--cols-${n}`;
+            },
+            profilePlaceholderCount(total, cols) {
+                const c = Math.max(1, Math.min(3, Number(cols) || 2));
+                const r = total % c;
+                return r === 0 ? 0 : (c - r);
+            },
+            profileColumnsCount() {
+                return (this.profileColumnsList?.() || []).length;
+            },
+            //========End Profile=============//
+
+
+
 
             // Pagination
             pageSize: cfg.pageSize || 10,
             pageSizes: cfg.pageSizes || [10, 25, 50, 100],
+            enablePagination: cfg.enablePagination !== false, //  جديد
             // NEW: Server paging (fast mode) - off by default
             serverPaging: !!cfg.serverPaging,
             // Search
@@ -304,6 +389,21 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             init() {
                 this.loadStoredPreferences();
                 this.bindPrintListenerOnce();
+
+
+
+                // ✅ تعطيل الـ Pagination فعليًا
+                if (!this.enablePagination) {
+                    this.page = 1;
+                    this.pages = 1;
+
+                    // اعرض كل الصفوف في صفحة وحدة
+                    this.pageSize = (this.rows && this.rows.length)
+                        ? this.rows.length
+                        : this.pageSize;
+                }
+
+
                 this.load();
                 this.setupEventListeners();
 

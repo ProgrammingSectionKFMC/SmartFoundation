@@ -3,6 +3,15 @@ using SmartFoundation.UI.ViewModels.SmartForm;
 
 namespace SmartFoundation.UI.ViewModels.SmartTable
 {
+
+
+    public enum TableViewMode
+    {
+        Table,
+        Profile,
+        
+    }
+
     public class SmartTableDsModel
     {
         public string? PageTitle { get; set; } = "النظام الموحد";
@@ -28,6 +37,10 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
 
         public bool ShowHeader { get; set; } = true;
         public bool ShowFooter { get; set; } = true;
+
+        public bool EnablePagination { get; set; } = true;
+
+        public bool ShowPageSizeSelector { get; set; } = true;
 
         public bool Searchable { get; set; } = true;
         public string? SearchPlaceholder { get; set; } = "بحث…";
@@ -80,8 +93,32 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         public string? AriaLabel { get; set; }
         public bool HighContrast { get; set; } = false;
 
-        public bool EnableCellCopy { get; set; } = true;  
+        public bool EnableCellCopy { get; set; } = true;
+
+        //  طريقة العرض (Table / Profile)
+        //  
+        public TableViewMode ViewMode { get; set; } = TableViewMode.Table;
+
+        // إعدادات Profile
+        public string? ProfileTitleField { get; set; } = null;
+        public string? ProfileSubtitleField { get; set; } = null;
+        public List<string> ProfileFields { get; set; } = new();
+        public string? ProfileCssClass { get; set; } = null;
+        public int ProfileColumns { get; set; } = 2;
+        public bool ProfileShowHeader { get; set; } = true;
+        public string? ProfileIcon { get; set; } = "fa-solid fa-id-card";
+        public string? ProfileTitleText { get; set; } = null; // اختياري: عنوان ثابت فوق
+        public List<object> ProfileMetaFields { get; set; } = new(); // chips أعلى البروفايل (اختياري)
+
+        public bool RenderAsToggle { get; set; } = false;         // يفعّل وضع الزر
+        public string ToggleLabel { get; set; } = "عرض";          // نص الزر
+        public string? ToggleIcon { get; set; } = "fa-solid fa-table";
+        public bool ToggleDefaultOpen { get; set; } = false;      // مفتوح افتراضياً؟
+
         public List<TableStyleRule> StyleRules { get; set; } = new();
 
     }
+
+
+
 }

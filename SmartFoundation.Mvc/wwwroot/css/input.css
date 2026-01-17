@@ -23,6 +23,18 @@ input, textarea, select, button {
     font-family: "Tajawal", sans-serif !important;
 }
 
+/* ثبّت مكان السكرول على حاوية المحتوى (مو body) */
+main,
+#main-content,
+.sf-main {
+    overflow-y: scroll;         
+    scrollbar-gutter: stable;    
+}
+
+
+
+
+
 /* =========================
    Tailwind
    ========================= */
@@ -123,7 +135,7 @@ input, textarea, select, button {
     }
 
     .input {
-        @apply placeholder-gray-500 block h-10 w-full rounded-sm border border-gray-300 bg-white px-3 py-2 text-base leading-relaxed text-gray-800 transition-colors duration-200 read-only:cursor-not-allowed read-only:bg-gray-100 read-only:text-gray-500 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500;
+        @apply placeholder-gray-500 block h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-base leading-relaxed text-gray-800 transition-colors duration-200 read-only:cursor-not-allowed read-only:bg-gray-100 read-only:text-gray-500 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500;
         font-family: "Tajawal", ui-sans-serif, system-ui, sans-serif;
     }
 
@@ -147,11 +159,11 @@ input, textarea, select, button {
         }
 
     .section-box {
-        @apply /*shadow-sm*/ col-span-12 rounded-sm border border-gray-300 bg-gray-50 p-4 md:p-5;
+        @apply /*shadow-sm*/ col-span-12 rounded-sm border border-gray-300 bg-gray-50 p-4 md:p-3;
     }
 
     .section-legend {
-        @apply -mt-6 inline-block px-3 text-base font-semibold text-gray-600 md:text-sm;
+        @apply -mt-6 inline-block px-3 text-base font-semibold text-gray-600 md:text-sm ;
     }
 
     .sf-label {
@@ -239,7 +251,7 @@ input, textarea, select, button {
    Buttons Table
    ========================= */
 .btn {
-    @apply inline-flex h-9 items-center justify-center gap-2 rounded-sm px-2 text-sm font-medium transition focus:ring-2 focus:ring-offset-0 focus:outline-none disabled:pointer-events-none disabled:opacity-60;
+    @apply inline-flex h-8 items-center justify-center gap-2 rounded-sm px-2 text-sm font-medium transition focus:ring-2 focus:ring-offset-0 focus:outline-none disabled:pointer-events-none disabled:opacity-60;
 }
 
     .btn i {
@@ -331,13 +343,16 @@ textarea[readonly] {
 /* =========================
    Head Cell
    ========================= */
+
+
 .th-cell {
-    @apply border-b border-gray-200 px-4 py-3 text-center text-sm font-semibold whitespace-nowrap;
-    background: linear-gradient(to bottom, #f9fafb, #f3f4f6);
-    color: #2c2c2c;
-    font-weight: 500;
-    font-size: 15px;
-    letter-spacing: -0.2px;
+    @apply border-b border-gray-200 px-4 py-2 text-center whitespace-nowrap;
+    background: #f9fafb; 
+    color: #374151; 
+    font-weight: 500; 
+    font-size: 14px; 
+    letter-spacing: -0.1px; 
+    line-height: 1.25;
     font-family: "Inter", "Tajawal", sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -622,19 +637,21 @@ textarea[readonly] {
     position: relative;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem; /* 12px */
-    margin-bottom: 0.75rem; /* 12px */
+    gap: 0.5rem; /* أقل */
+    margin-bottom: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: #fdfefe;
+    border: 1px solid #e5e7eb;
     border-radius: 4px;
-    border: 1px solid #d1d5db; /* gray-300 */
-    background: linear-gradient(to bottom, #f9fafb, #f3f4f6); /* نفس th-cell */
-    padding: 0.75rem 0.75rem; /* 12px 12px */
-    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.04);
+    box-shadow: none; /* ❌ إزالة السمنة */
+
     color: #374151;
-    font-weight: 400; /* ← هنا التعديل */
-    letter-spacing: -0.2px;
+    font-weight: 400;
+    letter-spacing: -0.1px;
     font-family: "Inter", "Tajawal", sans-serif;
     flex-wrap: wrap;
 }
+
 
 @media (min-width: 768px) {
     .toolbar {
@@ -761,6 +778,13 @@ textarea[readonly] {
             position: relative !important;
             z-index: 60; /* فوق العناصر اللي حولها */
         }
+
+@media (min-width: 768px) {
+    .toolbar-actions {
+        margin-inline-start: auto; /* يدفع الأزرار للجهة الثانية حتى لو اختفى البحث */
+    }
+}
+
 
             /* زر الإجراءات */
             .toolbar-actions .relative > button.btn.btn-outline-secondary,
@@ -1798,19 +1822,19 @@ header,
 /* =========================
    Panel (صفحة الرندر)
    ========================= */
-.sf-panel {
+/*.sf-panel {*/
     /*@apply relative mx-auto mt-6 mb-9 overflow-visible;*/
-    @apply relative mx-auto mt-6 mb-9 overflow-hidden;
+    /*@apply relative mx-auto mt-6 mb-9 overflow-hidden;
     @apply w-[99%];
     @apply rounded-sm border border-gray-300 bg-gray-50;
 
-}
+}*/
 
 /* =========================
    Panel Header
    ========================= */
 
-.sf-panel-header {
+/*.sf-panel-header {
     @apply relative z-10 flex items-center justify-between;
     @apply px-4 py-2.5;
     @apply border-b border-gray-300;
@@ -1829,7 +1853,44 @@ header,
         inset: 0;
         pointer-events: none;
         background: linear-gradient(to bottom, rgba(255,255,255,0.2), transparent);
+    }*/
+
+/* =========================
+   Panel (Gov Minimal / Flat)
+   - بدون سمنة / بدون بروز
+   - خلفية مسطحة
+   - حدود أخف
+   ========================= */
+
+.sf-panel {
+    @apply relative mx-auto mt-6 mb-9;
+    @apply w-[99%];
+    @apply rounded-sm border border-gray-200 bg-white; /* أخف من gray-300 + bg-gray-50 */
+    box-shadow: none !important; /* تأكيد */
+    overflow: hidden; /* خليها ثابتة */
+}
+
+/* =========================
+   Panel Header (Flat)
+   ========================= */
+
+.sf-panel-header {
+    @apply relative z-10 flex items-center justify-between;
+    @apply px-4 py-2; /* أقل سمك من 2.5 */
+    @apply border-b border-gray-200; /* أخف */
+    background: #f9fafb; /* بدون تدرج */
+    color: #4b5563; /* أهدأ من #374151 */
+    font-weight: 500;
+    letter-spacing: -0.1px;
+    font-family: "Inter", "Tajawal", sans-serif;
+    box-shadow: none !important; /* يشيل إحساس البروز */
+}
+
+    /* ❌ شيل طبقة اللمعة اللي تعطي إحساس منتفخ */
+    .sf-panel-header::before {
+        content: none !important;
     }
+
 
 /* =========================
    Panel Title
@@ -1852,8 +1913,8 @@ header,
    ========================= */
 .sf-panel-body {
     background: #fcfcfc;
-    @apply p-4 md:p-5;
-    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    @apply p-4 md:p-3;
+    border-top: 0px solid rgba(0, 0, 0, 0.06);
 }
 
 
@@ -2275,3 +2336,324 @@ body.sf-navigating .sf-select-panel {
         width: min(900px, 92vw);
     }
 }
+
+
+
+
+
+/* =====================================
+   SF Profile (Gov v1.6) - Fill last row placeholders
+   ===================================== */
+
+/* =====================================
+   SF Profile (Gov v1.7)
+   - Centered title + icon
+   - ✅ Placeholders via REAL items (NOT ::before/::after)
+   - ✅ Emerald-700 for icon + title
+   ===================================== */
+
+.sf-profile {
+    width: 100%;
+    margin-top: 1rem;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
+    overflow: hidden;
+    color: #111827;
+}
+
+/* ================= HEADER ================= */
+
+.sf-profile__header {
+    background: #f9fafb;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+/* العنوان + الأيقونة (توسيط كامل) */
+.sf-profile__title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    text-align: center;
+}
+
+.sf-profile__titleIcon {
+    font-size: 1rem;
+    color: #047857; /*  emerald-700 */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.sf-profile__titleText {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    min-width: 0;
+    white-space: nowrap;
+}
+
+.sf-profile__headingStatic {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #047857; /* ✅ emerald-700 */
+    line-height: 1.25;
+    margin: 0;
+}
+
+.sf-profile__headingName {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #374151;
+    line-height: 1.25;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sf-profile__subheading,
+.sf-profile__badges,
+.sf-profile__pill {
+    display: none;
+}
+
+/* ================= BODY ================= */
+
+.sf-profile__body {
+    background: #fff;
+    padding: 0;
+}
+
+/* ================= GRID ================= */
+
+.sf-profile__grid {
+    display: grid;
+    background: #fff;
+}
+
+.sf-profile__grid--cols-2 {
+    grid-template-columns: 1fr 1fr;
+}
+
+.sf-profile__grid--cols-3 {
+    grid-template-columns: 1fr 1fr 1fr;
+}
+
+/* ================= ITEM ================= */
+
+.sf-profile__item {
+    padding: 0.75rem 1rem;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+    outline: 1px solid #eef2f7;
+    outline-offset: -1px;
+}
+
+/* Label */
+.sf-profile__label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #6b7280;
+    margin: 0;
+    line-height: 1.25;
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+
+    .sf-profile__label::after {
+        content: " :";
+        margin-inline-start: 0.15rem;
+        color: #9ca3af;
+        font-weight: 500;
+    }
+
+/* Value */
+.sf-profile__value {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #111827;
+    line-height: 1.35;
+    margin: 0;
+    min-width: 0;
+    flex: 1 1 auto;
+    word-break: break-word;
+}
+
+/* ================= PLACEHOLDERS (REAL ITEMS) ================= */
+/* ✅ هذا بديل ::before/::after — لازم يكون عندك عناصر div.sf-profile__item--placeholder بالـ HTML */
+.sf-profile__item--placeholder {
+    background: #fff;
+}
+
+    .sf-profile__item--placeholder .sf-profile__label,
+    .sf-profile__item--placeholder .sf-profile__value {
+        visibility: hidden;
+    }
+
+/* ================= STATE ================= */
+
+.sf-profile__state {
+    padding: 1rem;
+    border: 1px solid #e5e7eb;
+    margin: 1rem;
+    border-radius: 6px;
+    background: #fff;
+    color: #374151;
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width:768px) {
+    .sf-profile__grid--cols-2,
+    .sf-profile__grid--cols-3 {
+        grid-template-columns: 1fr;
+    }
+
+    .sf-profile__item {
+        align-items: flex-start;
+    }
+}
+
+/* ================= RTL ================= */
+
+[dir="rtl"] .sf-profile__label,
+[dir="rtl"] .sf-profile__value {
+    text-align: right;
+}
+
+
+
+/* ===============================
+   SF Toggle ازرار اخفاء الجدول
+   =============================== */
+
+/* ===============================
+   SF Toggle (Gov Minimal / Emerald)
+   - رسمي خفيف
+   - لا تدرج ولا ظلال
+   - Emerald 700 فقط (خط يمين)
+   =============================== */
+
+:root {
+    --sf-emerald-700: #047857;
+    --sf-border: #e5e7eb;
+    --sf-border-2: #d1d5db;
+    --sf-text: #4b525e;
+    --sf-muted: #6b7280;
+    --sf-surface: #ffffff;
+    --sf-surface-2: #f9fafb;
+}
+
+[x-cloak] {
+    display: none !important;
+}
+
+.sf-toggle {
+    width: 100%;
+    margin-top: .5rem;
+}
+
+/* ===============================
+   زر التوجل
+   =============================== */
+.sf-toggle__btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    padding: .6rem .85rem;
+    background: var(--sf-surface);
+    color: var(--sf-text);
+    border: 1px solid var(--sf-border);
+    border-right: 3px solid var(--sf-emerald-700); /* ← المكان الوحيد للأخضر */
+
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: .95rem;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: background .12s ease, border-color .12s ease;
+}
+
+    /* Hover خفيف */
+    .sf-toggle__btn:hover {
+        background: var(--sf-surface-2);
+        border-color: var(--sf-border-2);
+    }
+
+    /* ===============================
+   FOCUS — emerald 700 فقط
+   =============================== */
+    .sf-toggle__btn:focus,
+    .sf-toggle__btn:focus-visible,
+    .sf-toggle__btn:focus-within {
+        outline: none !important;
+        box-shadow: none !important; /* ❌ لا ظل */
+        border-color: var(--sf-border); /* الإطار يبقى رمادي */
+        border-right-color: var(--sf-emerald-700); /* ✅ الأخضر فقط هنا */
+    }
+
+/* ===============================
+   محتوى الزر
+   =============================== */
+.sf-toggle__left {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    min-width: 0;
+}
+
+.sf-toggle__icon {
+    color: var(--sf-emerald-700);
+    font-size: .95rem;
+    width: 1.1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sf-toggle__label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* السهم */
+.sf-toggle__chev {
+    color: var(--sf-muted);
+    font-size: .9rem;
+    transition: transform .15s ease;
+}
+
+    .sf-toggle__chev.is-open {
+        transform: rotate(180deg);
+    }
+
+/* ===============================
+   محتوى التوجل
+   =============================== */
+.sf-toggle__content {
+    margin-top: .45rem;
+    padding: .7rem;
+    background: var(--sf-surface);
+    border: 1px solid var(--sf-border);
+    border-radius: 6px;
+}
+
+/* مسافات بين التوجلات */
+.sf-toggle + .sf-toggle {
+    margin-top: .45rem;
+}
+
+
+
