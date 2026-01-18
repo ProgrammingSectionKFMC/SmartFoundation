@@ -341,13 +341,22 @@
 
 
 
-                <template x-if="!loading && !error && rows.length===0">
+                @* <template x-if="!loading && !error && rows.length===0">
                     <tr>
                         <td :colspan="visibleColumns().length + (selectable?1:0)" class="td-empty">
                             لا توجد بيانات.
                         </td>
                     </tr>
-                </template>
+                </template> *@
+                        <template x-if="!loading && !error && rows.length===0">
+                            <tr>
+                                <td :colspan="visibleColumns().length + (selectable?1:0)"
+                                    class="py-6 text-center">
+                                    لا توجد بيانات.
+                                </td>
+                            </tr>
+                        </template>
+
 
                 <template x-for="(row, idx) in rows" :key="row[rowIdField] ?? idx">
                     <tr class="tr-row"
