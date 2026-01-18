@@ -355,3 +355,14 @@
 
 </body>
 </html>
+
+<script>
+    (function () {
+      // إذا الصفحة تحتوي QueryString
+      if (window.location.search.length > 0) {
+        // إعادة كتابة الرابط بدون QueryString
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    })();
+</script>
