@@ -115,11 +115,17 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         public string? ToggleIcon { get; set; } = "fa-solid fa-table";
         public bool ToggleDefaultOpen { get; set; } = false;      // مفتوح افتراضياً؟
 
+        public List<ProfileBadge> ProfileBadges { get; set; } = new();
 
         public List<TableStyleRule> StyleRules { get; set; } = new();
 
     }
 
+    public class ProfileBadge
+    {
+        public string Field { get; set; } = "";
+        public string Label { get; set; } = "";
+    }
 
 
 }

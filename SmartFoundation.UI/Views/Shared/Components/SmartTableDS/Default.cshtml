@@ -3,69 +3,51 @@
 @using SmartFoundation.UI.ViewModels.SmartTable
 @using SmartFoundation.UI.ViewModels.SmartForm
 @model SmartTableDsModel
-
 @{
-
     var webJson = new JsonSerializerOptions(JsonSerializerDefaults.Web);
     webJson.Converters.Add(new JsonStringEnumConverter());
-
     var tableConfig = new
     {
         clientSideMode = true,
         endpoint = "/smart/execute",
         spName = Model.StoredProcedureName,         
         operation = Model.Operation,                  
-
         pageSize = Model.PageSize,
         pageSizes = Model.PageSizes,
         searchable = Model.Searchable,
         searchPlaceholder = Model.SearchPlaceholder ?? "بحث…",
         quickSearchFields = Model.QuickSearchFields ?? new List<string>(),
-
         allowExport = Model.AllowExport,
         showHeader = Model.ShowHeader,
         showFooter = Model.ShowFooter,
         enablePagination = Model.EnablePagination,
         autoRefresh = true,
-
         columns = Model.Columns ?? new List<TableColumn>(),
         actions = new List<object>(),
-
         selectable = Model.Selectable,
         singleSelect = true,
         rowIdField = Model.RowIdField ?? "Id",
         rows = Model.Rows ?? new List<Dictionary<string, object?>>(),
-
         toolbar = Model.Toolbar ?? new TableToolbarConfig(),
         styleRules = Model.StyleRules ?? new List<TableStyleRule>(),
-
         tabelLabel = Model.TabelLabel ?? "",
         showToolbar = Model.ShowToolbar,
         enableCellCopy = Model.EnableCellCopy,
-
-        //  NEW: Profile View config
-        viewMode = Model.ViewMode.ToString(), // "Table" | "Profile"
-
+        //Profile View config
+        viewMode = Model.ViewMode.ToString(), 
         profileTitleField = Model.ProfileTitleField,
         profileSubtitleField = Model.ProfileSubtitleField,
-
         profileFields = Model.ProfileFields ?? new List<string>(),
-
         profileColumns = Model.ProfileColumns,
         profileCssClass = Model.ProfileCssClass ?? "",
         profileShowHeader = Model.ProfileShowHeader,
-
-        // NEW: Dynamic icon + optional title + meta chips
         profileIcon = Model.ProfileIcon ?? "fa-solid fa-id-card",
         profileTitleText = Model.ProfileTitleText ?? "",
         profileMetaFields = Model.ProfileMetaFields ?? new List<object>(),
         showPageSizeSelector = Model.ShowPageSizeSelector,
-
-
-
+        profileBadges = Model.ProfileBadges ?? new List<ProfileBadge>(),
     };
 }
-
 @{
     var useToggle = Model.RenderAsToggle;
     var toggleLabel = Model.ToggleLabel ?? "عرض";
@@ -73,12 +55,10 @@
     var toggleOpen = Model.ToggleDefaultOpen;
 }
 
-
 <div class="sf-toggle"
      x-data="{ open: @(toggleOpen ? "true" : "false") }"
      x-cloak>
 
-@* ( RenderAsToggle = true) *@
 @if (useToggle)
 {
         <button type="button"

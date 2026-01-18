@@ -312,3 +312,4 @@ public class TableActionGuards
     // تطبيق الشرط على أي صف من المحدد أو على كل الصفوف
     public string AppliesTo { get; set; } = "any"; // any | all
 }
+

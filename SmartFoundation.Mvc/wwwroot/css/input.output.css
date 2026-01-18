@@ -4,17 +4,30 @@
 @font-face {
   font-family: "Tajawal";
   src: url("../fonts/Tajawal-Regular.ttf") format("truetype");
-  font-weight: 400;
+  font-weight: 500;
   font-style: normal;
+  font-display: swap;
 }
 @font-face {
   font-family: "Tajawal";
   src: url("../fonts/Tajawal-Bold.ttf") format("truetype");
   font-weight: 700;
   font-style: normal;
+  font-display: swap;
 }
 body, h1, h2, h3, h4, h5, h6, input, textarea, select, button {
   font-family: "Tajawal", sans-serif !important;
+}
+body {
+  font-family: "Tajawal", sans-serif !important;
+  text-rendering: optimizeLegibility;
+  font-kerning: normal;
+  font-variant-ligatures: common-ligatures;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: 0;
+  word-spacing: 0.02em;
+  line-height: 1.6;
 }
 @layer theme, base, components, utilities;
 @layer theme {

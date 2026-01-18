@@ -16,6 +16,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             // إعدادات البروفايل من الكنترول)
             profileTitleField: (cfg.profileTitleField ?? null),
             profileSubtitleField: (cfg.profileSubtitleField ?? null),
+            profileBadges: Array.isArray(cfg.profileBadges) ? cfg.profileBadges : [],
             profileMetaFields: Array.isArray(cfg.profileMetaFields) ? cfg.profileMetaFields : [], 
             profileFields: Array.isArray(cfg.profileFields) ? cfg.profileFields : [],            
             profileCssClass: (cfg.profileCssClass ?? ""),
@@ -593,7 +594,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             async load() {
                 this.loading = true;
                 this.error = null;
-
                 try {
                     // ===== FAST MODE: server-side paging (only if enabled) =====
                     if (this.serverPaging) {
@@ -608,7 +608,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 sortDir: this.sort.dir || "asc"
                             }
                         };
-
                         const json = await this.postJson(this.endpoint, body);
                         // بيانات الصفحة الحالية فقط
                         this.rows = Array.isArray(json?.data) ? json.data : [];
@@ -632,7 +631,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         this.updateSelectAllState();
                         return;
                     }
-
                     // ===== OLD MODE (unchanged): client-side =====
                     if (this.allRows.length === 0) {
                         if (this.clientSideMode && Array.isArray(this.initialRows) && this.initialRows.length > 0) {
@@ -653,8 +651,19 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     this.applyFiltersAndSort();
 
                 } catch (e) {
+                    const msg = String(e?.message || "");
+                    if (msg.includes("لايوجد بيانات")) {
+                        this.rows = [];
+                        this.allRows = [];
+                        this.filteredRows = [];
+                        this.total = 0;
+                        this.pages = 1;
+                        this.page = 1;
+                        this.error = null;
+                        return;
+                    }
                     console.error("Load error:", e);
-                    this.error = e.message || "خطأ في تحميل البيانات";
+                    this.error = msg || "خطأ في تحميل البيانات";
                 } finally {
                     this.loading = false;
                 }
@@ -680,7 +689,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             const haystack = fields
                                 .map(f => String(row?.[f] ?? "").toLowerCase())
                                 .join(" ");
-
                             // لازم كل كلمات البحث موجودة (AND)
                             return tokens.every(t => haystack.includes(t));
                         });
