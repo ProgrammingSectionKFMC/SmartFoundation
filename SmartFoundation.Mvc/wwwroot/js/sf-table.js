@@ -97,7 +97,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             // Pagination
             pageSize: cfg.pageSize || 10,
             pageSizes: cfg.pageSizes || [10, 25, 50, 100],
-            enablePagination: cfg.enablePagination !== false, //  جديد
+            enablePagination: cfg.enablePagination !== false, 
+            showPageSizeSelector: cfg.showPageSizeSelector === true,
             // NEW: Server paging (fast mode) - off by default
             serverPaging: !!cfg.serverPaging,
             // Search
@@ -1347,6 +1348,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         serialLabel: (cfg.pdfSerialLabel ?? cfg.PdfSerialLabel) || "#",
                         showPageNumbers: ((cfg.pdfShowPageNumbers ?? cfg.PdfShowPageNumbers) !== false),
                         showGeneratedAt: ((cfg.pdfShowGeneratedAt ?? cfg.PdfShowGeneratedAt) !== false),
+                        showPageSizeSelector: cfg.showPageSizeSelector === true,
                         filename: (cfg.filename ?? cfg.Filename) || "export",
                         rightHeaderLine1: (cfg.rightHeaderLine1 ?? cfg.RightHeaderLine1) || "",
                         rightHeaderLine2: (cfg.rightHeaderLine2 ?? cfg.RightHeaderLine2) || "",
@@ -2141,75 +2143,93 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     case "url":
                     case "search": {
 
+                        const acRaw = field.autocomplete ?? field.Autocomplete;
+                        const ac = (acRaw ?? "").toString().trim();
+                        const defaultAc =
+                            (inputType === "email") ? "email" :
+                                (inputType === "search") ? "off" :
+                                    "on";
+                        const autocompleteAttr = ac
+                            ? `autocomplete="${this.escapeHtml(ac)}"`
+                            : `autocomplete="${defaultAc}"`;
                         const hasIcon = !!field.icon;
-
                         const isRtl =
                             (field.textMode && String(field.textMode).toLowerCase() === "arabic") ||
                             document?.documentElement?.dir === "rtl";
-
-                        // كلاس اتجاه الأيقونة
                         const iconSideClass = isRtl ? "sf-icon-right" : "sf-icon-left";
-
-                        // كلاس يضاف للـ input فقط إذا فيه أيقونة
                         const iconInputClass = hasIcon ? `sf-has-icon ${iconSideClass}` : "";
-
-                        // HTML الأيقونة
                         const iconHtml = hasIcon
                             ? `<span class="sf-input-icon ${iconSideClass}">
                             <i class="${this.escapeHtml(field.icon)}"></i>
-                       </span>`
+                            </span>`
                             : "";
 
-                        fieldHtml = `
+                            fieldHtml = `
                             <div class="form-group ${colCss}">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">
-                                    ${this.escapeHtml(field.label)}
-                                    ${field.required ? '<span class="text-red-500">*</span>' : ''}
-                                </label>
-
-                                <div class="sf-field-wrap">
-                                    ${iconHtml}
-                                    <input
-                                        type="${inputType}"
-                                        name="${this.escapeHtml(field.name)}"
-                                        value="${this.escapeHtml(value)}"
-                                        class="sf-modal-input ${iconInputClass}"
-                                        ${placeholder}
-                                        ${required}
-                                        ${disabled}
-                                        ${readonly}
-                                        ${maxLength}
-                                        ${autocomplete}
-                                        ${spellcheck}
-                                        ${autocapitalize}
-                                        ${autocorrect}
-                                        ${pattern}
-                                        ${oninput}
-                                    />
-                                </div>
-
-                                ${field.helpText
-                                                    ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
-                                                    : ''}
-                            </div>`;
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                ${this.escapeHtml(field.label)}
+                                ${field.required ? '<span class="text-red-500">*</span>' : ''}
+                            </label>
+                            <div class="sf-field-wrap">
+                                ${iconHtml}
+                                <input
+                                type="${inputType}"
+                                name="${this.escapeHtml(field.name)}"
+                                value="${this.escapeHtml(value)}"
+                                class="sf-modal-input ${iconInputClass}"
+                                ${placeholder}
+                                ${required}
+                                ${disabled}
+                                ${readonly}
+                                ${maxLength}
+                                ${autocompleteAttr}
+                                ${spellcheck}
+                                ${autocapitalize}
+                                ${autocorrect}
+                                ${pattern}
+                                ${oninput}
+                            />
+                        </div>
+                        ${field.helpText
+                        ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
+                        : ''}
+                    </div>`;
                         break;
                     }
 
 
-                    case "textarea":
+
+                    case "textarea": {
+                        const acRaw = field.autocomplete ?? field.Autocomplete;
+                        const ac = (acRaw ?? "").toString().trim();
+                        const defaultAc = "off";
+                        const autocompleteAttr = ac
+                            ? `autocomplete="${this.escapeHtml(ac)}"`
+                            : `autocomplete="${defaultAc}"`;
                         const rows = field.rows || 3;
                         fieldHtml = `
                         <div class="form-group ${colCss}">
                             <label class="block text-sm font-medium text-gray-700 mb-1">
                                 ${this.escapeHtml(field.label)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
-
                             </label>
-                            <textarea name="${this.escapeHtml(field.name)}" rows="${rows}"
-                                     class="sf-modal-input"
-                                     ${placeholder} ${required} ${disabled} ${readonly} ${maxLength}>${this.escapeHtml(value)}</textarea>
-                            ${field.helpText ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>` : ''}
-                        </div>`;
-                        break;
+                            <textarea
+                                name="${this.escapeHtml(field.name)}"
+                                rows="${rows}"
+                                class="sf-modal-input"
+                                ${placeholder}
+                                ${required}
+                                ${disabled}
+                                ${readonly}
+                                ${maxLength}
+                                ${autocompleteAttr}
+                            >${this.escapeHtml(value)}</textarea>
+                            ${field.helpText
+                            ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
+                            : ''}
+                            </div>`;
+                          break;
+                         }
+
 
 
 
@@ -2354,15 +2374,20 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
 
                     case "number":
-                        // رقم >= 0 فقط (بدون سالب)
                         const min0 = `min="0"`;
                         const numStep = field.step !== undefined ? `step="${field.step}"` : `step="1"`;
                         const numMax = field.max !== undefined ? `max="${field.max}"` : "";
 
-                        // يمنع إدخال السالب و e و + ويقص أي شيء غير رقم (ويسمح بنقطة لو step فيه كسور)
                         const allowDecimal =
                             String(field.step ?? "").includes('.') ||
                             (typeof field.step === 'number' && !Number.isInteger(field.step));
+
+                        const ac = field.autocomplete ?? field.Autocomplete;
+                        const autocompleteAttr =
+                            (ac !== undefined && ac !== null && String(ac).trim() !== "")
+                                ? `autocomplete="${this.escapeHtml(ac)}"`
+                                : `autocomplete="off"`;
+
 
                         const numberOnInput = allowDecimal
                             ? `oninput="this.value=this.value.replace(/[^0-9.]/g,''); if(this.value.startsWith('.')) this.value='0'+this.value; if(this.value.includes('.')){const p=this.value.split('.'); this.value=p[0]+'.'+p.slice(1).join('');}"`
@@ -2371,7 +2396,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         const numberOnKeyDown =
                             `onkeydown="if(['-','e','E','+'].includes(event.key)) event.preventDefault()"`;
 
-                        /* ===== ICON SUPPORT (نفس طريقة text/date) ===== */
                         const hasIcon = !!field.icon;
                         const isRtl = document?.documentElement?.dir === "rtl";
 
@@ -2380,41 +2404,43 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                         const iconHtml = hasIcon
                             ? `<span class="sf-input-icon ${iconSideClass}">
-                                <i class="${this.escapeHtml(field.icon)}"></i>
+                            <i class="${this.escapeHtml(field.icon)}"></i>
                            </span>`
-                            : "";
+                                            : "";
 
-                        fieldHtml = `
-                            <div class="form-group ${colCss}">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">
-                                    ${this.escapeHtml(field.label)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
-                                </label>
+                                        fieldHtml = `
+                        <div class="form-group ${colCss}">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                ${this.escapeHtml(field.label)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
+                            </label>
 
-                                <div class="sf-field-wrap">
-                                    ${iconHtml}
-                                    <input
-                                        type="number"
-                                        inputmode="numeric"
-                                        name="${this.escapeHtml(field.name)}"
-                                        value="${this.escapeHtml(value)}"
-                                        class="sf-modal-input ${iconInputClass}"
-                                        ${placeholder}
-                                        ${min0}
-                                        ${numMax}
-                                        ${numStep}
-                                        ${required}
-                                        ${disabled}
-                                        ${readonly}
-                                        ${numberOnKeyDown}
-                                        ${numberOnInput}
-                                    >
-                                </div>
-
-                                ${field.helpText
-                                                            ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
-                                                            : ''}
-                            </div>`;
+                            <div class="sf-field-wrap">
+                                ${iconHtml}
+                                <input
+                                    type="number"
+                                    inputmode="numeric"
+                                    name="${this.escapeHtml(field.name)}"
+                                    value="${this.escapeHtml(value)}"
+                                    class="sf-modal-input ${iconInputClass}"
+                                    ${autocompleteAttr}
+                                    ${placeholder}
+                                    ${min0}
+                                    ${numMax}
+                                    ${numStep}
+                                    ${required}
+                                    ${disabled}
+                                    ${readonly}
+                                    ${numberOnKeyDown}
+                                    ${numberOnInput}
+                                >
+                            </div>
+                            ${field.helpText
+                            ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
+                            : ''}
+                        </div>`;
                         break;
+
+
 
 
 
@@ -2432,136 +2458,131 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                         const nidOnKeyDown =
                             `onkeydown="if(['-','e','E','+','.'].includes(event.key)) event.preventDefault()"`;
-
-                        /* ===== ICON SUPPORT (نفس طريقة text/date/number) ===== */
+                        const acRaw = field.autocomplete ?? field.Autocomplete;
+                        const ac = (acRaw ?? "").toString().trim();
+                        const autocompleteAttr = ac
+                            ? `autocomplete="${this.escapeHtml(ac)}"`
+                            : `autocomplete="new-password"`;
                         const hasIcon = !!field.icon;
                         const isRtl = document?.documentElement?.dir === "rtl";
-
                         const iconSideClass = isRtl ? "sf-icon-right" : "sf-icon-left";
                         const iconInputClass = hasIcon ? `sf-has-icon ${iconSideClass}` : "";
-
                         const iconHtml = hasIcon
                             ? `<span class="sf-input-icon ${iconSideClass}">
-                            <i class="${this.escapeHtml(field.icon)}"></i>
-                       </span>`
-                                        : "";
-
-                                    fieldHtml = `
+                                <i class="${this.escapeHtml(field.icon)}"></i>
+                           </span>`
+                                            : "";
+                                        fieldHtml = `
                         <div class="form-group ${colCss}">
                             <label class="block text-sm font-medium text-gray-700 mb-1">
                                 ${this.escapeHtml(field.label)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
                             </label>
-
-                    <div class="sf-field-wrap">
-                    ${iconHtml}
-
-                    <input
-                        type="text"
-                        inputmode="numeric"
-                        name="${this.escapeHtml(field.name)}"
-                        value="${this.escapeHtml(value)}"
-                        class="sf-modal-input ${iconInputClass}"
-                        ${placeholder}
-                        ${required}
-                        ${disabled}
-                        ${readonly}
-                        autocomplete="new-password"
-                        autocorrect="off"
-                        autocapitalize="off"
-                        spellcheck="false"
-                        maxlength="10"
-                        pattern="^[0-9]{1,10}$"
-                        title="الهوية الوطنية يجب أن تكون أرقام فقط وبحد أقصى 10 رقم"
-
-                        ${nidOnKeyDown}
-                        ${nidOnInput}
-                    />
-                </div>
-
-                ${field.helpText ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>` : ''}
-            </div>`;
+                            <div class="sf-field-wrap">
+                                ${iconHtml}
+                                <input
+                                    type="text"
+                                    inputmode="numeric"
+                                    name="${this.escapeHtml(field.name)}"
+                                    value="${this.escapeHtml(value)}"
+                                    class="sf-modal-input ${iconInputClass}"
+                                    ${placeholder}
+                                    ${required}
+                                    ${disabled}
+                                    ${readonly}
+                                    ${autocompleteAttr}
+                                    autocorrect="off"
+                                    autocapitalize="off"
+                                    spellcheck="false"
+                                    maxlength="10"
+                                    pattern="^[0-9]{1,10}$"
+                                    title="الهوية الوطنية يجب أن تكون أرقام فقط وبحد أقصى 10 رقم"
+                                    ${nidOnKeyDown}
+                                    ${nidOnInput}
+                                />
+                            </div>
+                            ${field.helpText ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>` : ''}
+                        </div>`;
                         break;
                     }
 
 
 
 
-                    case "phone":
-                    case "tel": {
 
-                        const normalizeFn = `
-                            (function(el){
-                                let v = (el.value || '');
+                            case "phone":
+                            case "tel": {
 
-                                // digits to ascii
-                                v = v.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
-                                v = v.replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
+                            const normalizeFn = `
+                                        (function(el){
+                                            let v = (el.value || '');
 
-                                // keep digits only
-                                v = v.replace(/\\s+/g,'');
-                                v = v.replace(/^\\+/, '');      // +966... -> 966...
-                                v = v.replace(/\\D/g,'');
+                                            // digits to ascii
+                                            v = v.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+                                            v = v.replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
 
-                                // Saudi normalize to 05XXXXXXXX
-                                if (v.startsWith('966') ) v = '0' + v.slice(3);     // 9665xxxxxxxx -> 05xxxxxxxx
-                                if (v.startsWith('00966')) v = '0' + v.slice(5);    // 009665xxxxxxxx -> 05xxxxxxxx
-                                if (v.startsWith('5') && v.length === 9) v = '0' + v; // 5xxxxxxxx -> 05xxxxxxxx
+                                            // keep digits only
+                                            v = v.replace(/\\s+/g,'');
+                                            v = v.replace(/^\\+/, '');      // +966... -> 966...
+                                            v = v.replace(/\\D/g,'');
 
-                                // force prefix 05 if user started typing mobile
-                                if (v.length >= 2 && !v.startsWith('05')) {
-                                    if (v.startsWith('0')) v = '05' + v.slice(2);
-                                    else v = '05' + v.replace(/^05/, '').slice(0); // fallback
-                                }
+                                            // Saudi normalize to 05XXXXXXXX
+                                            if (v.startsWith('966'))  v = '0' + v.slice(3);      // 9665xxxxxxxx -> 05xxxxxxxx
+                                            if (v.startsWith('00966')) v = '0' + v.slice(5);     // 009665xxxxxxxx -> 05xxxxxxxx
+                                            if (v.startsWith('5') && v.length === 9) v = '0' + v; // 5xxxxxxxx -> 05xxxxxxxx
 
-                                if (v.length > 10) v = v.slice(0,10);
-                                el.value = v;
-                            })(this);
-                        `;
+                                            // force prefix 05 if user started typing mobile
+                                            if (v.length >= 2 && !v.startsWith('05')) {
+                                                if (v.startsWith('0')) v = '05' + v.slice(2);
+                                                else v = '05' + v.replace(/^05/, '').slice(0); // fallback
+                                            }
 
-                                        const validateFn = `
-                            (function(el){
-                                // normalize first
-                                ${normalizeFn.replace(/this/g, 'el')}
+                                            if (v.length > 10) v = v.slice(0,10);
+                                            el.value = v;
+                                        })(this);
+                                    `;
 
-                                const v = (el.value || '');
-                                if (${field.required ? 'true' : 'false'} && !v) {
-                                    el.setCustomValidity('رقم الجوال مطلوب');
-                                    return;
-                                }
-                                if (!v) { el.setCustomValidity(''); return; }
+                                                        const validateFn = `
+                                        (function(el){
+                                            // normalize first
+                                            ${normalizeFn.replace(/this/g, 'el')}
 
-                                if (!/^05\\d{8}$/.test(v)) {
-                                    el.setCustomValidity('رقم الجوال يجب أن يبدأ بـ 05 ثم 8 أرقام');
-                                } else {
-                                    el.setCustomValidity('');
-                                }
-                            })this);
-                        `;
+                                            const v = (el.value || '');
+                                            if (${field.required ? 'true' : 'false'} && !v) {
+                                                el.setCustomValidity('رقم الجوال مطلوب');
+                                                return;
+                                            }
+                                            if (!v) { el.setCustomValidity(''); return; }
 
-                        // initial normalize (server value)
+                                            if (!/^05\\d{8}$/.test(v)) {
+                                                el.setCustomValidity('رقم الجوال يجب أن يبدأ بـ 05 ثم 8 أرقام');
+                                            } else {
+                                                el.setCustomValidity('');
+                                            }
+                                        })(this);
+                                    `;
+
+                        const acRaw = field.autocomplete ?? field.Autocomplete;
+                        const ac = (acRaw ?? "").toString().trim();
+                        const autocompleteAttr = ac
+                            ? `autocomplete="${this.escapeHtml(ac)}"`
+                            : `autocomplete="new-password"`;
                         const initial = (() => {
                             let v = (value ?? '').toString();
                             v = v.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
                             v = v.replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
-                            v = v.replace(/\s+/g, '').replace(/^\+/, '').replace(/\D/g, '');
-
+                            v = v.replace(/\\s+/g, '').replace(/^\\+/, '').replace(/\\D/g, '');
                             if (v.startsWith('00966')) v = '0' + v.slice(5);
                             if (v.startsWith('966')) v = '0' + v.slice(3);
                             if (v.startsWith('5') && v.length === 9) v = '0' + v;
                             if (v.length > 10) v = v.slice(0, 10);
                             return v;
                         })();
-
-                        // IMPORTANT: oninput لا يعرض رسالة، فقط يطبّع
                         const onInput = `oninput="${normalizeFn} this.setCustomValidity('');"`;
-                        // التحقق فقط عند blur/invalid
                         const onBlur = `onblur="${validateFn}"`;
                         const onInvalid = `oninvalid="${validateFn}"`;
                         const onChange = `onchange="${normalizeFn}"`;
                         const onKeyDown =
                             `onkeydown="if(['-','e','E','+','.'].includes(event.key)) event.preventDefault()"`;
-
-                        /* ===== ICON SUPPORT (نفس طريقة text/date/number) ===== */
                         const hasIcon = !!field.icon;
                         const isRtl = document?.documentElement?.dir === "rtl";
 
@@ -2570,17 +2591,17 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                         const iconHtml = hasIcon
                             ? `<span class="sf-input-icon ${iconSideClass}">
-                                    <i class="${this.escapeHtml(field.icon)}"></i>
-                               </span>`
-                                                : "";
+                        <i class="${this.escapeHtml(field.icon)}"></i>
+                        </span>`
+                            : "";
 
                         fieldHtml = `
-                                <div class="form-group ${colCss}">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                                        ${this.escapeHtml(field.label)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
-                                    </label>
+                        <div class="form-group ${colCss}">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                ${this.escapeHtml(field.label)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
+                            </label>
 
-                                    <div class="sf-field-wrap">
+                            <div class="sf-field-wrap">
                                 ${iconHtml}
 
                                 <input
@@ -2594,7 +2615,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                     ${disabled}
                                     ${readonly}
                                     data-sa-mobile="1"
-                                    autocomplete="new-password"
+                                    ${autocompleteAttr}
                                     autocorrect="off"
                                     autocapitalize="off"
                                     spellcheck="false"
@@ -2605,13 +2626,14 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                     ${onInvalid}
                                     ${onBlur}
                                     ${onInput}
-                                    />
-                                </div>
+                                />
+                            </div>
 
-                                    ${field.helpText ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>` : ''}
-                                </div>`;
-                                                break;
-                                            }
+                            ${field.helpText ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>` : ''}
+                        </div>`;
+                        break;
+                    }
+
 
 
 
@@ -2651,16 +2673,35 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 return fieldHtml;
             },
 
-            resolveColCss(colCss) {
-                if (!colCss) return "col-span-12 md:col-span-6";
+            //resolveColCss(colCss) {
+            //    if (!colCss) return "col-span-12 md:col-span-6";
 
-                if (/^\d{1,2}$/.test(colCss)) {
-                    const n = Math.max(1, Math.min(12, parseInt(colCss, 10)));
-                    return `col-span-12 md:col-span-${n}`;
+            //    if (/^\d{1,2}$/.test(colCss)) {
+            //        const n = Math.max(1, Math.min(12, parseInt(colCss, 10)));
+            //        return `col-span-12 md:col-span-${n}`;
+            //    }
+
+            //    return colCss.includes('col-span') ? colCss : `col-span-12 ${colCss}`;
+            //},
+
+            resolveColCss(colCss) {
+                if (!colCss) return "col-span-12";
+
+                const raw = colCss.toString().trim();
+
+                // إذا المستخدم كتب رقم فقط: 2/3/4/6/8/10/12
+                if (/^\d{1,2}$/.test(raw)) {
+                    const n = Math.max(1, Math.min(12, parseInt(raw, 10)));
+                    return `col-span-${n}`;
                 }
 
-                return colCss.includes('col-span') ? colCss : `col-span-12 ${colCss}`;
+                // إذا كتب كلاسات جاهزة مثل: "col-span-4 md:col-span-6"
+                if (raw.includes("col-span")) return raw;
+
+                // غير كذا: اعتبره كلاس إضافي مع default 12
+                return `col-span-12 ${raw}`;
             },
+
 
             initModalScripts() {
                 const form = this.$el.querySelector('.sf-modal form');

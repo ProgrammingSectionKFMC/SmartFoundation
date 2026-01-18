@@ -24,16 +24,12 @@ input, textarea, select, button {
 }
 
 /* ثبّت مكان السكرول على حاوية المحتوى (مو body) */
-main,
+/*main,
 #main-content,
 .sf-main {
     overflow-y: scroll;         
     scrollbar-gutter: stable;    
-}
-
-
-
-
+}*/
 
 /* =========================
    Tailwind
@@ -163,7 +159,7 @@ main,
     }
 
     .section-legend {
-        @apply -mt-6 inline-block px-3 text-base font-semibold text-gray-600 md:text-sm ;
+        @apply -mt-6 inline-block px-3 text-base font-semibold text-gray-600 md:text-sm;
     }
 
     .sf-label {
@@ -347,12 +343,13 @@ textarea[readonly] {
 
 .th-cell {
     @apply border-b border-gray-200 px-4 py-2 text-center whitespace-nowrap;
-    background: #f9fafb; 
-    color: #374151; 
-    font-weight: 500; 
-    font-size: 14px; 
-    letter-spacing: -0.1px; 
-    line-height: 1.25;
+    background: #f9fafb;
+    /*color: #066d6d; */
+    color: #0f766e;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: -0.1px;
+    line-height: 1.85;
     font-family: "Inter", "Tajawal", sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -739,7 +736,7 @@ textarea[readonly] {
 
 /* Select Input (Fixed duplicate) */
 .select-sm {
-    @apply h-9 w-20;
+    @apply h-8.5 w-20;
     @apply rounded-sm border border-gray-300 bg-white px-2;
     @apply text-sm text-gray-700;
     @apply transition duration-100;
@@ -793,7 +790,7 @@ textarea[readonly] {
                 @apply border border-gray-300 bg-white text-gray-800;
                 @apply hover:bg-gray-50 hover:text-gray-900;
                 @apply focus:border-transparent focus:ring-1 focus:ring-emerald-700;
-                @apply h-9 rounded-sm px-3;
+                @apply h-8.5 rounded-sm px-3;
                 @apply inline-flex items-center gap-1;
                 background: linear-gradient(to bottom, #ffffff, #fdfdfd);
                 box-shadow: inset 0 0 0 1px rgba(0,0,0,0.02), 0 1px 1px rgba(0,0,0,0.03);
@@ -1301,8 +1298,8 @@ textarea[readonly] {
 }
 /* ألوان فوكس أخضر أغمق */
 :root {
-    --sf-focus-border: rgba(4,120,87,0.95); /* emerald-700-ish */
-    --sf-focus-ring: rgba(4,120,87,0.22); /* ring subtle */
+    --sf-focus-border: rgba(4,120,87,0.95); 
+    --sf-focus-ring: rgba(4,120,87,0.22); 
 }
 /* Input */
 .sf-modal .input,
@@ -1327,11 +1324,11 @@ textarea[readonly] {
 .sf-modal .form-group > label,
 .sf-modal .form-label,
 .sf-modal .sf-label {
-    margin-bottom: 6px;
+    margin-bottom: 3px;
     display: block;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #4b5563; /* gray-600 بدل الأسود */
+    font-size: 0.975rem;
+    font-weight: 500;
+    color: #434d59; /* gray-600 بدل الأسود */
 }
 
 
@@ -1357,7 +1354,7 @@ textarea[readonly] {
         left: 10px;
     }
 
-/* ✅ أهم شي: padding للحقل لما فيه أيقونة */
+
 .sf-modal .sf-modal-input.sf-has-icon.sf-icon-right {
     padding-right: 2rem !important;
 }
@@ -1834,40 +1831,13 @@ header,
    Panel Header
    ========================= */
 
-/*.sf-panel-header {
-    @apply relative z-10 flex items-center justify-between;
-    @apply px-4 py-2.5;
-    @apply border-b border-gray-300;
-    background: linear-gradient(to bottom, #f9fafb, #f3f4f6);
-    color: #374151;
-    font-weight: 500;
-    letter-spacing: -0.2px;
-    font-family: "Inter", "Tajawal", sans-serif;
-    transition: all 0.2s ease;
-}
-
-
-    .sf-panel-header::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        background: linear-gradient(to bottom, rgba(255,255,255,0.2), transparent);
-    }*/
-
-/* =========================
-   Panel (Gov Minimal / Flat)
-   - بدون سمنة / بدون بروز
-   - خلفية مسطحة
-   - حدود أخف
-   ========================= */
-
 .sf-panel {
     @apply relative mx-auto mt-6 mb-9;
     @apply w-[99%];
-    @apply rounded-sm border border-gray-200 bg-white; /* أخف من gray-300 + bg-gray-50 */
-    box-shadow: none !important; /* تأكيد */
-    overflow: hidden; /* خليها ثابتة */
+    @apply rounded-sm border border-gray-200 bg-white; 
+    box-shadow: none !important; 
+    overflow: hidden; 
+
 }
 
 /* =========================
@@ -1876,14 +1846,14 @@ header,
 
 .sf-panel-header {
     @apply relative z-10 flex items-center justify-between;
-    @apply px-4 py-2; /* أقل سمك من 2.5 */
-    @apply border-b border-gray-200; /* أخف */
-    background: #f9fafb; /* بدون تدرج */
-    color: #4b5563; /* أهدأ من #374151 */
+    @apply px-4 py-2; 
+    @apply border-b border-gray-200; 
+    background: #f9fafb; 
+    color: #4b5563; 
     font-weight: 500;
     letter-spacing: -0.1px;
     font-family: "Inter", "Tajawal", sans-serif;
-    box-shadow: none !important; /* يشيل إحساس البروز */
+    box-shadow: none !important; 
 }
 
     /* ❌ شيل طبقة اللمعة اللي تعطي إحساس منتفخ */
@@ -1899,12 +1869,14 @@ header,
     @apply flex items-center gap-2 text-sm font-semibold whitespace-nowrap text-gray-900;
     letter-spacing: -0.2px;
     font-weight: 500;
-    font-size: 17px;
+    font-size: 16px;
+    color: #0f766e;
 }
 
     .sf-panel-title i {
-        font-size: 14px;
-        color: #293545; /* Tailwind gray-800 */
+        font-size: 15px;
+        /*color: #293545;*/
+        color: #0f766e;
         opacity: 1;
     }
 

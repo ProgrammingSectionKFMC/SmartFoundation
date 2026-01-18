@@ -283,6 +283,9 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         public bool EnableScreenReader { get; set; } = true;
         public string? AriaLabel { get; set; }
         public bool HighContrast { get; set; } = false;
+        public string? Autocomplete { get; set; }
+
+        //public bool ShowPageSizeSelector { get; set; } = true;
         public List<TableStyleRule> StyleRules { get; set; } = new();
 
     }

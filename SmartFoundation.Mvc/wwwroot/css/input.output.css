@@ -16,10 +16,6 @@
 body, h1, h2, h3, h4, h5, h6, input, textarea, select, button {
   font-family: "Tajawal", sans-serif !important;
 }
-main, #main-content, .sf-main {
-  overflow-y: scroll;
-  scrollbar-gutter: stable;
-}
 @layer theme, base, components, utilities;
 @layer theme {
   :root, :host {
@@ -771,6 +767,9 @@ main, #main-content, .sf-main {
   }
   .col-span-3 {
     grid-column: span 3 / span 3;
+  }
+  .col-span-4 {
+    grid-column: span 4 / span 4;
   }
   .col-span-6 {
     grid-column: span 6 / span 6;
@@ -13303,11 +13302,11 @@ input[readonly], textarea[readonly] {
   text-align: center;
   white-space: nowrap;
   background: #f9fafb;
-  color: #374151;
-  font-weight: 500;
+  color: #0f766e;
+  font-weight: 600;
   font-size: 14px;
   letter-spacing: -0.1px;
-  line-height: 1.25;
+  line-height: 1.85;
   font-family: "Inter", "Tajawal", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -13736,7 +13735,7 @@ input[readonly], textarea[readonly] {
   }
 }
 .select-sm {
-  height: calc(var(--spacing) * 9);
+  height: calc(var(--spacing) * 8.5);
   width: calc(var(--spacing) * 20);
   border-radius: var(--radius-sm);
   border-style: var(--tw-border-style);
@@ -13815,7 +13814,7 @@ input[readonly], textarea[readonly] {
   &:focus {
     --tw-ring-color: var(--color-emerald-700);
   }
-  height: calc(var(--spacing) * 9);
+  height: calc(var(--spacing) * 8.5);
   border-radius: var(--radius-sm);
   padding-inline: calc(var(--spacing) * 3);
   display: inline-flex;
@@ -14310,11 +14309,11 @@ input[readonly], textarea[readonly] {
   box-shadow: 0 0 0 0px var(--sf-focus-ring);
 }
 .sf-modal .form-group > label, .sf-modal .form-label, .sf-modal .sf-label {
-  margin-bottom: 6px;
+  margin-bottom: 3px;
   display: block;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #4b5563;
+  font-size: 0.975rem;
+  font-weight: 500;
+  color: #434d59;
 }
 .sf-modal .sf-field-wrap {
   position: relative;
@@ -14702,11 +14701,12 @@ header, .sf-header, .navbar {
   color: var(--color-gray-900);
   letter-spacing: -0.2px;
   font-weight: 500;
-  font-size: 17px;
+  font-size: 16px;
+  color: #0f766e;
 }
 .sf-panel-title i {
-  font-size: 14px;
-  color: #293545;
+  font-size: 15px;
+  color: #0f766e;
   opacity: 1;
 }
 .sf-panel-body {

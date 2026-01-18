@@ -256,7 +256,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = rowIdField, Type = "hidden" },
 
                 new FieldConfig { Name = "p01", Label = "رقم الهوية", Type = "nationalid", ColCss = "6",Icon = "fa-solid fa-address-card"  },
-                new FieldConfig { Name = "p02", Label = "الرقم العام", Type = "number", ColCss = "6", Required = true , Icon = "fa-solid fa-user-tag" },
+                new FieldConfig { Name = "p02", Label = "الرقم العام", Type = "number", ColCss = "6", Required = true , Icon = "fa-solid fa-user-tag",Autocomplete="off" },
                 
 
 
@@ -362,6 +362,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 QuickSearchFields = dynamicColumns.Select(c => c.Field).Take(4).ToList(),
                 Searchable = true,
                 AllowExport = true,
+                ShowPageSizeSelector=true,
                 PanelTitle = "المستفيدين",
                 //TabelLabel = "بيانات المستفيدين",
                 //TabelLabelIcon = "fa-solid fa-user-group",
