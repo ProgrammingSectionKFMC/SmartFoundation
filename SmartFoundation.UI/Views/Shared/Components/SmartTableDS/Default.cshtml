@@ -112,11 +112,20 @@
 
             @* البحث فقط يتبع searchable *@
             <div class="toolbar-search" x-show="searchable">
-                <input type="text"
+                @* <input type="text"
                        class="sf-input search-input"
                        x-model="q"
                        x-on:input.debounce.500="debouncedSearch()"
-                       :placeholder="searchPlaceholder" />
+                       :placeholder="searchPlaceholder" /> *@
+                        <input type="text"
+                               class="sf-input search-input"
+                               name="tableSearch"
+                               x-model="q"
+                               x-on:input.debounce.500="debouncedSearch()"
+                               :placeholder="searchPlaceholder"
+                               aria-label="بحث" />
+
+
 
                 <button type="button"
                         class="btn btn-secondary"
@@ -154,7 +163,7 @@
                     <div class="toolbar-actions">
 
                         @* ✅ صف/صفحة (يتبع ShowPageSizeSelector) *@
-                        <template x-if="showPageSizeSelector">
+                        @* <template x-if="showPageSizeSelector">
                             <div class="inline-flex items-center gap-2">
                                 <label class="label-sm">صف/صفحة</label>
                                 <select class="sf-input select-sm"
@@ -165,7 +174,21 @@
                                     </template>
                                 </select>
                             </div>
+                        </template> *@
+                        <template x-if="showPageSizeSelector">
+                            <div class="inline-flex items-center gap-2">
+                                <label class="label-sm" for="pageSizeSelect">صف/صفحة</label>
+                                <select id="pageSizeSelect"
+                                        class="sf-input select-sm"
+                                        x-model.number="pageSize"
+                                        x-on:change="page=1; load()">
+                                    <template x-for="s in pageSizes" :key="s">
+                                        <option x-text="s"></option>
+                                    </template>
+                                </select>
+                            </div>
                         </template>
+
 
 
                 @* ===== تصدير ===== *@
