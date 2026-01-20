@@ -5,8 +5,6 @@ using Microsoft.Extensions.Options;
 namespace SmartFoundation.Mvc.Services.AiAssistant;
 
 
-public sealed record KnowledgeChunk(string Source, string Text);
-
 public sealed class FileAiKnowledgeBase : IAiKnowledgeBase
 {
     private readonly AiAssistantOptions _opt;
@@ -89,15 +87,46 @@ public sealed class FileAiKnowledgeBase : IAiKnowledgeBase
 
         string[] headers;
         if (ContainsAny(q, "اضف", "أضف", "إضافة", "اضافة", "أضيف", "اضيف"))
-            headers = new[] { "## إضافة مستفيد", "## إضافة سجل", "## إضافة" };
+            headers = new[] { 
+                "## إضافة مستفيد", 
+                "## إضافة مبنى", 
+                "## إضافة فئة جديدة",  // ✅ إضافة
+                "## إضافة سجل", 
+                "## إضافة" 
+            };
         else if (ContainsAny(q, "عدل", "تعديل", "تحديث", "عدّل", "تعديل بيانات"))
-            headers = new[] { "## تعديل مستفيد", "## تعديل سجل", "## تعديل" };
+            headers = new[] { 
+                "## تعديل مستفيد", 
+                "## تعديل مبنى", 
+                "## تعديل فئة موجودة",  // ✅ إضافة
+                "## تعديل سجل", 
+                "## تعديل" 
+            };
         else if (ContainsAny(q, "حذف", "امسح", "مسح", "إزالة", "ازالة"))
-            headers = new[] { "## حذف مستفيد", "## حذف سجل", "## حذف" };
+            headers = new[] { 
+                "## حذف مستفيد", 
+                "## حذف مبنى", 
+                "## حذف فئة",  // ✅ إضافة
+                "## حذف سجل", 
+                "## حذف" 
+            };
         else if (ContainsAny(q, "بحث", "ابحث", "البحث", "فلتر", "تصفية"))
-            headers = new[] { "## البحث عن مستفيد", "## البحث", "## Search" };
-        else if (ContainsAny(q, "طباعة", "اطبع", "طبع", "تقرير", "PDF"))
-            headers = new[] { "## طباعة تقرير المستفيدين", "## الطباعة", "## طباعة" };
+            headers = new[] { 
+                "## البحث عن مستفيد", 
+                "## البحث عن مبنى", 
+                "## البحث والتصفية",  // ✅ إضافة (لـ BuildingClass)
+                "## البحث", 
+                "## Search" 
+            };
+        else if (ContainsAny(q, "طباعة", "اطبع", "طبع", "تقرير", "PDF", "تصدير", "صدّر", "excel"))
+            headers = new[] { 
+                "## طباعة تقرير المستفيدين", 
+                "## طباعة تقرير المباني", 
+                "## التصدير",  // ✅ إضافة (لـ BuildingClass)
+                "## الطباعة", 
+                "## طباعة",
+                "## تصدير البيانات"
+            };
         else
             headers = Array.Empty<string>();
 

@@ -3,6 +3,9 @@ using LLama.Common;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 using System.Text;
+using SmartFoundation.DataEngine.Core.Interfaces;
+using SmartFoundation.DataEngine.Core.Models;
+using SmartFoundation.Application.Mapping; // ✅ إضافة
 
 namespace SmartFoundation.Mvc.Services.AiAssistant;
 
@@ -11,28 +14,23 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
     private readonly IAiKnowledgeBase _kb;
     private readonly AiAssistantOptions _opt;
     private readonly ILogger<EmbeddedLlamaChatService> _log;
+    private readonly ISmartComponentService? _dataEngine;
+    private readonly LLamaModelHolder _modelHolder;
 
     private readonly SemaphoreSlim _gate;
-    private readonly LLamaWeights _weights;
     private readonly LLamaContext _context;
-    private readonly string _modelPath;
 
-    // ========= General Chat =========
-    private const string GeneralChatSourceHint = "General_Chat"; // عدّلها لو اسم الملف/السورس مختلف
-    private const int GeneralChatMaxAnswerLen = 600;
+    private const string GeneralChatSourceHint = "General_Chat";
+    private const int GeneralChatMaxAnswerLen = 1500;
 
-    // =========================
-    // Entities (screens)
-    // =========================
     private static readonly (string Key, string Label, string[] Keywords)[] Entities =
     {
-        ("Residents",       "مستفيد", new[] { "مستفيد", "المستفيد", "المستفيدين", "ساكن", "Residents" }),
-        ("BuildingDetails", "مبنى",   new[] { "مبنى", "المباني", "Building", "BuildingDetails" }),
+        ("Residents", "مستفيد", new[] { "مستفيد", "المستفيد", "المستفيدين", "ساكن", "Residents" }),
+        ("BuildingDetails", "مبنى" , new[] { "مبنى", "المباني", "Building", "BuildingDetails" }),
+        ("BuildingClass", "فئة مبنى" , new[] { "فئة مبنى", "فئات المباني", "تصنيف مبنى", "تصنيفات المباني", "نوع مبنى", "أنواع المباني", "BuildingClass" }),
+        ("ResidentClass", "فئة مستفيد" , new[] { "فئة مستفيد", "فئات المستفيدين", "تصنيف مستفيد", "تصنيفات المستفيدين", "نوع مستفيد", "أنواع المستفيدين", "ResidentClass" }),
     };
 
-    // =========================
-    // Pending intent between turns (disambiguation follow-up)
-    // =========================
     private sealed class PendingState
     {
         public string Intent { get; set; } = "";
@@ -46,302 +44,283 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
     public EmbeddedLlamaChatService(
         IAiKnowledgeBase kb,
         IOptions<AiAssistantOptions> opt,
-        IWebHostEnvironment env,
-        ILogger<EmbeddedLlamaChatService> log)
+        LLamaModelHolder modelHolder,
+        ILogger<EmbeddedLlamaChatService> log,
+        ISmartComponentService? dataEngine = null)
     {
         _kb = kb;
         _opt = opt.Value;
         _log = log;
+        _dataEngine = dataEngine;
+        _modelHolder = modelHolder;
 
         _gate = new SemaphoreSlim(Math.Max(1, _opt.MaxParallelRequests));
 
-        _modelPath = _opt.ModelPath ?? "AiModels\\model.gguf";
-        if (!Path.IsPathRooted(_modelPath))
-            _modelPath = Path.Combine(env.ContentRootPath, _modelPath);
-
-        if (!File.Exists(_modelPath))
-            throw new FileNotFoundException($"AI model not found: {_modelPath}");
-
-        var p = new ModelParams(_modelPath)
+        _context = _modelHolder.Weights.CreateContext(new ModelParams(_modelHolder.ModelPath)
         {
-            ContextSize = (uint)Math.Clamp(_opt.ContextSize, 512, 8192),
-            Threads = Math.Max(1, _opt.Threads),
-        };
-
-        _weights = LLamaWeights.LoadFromFile(p);
-        _context = _weights.CreateContext(p);
+            ContextSize = _modelHolder.ContextSize,
+            Threads = _modelHolder.Threads
+        });
 
         _log.LogInformation(
-            "Embedded LLM loaded: {Path} | ctx={Ctx} | threads={Threads}",
-            _modelPath, _opt.ContextSize, _opt.Threads);
+            "EmbeddedLlamaChatService instance created (Scoped) using model: {Path}",
+            _modelHolder.ModelPath);
     }
 
     public async Task<AiChatResult> ChatAsync(AiChatRequest request, CancellationToken ct)
     {
-        CleanupPending();
+        var startTime = DateTimeOffset.UtcNow;
 
-        var originalMsg = (request.Message ?? "").Trim();
-        if (string.IsNullOrWhiteSpace(originalMsg))
-            return new AiChatResult("🙂", Array.Empty<KnowledgeChunk>());
+        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
+        var combinedCt = linkedCts.Token;
 
-        var msg = originalMsg;
-        var pageKey = ResolvePageKey(request);
-        var convoKey = ResolveConversationKey(request);
-
-        _log.LogInformation(
-            "AI_CHAT: convoKey='{ConvoKey}', userIdField='{UserId}', ConversationId='{ConversationId}', ClientId='{ClientId}', pageKey='{PageKey}', msg='{Msg}'",
-            convoKey ?? "",
-            GetPropString(request, "userId") ?? "",
-            GetPropString(request, "ConversationId") ?? "",
-            GetPropString(request, "ClientId") ?? "",
-            pageKey ?? "",
-            originalMsg.Replace("\n", " ").Trim()
-        );
-
-        // 1) Intent from message
-        var intent = NormalizeIntent(originalMsg);
-
-        // 2) Detect entity from current message
-        var entityHits = DetectEntities(originalMsg);
-
-        // 3) Follow-up: if user answered only entity after disambiguation question
-        string? selectedEntityKey = null;
-
-        if (string.IsNullOrWhiteSpace(intent) &&
-            entityHits.Count == 1 &&
-            IsShortEntityAnswer(originalMsg) &&
-            !string.IsNullOrWhiteSpace(convoKey) &&
-            _pending.TryGetValue(convoKey, out var pendingState) &&
-            DateTimeOffset.UtcNow - pendingState.At <= PendingTtl &&
-            !string.IsNullOrWhiteSpace(pendingState.Intent))
+        try
         {
+            CleanupPending();
+
+            var originalMsg = (request.Message ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(originalMsg))
+                return await SaveAndReturn(request, startTime, "🙂", Array.Empty<KnowledgeChunk>(), null, null);
+
+            var msg = originalMsg;
+            var pageKey = ResolvePageKey(request);
+            var convoKey = ResolveConversationKey(request);
+
             _log.LogInformation(
-                "AI_CHAT: PENDING_HIT key='{ConvoKey}' intent='{Intent}' original='{Original}'",
-                convoKey ?? "",
-                pendingState.Intent ?? "",
-                pendingState.OriginalMessage ?? ""
+                "AI_CHAT: convoKey='{ConvoKey}', pageKey='{PageKey}', msg='{Msg}'",
+                convoKey ?? "", pageKey ?? "", originalMsg.Replace("\n", " ").Trim()
             );
 
-            intent = pendingState.Intent;
-            selectedEntityKey = entityHits[0].Key;
+            var intent = NormalizeIntent(originalMsg);
+            var entityHits = DetectEntities(originalMsg);
+            string? selectedEntityKey = null;
 
-            // use the original pending question as msg for retrieval
-            if (!string.IsNullOrWhiteSpace(pendingState.OriginalMessage))
-                msg = pendingState.OriginalMessage;
-        }
-
-        // 4) If entity-only and no pending intent -> ask action
-        if (string.IsNullOrWhiteSpace(intent) &&
-            selectedEntityKey is null &&
-            entityHits.Count == 1 &&
-            IsShortEntityAnswer(originalMsg))
-        {
-            var label = entityHits[0].Label;
-            return new AiChatResult(
-                $"ماذا تريد أن تعمل في {label}؟ إضافة؟ تعديل؟ حذف؟ بحث؟ طباعة؟",
-                Array.Empty<KnowledgeChunk>()
-            );
-        }
-
-        // =========================
-        // GENERAL CHAT (NO INTENT) – answer from General_Chat ONLY
-        // =========================
-        if (string.IsNullOrWhiteSpace(intent))
-        {
-            if (TryAnswerFromGeneralChat(originalMsg, out var generalAnswer, out var usedGeneral))
+            if (string.IsNullOrWhiteSpace(intent) &&
+                entityHits.Count == 1 &&
+                IsShortEntityAnswer(originalMsg) &&
+                !string.IsNullOrWhiteSpace(convoKey) &&
+                _pending.TryGetValue(convoKey, out var pendingState) &&
+                DateTimeOffset.UtcNow - pendingState.At <= PendingTtl &&
+                !string.IsNullOrWhiteSpace(pendingState.Intent))
             {
+                _log.LogInformation(
+                    "AI_CHAT: PENDING_HIT key='{ConvoKey}' intent='{Intent}' original='{Original}'",
+                    convoKey ?? "", pendingState.Intent ?? "", pendingState.OriginalMessage ?? ""
+                );
+
+                intent = pendingState.Intent;
+                selectedEntityKey = entityHits[0].Key;
+
+                if (!string.IsNullOrWhiteSpace(pendingState.OriginalMessage))
+                    msg = pendingState.OriginalMessage;
+            }
+
+            if (string.IsNullOrWhiteSpace(intent) &&
+                selectedEntityKey is null &&
+                entityHits.Count == 1 &&
+                IsShortEntityAnswer(originalMsg))
+            {
+                var label = entityHits[0].Label;
+                return await SaveAndReturn(
+                    request, startTime,
+                    $"ماذا تريد أن تعمل في {label}؟ إضافة؟ تعديل؟ حذف؟ بحث؟ طباعة؟",
+                    Array.Empty<KnowledgeChunk>(),
+                    entityHits[0].Key,
+                    null
+                );
+            }
+
+            if (string.IsNullOrWhiteSpace(intent))
+            {
+                if (TryAnswerFromGeneralChat(originalMsg, out var generalAnswer, out var usedGeneral))
+                {
+                    if (!string.IsNullOrWhiteSpace(convoKey))
+                        _pending.TryRemove(convoKey, out _);
+
+                    return await SaveAndReturn(request, startTime, generalAnswer, usedGeneral, null, null);
+                }
+            }
+
+            var isProcedural = !string.IsNullOrWhiteSpace(intent);
+            var topK = Math.Max(8, _opt.RetrievalTopK);
+
+            var searchQuery = msg;
+            if (!string.IsNullOrWhiteSpace(selectedEntityKey))
+                searchQuery = $"{msg} {GetEntityLabel(selectedEntityKey)}";
+
+            _log.LogInformation(
+                "AI_CHAT: intent='{Intent}', selectedEntity='{Entity}', searchQuery='{Q}', topK={TopK}",
+                intent ?? "", selectedEntityKey ?? "", searchQuery ?? "", topK
+            );
+
+            var citations = _kb.Search(searchQuery, topK);
+
+            if (citations.Count > 0)
+            {
+                citations = citations
+                    .Where(c => c.Source?.Contains(GeneralChatSourceHint, StringComparison.OrdinalIgnoreCase) != true)
+                    .ToList();
+            }
+
+            if (isProcedural)
+            {
+                var detected = DetectEntities(originalMsg);
+
+                if (!string.IsNullOrWhiteSpace(selectedEntityKey))
+                {
+                    detected = new List<(string Key, string Label)>
+                    {
+                        (selectedEntityKey, GetEntityLabel(selectedEntityKey))
+                    };
+                }
+
+                if (detected.Count == 0 && !string.IsNullOrWhiteSpace(pageKey) && IsKnownEntity(pageKey))
+                    detected.Add((pageKey, GetEntityLabel(pageKey)));
+
+                if (detected.Count == 0)
+                {
+                    if (!string.IsNullOrWhiteSpace(convoKey))
+                    {
+                        _log.LogInformation("AI_CHAT: PENDING_SET key='{ConvoKey}' intent='{Intent}'", convoKey ?? "", intent ?? "");
+                        _pending[convoKey] = new PendingState { Intent = intent, OriginalMessage = originalMsg, At = DateTimeOffset.UtcNow };
+                    }
+
+                    return await SaveAndReturn(
+                        request, startTime,
+                        BuildDisambiguationQuestion(intent, Entities.Select(e => e.Label).ToArray()),
+                        citations, null, intent
+                    );
+                }
+
+                if (detected.Count > 1)
+                {
+                    if (!string.IsNullOrWhiteSpace(convoKey))
+                        _pending[convoKey] = new PendingState { Intent = intent, OriginalMessage = originalMsg, At = DateTimeOffset.UtcNow };
+
+                    var opts = detected.Select(x => x.Label).Distinct().ToArray();
+                    return await SaveAndReturn(
+                        request, startTime,
+                        BuildDisambiguationQuestion(intent, opts),
+                        citations, null, intent
+                    );
+                }
+
+                var entityKey = detected[0].Key;
+
+                if (citations.Count > 0)
+                {
+                    var filtered = citations
+                        .Where(c => !string.IsNullOrWhiteSpace(c.Source) &&
+                                    c.Source.Contains(entityKey, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+
+                    if (filtered.Count > 0)
+                        citations = filtered;
+                }
+
+                if (citations.Count == 0)
+                {
+                    var suggestions = GetSuggestions(entityKey);
+                    return await SaveAndReturn(
+                        request, startTime,
+                        $"لم أجد معلومات محددة لهذا السؤال.\n\n{suggestions}",
+                        citations, entityKey, intent
+                    );
+                }
+
+                var header = ResolveHeader(entityKey, intent);
+                if (string.IsNullOrWhiteSpace(header))
+                {
+                    var suggestions = GetSuggestions(entityKey);
+                    return await SaveAndReturn(
+                        request, startTime,
+                        $"لا يوجد شرح لهذه العملية في الدليل الحالي.\n\n{suggestions}",
+                        citations, entityKey, intent
+                    );
+                }
+
+                string? best = null;
+                var tryCount = Math.Min(6, citations.Count);
+                var fullDocCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+                for (int i = 0; i < tryCount; i++)
+                {
+                    combinedCt.ThrowIfCancellationRequested();
+
+                    var c = citations[i];
+                    var text = c.Text ?? "";
+
+                    if (!ContainsAny(text, "## إضافة", "## تعديل", "## حذف", "## طباعة", "## تصدير", "## البحث"))
+                    {
+                        if (!string.IsNullOrWhiteSpace(c.Source))
+                        {
+                            if (!fullDocCache.TryGetValue(c.Source, out var cached))
+                            {
+                                cached = _kb.GetDocumentBySource(c.Source) ?? "";
+                                fullDocCache[c.Source] = cached;
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(cached))
+                                text = cached;
+                        }
+                    }
+
+                    var extracted = ExtractSection(text, header);
+                    if (!string.IsNullOrWhiteSpace(extracted) &&
+                        !extracted.Equals(header, StringComparison.OrdinalIgnoreCase))
+                    {
+                        best = extracted;
+                        break;
+                    }
+                }
+
+                string answerText;
+                if (string.IsNullOrWhiteSpace(best) || best.Equals(header, StringComparison.OrdinalIgnoreCase))
+                {
+                    var suggestions = GetSuggestions(entityKey);
+                    answerText = $"السؤال غير واضح، ممكن تحدد سؤالك؟\n\n{suggestions}";
+                }
+                else
+                {
+                    answerText = best;
+                    answerText = RemoveKeywords(answerText);
+                    answerText = TrimToSingleSection(answerText);
+                    answerText = answerText.Trim();
+                }
+
+                if (string.IsNullOrWhiteSpace(answerText))
+                    answerText = "لا يوجد قسم مطابق لهذا السؤال في الدليل الحالي.";
+
                 if (!string.IsNullOrWhiteSpace(convoKey))
                     _pending.TryRemove(convoKey, out _);
 
-                return new AiChatResult(generalAnswer, usedGeneral);
-            }
-        }
-
-        // =========================
-        // PROCEDURAL PATH
-        // =========================
-        var isProcedural = !string.IsNullOrWhiteSpace(intent);
-
-        // retrieval
-        var topK = isProcedural ? Math.Max(8, _opt.RetrievalTopK) : Math.Max(8, _opt.RetrievalTopK);
-
-        var searchQuery = msg;
-        if (!string.IsNullOrWhiteSpace(selectedEntityKey))
-            searchQuery = $"{msg} {GetEntityLabel(selectedEntityKey)}";
-
-        _log.LogInformation(
-            "AI_CHAT: intent='{Intent}', selectedEntity='{Entity}', msg='{Msg}', searchQuery='{Q}', topK={TopK}",
-            intent ?? "",
-            selectedEntityKey ?? "",
-            msg ?? "",
-            searchQuery ?? "",
-            topK
-        );
-
-        var citations = _kb.Search(searchQuery, topK);
-
-        // prevent General_Chat from interfering with procedural answers
-        if (citations.Count > 0)
-        {
-            citations = citations
-                .Where(c => c.Source?.Contains(GeneralChatSourceHint, StringComparison.OrdinalIgnoreCase) != true)
-                .ToList();
-        }
-
-        if (isProcedural)
-        {
-            // Resolve entity from ORIGINAL message
-            var detected = DetectEntities(originalMsg);
-
-            if (!string.IsNullOrWhiteSpace(selectedEntityKey))
-            {
-                detected = new List<(string Key, string Label)>
-                {
-                    (selectedEntityKey, GetEntityLabel(selectedEntityKey))
-                };
-            }
-
-            if (detected.Count == 0 && !string.IsNullOrWhiteSpace(pageKey) && IsKnownEntity(pageKey))
-                detected.Add((pageKey, GetEntityLabel(pageKey)));
-
-            if (detected.Count == 0)
-            {
-                if (!string.IsNullOrWhiteSpace(convoKey))
-                {
-                    _log.LogInformation(
-                        "AI_CHAT: PENDING_SET key='{ConvoKey}' intent='{Intent}' original='{Original}'",
-                        convoKey ?? "",
-                        intent ?? "",
-                        originalMsg ?? ""
-                    );
-
-                    _pending[convoKey] = new PendingState
-                    {
-                        Intent = intent,
-                        OriginalMessage = originalMsg,
-                        At = DateTimeOffset.UtcNow
-                    };
-                }
-
-                return new AiChatResult(
-                    BuildDisambiguationQuestion(intent, Entities.Select(e => e.Label).ToArray()),
-                    citations
-                );
-            }
-
-            if (detected.Count > 1)
-            {
-                if (!string.IsNullOrWhiteSpace(convoKey))
-                {
-                    _pending[convoKey] = new PendingState
-                    {
-                        Intent = intent,
-                        OriginalMessage = originalMsg,
-                        At = DateTimeOffset.UtcNow
-                    };
-                }
-
-                var opts = detected.Select(x => x.Label).Distinct().ToArray();
-                return new AiChatResult(
-                    BuildDisambiguationQuestion(intent, opts),
-                    citations
-                );
-            }
-
-            var entityKey = detected[0].Key;
-
-            // Prefer citations from same entity/source
-            if (citations.Count > 0)
-            {
-                var filtered = citations
-                    .Where(c => !string.IsNullOrWhiteSpace(c.Source) &&
-                                c.Source.Contains(entityKey, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
-
-                if (filtered.Count > 0)
-                    citations = filtered;
+                return await SaveAndReturn(request, startTime, answerText, citations, entityKey, intent);
             }
 
             if (citations.Count == 0)
             {
-                return new AiChatResult(
-                    "لا يوجد شرح لهذه العملية في الدليل الحالي.",
-                    citations
+                return await SaveAndReturn(
+                    request, startTime,
+                    "اسف مافهمتك باقي اتدرب , ممكن تسألني كيف ابحث؟ كيف اطبع تقرير ؟ كيف اعدل ؟",
+                    citations, null, null
                 );
             }
 
-            var header = ResolveHeader(entityKey, intent);
-            if (string.IsNullOrWhiteSpace(header))
+            var system = BuildSystemPrompt(request, citations);
+
+            await _gate.WaitAsync(combinedCt);
+            try
             {
-                return new AiChatResult(
-                    "لا يوجد شرح لهذه العملية في الدليل الحالي.",
-                    citations
-                );
-            }
-
-            string? best = null;
-            var tryCount = Math.Min(6, citations.Count);
-
-            for (int i = 0; i < tryCount; i++)
-            {
-                var c = citations[i];
-                var text = c.Text ?? "";
-
-                if (!ContainsAny(text, "## إضافة", "## تعديل", "## حذف", "## طباعة", "## تصدير", "## البحث"))
+                using var ctx = _modelHolder.Weights.CreateContext(new ModelParams(_modelHolder.ModelPath)
                 {
-                    var fullDoc = _kb.GetDocumentBySource(c.Source);
-                    if (!string.IsNullOrWhiteSpace(fullDoc))
-                        text = fullDoc;
-                }
+                    ContextSize = (uint)Math.Clamp(_opt.ContextSize, 512, 4096),
+                    Threads = Math.Max(1, _opt.Threads),
+                });
 
-                var extracted = ExtractSection(text, header);
-                if (!string.IsNullOrWhiteSpace(extracted) &&
-                    !extracted.Equals(header, StringComparison.OrdinalIgnoreCase))
-                {
-                    best = extracted;
-                    break;
-                }
-            }
+                var executor = new InteractiveExecutor(ctx);
 
-            var answerText = best ?? "لا يوجد قسم مطابق لهذا السؤال في الدليل الحالي.";
-            answerText = RemoveKeywords(answerText);
-            answerText = TrimToSingleSection(answerText);
-            answerText = Clip(answerText, 900).Trim();
-
-            if (string.IsNullOrWhiteSpace(answerText))
-                answerText = "لا يوجد قسم مطابق لهذا السؤال في الدليل الحالي.";
-
-            if (!string.IsNullOrWhiteSpace(convoKey))
-                _pending.TryRemove(convoKey, out _);
-
-            return new AiChatResult(answerText, citations);
-        }
-
-        // =========================
-        // Non-procedural fallback
-        // =========================
-        if (citations.Count == 0)
-        {
-            return new AiChatResult(
-                "اسف مافهمتك باقي اتدرب , ممكن تسألني كيف ابحث؟ كيف اطبع تقرير ؟ كيف اعدل ؟",
-                citations
-            );
-        }
-
-        var system = BuildSystemPrompt(request, citations);
-
-        await _gate.WaitAsync(ct);
-        try
-        {
-            using var ctx = _weights.CreateContext(new ModelParams(_modelPath)
-            {
-                ContextSize = (uint)Math.Clamp(_opt.ContextSize, 512, 4096),
-                Threads = Math.Max(1, _opt.Threads),
-            });
-
-            var executor = new InteractiveExecutor(ctx);
-
-            var prompt = $"""
+                var prompt = $"""
 [System]
 {system}
 
@@ -351,41 +330,79 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
 [Assistant]
 """;
 
-            var inferenceParams = new InferenceParams
-            {
-                MaxTokens = Math.Min(_opt.MaxTokens, 512),
-                AntiPrompts = new List<string> { "[User]", "[System]" },
-                SamplingPipeline = new LLama.Sampling.DefaultSamplingPipeline
+                var inferenceParams = new InferenceParams
                 {
-                    Temperature = (float)_opt.Temperature,
-                    Seed = 1337
+                    MaxTokens = Math.Min(_opt.MaxTokens, 512),
+                    AntiPrompts = new List<string> { "[User]", "[System]" },
+                    SamplingPipeline = new LLama.Sampling.DefaultSamplingPipeline
+                    {
+                        Temperature = (float)_opt.Temperature,
+                        Seed = 1337
+                    }
+                };
+
+                var sb = new StringBuilder();
+                await foreach (var piece in executor.InferAsync(prompt, inferenceParams, combinedCt))
+                {
+                    sb.Append(piece);
+                    if (sb.Length > 2000) break;
                 }
-            };
 
-            var sb = new StringBuilder();
-            await foreach (var piece in executor.InferAsync(prompt, inferenceParams, ct))
-            {
-                sb.Append(piece);
-                if (sb.Length > 2000) break;
+                var answer = sb.ToString().Trim();
+                answer = CleanLlmArtifacts(answer);
+
+                if (string.IsNullOrWhiteSpace(answer))
+                    answer = "عذرا السوال غير واضح او الاتصال ضعيف حاول السؤال يكون اكثر تحديدا .";
+
+                return await SaveAndReturn(request, startTime, answer, citations, null, null);
             }
-
-            var answer = sb.ToString().Trim();
-            answer = CleanLlmArtifacts(answer);
-
-            if (string.IsNullOrWhiteSpace(answer))
-                answer = "لم أستطع توليد رد.";
-
-            return new AiChatResult(answer, citations);
+            finally
+            {
+                _gate.Release();
+            }
         }
-        finally
+        catch (OperationCanceledException) when (timeoutCts.Token.IsCancellationRequested)
         {
-            _gate.Release();
+            _log.LogWarning("AI_TIMEOUT: Request took longer than 30 seconds");
+            return await SaveAndReturn(
+                request, startTime,
+                "معليش، الاتصال ضعيف أو السؤال معقد. حاول تكون أكثر تفصيلاً في السؤال.\n\nمثلاً بدلاً من \"كيف أضيف؟\" اكتب \"كيف أضيف مستفيد؟\"",
+                Array.Empty<KnowledgeChunk>(), null, null
+            );
+        }
+        catch (OperationCanceledException)
+        {
+            _log.LogInformation("AI_CANCELLED: Request cancelled by user");
+            return await SaveAndReturn(
+                request, startTime,
+                "تم إيقاف العملية.",
+                Array.Empty<KnowledgeChunk>(), null, null
+            );
         }
     }
 
-    // =========================================================
-    // GENERAL CHAT: forced retrieval of General_Chat + parse blocks
-    // =========================================================
+    private async Task<AiChatResult> SaveAndReturn(
+        AiChatRequest request,
+        DateTimeOffset startTime,
+        string answer,
+        IReadOnlyList<KnowledgeChunk> citations,
+        string? entityKey,
+        string? intent)
+    {
+        var responseTime = (int)(DateTimeOffset.UtcNow - startTime).TotalMilliseconds;
+
+        var chatId = await SaveChatHistoryAsync(
+            request, answer, entityKey, intent, responseTime, citations?.Count ?? 0
+        );
+
+        return new AiChatResult(answer, citations)
+        {
+            ChatId = chatId,
+            EntityKey = entityKey,
+            Intent = intent
+        };
+    }
+
     private bool TryAnswerFromGeneralChat(
         string userMsg,
         out string answer,
@@ -397,7 +414,6 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
         userMsg ??= "";
         var q = NormalizeForMatch(userMsg);
 
-        // 1) Force the KB to surface General_Chat sources
         var forced = _kb.Search($"{GeneralChatSourceHint} {userMsg}", Math.Max(10, _opt.RetrievalTopK));
 
         var hits = forced
@@ -407,7 +423,6 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
 
         if (hits.Count == 0)
         {
-            // 2) fallback: search only by General_Chat hint
             var forced2 = _kb.Search(GeneralChatSourceHint, Math.Max(10, _opt.RetrievalTopK));
             hits = forced2
                 .Where(c => !string.IsNullOrWhiteSpace(c.Source) &&
@@ -418,7 +433,6 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
                 return false;
         }
 
-        // Prefer getting the full document
         var bestSource = hits[0].Source!;
         var fullDoc = _kb.GetDocumentBySource(bestSource);
 
@@ -469,7 +483,7 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
                 continue;
             }
 
-            i++; // after [KEYWORDS]
+            i++;
             var kw = new List<string>();
 
             while (i < lines.Length)
@@ -499,7 +513,6 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
                 if (tt == "---") break;
                 if (tt.Equals("[KEYWORDS]", StringComparison.OrdinalIgnoreCase)) break;
 
-                // ignore headings if user put them in the doc by mistake
                 if (tt.StartsWith("# ")) { i++; continue; }
 
                 sb.AppendLine(lines[i]);
@@ -559,18 +572,13 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
     private static string NormalizeForMatch(string s)
     {
         s = (s ?? "").Trim().ToLowerInvariant();
-
         s = s.Replace("؟", "").Replace("?", "");
         s = s.Replace("أ", "ا").Replace("إ", "ا").Replace("آ", "ا");
         s = s.Replace("ى", "ي").Replace("ة", "ه");
-
         while (s.Contains("  ")) s = s.Replace("  ", " ");
         return s.Trim();
     }
 
-    // =========================
-    // Disambiguation Helpers
-    // =========================
     private static string BuildDisambiguationQuestion(string intent, string[] options)
     {
         var verb = intent switch
@@ -646,9 +654,6 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
         }
     }
 
-    // =========================
-    // Page + Conversation Key
-    // =========================
     private static string ResolvePageKey(AiChatRequest request)
     {
         var v =
@@ -660,9 +665,13 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
 
         if (v.Equals("Residents", StringComparison.OrdinalIgnoreCase)) return "Residents";
         if (v.Equals("BuildingDetails", StringComparison.OrdinalIgnoreCase)) return "BuildingDetails";
+        if (v.Equals("BuildingClass", StringComparison.OrdinalIgnoreCase)) return "BuildingClass";
+        if (v.Equals("ResidentClass", StringComparison.OrdinalIgnoreCase)) return "ResidentClass";
 
         if (v.Contains("BuildingDetails", StringComparison.OrdinalIgnoreCase)) return "BuildingDetails";
         if (v.Contains("Residents", StringComparison.OrdinalIgnoreCase)) return "Residents";
+        if (v.Contains("BuildingClass", StringComparison.OrdinalIgnoreCase)) return "BuildingClass";
+        if (v.Contains("ResidentClass", StringComparison.OrdinalIgnoreCase)) return "ResidentClass";
 
         return v;
     }
@@ -689,9 +698,6 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
         return val?.ToString();
     }
 
-    // =========================
-    // Header Resolver (Entity + Intent)
-    // =========================
     private static string ResolveHeader(string entityKey, string intent)
     {
         if (entityKey.Equals("Residents", StringComparison.OrdinalIgnoreCase))
@@ -722,12 +728,37 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
             };
         }
 
+        if (entityKey.Equals("BuildingClass", StringComparison.OrdinalIgnoreCase))
+        {
+            return intent switch
+            {
+                "ADD" => "## إضافة فئة جديدة",
+                "UPDATE" => "## تعديل فئة موجودة",
+                "DELETE" => "## حذف فئة",
+                "SEARCH" => "## البحث والتصفية",
+                "PRINT" => "## التصدير",
+                "EXPORT" => "## التصدير",
+                _ => ""
+            };
+        }
+
+        if (entityKey.Equals("ResidentClass", StringComparison.OrdinalIgnoreCase))
+        {
+            return intent switch
+            {
+                "ADD" => "## إضافة فئة",
+                "UPDATE" => "## تعديل فئة",
+                "DELETE" => "## حذف فئة",
+                "SEARCH" => "## البحث",
+                "PRINT" => "## التصدير",
+                "EXPORT" => "## التصدير",
+                _ => ""
+            };
+        }
+
         return "";
     }
 
-    // =========================
-    // Helpers
-    // =========================
     private static string ExtractSection(string text, string header)
     {
         if (string.IsNullOrWhiteSpace(text) || string.IsNullOrWhiteSpace(header))
@@ -781,14 +812,10 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
 """;
     }
 
-    // =========================
-    // Intent (Saudi dialect)
-    // =========================
     private static string NormalizeIntent(string query)
     {
         if (string.IsNullOrWhiteSpace(query)) return "";
         query = query.Trim().ToLowerInvariant();
-
         query = query.Replace("؟", "").Replace("?", "").Trim();
 
         if (ContainsAny(query,
@@ -850,10 +877,195 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
     private static string Clip(string s, int max)
         => string.IsNullOrWhiteSpace(s) ? "" : (s.Length <= max ? s : s[..max] + " ...");
 
+    private static string GetSuggestions(string entityKey)
+    {
+        if (entityKey.Equals("Residents", StringComparison.OrdinalIgnoreCase))
+        {
+            return @"**مثلاً جرّب:**
+• كيف أضيف مستفيد؟
+• كيف أعدل مستفيد؟
+• كيف أحذف مستفيد؟
+• كيف أبحث عن مستفيد؟
+• كيف أطبع تقرير المستفيدين؟";
+        }
+
+        if (entityKey.Equals("BuildingDetails", StringComparison.OrdinalIgnoreCase))
+        {
+            return @"**مثلاً جرّب:**
+• كيف أضيف مبنى؟
+• كيف أعدل مبنى؟
+• كيف أحذف مبنى؟
+• كيف أبحث عن مبنى؟
+• كيف أطبع تقرير المباني؟";
+        }
+
+        if (entityKey.Equals("BuildingClass", StringComparison.OrdinalIgnoreCase))
+        {
+            return @"**مثلاً جرّب:**
+• كيف أضيف فئة مبنى؟
+• كيف أعدل فئة مبنى؟
+• كيف أحذف فئة مبنى؟
+• كيف أبحث عن فئة مبنى؟
+• كيف أصدّر فئات المباني؟";
+        }
+
+        if (entityKey.Equals("ResidentClass", StringComparison.OrdinalIgnoreCase))
+        {
+            return @"**مثلاً جرّب:**
+• كيف أضيف فئة مستفيد؟
+• كيف أعدل فئة مستفيد؟
+• كيف أحذف فئة مستفيد؟
+• كيف أبحث عن فئة مستفيد؟
+• كيف أصدّر فئات المستفيدين؟";
+        }
+
+        return @"**مثلاً جرّب:**
+• كيف أضيف؟
+• كيف أعدل؟
+• كيف أحذف؟
+• كيف أبحث؟
+• كيف أطبع تقرير؟";
+    }
+
+    private async Task<long> SaveChatHistoryAsync(
+        AiChatRequest request,
+        string answer,
+        string? entityKey,
+        string? intent,
+        int responseTimeMs,
+        int citationsCount)
+    {
+        if (_dataEngine is null)
+        {
+            _log.LogWarning("AI_SAVE_SKIPPED: DataEngine is null");
+            return 0;
+        }
+
+        try
+        {
+            var userId = GetPropString(request, "UserId");
+            var idaraId = GetPropString(request, "IdaraId") ?? "1";
+
+            // ✅ Debug: اطبع القيم قبل الإرسال
+            _log.LogInformation(
+                "AI_DEBUG_BEFORE_SEND: pageName_='AiChatHistory', ActionType='SAVEAICHATHISTORY', UserId={UserId}",
+                userId ?? "NULL"
+            );
+
+            var parameters = new Dictionary<string, object?>
+            {
+                { "pageName_", "AiChatHistory" },
+                { "ActionType", "SAVEAICHATHISTORY" },
+                { "idaraID", int.TryParse(idaraId, out var idaraIdInt) ? idaraIdInt : 1 },
+                { "entrydata", !string.IsNullOrWhiteSpace(userId) && int.TryParse(userId, out var uid) ? uid : 1 },
+                { "hostname", request.IpAddress ?? "unknown" },
+                { "parameter_02", request.Message ?? "" },
+                { "parameter_03", answer },
+                { "parameter_09", responseTimeMs.ToString() },
+                { "parameter_10", citationsCount.ToString() }
+            };
+
+            if (!string.IsNullOrWhiteSpace(userId) && int.TryParse(userId, out var userIdInt))
+                parameters["parameter_01"] = userIdInt.ToString();
+
+            if (!string.IsNullOrWhiteSpace(request.PageName))
+                parameters["parameter_04"] = request.PageName;
+
+            if (!string.IsNullOrWhiteSpace(request.PageTitle))
+                parameters["parameter_05"] = request.PageTitle;
+
+            if (!string.IsNullOrWhiteSpace(request.PageUrl))
+                parameters["parameter_06"] = request.PageUrl;
+
+            if (!string.IsNullOrWhiteSpace(entityKey))
+                parameters["parameter_07"] = entityKey;
+
+            if (!string.IsNullOrWhiteSpace(intent))
+                parameters["parameter_08"] = intent;
+
+            if (!string.IsNullOrWhiteSpace(request.IpAddress))
+                parameters["parameter_11"] = request.IpAddress;
+
+            // ✅ اطبع كل الـ parameters قبل الإرسال
+            _log.LogInformation(
+                "AI_DEBUG_PARAMS_DICT: {Params}",
+                string.Join(", ", parameters.Select(kvp => $"{kvp.Key}={kvp.Value}"))
+            );
+
+            var spName = ProcedureMapper.GetProcedureName("aichat", "saveHistory");
+            
+            _log.LogInformation("AI_DEBUG_SP_NAME: {SpName}", spName);
+
+            var spRequest = new SmartRequest
+            {
+                Operation = "sp",
+                SpName = spName,
+                Params = parameters
+            };
+
+            var response = await _dataEngine.ExecuteAsync(spRequest);
+
+            _log.LogInformation(
+                "AI_SAVE_RESPONSE: Success={Success}, DataCount={DataCount}, Message={Msg}",
+                response.Success,
+                response.Data?.Count ?? 0,
+                response.Message ?? "NULL"
+            );
+
+            if (response.Success && response.Data?.Count > 0)
+            {
+                var keys = string.Join(", ", response.Data[0].Keys);
+                _log.LogInformation("AI_SAVE_DATA_KEYS: {Keys}", keys);
+
+                var values = string.Join(", ", response.Data[0].Values.Select(v => v?.ToString() ?? "NULL"));
+                _log.LogInformation("AI_SAVE_DATA_VALUES: {Values}", values);
+
+                foreach (var key in response.Data[0].Keys)
+                {
+                    _log.LogInformation("AI_SAVE_KEY_CHECK: '{Key}' = '{Value}'", 
+                        key, 
+                        response.Data[0][key]?.ToString() ?? "NULL");
+                }
+
+                var chatIdKey = response.Data[0].Keys
+                    .FirstOrDefault(k => k.Equals("ChatId", StringComparison.OrdinalIgnoreCase));
+
+                if (chatIdKey != null)
+                {
+                    var chatId = Convert.ToInt64(response.Data[0][chatIdKey]);
+                    _log.LogInformation("AI_HISTORY_SAVED: ChatId={ChatId} ✅", chatId);
+                    return chatId;
+                }
+                else
+                {
+                    _log.LogWarning(
+                        "AI_SAVE_WARNING: ChatId key not found! Available keys: {Keys}",
+                        keys
+                    );
+                }
+            }
+            else
+            {
+                _log.LogWarning(
+                    "AI_SAVE_FAILED: Success={Success}, Message={Msg}",
+                    response.Success,
+                    response.Message ?? "NULL"
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "Failed to save chat history");
+        }
+
+        return 0;
+    }
+
+    // ✅ Force connection pool refresh
+
     public void Dispose()
     {
-        try { _context.Dispose(); } catch { }
-        try { _weights.Dispose(); } catch { }
-        try { _gate.Dispose(); } catch { }
+        try { _context?.Dispose(); } catch { }
+        try { _gate?.Dispose(); } catch { }
     }
 }

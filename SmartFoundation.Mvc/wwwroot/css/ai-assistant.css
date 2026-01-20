@@ -33,35 +33,24 @@
     transition: transform .15s ease, box-shadow .15s ease;
 }
 
-    .sf-ai-btn .sf-ai-icon {
-        font-size: 20px;
-        line-height: 1;
-    }
+.sf-ai-btn .sf-ai-icon {
+    font-size: 20px;
+    line-height: 1;
+}
 
-    .sf-ai-btn .sf-ai-text {
-        white-space: nowrap;
-    }
-
-    /* hover/active */
-    .sf-ai-btn:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 14px 30px rgba(0,0,0,0.28);
-    }
-
-    .sf-ai-btn:active {
-        transform: translateY(0px);
-    }
-
-/* Optional: show text only on hover (uncomment if you want)
 .sf-ai-btn .sf-ai-text {
-    max-width: 0;
-    overflow: hidden;
-    transition: max-width .25s ease;
+    white-space: nowrap;
 }
-.sf-ai-btn:hover .sf-ai-text {
-    max-width: 140px;
+
+/* hover/active */
+.sf-ai-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 30px rgba(0,0,0,0.28);
 }
-*/
+
+.sf-ai-btn:active {
+    transform: translateY(0px);
+}
 
 /* =========================
    Panel
@@ -84,10 +73,10 @@
     direction: rtl;
 }
 
-    .sf-ai-panel.open {
-        display: flex;
-        flex-direction: column;
-    }
+.sf-ai-panel.open {
+    display: flex;
+    flex-direction: column;
+}
 
 .sf-ai-header {
     display: flex;
@@ -125,9 +114,9 @@
     line-height: 1;
 }
 
-    .sf-ai-close:hover {
-        background: rgba(255,255,255,0.18);
-    }
+.sf-ai-close:hover {
+    background: rgba(255,255,255,0.18);
+}
 
 /* =========================
    Messages
@@ -157,15 +146,15 @@
     flex: 0 0 auto;
 }
 
-    .sf-ai-avatar.bot {
-        background: #e0f2fe;
-        color: #0c4a6e;
-    }
+.sf-ai-avatar.bot {
+    background: #e0f2fe;
+    color: #0c4a6e;
+}
 
-    .sf-ai-avatar.user {
-        background: #dcfce7;
-        color: #14532d;
-    }
+.sf-ai-avatar.user {
+    background: #dcfce7;
+    color: #14532d;
+}
 
 .sf-ai-bubble {
     max-width: 85%;
@@ -179,14 +168,22 @@
     word-break: break-word;
 }
 
-    .sf-ai-bubble.user {
-        background: #f0fdf4;
-        border-color: rgba(20, 83, 45, 0.15);
-    }
+.sf-ai-bubble.user {
+    background: #f0fdf4;
+    border-color: rgba(20, 83, 45, 0.15);
+}
 
-    .sf-ai-bubble.bot {
-        background: #fff;
-    }
+.sf-ai-bubble.bot {
+    background: #fff;
+}
+
+/* ✅ رسالة النظام (إلغاء/إيقاف) */
+.sf-ai-bubble.system {
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    color: #6b7280;
+    font-style: italic;
+}
 
 .sf-ai-meta {
     margin-top: 8px;
@@ -194,7 +191,93 @@
     color: #475569;
 }
 
-/* citations (kept) */
+/* ✅ "جاري التفكير..." مع زر الإيقاف */
+.sf-ai-msg.thinking .sf-ai-bubble {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fef3c7;
+    border-color: #fbbf24;
+}
+
+.sf-ai-thinking-indicator {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.sf-ai-thinking-indicator span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #f59e0b;
+    animation: sf-ai-bounce 1.4s infinite ease-in-out both;
+}
+
+.sf-ai-thinking-indicator span:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.sf-ai-thinking-indicator span:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+@keyframes sf-ai-bounce {
+    0%, 80%, 100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.sf-ai-thinking-text {
+    font-size: 13px;
+    color: #92400e;
+}
+
+.sf-ai-thinking-timer {
+    font-size: 11px;
+    color: #92400e;
+    font-family: monospace;
+    min-width: 30px;
+    opacity: 0.7;
+}
+
+/* ✅ زر الإيقاف */
+.sf-ai-stop-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-right: auto;
+}
+
+.sf-ai-stop-btn:hover {
+    background: #dc2626;
+    transform: scale(1.05);
+}
+
+.sf-ai-stop-btn:active {
+    transform: scale(0.95);
+}
+
+.sf-ai-stop-btn svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* citations */
 .sf-ai-citations {
     margin-top: 8px;
     border-top: 1px dashed rgba(0,0,0,0.12);
@@ -219,9 +302,9 @@
     flex-direction: column;
 }
 
-    .sf-ai-cit-list.open {
-        display: flex;
-    }
+.sf-ai-cit-list.open {
+    display: flex;
+}
 
 .sf-ai-cit-item {
     background: #fff;
@@ -259,10 +342,10 @@
     outline: none;
 }
 
-    .sf-ai-input:focus {
-        border-color: rgba(2,132,199,0.55);
-        box-shadow: 0 0 0 4px rgba(2,132,199,0.12);
-    }
+.sf-ai-input:focus {
+    border-color: rgba(2,132,199,0.55);
+    box-shadow: 0 0 0 4px rgba(2,132,199,0.12);
+}
 
 .sf-ai-send {
     border: 0;
@@ -275,10 +358,10 @@
     font-size: 13px;
 }
 
-    .sf-ai-send:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-    }
+.sf-ai-send:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
 
 .sf-ai-hint {
     padding: 6px 12px 10px 12px;
@@ -298,7 +381,6 @@
         bottom: 12px;
     }
 
-    /* on mobile: show icon only to save space */
     .sf-ai-btn {
         width: 56px;
         padding: 0;
@@ -306,25 +388,22 @@
         border-radius: 50%;
     }
 
-        .sf-ai-btn .sf-ai-text {
-            display: none;
-        }
+    .sf-ai-btn .sf-ai-text {
+        display: none;
+    }
 
     .sf-ai-panel {
         width: 94vw;
         height: 70vh;
     }
 
-    /* Optional: subtle attention pulse on first load */
     @keyframes sf-ai-pulse {
         0% {
             box-shadow: 0 0 0 0 rgba(17,24,39,0.55);
         }
-
         70% {
             box-shadow: 0 0 0 14px rgba(17,24,39,0);
         }
-
         100% {
             box-shadow: 0 0 0 0 rgba(17,24,39,0);
         }
@@ -333,5 +412,37 @@
     .sf-ai-btn.sf-ai-pulse {
         animation: sf-ai-pulse 1.6s ease-out 2;
     }
+}
 
+/* =========================
+   Feedback Buttons
+   ========================= */
+
+.sf-ai-feedback {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(0,0,0,0.1);
+}
+
+.sf-ai-feedback-btn {
+    background: transparent;
+    border: 1px solid rgba(0,0,0,0.12);
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+    line-height: 1;
+}
+
+.sf-ai-feedback-btn:hover:not(:disabled) {
+    background: rgba(0,0,0,0.05);
+    transform: scale(1.15);
+    border-color: rgba(0,0,0,0.2);
+}
+
+.sf-ai-feedback-btn:disabled {
+    cursor: not-allowed;
 }

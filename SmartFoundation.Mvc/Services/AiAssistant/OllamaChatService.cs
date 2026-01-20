@@ -5,21 +5,6 @@ using Microsoft.Extensions.Options;
 
 namespace SmartFoundation.Mvc.Services.AiAssistant;
 
-public interface IAiChatService
-{
-    Task<AiChatResult> ChatAsync(AiChatRequest request, CancellationToken ct);
-}
-
-public sealed record AiChatRequest(
-    string Message,
-    string? PageTitle,
-    string? PageUrl,
-    string? UserName,
-    string? UserId,
-    string? Culture);
-
-public sealed record AiChatResult(string Answer, IReadOnlyList<KnowledgeChunk> Citations);
-
 internal sealed class OllamaChatService : IAiChatService
 {
     private readonly HttpClient _http;
@@ -90,7 +75,6 @@ internal sealed class OllamaChatService : IAiChatService
 - إن كان السؤال مرتبطًا بالصفحة الحالية فابدأ بالحديث عنها.
 
 سياق المستخدم:
-- User: {r.UserName ?? "غير معروف"} (ID: {r.UserId ?? "غير معروف"})
 - Page: {r.PageTitle ?? "غير محدد"} | URL: {r.PageUrl ?? "غير محدد"}
 - Culture: {r.Culture ?? "ar"}
 

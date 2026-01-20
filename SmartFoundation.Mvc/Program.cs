@@ -9,14 +9,9 @@ using QuestPDF.Infrastructure;
 using QuestPDF.Drawing;
 using SmartFoundation.Mvc.Services.Exports.Pdf;
 using SmartFoundation.Mvc.Services.AiAssistant;
-
-
-
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
-QuestPDF.Settings.License = LicenseType.Community;
-
-//For report generation
 QuestPDF.Settings.License = LicenseType.Community;
 
 var fontPath = Path.Combine(builder.Environment.WebRootPath, "fonts", "Tajawal-Regular.ttf");
@@ -25,17 +20,14 @@ using (var fs = File.OpenRead(fontPath))
     FontManager.RegisterFont(fs);
 }
 
-// MVC controllers + views
 builder.Services.AddControllersWithViews()
     .AddJsonOptions(o =>
     {
         o.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
     });
 
-// Razor Pages (required for @page pages and ViewComponents in Layout)
 builder.Services.AddRazorPages();
 
-// Session + cache
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(o =>
 {
@@ -44,7 +36,6 @@ builder.Services.AddSession(o =>
     o.Cookie.IsEssential = true;
 });
 
-// Compression
 builder.Services.AddResponseCompression();
 
 // DataEngine + DI
@@ -53,7 +44,6 @@ builder.Services.AddScoped<ISmartComponentService, SmartComponentService>();
 builder.Services.AddScoped<CrudController>();
 builder.Services.AddScoped<IPdfExportService, QuestPdfExportService>();
 
-
 // Application Layer
 builder.Services.AddApplicationServices();
 
@@ -61,20 +51,18 @@ builder.Services.AddApplicationServices();
 builder.Services.Configure<AiAssistantOptions>(builder.Configuration.GetSection("AiAssistant"));
 builder.Services.AddSingleton<IAiKnowledgeBase, FileAiKnowledgeBase>();
 
-// Select provider
-builder.Services.AddSingleton<IAiChatService>(sp =>
+// ✅ الحل: تحميل LLM Model مرة واحدة كـ Singleton منفصل
+builder.Services.AddSingleton<LLamaModelHolder>(sp =>
 {
-    var opt = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AiAssistantOptions>>().Value;
-    if (string.Equals(opt.Provider, "EmbeddedLlama", StringComparison.OrdinalIgnoreCase))
-    {
-        return ActivatorUtilities.CreateInstance<EmbeddedLlamaChatService>(sp);
-    }
-
-    // fallback: keep old Ollama if you want (optional)
-    return ActivatorUtilities.CreateInstance<OllamaChatService>(sp);
+    var opt = sp.GetRequiredService<IOptions<AiAssistantOptions>>().Value;
+    var env = sp.GetRequiredService<IWebHostEnvironment>();
+    var log = sp.GetRequiredService<ILogger<LLamaModelHolder>>();
+    
+    return new LLamaModelHolder(opt, env, log);
 });
 
-
+// ✅ تغيير من Singleton إلى Scoped
+builder.Services.AddScoped<IAiChatService, EmbeddedLlamaChatService>();
 
 var app = builder.Build();
 
@@ -84,15 +72,12 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-app.UseAuthentication(); // if you have authentication; safe to keep or remove
+app.UseAuthentication();
 app.UseAuthorization();
 
-app.UseSession(); // MUST be before endpoints; only call once
+app.UseSession();
 
-// Map Razor Pages first (Layout renders a ViewComponent that is fine in both)
 app.MapRazorPages();
-
-// Also map controllers and a default route for MVC controllers
 app.MapControllers();
 app.MapControllerRoute(
     name: "default",
