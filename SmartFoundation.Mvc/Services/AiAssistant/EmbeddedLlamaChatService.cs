@@ -5,7 +5,7 @@ using System.Collections.Concurrent;
 using System.Text;
 using SmartFoundation.DataEngine.Core.Interfaces;
 using SmartFoundation.DataEngine.Core.Models;
-using SmartFoundation.Application.Mapping; // ✅ إضافة
+using SmartFoundation.Application.Mapping;
 
 namespace SmartFoundation.Mvc.Services.AiAssistant;
 
@@ -29,6 +29,13 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
         ("BuildingDetails", "مبنى" , new[] { "مبنى", "المباني", "Building", "BuildingDetails" }),
         ("BuildingClass", "فئة مبنى" , new[] { "فئة مبنى", "فئات المباني", "تصنيف مبنى", "تصنيفات المباني", "نوع مبنى", "أنواع المباني", "BuildingClass" }),
         ("ResidentClass", "فئة مستفيد" , new[] { "فئة مستفيد", "فئات المستفيدين", "تصنيف مستفيد", "تصنيفات المستفيدين", "نوع مستفيد", "أنواع المستفيدين", "ResidentClass" }),
+        ("WaitingListByResident", "قوائم الانتظار" , new[] { 
+            "قوائم الانتظار", "قائمة الانتظار", "قائمة انتظار", "قوائم انتظار",
+            "سجل انتظار", "سجلات الانتظار", "سجلات انتظار",
+            "خطاب تسكين", "خطابات التسكين", "خطابات تسكين",
+            "نقل سجل", "نقل سجلات", "طلب نقل", "طلبات النقل",
+            "WaitingListByResident", "WaitingList"
+        }),
     };
 
     private sealed class PendingState
@@ -663,11 +670,13 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
              GetPropString(request, "Screen") ??
              "").Trim();
 
+        if (v.Equals("WaitingListByResident", StringComparison.OrdinalIgnoreCase)) return "WaitingListByResident";
         if (v.Equals("Residents", StringComparison.OrdinalIgnoreCase)) return "Residents";
         if (v.Equals("BuildingDetails", StringComparison.OrdinalIgnoreCase)) return "BuildingDetails";
         if (v.Equals("BuildingClass", StringComparison.OrdinalIgnoreCase)) return "BuildingClass";
         if (v.Equals("ResidentClass", StringComparison.OrdinalIgnoreCase)) return "ResidentClass";
 
+        if (v.Contains("WaitingList", StringComparison.OrdinalIgnoreCase)) return "WaitingListByResident";
         if (v.Contains("BuildingDetails", StringComparison.OrdinalIgnoreCase)) return "BuildingDetails";
         if (v.Contains("Residents", StringComparison.OrdinalIgnoreCase)) return "Residents";
         if (v.Contains("BuildingClass", StringComparison.OrdinalIgnoreCase)) return "BuildingClass";
@@ -698,65 +707,63 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
         return val?.ToString();
     }
 
+    private static string GetSuggestions(string entityKey)
+    {
+        return entityKey switch
+        {
+            "Residents" => "💡 جرب:\n• كيف أضيف مستفيد؟\n• كيف أعدل بيانات مستفيد؟\n• كيف أحذف مستفيد؟\n• كيف أبحث عن مستفيد؟",
+            "BuildingDetails" => "💡 جرب:\n• كيف أضيف مبنى؟\n• كيف أعدل بيانات مبنى؟\n• كيف أحذف مبنى؟\n• كيف أبحث عن مبنى؟",
+            "BuildingClass" => "💡 جرب:\n• كيف أضيف فئة مبنى؟\n• كيف أعدل فئة مبنى؟\n• كيف أحذف فئة مبنى؟\n• كيف أطبع قائمة فئات المباني؟",
+            "ResidentClass" => "💡 جرب:\n• كيف أضيف فئة مستفيد؟\n• كيف أعدل فئة مستفيد؟\n• كيف أحذف فئة مستفيد؟",
+            "WaitingListByResident" => "💡 جرب:\n• كيف أبحث عن مستفيد برقم الهوية؟\n• كيف أضيف سجل انتظار؟\n• كيف أنقل سجل انتظار لإدارة أخرى؟\n• كيف أضيف خطاب تسكين؟\n• كيف أحذف طلب نقل؟",
+            _ => "💡 جرب: كيف أضيف؟ كيف أعدل؟ كيف أحذف؟ كيف أبحث؟"
+        };
+    }
+
     private static string ResolveHeader(string entityKey, string intent)
     {
-        if (entityKey.Equals("Residents", StringComparison.OrdinalIgnoreCase))
-        {
-            return intent switch
-            {
-                "ADD" => "## إضافة مستفيد",
-                "UPDATE" => "## تعديل مستفيد",
-                "DELETE" => "## حذف مستفيد",
-                "SEARCH" => "## البحث عن مستفيد",
-                "PRINT" => "## طباعة تقرير المستفيدين",
-                "EXPORT" => "## تصدير البيانات",
-                _ => ""
-            };
-        }
+        if (string.IsNullOrWhiteSpace(intent))
+            return "";
 
-        if (entityKey.Equals("BuildingDetails", StringComparison.OrdinalIgnoreCase))
+        return (entityKey, intent) switch
         {
-            return intent switch
-            {
-                "ADD" => "## إضافة مبنى",
-                "UPDATE" => "## تعديل مبنى",
-                "DELETE" => "## حذف مبنى",
-                "SEARCH" => "## البحث عن مبنى",
-                "PRINT" => "## طباعة تقرير المباني",
-                "EXPORT" => "## تصدير المباني",
-                _ => ""
-            };
-        }
+            // Residents
+            ("Residents", "ADD") => "## إضافة مستفيد",
+            ("Residents", "UPDATE") => "## تعديل مستفيد",
+            ("Residents", "DELETE") => "## حذف مستفيد",
+            ("Residents", "SEARCH") => "## البحث عن مستفيد",
+            ("Residents", "PRINT") => "## طباعة تقرير المستفيدين",
 
-        if (entityKey.Equals("BuildingClass", StringComparison.OrdinalIgnoreCase))
-        {
-            return intent switch
-            {
-                "ADD" => "## إضافة فئة جديدة",
-                "UPDATE" => "## تعديل فئة موجودة",
-                "DELETE" => "## حذف فئة",
-                "SEARCH" => "## البحث والتصفية",
-                "PRINT" => "## التصدير",
-                "EXPORT" => "## التصدير",
-                _ => ""
-            };
-        }
+            // BuildingDetails
+            ("BuildingDetails", "ADD") => "## إضافة مبنى",
+            ("BuildingDetails", "UPDATE") => "## تعديل مبنى",
+            ("BuildingDetails", "DELETE") => "## حذف مبنى",
+            ("BuildingDetails", "SEARCH") => "## البحث عن مبنى",
+            ("BuildingDetails", "PRINT") => "## طباعة تقرير المباني",
 
-        if (entityKey.Equals("ResidentClass", StringComparison.OrdinalIgnoreCase))
-        {
-            return intent switch
-            {
-                "ADD" => "## إضافة فئة",
-                "UPDATE" => "## تعديل فئة",
-                "DELETE" => "## حذف فئة",
-                "SEARCH" => "## البحث",
-                "PRINT" => "## التصدير",
-                "EXPORT" => "## التصدير",
-                _ => ""
-            };
-        }
+            // BuildingClass
+            ("BuildingClass", "ADD") => "## إضافة فئة جديدة",
+            ("BuildingClass", "UPDATE") => "## تعديل فئة موجودة",
+            ("BuildingClass", "DELETE") => "## حذف فئة",
+            ("BuildingClass", "SEARCH") => "## البحث والتصفية",
+            ("BuildingClass", "PRINT") => "## التصدير",
+            ("BuildingClass", "EXPORT") => "## التصدير",
 
-        return "";
+            // ResidentClass
+            ("ResidentClass", "ADD") => "## إضافة فئة مستفيد",
+            ("ResidentClass", "UPDATE") => "## تعديل فئة مستفيد",
+            ("ResidentClass", "DELETE") => "## حذف فئة مستفيد",
+
+            // WaitingListByResident
+            ("WaitingListByResident", "SEARCH") => "## البحث عن مستفيد",
+            ("WaitingListByResident", "ADD") => "### إضافة سجل انتظار جديد",
+            ("WaitingListByResident", "UPDATE") => "### تعديل سجل انتظار",
+            ("WaitingListByResident", "DELETE") => "### حذف سجل انتظار",
+            ("WaitingListByResident", "PRINT") => "## التصدير",
+            ("WaitingListByResident", "EXPORT") => "## التصدير",
+
+            _ => ""
+        };
     }
 
     private static string ExtractSection(string text, string header)
@@ -767,7 +774,8 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
         var h = System.Text.RegularExpressions.Regex.Escape(header.Trim());
         h = h.Replace("\\ ", "\\s+");
 
-        var pattern = $"{h}\\s*\\r?\\n(?<body>[\\s\\S]*?)(?=\\r?\\n##\\s|\\z)";
+        // دعم ## و ### headers
+        var pattern = $"{h}\\s*\\r?\\n(?<body>[\\s\\S]*?)(?=\\r?\\n###?\\s|\\z)";
         var m = System.Text.RegularExpressions.Regex.Match(text, pattern,
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
@@ -821,7 +829,7 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
         if (ContainsAny(query,
             "تعديل", "عدّل", "عدل", "تحديث", "حدث", "تغيير", "غير",
             "ابي اعدل", "أبي أعدل", "ابغى اعدل", "أبغى أعدل",
-            "ابي اغير", "ابغى اغير", "أبي أغير", "أبغى أغير",
+            "امي اغير", "ابغى اغير", "أبي أغير", "أبغى أغير",
             "صحح", "تصحيح"))
             return "UPDATE";
 
@@ -877,56 +885,6 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
     private static string Clip(string s, int max)
         => string.IsNullOrWhiteSpace(s) ? "" : (s.Length <= max ? s : s[..max] + " ...");
 
-    private static string GetSuggestions(string entityKey)
-    {
-        if (entityKey.Equals("Residents", StringComparison.OrdinalIgnoreCase))
-        {
-            return @"**مثلاً جرّب:**
-• كيف أضيف مستفيد؟
-• كيف أعدل مستفيد؟
-• كيف أحذف مستفيد؟
-• كيف أبحث عن مستفيد؟
-• كيف أطبع تقرير المستفيدين؟";
-        }
-
-        if (entityKey.Equals("BuildingDetails", StringComparison.OrdinalIgnoreCase))
-        {
-            return @"**مثلاً جرّب:**
-• كيف أضيف مبنى؟
-• كيف أعدل مبنى؟
-• كيف أحذف مبنى؟
-• كيف أبحث عن مبنى؟
-• كيف أطبع تقرير المباني؟";
-        }
-
-        if (entityKey.Equals("BuildingClass", StringComparison.OrdinalIgnoreCase))
-        {
-            return @"**مثلاً جرّب:**
-• كيف أضيف فئة مبنى؟
-• كيف أعدل فئة مبنى؟
-• كيف أحذف فئة مبنى؟
-• كيف أبحث عن فئة مبنى؟
-• كيف أصدّر فئات المباني؟";
-        }
-
-        if (entityKey.Equals("ResidentClass", StringComparison.OrdinalIgnoreCase))
-        {
-            return @"**مثلاً جرّب:**
-• كيف أضيف فئة مستفيد؟
-• كيف أعدل فئة مستفيد؟
-• كيف أحذف فئة مستفيد؟
-• كيف أبحث عن فئة مستفيد؟
-• كيف أصدّر فئات المستفيدين؟";
-        }
-
-        return @"**مثلاً جرّب:**
-• كيف أضيف؟
-• كيف أعدل؟
-• كيف أحذف؟
-• كيف أبحث؟
-• كيف أطبع تقرير؟";
-    }
-
     private async Task<long> SaveChatHistoryAsync(
         AiChatRequest request,
         string answer,
@@ -945,12 +903,6 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
         {
             var userId = GetPropString(request, "UserId");
             var idaraId = GetPropString(request, "IdaraId") ?? "1";
-
-            // ✅ Debug: اطبع القيم قبل الإرسال
-            _log.LogInformation(
-                "AI_DEBUG_BEFORE_SEND: pageName_='AiChatHistory', ActionType='SAVEAICHATHISTORY', UserId={UserId}",
-                userId ?? "NULL"
-            );
 
             var parameters = new Dictionary<string, object?>
             {
@@ -986,15 +938,7 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
             if (!string.IsNullOrWhiteSpace(request.IpAddress))
                 parameters["parameter_11"] = request.IpAddress;
 
-            // ✅ اطبع كل الـ parameters قبل الإرسال
-            _log.LogInformation(
-                "AI_DEBUG_PARAMS_DICT: {Params}",
-                string.Join(", ", parameters.Select(kvp => $"{kvp.Key}={kvp.Value}"))
-            );
-
             var spName = ProcedureMapper.GetProcedureName("aichat", "saveHistory");
-            
-            _log.LogInformation("AI_DEBUG_SP_NAME: {SpName}", spName);
 
             var spRequest = new SmartRequest
             {
@@ -1005,52 +949,17 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
 
             var response = await _dataEngine.ExecuteAsync(spRequest);
 
-            _log.LogInformation(
-                "AI_SAVE_RESPONSE: Success={Success}, DataCount={DataCount}, Message={Msg}",
-                response.Success,
-                response.Data?.Count ?? 0,
-                response.Message ?? "NULL"
-            );
-
             if (response.Success && response.Data?.Count > 0)
             {
-                var keys = string.Join(", ", response.Data[0].Keys);
-                _log.LogInformation("AI_SAVE_DATA_KEYS: {Keys}", keys);
-
-                var values = string.Join(", ", response.Data[0].Values.Select(v => v?.ToString() ?? "NULL"));
-                _log.LogInformation("AI_SAVE_DATA_VALUES: {Values}", values);
-
-                foreach (var key in response.Data[0].Keys)
-                {
-                    _log.LogInformation("AI_SAVE_KEY_CHECK: '{Key}' = '{Value}'", 
-                        key, 
-                        response.Data[0][key]?.ToString() ?? "NULL");
-                }
-
                 var chatIdKey = response.Data[0].Keys
                     .FirstOrDefault(k => k.Equals("ChatId", StringComparison.OrdinalIgnoreCase));
 
                 if (chatIdKey != null)
                 {
                     var chatId = Convert.ToInt64(response.Data[0][chatIdKey]);
-                    _log.LogInformation("AI_HISTORY_SAVED: ChatId={ChatId} ✅", chatId);
+                    _log.LogInformation("AI_HISTORY_SAVED: ChatId={ChatId}", chatId);
                     return chatId;
                 }
-                else
-                {
-                    _log.LogWarning(
-                        "AI_SAVE_WARNING: ChatId key not found! Available keys: {Keys}",
-                        keys
-                    );
-                }
-            }
-            else
-            {
-                _log.LogWarning(
-                    "AI_SAVE_FAILED: Success={Success}, Message={Msg}",
-                    response.Success,
-                    response.Message ?? "NULL"
-                );
             }
         }
         catch (Exception ex)
@@ -1060,8 +969,6 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
 
         return 0;
     }
-
-    // ✅ Force connection pool refresh
 
     public void Dispose()
     {

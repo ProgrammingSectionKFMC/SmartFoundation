@@ -3343,27 +3343,26 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
             if (!table) return false;
 
-            // افتراضي: نفس الرسالة الجميلة اللي عندك
             const defaultHtml = `
-    <div class="space-y-3 text-center">
-      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-400 text-white text-sm">
-        جاري تجهيز البيانات للطباعة الرجاء الانتظار
-        <i class="fa fa-spinner animate-spin"></i>
-      </div>
+                    <div class="space-y-3 text-center">
+                      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-400 text-white text-sm">
+                        جاري تجهيز البيانات للطباعة الرجاء الانتظار
+                        <i class="fa fa-spinner animate-spin"></i>
+                      </div>
 
-      <div class="text-base">
-        <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-400 text-white text-sm">
-          وقت الطباعة يعتمد على عدد السجلات المراد طباعتها وسرعة الاتصال
-          <i class="fa fa-bolt"></i>
-        </span>
-      </div>
+                      <div class="text-base">
+                        <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-400 text-white text-sm">
+                          وقت الطباعة يعتمد على عدد السجلات المراد طباعتها وسرعة الاتصال
+                          <i class="fa fa-bolt"></i>
+                        </span>
+                      </div>
 
-      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-50 text-green-700 text-sm">
-        حفاظًا على البيئة وتماشياً مع مستهدفات رؤية 2030 نأمل تقليل الطباعة
-        <i class="fa fa-leaf"></i>
-      </div>
-    </div>
-  `;
+                      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-50 text-green-700 text-sm">
+                        حفاظًا على البيئة وتماشياً مع مستهدفات رؤية 2030 نأمل تقليل الطباعة
+                        <i class="fa fa-leaf"></i>
+                      </div>
+                    </div>
+                  `;
 
             const busy = options.busy || {};
             const pdfVal = (options.pdf ?? options.pdfVal ?? 1);

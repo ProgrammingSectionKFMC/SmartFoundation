@@ -88,44 +88,74 @@ public sealed class FileAiKnowledgeBase : IAiKnowledgeBase
         string[] headers;
         if (ContainsAny(q, "اضف", "أضف", "إضافة", "اضافة", "أضيف", "اضيف"))
             headers = new[] { 
+                "### إضافة سجل انتظار جديد",  // ✅ WaitingListByResident
+                "### إضافة خطاب تسكين جديد",   // ✅ WaitingListByResident
                 "## إضافة مستفيد", 
                 "## إضافة مبنى", 
-                "## إضافة فئة جديدة",  // ✅ إضافة
+                "## إضافة فئة جديدة",
                 "## إضافة سجل", 
                 "## إضافة" 
             };
         else if (ContainsAny(q, "عدل", "تعديل", "تحديث", "عدّل", "تعديل بيانات"))
             headers = new[] { 
+                "### تعديل سجل انتظار",         // ✅ WaitingListByResident
+                "### تعديل خطاب تسكين",          // ✅ WaitingListByResident
                 "## تعديل مستفيد", 
                 "## تعديل مبنى", 
-                "## تعديل فئة موجودة",  // ✅ إضافة
+                "## تعديل فئة موجودة",
                 "## تعديل سجل", 
                 "## تعديل" 
             };
-        else if (ContainsAny(q, "حذف", "امسح", "مسح", "إزالة", "ازالة"))
+        else if (ContainsAny(q, "حذف", "امسح", "مسح", "إزالة", "ازالة", "إلغاء", "الغاء"))
             headers = new[] { 
+                "### حذف سجل انتظار",            // ✅ WaitingListByResident
+                "### حذف خطاب تسكين",             // ✅ WaitingListByResident
+                "### إلغاء طلب نقل",              // ✅ WaitingListByResident
                 "## حذف مستفيد", 
                 "## حذف مبنى", 
-                "## حذف فئة",  // ✅ إضافة
+                "## حذف فئة",
                 "## حذف سجل", 
                 "## حذف" 
             };
-        else if (ContainsAny(q, "بحث", "ابحث", "البحث", "فلتر", "تصفية"))
+        else if (ContainsAny(q, "نقل", "انقل", "طلب نقل", "نقل سجل", "نقل قائمة"))
             headers = new[] { 
-                "## البحث عن مستفيد", 
+                "### نقل سجل انتظار لإدارة أخرى", // ✅ WaitingListByResident
+                "## طلبات نقل سجلات الانتظار",   // ✅ WaitingListByResident
+                "## نقل"
+            };
+        else if (ContainsAny(q, "بحث", "ابحث", "البحث", "فلتر", "تصفية", "هوية", "رقم الهوية"))
+            headers = new[] { 
+                "## البحث عن مستفيد",            // ✅ WaitingListByResident
+                "### خطوات البحث",                // ✅ WaitingListByResident
                 "## البحث عن مبنى", 
-                "## البحث والتصفية",  // ✅ إضافة (لـ BuildingClass)
+                "## البحث والتصفية",
                 "## البحث", 
                 "## Search" 
             };
         else if (ContainsAny(q, "طباعة", "اطبع", "طبع", "تقرير", "PDF", "تصدير", "صدّر", "excel"))
             headers = new[] { 
+                "### تصدير قوائم الانتظار",       // ✅ WaitingListByResident
+                "## التصدير",                     // ✅ WaitingListByResident
                 "## طباعة تقرير المستفيدين", 
                 "## طباعة تقرير المباني", 
-                "## التصدير",  // ✅ إضافة (لـ BuildingClass)
                 "## الطباعة", 
                 "## طباعة",
                 "## تصدير البيانات"
+            };
+        else if (ContainsAny(q, "خطاب تسكين", "خطابات", "خطاب", "تسكين"))
+            headers = new[] { 
+                "## إدارة خطابات التسكين",         // ✅ WaitingListByResident
+                "### عرض خطابات التسكين",          // ✅ WaitingListByResident
+                "### إضافة خطاب تسكين جديد",       // ✅ WaitingListByResident
+                "### تعديل خطاب تسكين",            // ✅ WaitingListByResident
+                "### حذف خطاب تسكين"               // ✅ WaitingListByResident
+            };
+        else if (ContainsAny(q, "قائمة انتظار", "قوائم انتظار", "سجل انتظار", "سجلات"))
+            headers = new[] { 
+                "## إدارة قوائم الانتظار",         // ✅ WaitingListByResident
+                "### عرض قوائم الانتظار",          // ✅ WaitingListByResident
+                "### إضافة سجل انتظار جديد",       // ✅ WaitingListByResident
+                "## إدارة"
             };
         else
             headers = Array.Empty<string>();
@@ -144,14 +174,15 @@ public sealed class FileAiKnowledgeBase : IAiKnowledgeBase
         return text;
     }
 
-    // يأخذ القسم من عنوان header إلى العنوان التالي "## "
+    // يأخذ القسم من عنوان header إلى العنوان التالي "## " أو "### "
     private static string SliceMarkdownSection(string text, string header)
     {
         var start = text.IndexOf(header, StringComparison.OrdinalIgnoreCase);
         if (start < 0) return "";
 
-        // نهاية القسم: أول "## " بعد البداية (غير نفس العنوان)
-        var next = text.IndexOf("\n## ", start + header.Length, StringComparison.OrdinalIgnoreCase);
+        // نهاية القسم: أول "## " أو "### " بعد البداية (غير نفس العنوان)
+        var headerLevel = header.StartsWith("###") ? "\n### " : "\n## ";
+        var next = text.IndexOf(headerLevel, start + header.Length, StringComparison.OrdinalIgnoreCase);
         if (next < 0) next = text.Length;
 
         return text.Substring(start, next - start).Trim();

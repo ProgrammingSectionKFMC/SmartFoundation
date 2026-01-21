@@ -10,6 +10,175 @@
     const input = document.getElementById("sf-ai-input");
     const sendBtn = document.getElementById("sf-ai-send");
 
+    function updatePanelPlacement() {
+        const root = document.getElementById("sf-ai");
+        const panel = document.getElementById("sf-ai-panel");
+        if (!root || !panel) return;
+
+        const gap = 12;
+        const offset = 70;
+
+        const rect = root.getBoundingClientRect();
+
+        const maxPanelW = Math.max(260, window.innerWidth - (gap * 2));
+        const panelW = Math.min(360, maxPanelW);
+        panel.style.width = panelW + "px";
+
+        const spaceAbove = rect.top - gap;
+        const spaceBelow = (window.innerHeight - rect.bottom) - gap;
+
+        const panelH = panel.offsetHeight || 520;
+
+        const openDown = (spaceAbove < panelH + offset) && (spaceBelow > spaceAbove);
+        root.classList.toggle("open-down", openDown);
+
+        const availableH = openDown ? (spaceBelow - offset) : (spaceAbove - offset);
+        panel.style.maxHeight = Math.max(220, Math.floor(availableH)) + "px";
+
+        const spaceLeft = rect.left - gap;
+        const spaceRight = (window.innerWidth - rect.right) - gap;
+
+        const needOpenRight = (spaceLeft < panelW - rect.width) && (spaceRight > spaceLeft);
+        root.classList.toggle("open-left", needOpenRight);
+    }
+
+
+    window.addEventListener("resize", () => {
+        if (panel && panel.classList.contains("open")) {
+            updatePanelPlacement();
+        }
+    });
+
+    // =========================
+    // DRAG: move whole widget (#sf-ai)
+    // =========================
+
+    const root = document.getElementById("sf-ai");
+    const STORAGE_KEY = "sf_ai_pos_v1";
+    /*const DEFAULT_POS = { right: 18, bottom: 18 }; */
+    const DEFAULT_POS = { left: 18, bottom: 18 };
+
+    (function enableDrag() {
+        if (!root) return;
+        localStorage.removeItem(STORAGE_KEY);
+        applyDefaultPosition();
+
+        //const STORAGE_KEY = "sf_ai_pos_v1";
+        //try {
+        //    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+        //    if (saved && typeof saved.x === "number" && typeof saved.y === "number") {
+        //        root.style.left = saved.x + "px";
+        //        root.style.top = saved.y + "px";
+        //        root.style.right = "auto";
+        //        root.style.bottom = "auto";
+        //    }
+        //} catch { /* ignore */ }
+
+        function applyDefaultPosition() {
+            root.style.top = "auto";
+            root.style.right = "auto";
+            root.style.left = DEFAULT_POS.left + "px";
+            root.style.bottom = DEFAULT_POS.bottom + "px";
+        }
+
+
+        function applySavedPositionIfAny() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+                if (saved && typeof saved.x === "number" && typeof saved.y === "number") {
+                    root.style.left = saved.x + "px";
+                    root.style.top = saved.y + "px";
+                    root.style.right = "auto";
+                    root.style.bottom = "auto";
+                    return true;
+                }
+            } catch { }
+            return false;
+        }
+
+        if (!applySavedPositionIfAny()) {
+            applyDefaultPosition();
+        }
+
+
+        let dragging = false;
+        let maybeDrag = false;
+        let startX = 0, startY = 0;
+        let startLeft = 0, startTop = 0;
+        const DRAG_THRESHOLD = 6; // px
+        function getCurrentLeftTop() {
+            const rect = root.getBoundingClientRect();
+            return { left: rect.left, top: rect.top };
+        }
+
+        function clamp(v, min, max) {
+            return Math.min(max, Math.max(min, v));
+        }
+        function onPointerDown(e) {
+            const fromHeader = e.target.closest(".sf-ai-header");
+            const fromButton = e.target.closest("#sf-ai-btn");
+            if (!fromHeader && !fromButton) return;
+            if (e.target.closest("#sf-ai-close, #sf-ai-send, #sf-ai-input")) return;
+            maybeDrag = true;
+            dragging = false;
+            const { left, top } = getCurrentLeftTop();
+            startLeft = left;
+            startTop = top;
+
+            startX = e.clientX;
+            startY = e.clientY;
+        }
+
+        function onPointerMove(e) {
+            if (!maybeDrag) return;
+            const dx0 = e.clientX - startX;
+            const dy0 = e.clientY - startY;
+            if (!dragging) {
+                if (Math.abs(dx0) < DRAG_THRESHOLD && Math.abs(dy0) < DRAG_THRESHOLD) return;
+                dragging = true;
+                root.classList.add("dragging");
+                root.style.left = startLeft + "px";
+                root.style.top = startTop + "px";
+                root.style.right = "auto";
+                root.style.bottom = "auto";
+                if (root.setPointerCapture) root.setPointerCapture(e.pointerId);
+            }
+
+            e.preventDefault();
+
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            const margin = 8;
+            const rootRect = root.getBoundingClientRect();
+            const maxLeft = window.innerWidth - rootRect.width - margin;
+            const maxTop = window.innerHeight - rootRect.height - margin;
+            const newLeft = clamp(startLeft + dx, margin, maxLeft);
+            const newTop = clamp(startTop + dy, margin, maxTop);
+            root.style.left = newLeft + "px";
+            root.style.top = newTop + "px";
+        }
+
+        function onPointerUp() {
+            if (!maybeDrag) return;
+            maybeDrag = false;
+
+            if (!dragging) return;
+
+            dragging = false;
+            root.classList.remove("dragging");
+
+            const rect = root.getBoundingClientRect();
+            try {
+                /*localStorage.setItem(STORAGE_KEY, JSON.stringify({ x: rect.left, y: rect.top }));*/
+                updatePanelPlacement();
+            } catch { /* ignore */ }
+        }
+
+        document.addEventListener("pointermove", onPointerMove, { passive: false });
+        document.addEventListener("pointerup", onPointerUp, { passive: true });
+        root.addEventListener("pointerdown", onPointerDown, { passive: false });
+    })();
+
     if (!btn || !panel || !closeBtn || !messages || !input || !sendBtn) return;
 
     setTimeout(() => {
@@ -94,12 +263,17 @@
     function setOpen(isOpen) {
         if (isOpen) {
             panel.classList.add("open");
+
+            updatePanelPlacement(); // جديد
+
             panel.setAttribute("aria-hidden", "false");
 
             if (messages.childElementCount === 0) {
-                addMessage("bot",
+                addMessage(
+                    "bot",
                     "هلا 👋\nأنا وحيد مساعدك الذكي داخل النظام.\nاسألني: كيف أضيف مستفيد؟ كيف أطبع؟ أين أجد التقرير؟\nملاحظة: المساعد الذكي لازال تحت التدريب في مرحلة الاطلاق التجريبي تأكد من صحة الأجوبة قبل الاعتماد عليها كلياً",
-                    [], 0
+                    [],
+                    0
                 );
             }
 
@@ -132,6 +306,7 @@
         e.stopPropagation();
         doSend();
     });
+
 
     function cancelCurrentRequest() {
         if (currentAbortController) {

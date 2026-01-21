@@ -173,26 +173,6 @@ function sfInitSelect2(root = document) {
                         : 0
             });
 
-
-
-
-
-            // ✅ Fix Chrome Issues: Select2 internal search input needs id/name/label
-            const sid = $s.attr('id') || $s.attr('name') || 'sf';
-
-            const labelText =
-                (jQuery(`label[for="${$s.attr('id')}"]`).first().text() || '').trim() ||
-                ($s.data('s2-placeholder') || $s.attr('name') || 'اختيار');
-
-            $s.on('select2:open', function () {
-                const $search = jQuery('.select2-container--open .select2-search__field').last();
-                if (!$search.length) return;
-
-                if (!$search.attr('id')) $search.attr('id', `s2_${sid}_search`);
-                if (!$search.attr('name')) $search.attr('name', `s2_${sid}_search`);
-                if (!$search.attr('aria-label')) $search.attr('aria-label', labelText);
-            });
-
         });
 }
 

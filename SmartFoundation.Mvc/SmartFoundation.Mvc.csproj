@@ -14,7 +14,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="AiModels\" />
     <Folder Include="wwwroot\lib\fontawesome\" />
   </ItemGroup>
 
