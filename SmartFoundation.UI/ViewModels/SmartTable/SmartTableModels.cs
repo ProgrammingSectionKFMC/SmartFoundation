@@ -28,17 +28,52 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         public Dictionary<string, string> AggregateTypes { get; set; } = new();
     }
 
+    //public class TableExportConfig
+    //{
+    //    //public bool EnableExcel { get; set; } = true;
+    //    public bool EnableCsv { get; set; } = true;
+    //    public bool EnablePdf { get; set; } = false;
+    //    public bool EnablePrint { get; set; } = true;
+    //    public string? ExcelTemplate { get; set; }
+    //    public string? PdfTemplate { get; set; }
+    //    public List<string> ExcludeColumns { get; set; } = new();
+    //    public string? Filename { get; set; }
+
+
+    //}
+
     public class TableExportConfig
     {
-        //public bool EnableExcel { get; set; } = true;
         public bool EnableCsv { get; set; } = true;
         public bool EnablePdf { get; set; } = false;
         public bool EnablePrint { get; set; } = true;
+
         public string? ExcelTemplate { get; set; }
         public string? PdfTemplate { get; set; }
+
         public List<string> ExcludeColumns { get; set; } = new();
         public string? Filename { get; set; }
+
+        // NEW: endpoint + defaults
+        public string? PdfEndpoint { get; set; } = "/exports/pdf/table";
+        public string? PdfTitle { get; set; }
+        public string? PdfLogoUrl { get; set; }
+        public string? PdfPaper { get; set; } = "A4";
+        public string? PdfOrientation { get; set; } = "portrait"; // portrait | landscape
+        public bool PdfShowPageNumbers { get; set; } = true;
+        public bool PdfShowGeneratedAt { get; set; } = true; // يعرض تاريخ التوليد في الهيدر 
+        public bool PdfShowSerial { get; set; } = false; // تفعيل أو تعطيل الرقم التسلسلي
+        public string PdfSerialLabel { get; set; } = "#";
+        
+        public string? RightHeaderLine1 { get; set; } // المملكة العربية السعودية
+        public string? RightHeaderLine2 { get; set; } 
+        public string? RightHeaderLine3 { get; set; } 
+        public string? RightHeaderLine4 { get; set; } 
+        public string? RightHeaderLine5 { get; set; } 
     }
+
+
+
 
     public class TableStyleRule
     {
@@ -74,6 +109,8 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         public bool StopOnMatch { get; set; } = false;
     }
 
+
+
     public class TableColumn
     {
         public string Field { get; set; } = string.Empty;
@@ -106,14 +143,11 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         public Dictionary<string, object> CustomProperties { get; set; } = new();
     }
 
-
-
     public enum TableActionPlacement
     {
         Button,       // زر مباشر في التولبار (الافتراضي)
         ActionsMenu   // داخل قائمة "الإجراءات"
     }
-
 
     public class TableAction
     {
@@ -168,6 +202,9 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         public bool ShowExportExcel { get; set; } = true;
         public bool ShowExportPdf { get; set; } = false;
         public bool ShowPrint { get; set; } = true;
+        public bool ShowPrint1 { get; set; } = true;
+        public bool ShowPrint2 { get; set; } = true;
+        public bool ShowPrint3 { get; set; } = true;
         public bool ShowAdvancedFilter { get; set; } = false;
         public bool ShowBulkDelete { get; set; } = false;
         public bool ShowFullscreen { get; set; } = true;
@@ -193,6 +230,11 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         public TableExportConfig ExportConfig { get; set; } = new();
         public bool ShowSearch { get; set; } = true;
         public string? SearchPosition { get; set; } = "left";
+        public TableAction? Print { get; set; }
+        public TableAction? Print1 { get; set; }
+        public TableAction? Print2 { get; set; }
+        public TableAction? Print3 { get; set; }
+
     }
 
     public class TableConfig
@@ -241,6 +283,9 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         public bool EnableScreenReader { get; set; } = true;
         public string? AriaLabel { get; set; }
         public bool HighContrast { get; set; } = false;
+        public string? Autocomplete { get; set; }
+
+        //public bool ShowPageSizeSelector { get; set; } = true;
         public List<TableStyleRule> StyleRules { get; set; } = new();
 
     }
@@ -267,3 +312,4 @@ public class TableActionGuards
     // تطبيق الشرط على أي صف من المحدد أو على كل الصفوف
     public string AppliesTo { get; set; } = "any"; // any | all
 }
+

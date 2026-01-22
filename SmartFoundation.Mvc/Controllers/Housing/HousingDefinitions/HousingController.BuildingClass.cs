@@ -220,6 +220,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 Searchable = true,
                 AllowExport = true,
                 PanelTitle = "فئات المباني ",
+               
                 Toolbar = new TableToolbarConfig
                 {
                     ShowRefresh = false,
@@ -230,6 +231,18 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowEdit = canUpdate,
                     ShowDelete = canDelete,
                     ShowBulkDelete = false,
+                    ShowExportPdf=true,
+                    ExportConfig = new TableExportConfig
+                    {
+                        EnablePdf = true,
+                        PdfEndpoint = "/exports/pdf/table",
+                        PdfTitle = "المستفيدين",
+                        PdfPaper = "A4",
+                        PdfOrientation = "portrait",
+                        PdfShowPageNumbers = true,
+                        Filename = "Residents",
+                        PdfShowGeneratedAt = false, 
+                    },
 
                     Add = new TableAction
                     {

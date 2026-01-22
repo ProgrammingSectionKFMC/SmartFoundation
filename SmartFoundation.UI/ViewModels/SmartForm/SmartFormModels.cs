@@ -98,6 +98,33 @@ namespace SmartFoundation.UI.ViewModels.SmartForm
         public string? Select2Placeholder { get; set; }      // اختياري
 
 
+
+        public string? NavUrl { get; set; }        // رابط الانتقال حق الصفحة
+        public string? NavKey { get; set; }        // اسم الباراميتر في QueryString
+        public string? NavKey2 { get; set; }
+        public string? NavVal2 { get; set; }
+        public string? NavKey3 { get; set; }
+        public string? NavVal3 { get; set; }
+        public string? NavKey4 { get; set; }
+        public string? NavVal4 { get; set; }
+        public string? NavKey5 { get; set; }
+        public string? NavVal5 { get; set; }
+        public string? RequiredMsg { get; set; }   // رسالة مطلوب
+        public string? PatternMsg { get; set; }    // رسالة Regex
+        public string? RejectValue { get; set; }   // قيمة مرفوضة مثل -1
+        public string? RejectMsg { get; set; }     // رسالة رفض
+        public string? ToastType { get; set; }     // info / error
+        public string? NavField3 { get; set; }  // اسم حقل يجيب منه قيمة NavKey3
+        public string? NavField4 { get; set; }
+        public string? NavField5 { get; set; }
+        public string? ToggleGroup { get; set; }     // اسم مجموعة الحقول اللي بتنخفي/تظهر
+        public string? ToggleMap { get; set; }       // خريطة العرض "1:Users|2:Distributors|..."
+        public string? ToggleMode { get; set; }
+
+        public bool SubmitOnEnter { get; set; } = false;
+
+
+
         public SmartTable.TableConfig? Table { get; set; }
 
         public string GetResolvedColCss()
@@ -182,7 +209,9 @@ namespace SmartFoundation.UI.ViewModels.SmartForm
         public bool Show { get; set; } = true;
         public string? StoredProcedureName { get; set; }
         public string? Operation { get; set; } = "custom";
-        public string? Color { get; set; } 
+        public string? Color { get; set; }
+
+        public string? SectionTitle { get; set; }  // اسم ال
     }
 
     public class FormConfig

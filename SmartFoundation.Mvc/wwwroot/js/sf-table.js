@@ -9,10 +9,97 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             endpoint: cfg.endpoint || "/smart/execute",
             spName: cfg.spName || "",
             operation: cfg.operation || "select",
+            /*operation: cfg.operation || "select",*/
+
+            //  NEW: Profile View — Full block)
+            viewMode: (cfg.viewMode ?? "Table"), // "Table" | "Profile"
+            // إعدادات البروفايل من الكنترول)
+            profileTitleField: (cfg.profileTitleField ?? null),
+            profileSubtitleField: (cfg.profileSubtitleField ?? null),
+            profileBadges: Array.isArray(cfg.profileBadges) ? cfg.profileBadges : [],
+            profileMetaFields: Array.isArray(cfg.profileMetaFields) ? cfg.profileMetaFields : [], 
+            profileFields: Array.isArray(cfg.profileFields) ? cfg.profileFields : [],            
+            profileCssClass: (cfg.profileCssClass ?? ""),
+            profileColumns: Number.isFinite(Number(cfg.profileColumns)) ? Number(cfg.profileColumns) : 2,
+            profileShowHeader: (cfg.profileShowHeader !== false),
+            profileIcon: (cfg.profileIcon ?? "fa-solid fa-id-card"),
+            profileTitleText: (cfg.profileTitleText ?? "البيانات الأساسية"),
+            // ===== Helpers =====
+            normalizeFieldName(v) {
+                if (v == null) return "";
+                if (typeof v === "string") return v.trim();
+                // لو جاك object من السيرفر
+                return String(v.field ?? v.Field ?? v.name ?? v.Name ?? "").trim();
+            },
+            getProfileTitle(row) {
+                const f = this.normalizeFieldName(this.profileTitleField);
+                if (f && row?.[f] != null) return String(row[f]);
+                const first = (this.visibleColumns?.() || []).find(c => c?.visible !== false && c?.field);
+                return first ? String(row?.[first.field] ?? "") : "";
+            },
+            getProfileSubtitle(row) {
+                const f = this.normalizeFieldName(this.profileSubtitleField);
+                if (f && row?.[f] != null) return String(row[f]);
+                return "";
+            },
+            profileMetaList() {
+                const cols = (this.visibleColumns?.() || []).filter(c => c && c.visible !== false && c.field);
+                const map = new Map(cols.map(c => [String(c.field), c]));
+
+                const src = Array.isArray(this.profileMetaFields) ? this.profileMetaFields : [];
+                const items = [];
+
+                for (const it of src) {
+                    const field = this.normalizeFieldName(it);
+                    if (!field) continue;
+
+                    const col = map.get(field);
+                    const label =
+                        (typeof it === "object" && (it.label || it.Label)) ||
+                        (col?.label || col?.Label) ||
+                        field;
+
+                    items.push({ field, label });
+                }
+
+                return items;
+            },
+            profileColumnsList() {
+                const cols = (this.visibleColumns?.() || [])
+                    .filter(c => c && c.visible !== false && c.field);
+
+                const titleF = String(this.normalizeFieldName(this.profileTitleField));
+                const subF = String(this.normalizeFieldName(this.profileSubtitleField));
+                if (Array.isArray(this.profileFields) && this.profileFields.length) {
+                    const wanted = this.profileFields.map(f => String(this.normalizeFieldName(f))).filter(Boolean);
+                    const map = new Map(cols.map(c => [String(c.field), c]));
+                    return wanted.map(f => map.get(f)).filter(Boolean);
+                }
+                return cols.filter(c => String(c.field) !== titleF && String(c.field) !== subF);
+            },
+
+            profileGridClass() {
+                const n = Math.max(1, Math.min(3, Number(this.profileColumns) || 2));
+                return `sf-profile__grid sf-profile__grid--cols-${n}`;
+            },
+            profilePlaceholderCount(total, cols) {
+                const c = Math.max(1, Math.min(3, Number(cols) || 2));
+                const r = total % c;
+                return r === 0 ? 0 : (c - r);
+            },
+            profileColumnsCount() {
+                return (this.profileColumnsList?.() || []).length;
+            },
+            //========End Profile=============//
+
+
+
 
             // Pagination
             pageSize: cfg.pageSize || 10,
             pageSizes: cfg.pageSizes || [10, 25, 50, 100],
+            enablePagination: cfg.enablePagination !== false, 
+            showPageSizeSelector: cfg.showPageSizeSelector === true,
             // NEW: Server paging (fast mode) - off by default
             serverPaging: !!cfg.serverPaging,
             // Search
@@ -303,8 +390,25 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             // ===== Initialization =====
             init() {
                 this.loadStoredPreferences();
+                this.bindPrintListenerOnce();
+
+
+
+                // ✅ تعطيل الـ Pagination فعليًا
+                if (!this.enablePagination) {
+                    this.page = 1;
+                    this.pages = 1;
+
+                    // اعرض كل الصفوف في صفحة وحدة
+                    this.pageSize = (this.rows && this.rows.length)
+                        ? this.rows.length
+                        : this.pageSize;
+                }
+
+
                 this.load();
                 this.setupEventListeners();
+
             },
 
             loadStoredPreferences() {
@@ -490,7 +594,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             async load() {
                 this.loading = true;
                 this.error = null;
-
                 try {
                     // ===== FAST MODE: server-side paging (only if enabled) =====
                     if (this.serverPaging) {
@@ -505,7 +608,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 sortDir: this.sort.dir || "asc"
                             }
                         };
-
                         const json = await this.postJson(this.endpoint, body);
                         // بيانات الصفحة الحالية فقط
                         this.rows = Array.isArray(json?.data) ? json.data : [];
@@ -529,7 +631,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         this.updateSelectAllState();
                         return;
                     }
-
                     // ===== OLD MODE (unchanged): client-side =====
                     if (this.allRows.length === 0) {
                         if (this.clientSideMode && Array.isArray(this.initialRows) && this.initialRows.length > 0) {
@@ -550,8 +651,19 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     this.applyFiltersAndSort();
 
                 } catch (e) {
+                    const msg = String(e?.message || "");
+                    if (msg.includes("لايوجد بيانات")) {
+                        this.rows = [];
+                        this.allRows = [];
+                        this.filteredRows = [];
+                        this.total = 0;
+                        this.pages = 1;
+                        this.page = 1;
+                        this.error = null;
+                        return;
+                    }
                     console.error("Load error:", e);
-                    this.error = e.message || "خطأ في تحميل البيانات";
+                    this.error = msg || "خطأ في تحميل البيانات";
                 } finally {
                     this.loading = false;
                 }
@@ -577,7 +689,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             const haystack = fields
                                 .map(f => String(row?.[f] ?? "").toLowerCase())
                                 .join(" ");
-
                             // لازم كل كلمات البحث موجودة (AND)
                             return tokens.every(t => haystack.includes(t));
                         });
@@ -750,17 +861,27 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             },
 
 
-            // ===== Export Functions (XLSX true) =====
+            // ===== Export Functions (XLSX pdf true) =====
+            // ===== Export Functions (XLSX pdf true) =====
             exportData(type) {
                 if (!this.allowExport) return;
 
-                if (type !== "excel") {
-                    this.showToast("التصدير الحالي يدعم Excel فقط هنا", "error");
+                // PDF
+                if (type === "pdf") {
+                    this.openExportPdfModal();
                     return;
                 }
 
-                this.openExportExcelModal();
+                // Excel
+                if (type === "excel") {
+                    this.openExportExcelModal();
+                    return;
+                }
+
+                // غير مدعوم
+                this.showToast("نوع التصدير غير مدعوم", "error");
             },
+
 
             openExportExcelModal() {
                 if (!window.XLSX) {
@@ -1072,7 +1193,238 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 XLSX.writeFile(wb, `export_${new Date().toISOString().slice(0, 10)}.xlsx`);
             },
 
-             /*===== نهاية تصدير اكسل =====*/
+            /*===== نهاية تصدير اكسل =====*/
+
+
+            /*===== بداية تصدير PDF =====*/
+
+            openExportPdfModal() {
+                const cfg = (this.toolbar && this.toolbar.exportConfig) ? this.toolbar.exportConfig : {};
+
+                const enabled = (cfg.enablePdf ?? cfg.EnablePdf);
+                if (enabled === false) {
+                    this.showToast("PDF غير مفعل", "error");
+                    return;
+                }
+
+                const selectedRow = this.getSelectedRowFromCurrentData();
+                if (!selectedRow) {
+                    this.showToast("اختر صف واحد على الأقل قبل التصدير", "error");
+                    return;
+                }
+
+                this.modal.open = true;
+                window.__sfTableActive = this;
+                this.modal.title = "تصدير PDF";
+                this.modal.message = "";
+                this.modal.messageClass = "";
+                this.modal.messageIcon = "";
+                this.modal.messageIsHtml = false;
+                this.modal.loading = false;
+                this.modal.error = null;
+
+                window.toggleExportCountPdf = function () {
+                    const scope = document.getElementById("exportScopePdf")?.value;
+                    const countContainer = document.getElementById("countContainerPdf");
+                    if (!countContainer) return;
+                    countContainer.style.display = (scope === "from_selected_count") ? "" : "none";
+                };
+
+                this.modal.html = `
+                    <form id="sfExportPdfForm" class="sf-modal-form" onsubmit="return false;">
+                        <div class="grid grid-cols-12 gap-4">
+
+                            <div class="col-span-12 md:col-span-6">
+                                <label class="block text-sm font-medium mb-1">نطاق التصدير</label>
+                                <div class="sf-select-wrap">
+                                    <select name="scope" id="exportScopePdf" onchange="toggleExportCountPdf()" class="sf-modal-input" required>
+                                        <option value="all" selected>تصدير الكل</option>
+                                        <option value="from_selected_count">ابدأ من الصف المحدد وصدّر عدد</option>
+                                    </select>
+                                </div>
+                                <p class="mt-1 text-xs text-gray-500">
+                                    "ابدأ من الصف المحدد" يعتمد على ترتيب البيانات الحالي (بحث/فرز/فلترة).
+                                </p>
+                            </div>
+
+                            <div class="col-span-12 md:col-span-6" id="countContainerPdf" style="display:none;">
+                                <label class="block text-sm font-medium mb-1">عدد الصفوف</label>
+                                <input name="count" type="number" min="1" value="1" class="sf-modal-input" />
+                                <p class="mt-1 text-xs text-gray-500">مثال: 1 لتصدير صف واحد، أو 100 لتصدير 100 صف.</p>
+                            </div>
+
+                            <div class="col-span-12">
+                                <label class="block text-base font-medium mb-2">اختر الأعمدة المراد تصديرها :</label>
+                                <div class="grid grid-cols-2 gap-2" id="columnsCheckboxesPdf"></div>
+                            </div>
+
+                            <div class="col-span-12 flex justify-end gap-2 mt-4 sf-modal-actions">
+                                <button type="button" class="btn btn-danger" data-export-pdf-confirm>تصدير PDF</button>
+                                <button type="button" class="btn btn-secondary sf-modal-cancel">إلغاء</button>
+                            </div>
+                        </div>
+                    </form>
+                    `;
+
+                this.$nextTick(() => {
+                    const checkboxContainer = document.getElementById("columnsCheckboxesPdf");
+                    if (!checkboxContainer) return;
+
+                    const visibleCols = this.visibleColumns().filter(c => c.showInExport !== false);
+                    checkboxContainer.innerHTML = visibleCols.map(col => `
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" name="exportColsPdf" value="${col.field}" checked class="sf-checkbox" />
+                            <span>${col.label || col.field}</span>
+                        </label>
+                    `).join("");
+
+                    if (window.toggleExportCountPdf) window.toggleExportCountPdf();
+
+                    const btn = document.querySelector('[data-export-pdf-confirm]');
+                    if (btn) btn.addEventListener('click', () => this.confirmExportPdfFromModal(), { once: true });
+
+                    const modalEl = document.querySelector('.sf-modal') || this.$el.querySelector('.sf-modal');
+                    if (modalEl) {
+                        this.enableModalDrag(modalEl);
+                        this.enableModalResize(modalEl);
+                        this.initSelect2InModal(modalEl);
+                    }
+                });
+            },
+
+            async confirmExportPdfFromModal() {
+                const btn = document.querySelector('[data-export-pdf-confirm]');
+                const originalText = btn ? btn.textContent : "تصدير PDF";
+
+                try {
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.classList.add("opacity-60", "pointer-events-none");
+                        btn.textContent = "جاري تجهيز الملف…";
+                    }
+                    this.modal.loading = true;
+                    const cfg = (this.toolbar && this.toolbar.exportConfig) ? this.toolbar.exportConfig : {};
+                    const endpoint = (cfg.pdfEndpoint ?? cfg.PdfEndpoint) || "/exports/pdf/table";
+                    const form = document.getElementById("sfExportPdfForm");
+                    if (!form) return;
+                    const fd = new FormData(form);
+                    const scope = String(fd.get("scope") || "all");
+                    const count = Math.max(1, Number(fd.get("count") || 1));
+                    const dataView = (Array.isArray(this.filteredRows) && this.filteredRows.length)
+                        ? this.filteredRows
+                        : (Array.isArray(this.allRows) ? this.allRows : []);
+                    let rowsToExport = [];
+                    if (scope === "all") {
+                        rowsToExport = dataView.slice();
+                    } else if (scope === "from_selected_count") {
+                        const startRow = this.getSelectedRowFromCurrentData();
+                        if (!startRow) {
+                            this.showToast("تعذر تحديد الصف المحدد كبداية", "error");
+                            return;
+                        }
+                        const startIdx = dataView.findIndex(r => String(r?.[this.rowIdField]) === String(startRow?.[this.rowIdField]));
+                        if (startIdx < 0) {
+                            this.showToast("تعذر إيجاد الصف المحدد داخل البيانات الحالية", "error");
+                            return;
+                        }
+
+                        const maxCount = dataView.length - startIdx;
+                        rowsToExport = dataView.slice(startIdx, startIdx + Math.min(count, maxCount));
+                    }
+
+                    if (!rowsToExport.length) {
+                        this.showToast("لا توجد بيانات للتصدير", "error");
+                        return;
+                    }
+                    const selectedFields = Array.from(document.querySelectorAll('input[name="exportColsPdf"]:checked'))
+                        .map(i => i.value);
+
+                    const allCols = this.visibleColumns().filter(c => c.showInExport !== false);
+                    const cols = allCols.filter(c => selectedFields.includes(c.field));
+
+                    if (!cols.length) {
+                        this.showToast("لا توجد أعمدة للتصدير", "error");
+                        return;
+                    }
+                    const colsRtl = cols.slice().reverse();
+                    const payload = {
+                        title: (cfg.pdfTitle ?? cfg.PdfTitle) || "تقرير",
+                        logoUrl: (cfg.pdfLogoUrl ?? cfg.PdfLogoUrl) || null,
+                        paper: (cfg.pdfPaper ?? cfg.PdfPaper) || "A4",
+                        orientation: (cfg.pdfOrientation ?? cfg.PdfOrientation) || "portrait",
+                        showSerial: (cfg.pdfShowSerial ?? cfg.PdfShowSerial) === true,
+                        serialLabel: (cfg.pdfSerialLabel ?? cfg.PdfSerialLabel) || "#",
+                        showPageNumbers: ((cfg.pdfShowPageNumbers ?? cfg.PdfShowPageNumbers) !== false),
+                        showGeneratedAt: ((cfg.pdfShowGeneratedAt ?? cfg.PdfShowGeneratedAt) !== false),
+                        showPageSizeSelector: cfg.showPageSizeSelector === true,
+                        filename: (cfg.filename ?? cfg.Filename) || "export",
+                        rightHeaderLine1: (cfg.rightHeaderLine1 ?? cfg.RightHeaderLine1) || "",
+                        rightHeaderLine2: (cfg.rightHeaderLine2 ?? cfg.RightHeaderLine2) || "",
+                        rightHeaderLine3: (cfg.rightHeaderLine3 ?? cfg.RightHeaderLine3) || "",
+                        rightHeaderLine4: (cfg.rightHeaderLine4 ?? cfg.RightHeaderLine4) || "",
+                        rightHeaderLine5: (cfg.rightHeaderLine5 ?? cfg.RightHeaderLine5) || "",
+
+                        columns: colsRtl.map(c => ({ field: c.field, label: c.label || c.field })),
+                        rows: rowsToExport
+                    };
+
+                    const blob = await this.postPdfBlob(endpoint, payload);
+                    this.downloadBlob(blob, `${payload.filename}_${new Date().toISOString().slice(0, 10)}.pdf`);
+
+                    this.closeModal();
+
+                } catch (e) {
+                    console.error(e);
+                    this.showToast("فشل تصدير PDF: " + (e.message || e), "error");
+
+                } finally {
+                    
+                    this.modal.loading = false;
+
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.classList.remove("opacity-60", "pointer-events-none");
+                        btn.textContent = originalText;
+                    }
+                }
+            },
+
+            async postPdfBlob(url, body) {
+                const headers = { "Content-Type": "application/json" };
+                const csrfToken = this.getCsrfToken();
+                if (csrfToken) headers["RequestVerificationToken"] = csrfToken;
+
+                const resp = await fetch(url, {
+                    method: "POST",
+                    headers,
+                    body: JSON.stringify(body)
+                });
+
+                if (!resp.ok) {
+                    let msg = `HTTP ${resp.status}`;
+                    try {
+                        const j = await resp.json();
+                        msg = j?.error || j?.message || msg;
+                    } catch { }
+                    throw new Error(msg);
+                }
+
+                return await resp.blob();
+            },
+
+            downloadBlob(blob, filename) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = filename;
+                a.style.display = "none";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            },
+
+            /*===== نهاية تصدير PDF =====*/
 
             formatCellForExport(row, col) {
                 let value = row[col.field];
@@ -1113,11 +1465,12 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             },
 
             // ===== Actions Management =====
+
             async doAction(action, row) {
                 if (!action) return;
 
                 try {
-                    // Check selection requirements
+                    // التحقق من متطلبات الاختيار
                     if (action.requireSelection) {
                         const selectedCount = this.selectedKeys.size;
                         if (selectedCount < (action.minSelection || 1)) {
@@ -1128,33 +1481,85 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             this.showToast(`لا يمكن اختيار أكثر من ${action.maxSelection} عنصر`, 'error');
                             return;
                         }
+
+                        // إذا row ما وصل، جيبه من الاختيار الحالي
+                        if (!row) row = this.getSelectedRowFromCurrentData();
+                    }
+
+                    // Guards
+                    const guardRes = this.evalGuards(action);
+                    if (!guardRes.allowed) {
+                        this.showToast(guardRes.message || "غير مسموح", "error");
+                        return;
                     }
 
                     // Confirm if needed
+                    if (action.confirmText && !confirm(action.confirmText)) return;
+
+                    // ✅ 1) OnClickJs (قبل المودال/السب)
+                    const js = action.onClickJs || action.OnClickJs;
+                    if (js && String(js).trim()) {
+                        try {
+                            const code = String(js).trim();
+
+                            // إذا مكتوب كاسم دالة فقط: myFunc
+                            // أو myFunc(...)
+                            const isFnCallOrName =
+                                /^[a-zA-Z_$][\w$]*(\s*\(.*\))?$/.test(code);
+
+                            if (isFnCallOrName) {
+                                const fnName = code.split('(')[0].trim();
+                                const fn = window[fnName];
+                                if (typeof fn === "function") {
+                                    // استدعاء الدالة وتمرير (row, action, tableApi)
+                                    fn(row, action, this);
+                                    return;
+                                }
+                            }
+
+                            // تنفيذ نص JS مباشرة مع سياق (row/action/table)
+                            // نمرر row/action/table كمتغيرات داخل التنفيذ
+                            // eslint-disable-next-line no-new-func
+                            const runner = new Function("row", "action", "table", code);
+                            runner(row, action, this);
+                            return;
+
+                        } catch (err) {
+                            console.error("OnClickJs failed:", err);
+                            this.showToast("فشل تنفيذ الأمر", "error");
+                            return;
+                        }
+                    }
+
+                    // Open modal
+                    // التأكيد إذا كان مطلوباً
                     if (action.confirmText && !confirm(action.confirmText)) {
                         return;
                     }
 
-                    // Open modal
-                    //if (action.openModal) {
-                    //    await this.openModal(action, row);
-                    //    return;
-                    //}
-
-                    // =====Open modal with Guards check (NEW) =====
+                    // فتح المودال مع فحص Guards
                     if (action.openModal) {
-                        const guardRes = this.evalGuards(action);
-                        if (!guardRes.allowed) {
-                            this.showToast(guardRes.message || "غير مسموح", "error");
-                            return;
-                        }
-
                         await this.openModal(action, row);
                         return;
                     }
 
-
                     // Execute stored procedure
+                    // ===== OnClickJs للأزرار التي لا تفتح مودال =====
+
+                    if (action.onClickJs) {
+                        try {
+                            // تنفيذ الكود الجافاسكربت المخصص
+                            
+                            const fn = new Function('action', 'row', action.onClickJs);
+                            fn.call(this, action, row);
+                        } catch (e) {
+                            console.error("OnClickJs execution error:", e);
+                            this.showToast("فشل تنفيذ الإجراء", 'error');
+                        }
+                        return;
+                    }
+
+                    // تنفيذ stored procedure
                     if (action.saveSp) {
                         const success = await this.executeSp(action.saveSp, action.saveOp || "execute", row);
                         if (success && this.autoRefresh) {
@@ -1169,6 +1574,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     this.showToast("فشل في تنفيذ الإجراء: " + e.message, 'error');
                 }
             },
+
 
             async doBulkDelete() {
                 if (this.selectedKeys.size === 0) {
@@ -1253,9 +1659,66 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             this.$el.querySelector('.sf-modal');
 
                         if (!modalEl) return;
-                        //  datepickers داخل المودال
+
+                        // زر الحفظ داخل المودال: يغيّر الزر فقط إلى "جاري الحفظ…"
+                        const form = modalEl.querySelector('form');
+                        if (form && !form.__saveBound) {
+                            form.__saveBound = true;
+
+                            // عند الضغط على حفظ (submit)
+                            form.addEventListener('submit', (e) => {
+                                const btn =
+                                    form.querySelector('.sf-modal-btn-save') ||
+                                    form.querySelector('button[type="submit"]');
+
+                                if (!btn) return;
+
+                                // منع تكرار الضغط
+                                if (btn.__saving) return;
+                                btn.__saving = true;
+
+                                // حفظ النص الأصلي
+                                btn.__originalText = btn.textContent;
+
+                                // تغيير شكل/نص الزر فقط
+                                btn.disabled = true;
+                                btn.classList.add("opacity-60", "pointer-events-none");
+                                btn.textContent ="جاري الحفظ .."
+
+                                
+                                clearTimeout(btn.__restoreTimer);
+                                btn.__restoreTimer = setTimeout(() => {
+                                    if (this.modal?.open) {
+                                        btn.disabled = false;
+                                        btn.classList.remove("opacity-60", "pointer-events-none");
+                                        btn.textContent = btn.__originalText || "حفظ";
+                                        btn.__saving = false;
+                                    }
+                                }, 15000); // 15 ثانية
+                            });
+
+                            // إذا الفورم غير صالح (required…): رجّع الزر مباشرة
+                            form.addEventListener('invalid', (e) => {
+                                const btn =
+                                    form.querySelector('.sf-modal-btn-save') ||
+                                    form.querySelector('button[type="submit"]');
+
+                                if (!btn) return;
+
+                                clearTimeout(btn.__restoreTimer);
+
+                                btn.disabled = false;
+                                btn.classList.remove("opacity-60", "pointer-events-none");
+                                btn.textContent = btn.__originalText || "حفظ";
+                                btn.__saving = false;
+
+                            }, true);
+                        }
+
+                        // datepickers داخل المودال
                         this.initDatePickers(modalEl);
-                        // ===== drag  =====
+
+                        // ===== drag =====
                         (function () {
                             const modal = modalEl;
                             const header = modal.querySelector('.sf-modal-header');
@@ -1308,12 +1771,15 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             }
                         })();
 
-                        //  الجديد: تفعيل التحجيم
+                        // تفعيل التحجيم
                         this.enableModalResize(modalEl);
 
-                        //  select2 داخل المودال
+                        // select2 داخل المودال
                         this.initSelect2InModal(modalEl);
                     });
+
+
+
 
                 } catch (e) {
                     console.error("Modal error:", e);
@@ -1324,6 +1790,17 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             },
 
             closeModal() {
+
+                if (this.__printHandle && typeof this.__printHandle.cancel === "function") {
+                    this.__printHandle.cancel();
+                    this.__printHandle = null;
+                }
+
+                // (اختياري) احتياط عام
+                if (window.__sfPrintSession?.active) {
+                    window.__sfPrintSession.canceled = true;
+                }
+
                 this.modal.open = false;
                 this.modal.html = "";
                 this.modal.action = null;
@@ -1668,59 +2145,99 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     : "";
 
                 switch ((field.type || "text").toLowerCase()) {
+
                     case "text":
                     case "email":
                     case "url":
-                    case "search":
+                    case "search": {
 
-                        fieldHtml = `
-            <div class="form-group ${colCss}">
-                <label class="block text-sm font-medium text-gray-700 mb-1">
-                    ${this.escapeHtml(field.label)}
-                    ${field.required ? '<span class="text-red-500">*</span>' : ''}
-                </label>
+                        const acRaw = field.autocomplete ?? field.Autocomplete;
+                        const ac = (acRaw ?? "").toString().trim();
+                        const defaultAc =
+                            (inputType === "email") ? "email" :
+                                (inputType === "search") ? "off" :
+                                    "on";
+                        const autocompleteAttr = ac
+                            ? `autocomplete="${this.escapeHtml(ac)}"`
+                            : `autocomplete="${defaultAc}"`;
+                        const hasIcon = !!field.icon;
+                        const isRtl =
+                            (field.textMode && String(field.textMode).toLowerCase() === "arabic") ||
+                            document?.documentElement?.dir === "rtl";
+                        const iconSideClass = isRtl ? "sf-icon-right" : "sf-icon-left";
+                        const iconInputClass = hasIcon ? `sf-has-icon ${iconSideClass}` : "";
+                        const iconHtml = hasIcon
+                            ? `<span class="sf-input-icon ${iconSideClass}">
+                            <i class="${this.escapeHtml(field.icon)}"></i>
+                            </span>`
+                            : "";
 
-                <input        
-                    type="${inputType}"
-                    name="${this.escapeHtml(field.name)}"
-                    value="${this.escapeHtml(value)}"
-                    class="sf-modal-input"
-                    ${placeholder}
-                    ${required}
-                    ${disabled}
-                    ${readonly}
-                    ${maxLength}
-                    ${autocomplete}
-                    ${spellcheck}
-                    ${autocapitalize}
-                    ${autocorrect}
-                    ${pattern}
-                    ${oninput}
-                />
-
-                ${field.helpText
-                                ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
-                                : ''}
+                            fieldHtml = `
+                            <div class="form-group ${colCss}">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                ${this.escapeHtml(field.label)}
+                                ${field.required ? '<span class="text-red-500">*</span>' : ''}
+                            </label>
+                            <div class="sf-field-wrap">
+                                ${iconHtml}
+                                <input
+                                type="${inputType}"
+                                name="${this.escapeHtml(field.name)}"
+                                value="${this.escapeHtml(value)}"
+                                class="sf-modal-input ${iconInputClass}"
+                                ${placeholder}
+                                ${required}
+                                ${disabled}
+                                ${readonly}
+                                ${maxLength}
+                                ${autocompleteAttr}
+                                ${spellcheck}
+                                ${autocapitalize}
+                                ${autocorrect}
+                                ${pattern}
+                                ${oninput}
+                            />
+                        </div>
+                        ${field.helpText
+                        ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
+                        : ''}
                     </div>`;
                         break;
+                    }
 
 
 
-
-                    case "textarea":
+                    case "textarea": {
+                        const acRaw = field.autocomplete ?? field.Autocomplete;
+                        const ac = (acRaw ?? "").toString().trim();
+                        const defaultAc = "off";
+                        const autocompleteAttr = ac
+                            ? `autocomplete="${this.escapeHtml(ac)}"`
+                            : `autocomplete="${defaultAc}"`;
                         const rows = field.rows || 3;
                         fieldHtml = `
                         <div class="form-group ${colCss}">
                             <label class="block text-sm font-medium text-gray-700 mb-1">
                                 ${this.escapeHtml(field.label)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
-
                             </label>
-                            <textarea name="${this.escapeHtml(field.name)}" rows="${rows}"
-                                     class="sf-modal-input"
-                                     ${placeholder} ${required} ${disabled} ${readonly} ${maxLength}>${this.escapeHtml(value)}</textarea>
-                            ${field.helpText ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>` : ''}
-                        </div>`;
-                        break;
+                            <textarea
+                                name="${this.escapeHtml(field.name)}"
+                                rows="${rows}"
+                                class="sf-modal-input"
+                                ${placeholder}
+                                ${required}
+                                ${disabled}
+                                ${readonly}
+                                ${maxLength}
+                                ${autocompleteAttr}
+                            >${this.escapeHtml(value)}</textarea>
+                            ${field.helpText
+                            ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
+                            : ''}
+                            </div>`;
+                          break;
+                         }
+
 
 
 
@@ -1814,43 +2331,72 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         break;
 
 
-                    case "date":
-                        fieldHtml = `
-                          <div class="form-group ${colCss}">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                            ${this.escapeHtml(field.label)}
-                             ${field.required ? '<span class="text-red-500">*</span>' : ''}
-                             </label>
-                        <div class="relative">
-                       ${iconHtml}
-                       <input
-                       type="text"
-                       name="${this.escapeHtml(field.name)}"
-                       value="${this.escapeHtml(value)}"
-                       class="sf-modal-input js-date ${hasIcon ? "pr-10" : ""}"
-                       data-default-date=""
-                       data-alt-input="true"
-                       data-date-format="Y-m-d"
-                       autocomplete="off"
-                       ${required} ${disabled} ${readonly}
-                       />
+                    case "date": {
 
-                       </div>
-                       ${field.helpText
-                                ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
-                                : ''}
-                       </div>`;
+                        const hasIcon = !!field.icon;
+                        const isRtl = document?.documentElement?.dir === "rtl";
+
+                        // كلاس اتجاه الأيقونة
+                        const iconSideClass = isRtl ? "sf-icon-right" : "sf-icon-left";
+
+                        // كلاس يضاف للـ input فقط إذا فيه أيقونة
+                        const iconInputClass = hasIcon ? `sf-has-icon ${iconSideClass}` : "";
+
+                        // HTML الأيقونة
+                        const iconHtml = hasIcon
+                            ? `<span class="sf-input-icon ${iconSideClass}">
+                                    <i class="${this.escapeHtml(field.icon)}"></i>
+                               </span>`
+                                                : "";
+
+                                            fieldHtml = `
+                            <div class="form-group ${colCss}">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                    ${this.escapeHtml(field.label)}
+                                    ${field.required ? '<span class="text-red-500">*</span>' : ''}
+                                </label>
+
+                                <div class="sf-field-wrap">
+                                    ${iconHtml}
+                                    <input
+                                        type="text"
+                                        name="${this.escapeHtml(field.name)}"
+                                        value="${this.escapeHtml(value)}"
+                                        class="sf-modal-input js-date ${iconInputClass}"
+                                        data-default-date=""
+                                        data-alt-input="true"
+                                        data-date-format="Y-m-d"
+                                        autocomplete="off"
+                                        ${required} ${disabled} ${readonly}
+                                    />
+                                </div>
+
+                                ${field.helpText
+                                                    ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
+                                                    : ''}
+                            </div>`;
                         break;
+                    }
+
+
 
 
                     case "number":
-                        // رقم >= 0 فقط (بدون سالب)
                         const min0 = `min="0"`;
                         const numStep = field.step !== undefined ? `step="${field.step}"` : `step="1"`;
                         const numMax = field.max !== undefined ? `max="${field.max}"` : "";
 
-                        // يمنع إدخال السالب و e و + ويقص أي شيء غير رقم (ويسمح بنقطة لو step فيه كسور)
-                        const allowDecimal = String(field.step ?? "").includes('.') || (typeof field.step === 'number' && !Number.isInteger(field.step));
+                        const allowDecimal =
+                            String(field.step ?? "").includes('.') ||
+                            (typeof field.step === 'number' && !Number.isInteger(field.step));
+
+                        const ac = field.autocomplete ?? field.Autocomplete;
+                        const autocompleteAttr =
+                            (ac !== undefined && ac !== null && String(ac).trim() !== "")
+                                ? `autocomplete="${this.escapeHtml(ac)}"`
+                                : `autocomplete="off"`;
+
+
                         const numberOnInput = allowDecimal
                             ? `oninput="this.value=this.value.replace(/[^0-9.]/g,''); if(this.value.startsWith('.')) this.value='0'+this.value; if(this.value.includes('.')){const p=this.value.split('.'); this.value=p[0]+'.'+p.slice(1).join('');}"`
                             : `oninput="this.value=this.value.replace(/\\D/g,'')"`;
@@ -1858,17 +2404,33 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         const numberOnKeyDown =
                             `onkeydown="if(['-','e','E','+'].includes(event.key)) event.preventDefault()"`;
 
-                        fieldHtml = `
-                            <div class="form-group ${colCss}">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">
-                                    ${this.escapeHtml(field.label)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
-                                </label>
+                        const hasIcon = !!field.icon;
+                        const isRtl = document?.documentElement?.dir === "rtl";
+
+                        const iconSideClass = isRtl ? "sf-icon-right" : "sf-icon-left";
+                        const iconInputClass = hasIcon ? `sf-has-icon ${iconSideClass}` : "";
+
+                        const iconHtml = hasIcon
+                            ? `<span class="sf-input-icon ${iconSideClass}">
+                            <i class="${this.escapeHtml(field.icon)}"></i>
+                           </span>`
+                                            : "";
+
+                                        fieldHtml = `
+                        <div class="form-group ${colCss}">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                ${this.escapeHtml(field.label)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
+                            </label>
+
+                            <div class="sf-field-wrap">
+                                ${iconHtml}
                                 <input
                                     type="number"
                                     inputmode="numeric"
                                     name="${this.escapeHtml(field.name)}"
                                     value="${this.escapeHtml(value)}"
-                                    class="sf-modal-input"
+                                    class="sf-modal-input ${iconInputClass}"
+                                    ${autocompleteAttr}
                                     ${placeholder}
                                     ${min0}
                                     ${numMax}
@@ -1878,169 +2440,210 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                     ${readonly}
                                     ${numberOnKeyDown}
                                     ${numberOnInput}
-                                    
-
                                 >
-                                ${field.helpText ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>` : ''}
-                            </div>`;
+                            </div>
+                            ${field.helpText
+                            ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
+                            : ''}
+                        </div>`;
                         break;
 
 
-                            case "nationalid":
-                            case "nid":
-                            case "identity": {
-
-                                // أرقام فقط + أقصى 10 أرقام
-                                const nidOnInput =
-                                    `oninput="` +
-                                    `this.value=this.value.replace(/\\D/g,'');` +
-                                    `if(this.value.length>10)this.value=this.value.slice(0,10);` +
-                                    `"`; 
-
-                                const nidOnKeyDown =
-                                    `onkeydown="if(['-','e','E','+','.'].includes(event.key)) event.preventDefault()"`;
-
-                                fieldHtml = `
-                                <div class="form-group ${colCss}">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                                        ${this.escapeHtml(field.label)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
-                                    </label>
-
-                                    <input
-                                        type="text"
-                                        inputmode="numeric"
-                                        name="${this.escapeHtml(field.name)}"
-                                        value="${this.escapeHtml(value)}"
-                                        class="sf-modal-input"
-                                        ${placeholder}
-                                        ${required}
-                                        ${disabled}
-                                        ${readonly}
-                                        autocomplete="new-password"
-                                        autocorrect="off"
-                                        autocapitalize="off"
-                                        spellcheck="false"
-                                        maxlength="10"
-                                        pattern="^[0-9]{1,10}$"
-                                        title="الهوية الوطنية يجب أن تكون أرقام فقط وبحد أقصى 10 رقم"
-
-                                        ${nidOnKeyDown}
-                                        ${nidOnInput}
-                                    />
-                                    ${field.helpText ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>` : ''}
-                                </div>`;
-                            break;
-                           }
 
 
-                    case "phone":
-                    case "tel": {
 
-                        const normalizeFn = `
-                                (function(el){
-                                    let v = (el.value || '');
 
-                                    // digits to ascii
-                                    v = v.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
-                                    v = v.replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
+                    case "nationalid":
+                    case "nid":
+                    case "identity": {
 
-                                    // keep digits only
-                                    v = v.replace(/\\s+/g,'');
-                                    v = v.replace(/^\\+/, '');      // +966... -> 966...
-                                    v = v.replace(/\\D/g,'');
+                        // أرقام فقط + أقصى 10 أرقام
+                        const nidOnInput =
+                            `oninput="` +
+                            `this.value=this.value.replace(/\\D/g,'');` +
+                            `if(this.value.length>10)this.value=this.value.slice(0,10);` +
+                            `"`;
 
-                                    // Saudi normalize to 05XXXXXXXX
-                                    if (v.startsWith('966') ) v = '0' + v.slice(3);     // 9665xxxxxxxx -> 05xxxxxxxx
-                                    if (v.startsWith('00966')) v = '0' + v.slice(5);    // 009665xxxxxxxx -> 05xxxxxxxx
-                                    if (v.startsWith('5') && v.length === 9) v = '0' + v; // 5xxxxxxxx -> 05xxxxxxxx
+                        const nidOnKeyDown =
+                            `onkeydown="if(['-','e','E','+','.'].includes(event.key)) event.preventDefault()"`;
+                        const acRaw = field.autocomplete ?? field.Autocomplete;
+                        const ac = (acRaw ?? "").toString().trim();
+                        const autocompleteAttr = ac
+                            ? `autocomplete="${this.escapeHtml(ac)}"`
+                            : `autocomplete="new-password"`;
+                        const hasIcon = !!field.icon;
+                        const isRtl = document?.documentElement?.dir === "rtl";
+                        const iconSideClass = isRtl ? "sf-icon-right" : "sf-icon-left";
+                        const iconInputClass = hasIcon ? `sf-has-icon ${iconSideClass}` : "";
+                        const iconHtml = hasIcon
+                            ? `<span class="sf-input-icon ${iconSideClass}">
+                                <i class="${this.escapeHtml(field.icon)}"></i>
+                           </span>`
+                                            : "";
+                                        fieldHtml = `
+                        <div class="form-group ${colCss}">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                ${this.escapeHtml(field.label)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
+                            </label>
+                            <div class="sf-field-wrap">
+                                ${iconHtml}
+                                <input
+                                    type="text"
+                                    inputmode="numeric"
+                                    name="${this.escapeHtml(field.name)}"
+                                    value="${this.escapeHtml(value)}"
+                                    class="sf-modal-input ${iconInputClass}"
+                                    ${placeholder}
+                                    ${required}
+                                    ${disabled}
+                                    ${readonly}
+                                    ${autocompleteAttr}
+                                    autocorrect="off"
+                                    autocapitalize="off"
+                                    spellcheck="false"
+                                    maxlength="10"
+                                    pattern="^[0-9]{1,10}$"
+                                    title="الهوية الوطنية يجب أن تكون أرقام فقط وبحد أقصى 10 رقم"
+                                    ${nidOnKeyDown}
+                                    ${nidOnInput}
+                                />
+                            </div>
+                            ${field.helpText ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>` : ''}
+                        </div>`;
+                        break;
+                    }
 
-                                    // force prefix 05 if user started typing mobile
-                                    if (v.length >= 2 && !v.startsWith('05')) {
-                                        if (v.startsWith('0')) v = '05' + v.slice(2);
-                                        else v = '05' + v.replace(/^05/, '').slice(0); // fallback
-                                    }
 
-                                    if (v.length > 10) v = v.slice(0,10);
-                                    el.value = v;
-                                })(this);
-                            `;
 
-                                                const validateFn = `
-                                (function(el){
-                                    // normalize first
-                                    ${normalizeFn.replace(/this/g, 'el')}
 
-                                    const v = (el.value || '');
-                                    if (${field.required ? 'true' : 'false'} && !v) {
-                                        el.setCustomValidity('رقم الجوال مطلوب');
-                                        return;
-                                    }
-                                    if (!v) { el.setCustomValidity(''); return; }
 
-                                    if (!/^05\\d{8}$/.test(v)) {
-                                        el.setCustomValidity('رقم الجوال يجب أن يبدأ بـ 05 ثم 8 أرقام');
-                                    } else {
-                                        el.setCustomValidity('');
-                                    }
-                                })(this);
-                            `;
+                            case "phone":
+                            case "tel": {
 
-                        // initial normalize (server value)
+                            const normalizeFn = `
+                                        (function(el){
+                                            let v = (el.value || '');
+
+                                            // digits to ascii
+                                            v = v.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+                                            v = v.replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
+
+                                            // keep digits only
+                                            v = v.replace(/\\s+/g,'');
+                                            v = v.replace(/^\\+/, '');      // +966... -> 966...
+                                            v = v.replace(/\\D/g,'');
+
+                                            // Saudi normalize to 05XXXXXXXX
+                                            if (v.startsWith('966'))  v = '0' + v.slice(3);      // 9665xxxxxxxx -> 05xxxxxxxx
+                                            if (v.startsWith('00966')) v = '0' + v.slice(5);     // 009665xxxxxxxx -> 05xxxxxxxx
+                                            if (v.startsWith('5') && v.length === 9) v = '0' + v; // 5xxxxxxxx -> 05xxxxxxxx
+
+                                            // force prefix 05 if user started typing mobile
+                                            if (v.length >= 2 && !v.startsWith('05')) {
+                                                if (v.startsWith('0')) v = '05' + v.slice(2);
+                                                else v = '05' + v.replace(/^05/, '').slice(0); // fallback
+                                            }
+
+                                            if (v.length > 10) v = v.slice(0,10);
+                                            el.value = v;
+                                        })(this);
+                                    `;
+
+                                                        const validateFn = `
+                                        (function(el){
+                                            // normalize first
+                                            ${normalizeFn.replace(/this/g, 'el')}
+
+                                            const v = (el.value || '');
+                                            if (${field.required ? 'true' : 'false'} && !v) {
+                                                el.setCustomValidity('رقم الجوال مطلوب');
+                                                return;
+                                            }
+                                            if (!v) { el.setCustomValidity(''); return; }
+
+                                            if (!/^05\\d{8}$/.test(v)) {
+                                                el.setCustomValidity('رقم الجوال يجب أن يبدأ بـ 05 ثم 8 أرقام');
+                                            } else {
+                                                el.setCustomValidity('');
+                                            }
+                                        })(this);
+                                    `;
+
+                        const acRaw = field.autocomplete ?? field.Autocomplete;
+                        const ac = (acRaw ?? "").toString().trim();
+                        const autocompleteAttr = ac
+                            ? `autocomplete="${this.escapeHtml(ac)}"`
+                            : `autocomplete="new-password"`;
                         const initial = (() => {
                             let v = (value ?? '').toString();
                             v = v.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
                             v = v.replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
-                            v = v.replace(/\s+/g, '').replace(/^\+/, '').replace(/\D/g, '');
-
+                            v = v.replace(/\\s+/g, '').replace(/^\\+/, '').replace(/\\D/g, '');
                             if (v.startsWith('00966')) v = '0' + v.slice(5);
                             if (v.startsWith('966')) v = '0' + v.slice(3);
                             if (v.startsWith('5') && v.length === 9) v = '0' + v;
                             if (v.length > 10) v = v.slice(0, 10);
                             return v;
                         })();
-
-                        // IMPORTANT: oninput لا يعرض رسالة، فقط يطبّع
                         const onInput = `oninput="${normalizeFn} this.setCustomValidity('');"`;
-                        // التحقق فقط عند blur/invalid
                         const onBlur = `onblur="${validateFn}"`;
                         const onInvalid = `oninvalid="${validateFn}"`;
                         const onChange = `onchange="${normalizeFn}"`;
                         const onKeyDown =
                             `onkeydown="if(['-','e','E','+','.'].includes(event.key)) event.preventDefault()"`;
+                        const hasIcon = !!field.icon;
+                        const isRtl = document?.documentElement?.dir === "rtl";
+
+                        const iconSideClass = isRtl ? "sf-icon-right" : "sf-icon-left";
+                        const iconInputClass = hasIcon ? `sf-has-icon ${iconSideClass}` : "";
+
+                        const iconHtml = hasIcon
+                            ? `<span class="sf-input-icon ${iconSideClass}">
+                        <i class="${this.escapeHtml(field.icon)}"></i>
+                        </span>`
+                            : "";
 
                         fieldHtml = `
-                                <div class="form-group ${colCss}">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">
-                                        ${this.escapeHtml(field.label)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
-                                    </label>
-                                    <input
-                                        type="text"
-                                        inputmode="numeric"
-                                        name="${this.escapeHtml(field.name)}"
-                                        value="${this.escapeHtml(initial)}"
-                                        class="sf-modal-input"
-                                        ${placeholder}
-                                        ${required}
-                                        ${disabled}
-                                        ${readonly}
-                                        data-sa-mobile="1"
-                                        autocomplete="new-password"
-                                        autocorrect="off"
-                                        autocapitalize="off"
-                                        spellcheck="false"
-                                        maxlength="10"
-                                        title="مثال: 05XXXXXXXX"
-                                        ${onKeyDown}
-                                        ${onChange}
-                                        ${onInvalid}
-                                        ${onBlur}
-                                        ${onInput}
-                                    />
+                        <div class="form-group ${colCss}">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                                ${this.escapeHtml(field.label)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
+                            </label>
 
-                                    ${field.helpText ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>` : ''}
-                                </div>`;
-                                break;
-                            }
+                            <div class="sf-field-wrap">
+                                ${iconHtml}
+
+                                <input
+                                    type="text"
+                                    inputmode="numeric"
+                                    name="${this.escapeHtml(field.name)}"
+                                    value="${this.escapeHtml(initial)}"
+                                    class="sf-modal-input ${iconInputClass}"
+                                    ${placeholder}
+                                    ${required}
+                                    ${disabled}
+                                    ${readonly}
+                                    data-sa-mobile="1"
+                                    ${autocompleteAttr}
+                                    autocorrect="off"
+                                    autocapitalize="off"
+                                    spellcheck="false"
+                                    maxlength="10"
+                                    title="مثال: 05XXXXXXXX"
+                                    ${onKeyDown}
+                                    ${onChange}
+                                    ${onInvalid}
+                                    ${onBlur}
+                                    ${onInput}
+                                />
+                            </div>
+
+                            ${field.helpText ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>` : ''}
+                        </div>`;
+                        break;
+                    }
+
+
+
 
 
                     case "iban":
@@ -2078,16 +2681,35 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 return fieldHtml;
             },
 
-            resolveColCss(colCss) {
-                if (!colCss) return "col-span-12 md:col-span-6";
+            //resolveColCss(colCss) {
+            //    if (!colCss) return "col-span-12 md:col-span-6";
 
-                if (/^\d{1,2}$/.test(colCss)) {
-                    const n = Math.max(1, Math.min(12, parseInt(colCss, 10)));
-                    return `col-span-12 md:col-span-${n}`;
+            //    if (/^\d{1,2}$/.test(colCss)) {
+            //        const n = Math.max(1, Math.min(12, parseInt(colCss, 10)));
+            //        return `col-span-12 md:col-span-${n}`;
+            //    }
+
+            //    return colCss.includes('col-span') ? colCss : `col-span-12 ${colCss}`;
+            //},
+
+            resolveColCss(colCss) {
+                if (!colCss) return "col-span-12";
+
+                const raw = colCss.toString().trim();
+
+                // إذا المستخدم كتب رقم فقط: 2/3/4/6/8/10/12
+                if (/^\d{1,2}$/.test(raw)) {
+                    const n = Math.max(1, Math.min(12, parseInt(raw, 10)));
+                    return `col-span-${n}`;
                 }
 
-                return colCss.includes('col-span') ? colCss : `col-span-12 ${colCss}`;
+                // إذا كتب كلاسات جاهزة مثل: "col-span-4 md:col-span-6"
+                if (raw.includes("col-span")) return raw;
+
+                // غير كذا: اعتبره كلاس إضافي مع default 12
+                return `col-span-12 ${raw}`;
             },
+
 
             initModalScripts() {
                 const form = this.$el.querySelector('.sf-modal form');
@@ -2601,23 +3223,37 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     .replace(/'/g, "&#039;");
             },
 
+           
             showToast(message, type = 'info') {
                 const toast = document.createElement('div');
-                toast.className = `fixed top-4 right-4 px-4 py-2 rounded-md text-white z-50 ${
-                    type === 'error' ? 'bg-red-600' : 
-                    type === 'success' ? 'bg-green-600' : 'bg-blue-600'
-                }`;
                 toast.textContent = message;
-                toast.style.zIndex = '10000';
-                
+                Object.assign(toast.style, {
+                    position: 'fixed',
+                    top: '20px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    padding: '1rem 2rem',
+                    borderRadius: '0.5rem',
+                    color: 'white',
+                    backgroundColor:
+                        type === 'error' ? '#EF4444' :
+                            type === 'success' ? '#16A34A' :
+                                '#3B82F6',
+                    zIndex: '10000',
+                    fontSize: '1rem',
+                    textAlign: 'center',
+                    maxWidth: '90%',
+                    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+                });
+
                 document.body.appendChild(toast);
-                
+
                 setTimeout(() => {
-                    if (toast.parentElement) {
-                        toast.parentElement.removeChild(toast);
-                    }
+                    toast.remove();
                 }, 3000);
             },
+
+
 
             // ===== Advanced Features =====
             toggleFullscreen() {
@@ -2634,9 +3270,161 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             changeDensity(density) {
                 this.$el.setAttribute('data-density', density);
                 this.savePreferences();
+            },
+
+            //========== بداية الطباعه =========
+
+
+            // ===== Busy Print (NEW) =====
+            showBusyPrint(message = "جاري تجهيز البيانات للطباعة...", opts = {}) {
+                const isHtml = (opts.isHtml === true);
+
+                this.modal.open = true;
+                window.__sfTableActive = this;
+                window.__sfTableLastActive = this;
+
+                this.modal.title = opts.title || "طباعة";
+                this.modal.message = message;
+
+                // لو ما أرسلت class/icon استخدم الافتراضي
+                this.modal.messageClass = opts.messageClass || "border border-sky-200 bg-sky-50 text-sky-700";
+                this.modal.messageIcon = opts.messageIcon || "";
+
+                this.modal.messageIsHtml = isHtml;
+
+                this.modal.error = null;
+                this.modal.html = "";
+                this.modal.loading = true;
+
+            },
+
+
+            hideBusyPrint() {
+                this.modal.loading = false;
+                this.modal.open = false;
+            },
+
+            bindPrintListenerOnce() {
+                if (window.__sfPrintBound) return;
+                window.__sfPrintBound = true;
+
+                window.addEventListener("message", (ev) => {
+                    if (ev.origin !== window.location.origin) return;
+
+                    const msg = ev.data || {};
+                    if (msg.type !== "sf-print") return;
+
+                    const table = window.__sfTableActive || window.__sfTableLastActive;
+                    if (!table) return;
+
+                    if (msg.stage === "ready" || msg.stage === "print-opened" || msg.stage === "print-closed") {
+                        table.hideBusyPrint?.();
+                        return;
+                    }
+
+                    if (msg.stage === "error") {
+                        table.hideBusyPrint?.();
+                        table.showToast?.(msg.message || "فشل تجهيز الطباعة", "error");
+                        return;
+                    }
+                });
             }
 
+
+
+            //========== نهاية الطباعه =========
+
+
         }));
+
+        // دالة عامة للطباعة مع Busy modal
+        window.sfPrintWithBusy = window.sfPrintWithBusy || function (table, options) {
+            options = options || {};
+
+            if (!table) return false;
+
+            const defaultHtml = `
+                    <div class="space-y-3 text-center">
+                      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-400 text-white text-sm">
+                        جاري تجهيز البيانات للطباعة الرجاء الانتظار
+                        <i class="fa fa-spinner animate-spin"></i>
+                      </div>
+
+                      <div class="text-base">
+                        <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-400 text-white text-sm">
+                          وقت الطباعة يعتمد على عدد السجلات المراد طباعتها وسرعة الاتصال
+                          <i class="fa fa-bolt"></i>
+                        </span>
+                      </div>
+
+                      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-50 text-green-700 text-sm">
+                        حفاظًا على البيئة وتماشياً مع مستهدفات رؤية 2030 نأمل تقليل الطباعة
+                        <i class="fa fa-leaf"></i>
+                      </div>
+                    </div>
+                  `;
+
+            const busy = options.busy || {};
+            const pdfVal = (options.pdf ?? options.pdfVal ?? 1);
+
+            // ✅ افتح مودال الـ Busy
+            if (options.messageText) {
+                table.showBusyPrint(options.messageText, {
+                    isHtml: false,
+                    title: busy.title || "الطباعة",
+                    icon: (busy.icon === undefined) ? "fa fa-print" : busy.icon,
+                    className: busy.className || "border border-sky-200 bg-sky-50 text-sky-700"
+                });
+            } else {
+                table.showBusyPrint(options.messageHtml || defaultHtml, {
+                    isHtml: true,
+                    title: busy.title || "الطباعة",
+                    icon: (busy.icon === undefined) ? "fa fa-print" : busy.icon,
+                    className: busy.className || "border border-sky-200 bg-sky-50 text-sky-700"
+                });
+            }
+
+            // ✅ كوّن رابط الطباعة من نفس الصفحة
+            let url;
+            try {
+                const u = new URL(window.location.href);
+                u.searchParams.set('pdf', String(pdfVal));
+
+                // أي بارامترات إضافية
+                if (options.extraParams && typeof options.extraParams === "object") {
+                    Object.keys(options.extraParams).forEach(k => {
+                        const v = options.extraParams[k];
+                        if (v === null || v === undefined) return;
+                        u.searchParams.set(k, String(v));
+                    });
+                }
+
+                url = u.toString();
+            } catch (e) {
+                table.hideBusyPrint();
+                table.showToast("تعذر تجهيز رابط الطباعة", "error");
+                return false;
+            }
+
+            // ✅ ابدأ الطباعة عبر iframe
+            table.__printHandle = sfOpenPrint(url, {
+                onBeforePrint: () => table.hideBusyPrint(),
+                onAfterPrint: () => table.hideBusyPrint(), // احتياط
+                onError: (e) => {
+                    table.hideBusyPrint();
+                    table.showToast('تعذر فتح الطباعة: ' + (e?.message || e), 'error');
+                }
+            });
+
+            if (!table.__printHandle) {
+                table.hideBusyPrint();
+                table.showToast('تعذر بدء الطباعة', 'error');
+                return false;
+            }
+
+            return true;
+        };
+
     };
 
     if (window.Alpine) {

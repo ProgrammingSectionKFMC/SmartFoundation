@@ -164,88 +164,40 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 // ----------------------END DDLValues ----------------------
 
 
-
-
-
                 // Determine which fields should be visible based on SearchID_
 
                 form = new FormConfig
                 {
-                    FormId = "dynamicForm",
-                    Title = "نموذج الإدخال",
-                    Method = "POST",
-                    SubmitText = null,
-
-
-                    StoredProcedureName = "sp_SaveDemoForm",
-                    Operation = "insert",
-                    StoredSuccessMessageField = "Message",
-                    StoredErrorMessageField = "Error",
-
                     Fields = new List<FieldConfig>
                 {
-
-
-                     new FieldConfig {
-                         SectionTitle = "اختيار المرفق",
-                         Name = "UtilityType",
-                         Type = "select",
-                         Options = UtilityTypeOptions,
-                         ColCss = "3",
-                         Placeholder = "اختر المرفق",
-                         Icon = "fa fa-user",
-                         Value = UtilityTypeID_,
-                         OnChangeJs = @"
-                                       var UtilityTypeID_ = value.trim();
-                                       if (!UtilityTypeID_) {
-                                           if (typeof toastr !== 'undefined') {
-                                               toastr.info('الرجاء الاختيار اولا');
-                                           }
-                                           return;
-                                       }
-                                         if (value && value !== '-1') {
-                             var url = '/Housing/BuildingDetails?S=1&U=' + encodeURIComponent(UtilityTypeID_);
-                            window.location.href = url;
-                        }
-
-                                   "
+                       new FieldConfig
+                                {
+                                    SectionTitle = "اختيار المرفق",
+                                    Name = "UtilityType",
+                                    Type = "select",
+                                    Select2 = true,
+                                    Options = UtilityTypeOptions,
+                                    ColCss = "3",
+                                    Placeholder = "اختر المرفق",
+                                    Icon = "fa fa-user",
+                                    Value = UtilityTypeID_,
+                                    // ===== تنقّل (sfNav) =====
+                                    NavUrl  = "/Housing/BuildingDetails",
+                                    NavKey  = "U",        // قيمة الحقل (UtilityType)
+                                    NavKey2 = "S",        // ثابت
+                                    NavVal2 = "1",
+                                    OnChangeJs = "sfNav(this)"
+                                },
                      },
-
-
-                 },
                     Buttons = new List<FormButtonConfig>
                     {
-                        //           new FormButtonConfig
-                        //  {
-                        //      Text="بحث",
-                        //      Icon="fa-solid fa-search",
-                        //      Type="button",
-                        //      Color="success",
-                        //      // Replace the OnClickJs of the "تجربة" button with this:
-                        //      OnClickJs = "(function(){"
-                        //+ "var hidden=document.querySelector('input[name=Users]');"
-                        //+ "if(!hidden){toastr.error('لا يوجد حقل مستخدم');return;}"
-                        //+ "var userId = (hidden.value||'').trim();"
-                        //+ "var anchor = hidden.parentElement.querySelector('.sf-select');"
-                        //+ "var userName = anchor && anchor.querySelector('.truncate') ? anchor.querySelector('.truncate').textContent.trim() : '';"
-                        //+ "if(!userId){toastr.info('اختر مستخدم أولاً');return;}"
-                        //+ "var url = '/ControlPanel/Permission?Q1=' + encodeURIComponent(userId);"
-                        //+ "window.location.href = url;"
-                        //+ "})();"
-                        //  },
-
-
 
                     }
-
-
                 };
 
                 if (ds != null && ds.Tables.Count > 0 && ds.Tables[0].Rows.Count > 0)
                 {
                     // اقرأ الجدول الأول
-
-
                     // نبحث عن صلاحيات محددة داخل الجدول
                     foreach (DataRow row in permissionTable.Rows)
                     {
@@ -260,7 +212,6 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         if (permissionName == "DELETE")
                             canDelete = true;
                     }
-
 
                     if (ds != null && ds.Tables.Count > 0)
                     {

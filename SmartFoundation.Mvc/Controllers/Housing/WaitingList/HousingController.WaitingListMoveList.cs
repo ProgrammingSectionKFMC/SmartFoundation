@@ -223,13 +223,14 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     Delete = new TableAction
                     {
                         Label = "قبول الطلب",
-                        Icon = "fa fa-check",
+                        //Icon = "fa fa-check",
                         Color = "success",
                         IsEdit = true,
                         OpenModal = true,
-                        ModalTitle = "قبول الطلب <i class='fa fa-exclamation-triangle text-white-600 text-xl mr-2'></i>",
+                        ModalTitle = "قبول الطلب",
                         ModalMessage = "هل أنت متأكد من قبول الطلب؟",
                         ModalMessageClass = "bg-green-50 text-green-700",
+                        ModalMessageIcon = "fa-solid fa-circle-question",
                         OpenForm = new FormConfig
                         {
                             FormId = "WaitingListMoveListDeleteForm",
@@ -268,6 +269,14 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                     Value = "مرفوض",
                                     Message = "لا يمكن قبول طلب حالته (مرفوض).",
                                     Priority = 2
+                                },
+                                new TableActionRule
+                                {
+                                    Field = "ActionStatus",
+                                    Op = "eq",
+                                    Value = "ملغى",
+                                    Message = "لا يمكن قبول طلب حالته (ملغى).",
+                                    Priority = 3
                                 }
                             }
                         }
@@ -282,9 +291,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         Color = "danger",
                         IsEdit = true,
                         OpenModal = true,
-                        ModalTitle = "<i class='fa fa-exclamation-triangle text-red-600 text-xl mr-2'></i> تحذير",
+                        ModalTitle = "تحذير",
                         ModalMessage = "هل أنت متأكد من رفض الطلب؟",
                         ModalMessageClass = "bg-red-50 text-red-700",
+                        ModalMessageIcon = "fa-solid fa-triangle-exclamation",
                         OpenForm = new FormConfig
                         {
                             FormId = "WaitingListMoveListDeleteForm",
@@ -316,13 +326,21 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                     Message = "لا يمكن رفض طلب حالته بالفعل (مرفوض).",
                                     Priority = 1
                                 },
+                            new TableActionRule
+                            {
+                                    Field = "ActionStatus",
+                                    Op = "eq",
+                                    Value = "ملغى",
+                                    Message = "لا يمكن رفض طلب حالته بالفعل (ملغى).",
+                                    Priority = 2
+                                },
                                 new TableActionRule
                                 {
                                     Field = "ActionStatus",
                                     Op = "eq",
                                     Value = "مقبول",
                                     Message = "لا يمكن رفض طلب حالته (مقبول).",
-                                    Priority = 2
+                                    Priority = 3
                                 }
                             }
                         }
@@ -346,6 +364,18 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 Field = "ActionStatus",
                 Op = "eq",
                 Value = "مرفوض",
+                CssClass = "row-red",
+                Priority = 1
+            },
+                           
+            new TableStyleRule
+                          
+            {
+                                
+                Target = "row",
+                Field = "ActionStatus",
+                Op = "eq",
+                Value = "ملغى",
                 CssClass = "row-red",
                 Priority = 1
             },

@@ -117,55 +117,29 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 // ----------------------END DDLValues ----------------------
 
 
-
-
-
                 // Determine which fields should be visible based on SearchID_
 
-                form = new FormConfig
-                {
-                    FormId = "dynamicForm",
-                    Title = "نموذج الإدخال",
-                    Method = "POST",
-                    SubmitText = null,
+                           form = new FormConfig
+                            {
+                                 Fields = new List<FieldConfig>
+                                {
+                                    new FieldConfig
+                                    {
+                                        SectionTitle = "اختيار فئة قائمة الانتظار",
+                                        Name = "WaitingList",
+                                        Type = "select",
+                                        Select2 = true,
+                                        Options = WaitingListOptions,
+                                        ColCss = "3",
+                                        Placeholder = "اختر فئة سجلات الانتظار",
+                                        Icon = "fa fa-user",
+                                        Value = waitingClassID_,
+                                        OnChangeJs = "sfNav(this)",
+                                        NavUrl = "/Housing/WaitingList",
+                                        NavKey = "U",
+                                    },
+                                },
 
-
-                    StoredProcedureName = "sp_SaveDemoForm",
-                    Operation = "insert",
-                    StoredSuccessMessageField = "Message",
-                    StoredErrorMessageField = "Error",
-
-                    Fields = new List<FieldConfig>
-                {
-
-
-                     new FieldConfig {
-                         SectionTitle = "اختيار فئة قائمة الانتظار",
-                         Name = "WaitingList",
-                         Type = "select",
-                         Options = WaitingListOptions,
-                         ColCss = "3",
-                         Placeholder = "اختر فئة سجلات الانتظار",
-                         Icon = "fa fa-user",
-                         Value = waitingClassID_,
-                         OnChangeJs = @"
-                                       var WaitingClassID_ = value.trim();
-                                       if (!WaitingClassID_) {
-                                           if (typeof toastr !== 'undefined') {
-                                               toastr.info('الرجاء الاختيار اولا');
-                                           }
-                                           return;
-                                       }
-                                         if (value && value !== '-1') {
-                             var url = '/Housing/WaitingList?U=' + encodeURIComponent(WaitingClassID_);
-                            window.location.href = url;
-                        }
-
-                                   "
-                     },
-
-
-                 },
                     Buttons = new List<FormButtonConfig>
                     {
                         //           new FormButtonConfig
@@ -186,8 +160,6 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         //+ "window.location.href = url;"
                         //+ "})();"
                         //  },
-
-
 
                     }
 
@@ -406,9 +378,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         IsEdit = true,
                         OpenModal = true,
                         //ModalTitle = "رسالة تحذيرية",
-                        ModalTitle = "<i class='fa fa-exclamation-triangle text-red-600 text-xl mr-2'></i> نقل المستفيد لقائمة التخصيص <i class='fa fa-exclamation-triangle text-red-600 text-xl mr-2'></i>",
+                        ModalTitle = "نقل المستفيد لقائمة التخصيص",
                         ModalMessage = "ملاحظة : سيتم رفض نقل المستفيد في حال لم يكن في رأس القائمة من قبل النظام",
-                        ModalMessageClass = "bg-red-50 border border-red-200 text-red-700",
+                        ModalMessageClass = "bg-red-50 text-red-700",
+                        ModalMessageIcon = "fa-solid fa-triangle-exclamation",
                         OpenForm = new FormConfig
                         {
                             FormId = "employeeDeleteForm",
@@ -418,7 +391,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             Buttons = new List<FormButtonConfig>
                             {
                                 new FormButtonConfig { Text = "نقل المستفيد", Type = "submit", Color = "success", Icon = "fa fa-check" },
-                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", Icon = "fa fa-times", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
+                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
                             },
                             Fields = MoveToCustomizationListFields
                         },

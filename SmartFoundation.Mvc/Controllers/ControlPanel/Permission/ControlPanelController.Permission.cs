@@ -63,10 +63,6 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
 
             ds = await _mastersServies.GetDataLoadDataSetAsync(spParameters);
 
-
-
-
-
             DataTable? permissionTable = (ds?.Tables?.Count ?? 0) > 0 ? ds.Tables[0] : null;
 
             //DataTable? rawDt1 = (ds?.Tables?.Count ?? 0) > 1 ? ds.Tables[1] : null;
@@ -111,16 +107,11 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 return RedirectToAction("Index", "Home");
             }
 
-
-
-
-
             string rowIdField = "";
             bool canInsert = false;
             bool canInsertFullAccess = false;
             bool canUpdate = false;
             bool canDelete = false;
-
 
 
             List<OptionItem> permissionsOptions = new();
@@ -136,19 +127,13 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
 
             FormConfig form = new();
 
-            
             try
             {
 
                 // ---------------------- DDLValues ----------------------
-
-
-
-
                 JsonResult? result;
                 string json;
                 // ---------------------- permissin Type ----------------------
-
 
                 List<OptionItem> permissinTypeOptions = new()
                 {
@@ -159,14 +144,12 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                     new OptionItem { Value = "4", Text = "ادارة" },
                     new OptionItem { Value = "5", Text = "قسم" },
 
-
                 };
 
                 // ---------------------- Users ----------------------
                 result = await _CrudController.GetDDLValues(
                     "FullName", "userID_", "2", nameof(Permission), usersId, IdaraId, HostName
                 ) as JsonResult;
-
 
                 json = JsonSerializer.Serialize(result!.Value);
 
@@ -235,7 +218,6 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
 
                 RoleOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
-
                 // ---------------------- distributorToGivepermission ----------------------
                 result = await _CrudController.GetDDLValues(
                     "distributorName_A", "distributorID", "10", nameof(Permission), usersId, IdaraId, HostName, null, null
@@ -245,13 +227,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
 
                 distributorToGivepermissionOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
-              
-
                 // ----------------------END DDLValues ----------------------
-
-
-
-
 
                 // Determine which fields should be visible based on SearchID_
                 bool showUsers = SearchID_ == "1";
@@ -262,295 +238,175 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
 
                 form = new FormConfig
                 {
-                    FormId = "dynamicForm",
-                    Title = "نموذج الإدخال",
-                    Method = "POST",
-                    SubmitText = null,
-
-
-                    StoredProcedureName = "sp_SaveDemoForm",
-                    Operation = "insert",
-                    StoredSuccessMessageField = "Message",
-                    StoredErrorMessageField = "Error",
-
                     Fields = new List<FieldConfig>
                 {
                     // ========= البيانات الشخصية =========
 
-                     new FieldConfig {
-                         SectionTitle = "نوع البحث",
-                         Name = "permissinType",
-                         Type = "select",
-                         Options = permissinTypeOptions,
-                         ColCss = "3",
-                         Value = SearchID_,
-                         Placeholder = "اختر نوع البحث",
-                         Icon = "fa fa-user",
-                         OnChangeJs = @"
-                        // Remove 'active' class from all search fields
-                        document.querySelectorAll('.search-field-container').forEach(function(el) {
-                            el.classList.remove('active');
-                        });
-    
-                        // Hide all search fields
-                        document.querySelectorAll('.search-field, .hidden-field').forEach(function(field) {
-                            var container = field.closest('.form-group');
-                            if (container) {
-                                container.style.display = 'none';
-                                container.classList.remove('active');
-                            }
-                        });
-    
-                        // Map selection to field name(s) - value can be string or array
-                        var fieldMap = {
-                            '1': 'Users',
-                            '2': 'Distributors', 
-                            '3': 'Roles',
-                            '4': 'Idara',
-                            '5': ['Dept', 'Section', 'Divison']  // Show multiple fields for option 5
-                        };
-    
-                        var fieldsToShow = fieldMap[value];
-    
-                        // Handle both single field (string) and multiple fields (array)
-                        if (fieldsToShow) {
-                            var fieldArray = Array.isArray(fieldsToShow) ? fieldsToShow : [fieldsToShow];
-        
-                            fieldArray.forEach(function(fieldName) {
-                                var targetField = document.querySelector('input[name=""' + fieldName + '""], select[name=""' + fieldName + '""]');
-                                if (targetField) {
-                                    var container = targetField.closest('.form-group');
-                                    if (container) {
-                                        container.style.display = 'block';
-                                        container.classList.add('active');
-                                    }
-                                }
-                            });
-                        }
-    
-                        // Navigate with the selected search type
-                        if (value && value !== '-1') {
-                            var url = '/ControlPanel/Permission?S=' + encodeURIComponent(value);
-                            window.location.href = url;
-                        }
-                    "
-                     },
+                        //غيرنا الطريقة خلينا التنفيذ داخل دوال موجودة في ملف sf-form.js   sfToggle(this) sfNav(this)  اسم الدوال
+                        // الهدف تسهيل + نختصر الكنترولات
 
-                     new FieldConfig {
-
-                         Name = "Users",
-                         Type = "select",
-                         Options = UsersOptions,
-                         ColCss = "3",
-                         Placeholder = "اختر المستخدم",
-                         Icon = "fa fa-user",
-                         Value = UserID_,
-                         IsHidden = !showUsers,
-                         Select2=true,
-                         OnChangeJs = @"
-                                       var UserID_ = value.trim();
-                                       if (!UserID_) {
-                                           if (typeof toastr !== 'undefined') {
-                                               toastr.info('الرجاء الاختيار اولا');
-                                           }
-                                           return;
-                                       }
-                                       var url = '/ControlPanel/Permission?S=1&U=' + encodeURIComponent(UserID_);
-                                       window.location.href = url;
-                                   "
-                     },
-
+                       new FieldConfig
+                            {
+                                SectionTitle = "نوع البحث",
+                                Name = "permissinType",
+                                Type = "select",
+                                Select2 = true,
+                                Options = permissinTypeOptions,
+                                ColCss = "3",
+                                Value = SearchID_,
+                                Placeholder = "اختر نوع البحث",
+                                Icon = "fa fa-user",
+                                ToggleGroup = "permSearch", // اسم مجموعة التبديل: أي حقل يحمل نفس القيمة سيتم إخفاؤه/إظهاره 
+                                ToggleMap   = "1:Users|2:Distributors|3:Roles|4:Idara|5:Dept,Section,Divison", // خريطة الإظهار حسب قيمة الاختيار: 1=Users | 2=Distributors | 3=Roles | 4=Idara | 5=Dept,Section,Divison
+                                NavUrl = "/ControlPanel/Permission",
+                                NavKey = "S",
+                                OnChangeJs = "sfToggle(this); sfNav(this);"  //الدوال اللي تنفذ
+                            },
 
                           new FieldConfig
-                    {
-
-                        Name = "Distributors",
-                         Type = "select",
-                         Options = distributorToGivepermissionOptions,
-                         ColCss = "3",
-                         Placeholder = "اختر الموزع",
-                         Select2=true,
-                         Icon = "fa fa-user",
-                         Value =distributorID_,
-                         IsHidden = !showDistributors,
-                         OnChangeJs = @"
-                                       var distributorID_ = value.trim();
-                                       if (!distributorID_) {
-                                           if (typeof toastr !== 'undefined') {
-                                               toastr.info('الرجاء الاختيار اولا');
-                                           }
-                                           return;
-                                       }
-                                       var url = '/ControlPanel/Permission?S=2&di=' + encodeURIComponent(distributorID_);
-                                       window.location.href = url;
-                                   "
-                    },
-                          new FieldConfig
-                    {
-
-                        Name = "Roles",
-                         Type = "select",
-                         Options = RoleOptions,
-                         ColCss = "3",
-                         Placeholder = "اختر الدور",
-                         Select2=true,
-                         Icon = "fa fa-user",
-                         Value=RoleID_,
-                          IsHidden = !showRoles,
-                           OnChangeJs = @"
-                                       var RoleID_ = value.trim();
-                                       if (!RoleID_) {
-                                           if (typeof toastr !== 'undefined') {
-                                               toastr.info('الرجاء الاختيار اولا');
-                                           }
-                                           return;
-                                       }
-                                       var url = '/ControlPanel/Permission?S=3&Ro=' + encodeURIComponent(RoleID_);
-                                       window.location.href = url;
-                                   "
-                    },
-                          new FieldConfig
-                    {
-
-                        Name = "Idara",
-                         Type = "select",
-                         Options = idarasOptions,
-                         ColCss = "3",
-                         Placeholder = "اختر الادارة",
-                         Select2=true,
-                         Icon = "fa fa-user",
-                         Value = Idara_,
-                          IsHidden = !showIdara,
-                         OnChangeJs = @"
-                            var Idara_ = value.trim();
-                            if (!Idara_) {
-                                if (typeof toastr !== 'undefined') {
-                                    toastr.info('الرجاء الاختيار اولا');
-                                }
-                                return;
-                            }
-                            var url = '/ControlPanel/Permission?S=4&Ida=' + encodeURIComponent(Idara_);
-                            window.location.href = url;
-                        "
-                    },
-                          new FieldConfig
-                    {
-
-                        Name = "Dept",
-                         Type = "select",
-                         Options = DeptOptions,
-                         ColCss = "3",
-                         Select2=true,
-                         Placeholder = "اختر القسم",
-                         Icon = "fa fa-user",
-                         Value = Dept_,
-                         IsHidden = !showDeptFields,
-
-                         OnChangeJs = @"
-                        var Dept_ = value.trim();
-                        if (!Dept_) {
-                            if (typeof toastr !== 'undefined') {
-                                toastr.info('الرجاء الاختيار اولا');
-                            }
-                            return;
-                        }
-                        var url = '/ControlPanel/Permission?S=5&Dep=' + encodeURIComponent(Dept_);
-                        window.location.href = url;
-                    "
-                    },
-
-
+                            {
+                                Name = "Users",
+                                Type = "select",
+                                Options = UsersOptions,
+                                ColCss = "3",
+                                Placeholder = "اختر المستخدم",
+                                Icon = "fa fa-user",
+                                Value = UserID_,
+                                IsHidden = !showUsers,
+                                Select2 = true,
+                                // ===== بيانات التنقّل (sfNav) =====
+                                NavUrl  = "/ControlPanel/Permission",
+                                NavKey  = "U",// قيمة الحقل بتروح هنا: U=UserID
+                                NavKey2 = "S",
+                                NavVal2 = "1",
+                                OnChangeJs = "sfNav(this)"
+                            },
 
                           new FieldConfig
-                        {
-                            Name = "Section",
-                            Type = "select",
-                            Options = secOptions, 
-                            ColCss = "3",
-                            Placeholder = "اختر الفرع",
-                            Select2=true,
-                            Icon = "fa fa-user",
-                            Value = Section_,
-                            IsHidden = !showDeptFields,
-                            DependsOn = "Dept",
-                            DependsUrl = "/crud/DDLFiltered?FK=deptID_FK&textcol=secName_A&ValueCol=secID&PageName=Permission&TableIndex=7",
-                            OnChangeJs = @"
-                            var sec = (value||'').trim();
-                            if(!sec){ toastr?.info('اختر الفرع'); return; }
+                                {
+                                    Name = "Distributors",
+                                    Type = "select",
+                                    Options = distributorToGivepermissionOptions,
+                                    ColCss = "3",
+                                    Placeholder = "اختر الموزع",
+                                    Select2 = true,
+                                    Icon = "fa fa-user",
+                                    Value = distributorID_,
+                                    IsHidden = !showDistributors,
+                                    // ===== بيانات التنقّل (sfNav) =====
+                                    NavUrl  = "/ControlPanel/Permission",
+                                    NavKey  = "di",        
+                                    NavKey2 = "S",        
+                                    NavVal2 = "2",
+                                    OnChangeJs = "sfNav(this)"
+                                },
 
-                            var depEl = document.querySelector('[name=""Dept""]');
-                            var dep = (depEl?.value||'').trim();
-                            if(!dep){ toastr?.info('اختر القسم أولاً'); return; }
+                         new FieldConfig
+                                {
+                                    Name = "Roles",
+                                    Type = "select",
+                                    Options = RoleOptions,
+                                    ColCss = "3",
+                                    Placeholder = "اختر الدور",
+                                    Select2 = true,
+                                    Icon = "fa fa-user",
+                                    Value = RoleID_,
+                                    IsHidden = !showRoles,
+                                    // ===== بيانات التنقّل (sfNav) =====
+                                    NavUrl  = "/ControlPanel/Permission",
+                                    NavKey  = "Ro",        // قيمة الحقل
+                                    NavKey2 = "S",         
+                                    NavVal2 = "3",
+                                    OnChangeJs = "sfNav(this)"
+                                },
 
-                            var url = '/ControlPanel/Permission?S=5&Dep=' + encodeURIComponent(dep)
-                                    + '&Sec=' + encodeURIComponent(sec);
-                            window.location.href = url;
-                        "
-                        },
+                         new FieldConfig
+                                    {
+                                        Name = "Idara",
+                                        Type = "select",
+                                        Options = idarasOptions,
+                                        ColCss = "3",
+                                        Placeholder = "اختر الادارة",
+                                        Select2 = true,
+                                        Icon = "fa fa-user",
+                                        Value = Idara_,
+                                        IsHidden = !showIdara,
+                                        // ===== بيانات التنقّل (sfNav) =====
+                                        NavUrl  = "/ControlPanel/Permission",
+                                        NavKey  = "Ida",      // قيمة الحقل (Idara)
+                                        NavKey2 = "S",        // ثابت
+                                        NavVal2 = "4",
+                                        OnChangeJs = "sfNav(this)"
+                                    },
 
                           new FieldConfig
-                        {
-                            Name = "Divison",
-                            Type = "select",
-                            Options = divOptions, 
-                            ColCss = "3",
-                            Placeholder = "اختر الشعبة",
-                            Select2=true,
-                            Icon = "fa fa-user",
-                            Value = Divison_,
-                            IsHidden = !showDeptFields,
-                            DependsOn = "Section",
-                            DependsUrl = "/crud/DDLFiltered?FK=secID_FK&textcol=divName_A&ValueCol=divID&PageName=Permission&TableIndex=8",
-                            OnChangeJs = @"
-                            var div = (value||'').trim();
-                            if(!div){ toastr?.info('اختر الشعبة'); return; }
+                                    {
+                                        Name = "Dept",
+                                        Type = "select",
+                                        Options = DeptOptions,
+                                        ColCss = "3",
+                                        Select2 = true,
+                                        Placeholder = "اختر القسم",
+                                        Icon = "fa fa-user",
+                                        Value = Dept_,
+                                        IsHidden = !showDeptFields,
+                                        // ===== بيانات التنقّل (sfNav) =====
+                                        NavUrl  = "/ControlPanel/Permission",
+                                        NavKey  = "Dep",     // قيمة الحقل
+                                        NavKey2 = "S",       // ثابت
+                                        NavVal2 = "5",
+                                        OnChangeJs = "sfNav(this)"
+                                    },
 
-                            var depEl = document.querySelector('[name=""Dept""]');
-                            var secEl = document.querySelector('[name=""Section""]');
+                          new FieldConfig
+                                    {
+                                        Name = "Section",
+                                        Type = "select",
+                                        Options = secOptions,
+                                        ColCss = "3",
+                                        Placeholder = "اختر الفرع",
+                                        Select2 = true,
+                                        Icon = "fa fa-user",
+                                        Value = Section_,
+                                        IsHidden = !showDeptFields,
+                                        DependsOn = "Dept",
+                                        DependsUrl = "/crud/DDLFiltered?FK=deptID_FK&textcol=secName_A&ValueCol=secID&PageName=Permission&TableIndex=7",
+                                        // ===== بيانات التنقّل (sfNav) =====
+                                        NavUrl  = "/ControlPanel/Permission",
+                                        NavKey  = "Sec",     // قيمة الفرع من هذا الحقل
+                                        NavKey2 = "S",
+                                        NavVal2 = "5",       // ثابت
+                                        NavKey3   = "Dep",   // باراميتر القسم
+                                        NavField3 = "Dept",  // يجيب قيمته من حقل Dept تلقائياً
+                                        OnChangeJs = "sfNav(this)"
+                                    },
 
-                            var dep = (depEl?.value||'').trim();
-                            var sec = (secEl?.value||'').trim();
-
-                            if(!dep || !sec){
-                                toastr?.info('اختر القسم ثم الفرع أولاً');
-                                return;
-                            }
-
-                            var url = '/ControlPanel/Permission?S=5&Dep=' + encodeURIComponent(dep)
-                                    + '&Sec=' + encodeURIComponent(sec)
-                                    + '&Div=' + encodeURIComponent(div);
-                            window.location.href = url;
-                        "
-                        },
-
-                        },
-
-
-                    Buttons = new List<FormButtonConfig>
-                    {
-                        //           new FormButtonConfig
-                        //  {
-                        //      Text="بحث",
-                        //      Icon="fa-solid fa-search",
-                        //      Type="button",
-                        //      Color="success",
-                        //      // Replace the OnClickJs of the "تجربة" button with this:
-                        //      OnClickJs = "(function(){"
-                        //+ "var hidden=document.querySelector('input[name=Users]');"
-                        //+ "if(!hidden){toastr.error('لا يوجد حقل مستخدم');return;}"
-                        //+ "var userId = (hidden.value||'').trim();"
-                        //+ "var anchor = hidden.parentElement.querySelector('.sf-select');"
-                        //+ "var userName = anchor && anchor.querySelector('.truncate') ? anchor.querySelector('.truncate').textContent.trim() : '';"
-                        //+ "if(!userId){toastr.info('اختر مستخدم أولاً');return;}"
-                        //+ "var url = '/ControlPanel/Permission?Q1=' + encodeURIComponent(userId);"
-                        //+ "window.location.href = url;"
-                        //+ "})();"
-                        //  },
-
-
-
-                    }
-                };
+                          new FieldConfig
+                                    {
+                                        Name = "Divison",
+                                        Type = "select",
+                                        Options = divOptions,
+                                        ColCss = "3",
+                                        Placeholder = "اختر الشعبة",
+                                        Select2 = true,
+                                        Icon = "fa fa-user",
+                                        Value = Divison_,
+                                        IsHidden = !showDeptFields,
+                                        DependsOn = "Section",
+                                        DependsUrl = "/crud/DDLFiltered?FK=secID_FK&textcol=divName_A&ValueCol=divID&PageName=Permission&TableIndex=8",
+                                        // ===== بيانات التنقّل (sfNav) =====
+                                        NavUrl  = "/ControlPanel/Permission",
+                                        NavKey  = "Div",      // قيمة الشعبة من هذا الحقل
+                                        NavKey2 = "S",
+                                        NavVal2 = "5",        // ثابت
+                                        NavKey3   = "Dep",    // باراميتر القسم
+                                        NavField3 = "Dept",   //  يجيب قيمته من حقل Dept
+                                        NavKey4   = "Sec",    // باراميتر الفرع
+                                        NavField4 = "Section",// يجيب قيمته من حقل Section
+                                        OnChangeJs = "sfNav(this)"
+                                    },
+                                },
+                           };
 
                 if (ds != null && ds.Tables.Count > 0 && ds.Tables[0].Rows.Count > 0)
                 {
@@ -728,8 +584,8 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                     DependsOn = "p01",
                     DependsUrl = "/crud/DDLFiltered?FK=distributorID_FK&textcol=permissionTypeName_A&ValueCol=distributorPermissionTypeID&PageName=Permission&TableIndex=4"
                 },
-                new FieldConfig { Name = "p03", Label = "تاريخ بداية الصلاحية", Type = "date", ColCss = "3", Required = false, /*Icon = "fa fa-calendar"*/ },
-                new FieldConfig { Name = "p04", Label = "تاريخ نهاية الصلاحية", Type = "date", ColCss = "3", Required = false, /*Icon = "fa fa-calendar"*/ },
+                new FieldConfig { Name = "p03", Label = "تاريخ بداية الصلاحية", Type = "date", ColCss = "3", Required = false, Icon = "fa-solid fa-calendar-days" },
+                new FieldConfig { Name = "p04", Label = "تاريخ نهاية الصلاحية", Type = "date", ColCss = "3", Required = false,Icon = "fa-solid fa-calendar-days" },
                 new FieldConfig { Name = "p05", Label = "ملاحظات", Type = "textarea", ColCss = "6", Required = false },
 
                   new FieldConfig { Name = "p06",Value=UserID_, Type = "hidden" },
@@ -781,8 +637,8 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                     Required = true
                 },
 
-                new FieldConfig { Name = "p02", Label = "تاريخ بداية الصلاحية", Type = "date", ColCss = "3", Required = false,/*Icon = "fa fa-calendar"*/ },
-                new FieldConfig { Name = "p03", Label = "تاريخ نهاية الصلاحية", Type = "date", ColCss = "3", Required = false,/*Icon = "fa fa-calendar"*/ },
+                new FieldConfig { Name = "p02", Label = "تاريخ بداية الصلاحية", Type = "date", ColCss = "3", Required = false,Icon = "fa-solid fa-calendar-days" },
+                new FieldConfig { Name = "p03", Label = "تاريخ نهاية الصلاحية", Type = "date", ColCss = "3", Required = false,Icon = "fa-solid fa-calendar-days" },
                 new FieldConfig { Name = "p04", Label = "ملاحظات", Type = "textarea", ColCss = "6", Required = false },
 
                   new FieldConfig { Name = "p05",Value=UserID_, Type = "hidden" },
@@ -856,8 +712,8 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 //    DependsOn = "p02",
                 //    DependsUrl = "/crud/DDLFiltered?FK=distributorID_FK&textcol=permissionTypeName_A&ValueCol=distributorPermissionTypeID&PageName=Permission&TableIndex=4"
                 //},
-                new FieldConfig { Name = "p04", Label = "تاريخ بداية الصلاحية", Type = "date", Required = false, ColCss = "3",/*Icon = "fa fa-calendar"*/ },
-                 new FieldConfig { Name = "p05", Label = "تاريخ نهاية الصلاحية", Type = "date", Required = false, ColCss = "3",/*Icon = "fa fa-calendar"*/ },
+                new FieldConfig { Name = "p04", Label = "تاريخ بداية الصلاحية", Type = "date", Required = false, ColCss = "3",Icon = "fa-solid fa-calendar-days"},
+                 new FieldConfig { Name = "p05", Label = "تاريخ نهاية الصلاحية", Type = "date", Required = false, ColCss = "3",Icon = "fa-solid fa-calendar-days" },
                 new FieldConfig { Name = "p06", Label = "ملاحظات",            Type = "textarea",   ColCss = "6" }
             };
 
@@ -1022,14 +878,6 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 }
             };
 
-            //var vm = new FormTableViewModel
-            //{
-            //    Form = form,
-            //    Table = dsModel,
-            //    PageTitle = dsModel.PageTitle,
-            //    PanelTitle = dsModel.PanelTitle
-            //};
-            //return View("Permission/Permission", vm);
             var vm = new SmartPageViewModel
             {
                 PageTitle = dsModel.PageTitle,

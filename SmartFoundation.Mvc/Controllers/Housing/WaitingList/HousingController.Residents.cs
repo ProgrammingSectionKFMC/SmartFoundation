@@ -1,17 +1,18 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using SmartFoundation.MVC.Reports;
 using SmartFoundation.UI.ViewModels.SmartForm;
 using SmartFoundation.UI.ViewModels.SmartPage;
+using SmartFoundation.UI.ViewModels.SmartPrint;
 using SmartFoundation.UI.ViewModels.SmartTable;
 using System.Data;
 using System.Linq;
 using System.Text.Json;
 
-
 namespace SmartFoundation.Mvc.Controllers.Housing
 {
     public partial class HousingController : Controller
     {
-        public async Task<IActionResult> Residents()
+        public async Task<IActionResult> Residents(int pdf = 0)
         {
             //  قراءة السيشن والكونتكست
             if (!InitPageContext(out var redirect))
@@ -27,8 +28,6 @@ namespace SmartFoundation.Mvc.Controllers.Housing
              usersId,
              HostName
             };
-
-           
 
             var rowsList = new List<Dictionary<string, object?>>();
             var dynamicColumns = new List<TableColumn>();
@@ -59,14 +58,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             // ---------------------- DDLValues ----------------------
 
-
-
-
             JsonResult? result;
             string json;
-
-
-
 
             //// ---------------------- rankOptions ----------------------
             result = await _CrudController.GetDDLValues(
@@ -262,8 +255,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             {
                 new FieldConfig { Name = rowIdField, Type = "hidden" },
 
-                new FieldConfig { Name = "p01", Label = "رقم الهوية", Type = "nationalid", ColCss = "6", },
-                new FieldConfig { Name = "p02", Label = "الرقم العام", Type = "number", ColCss = "6", Required = true },
+                new FieldConfig { Name = "p01", Label = "رقم الهوية", Type = "nationalid", ColCss = "6",Icon = "fa-solid fa-address-card"  },
+                new FieldConfig { Name = "p02", Label = "الرقم العام", Type = "number", ColCss = "6", Required = true , Icon = "fa-solid fa-user-tag",Autocomplete="off" },
                 
 
 
@@ -280,50 +273,50 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                 new FieldConfig { Name = "p11", Label = "الرتبة", Type = "select", ColCss = "3", Required = true, Options= rankOptions,Select2 = true },
                 new FieldConfig { Name = "p12", Label = "الوحدة", Type = "select", ColCss = "6", Required = true, Options= militaryUnitOptions,Select2 = true },
-                new FieldConfig { Name = "p13", Label = "الحالة الاجتماعية", Type = "select", ColCss = "3", Required = true, Options= MaritalStatusOptions, },
+                new FieldConfig { Name = "p13", Label = "الحالة الاجتماعية", Type = "select", ColCss = "3", Required = true, Options= MaritalStatusOptions,Select2 = true },
                 new FieldConfig { Name = "p14", Label = "الجنسية", Type = "select", ColCss = "3", Required = true, Options= NationalityOptions,Select2 = true },
 
-                new FieldConfig { Name = "p15", Label = "عدد التابعين", Type = "number", ColCss = "3" },
-                new FieldConfig { Name = "p16", Label = "الجنس", Type = "select", ColCss = "3", Required = true, Options= GenderOptions },
-                new FieldConfig { Name = "p17", Label = "تاريخ الميلاد", Type = "date", ColCss = "3" },
-                new FieldConfig { Name = "p18", Label = "رقم الجوال", Type = "tel", ColCss = "3", Required = true, HelpText=" مثال : 05XXXXXXXX" },
+                new FieldConfig { Name = "p15", Label = "عدد التابعين", Type = "number", ColCss = "3",Icon = "fa-solid fa-user-group"},
+                new FieldConfig { Name = "p16", Label = "الجنس", Type = "select", ColCss = "3", Required = true, Options= GenderOptions,Select2 = true },
+                new FieldConfig { Name = "p17", Label = "تاريخ الميلاد", Type = "date", ColCss = "3",Icon = "fa fa-calendar" },
+                new FieldConfig { Name = "p18", Label = "رقم الجوال", Type = "tel", ColCss = "3", Required = true, HelpText=" مثال : 05XXXXXXXX",Icon = "fa fa-square-phone" },
                 new FieldConfig { Name = "p19", Label = "ملاحظات", Type = "textarea", ColCss = "6", Required = false },
                 
             };
 
             // hidden fields
-            addFields.Insert(0, new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") });
-            addFields.Insert(0, new FieldConfig { Name = "hostname", Type = "hidden", Value = Request.Host.Value });
-            addFields.Insert(0, new FieldConfig { Name = "entrydata", Type = "hidden", Value = usersId.ToString() });
-            addFields.Insert(0, new FieldConfig { Name = "idaraID", Type = "hidden", Value = IdaraId.ToString() });
-            addFields.Insert(0, new FieldConfig { Name = "ActionType", Type = "hidden", Value = "INSERT" });
-            addFields.Insert(0, new FieldConfig { Name = "pageName_", Type = "hidden", Value = PageName });
-            addFields.Insert(0, new FieldConfig { Name = "redirectAction", Type = "hidden", Value = PageName });
-            addFields.Insert(0, new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName });
+            addFields.Insert(0, new FieldConfig { Name = "__RequestVerificationToken",Type ="hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") });
+            addFields.Insert(0, new FieldConfig { Name = "hostname",Type="hidden",Value = Request.Host.Value });
+            addFields.Insert(0, new FieldConfig { Name = "entrydata",Type="hidden",Value =usersId.ToString() });
+            addFields.Insert(0, new FieldConfig { Name = "idaraID",Type="hidden",Value =IdaraId.ToString() });
+            addFields.Insert(0, new FieldConfig { Name = "ActionType",Type="hidden",Value="INSERT" });
+            addFields.Insert(0, new FieldConfig { Name = "pageName_",Type ="hidden",Value=PageName });
+            addFields.Insert(0, new FieldConfig { Name = "redirectAction",Type="hidden", Value=PageName });
+            addFields.Insert(0, new FieldConfig { Name = "redirectController",Type="hidden",Value=ControllerName });
 
             // UPDATE fields
             var updateFields = new List<FieldConfig>
             {
-                new FieldConfig { Name = "redirectAction",      Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "redirectController",  Type = "hidden", Value = ControllerName},
-                new FieldConfig { Name = "pageName_",           Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",          Type = "hidden", Value = "UPDATE" },
-                new FieldConfig { Name = "idaraID",             Type = "hidden", Value = IdaraId.ToString() },
-                new FieldConfig { Name = "entrydata",           Type = "hidden", Value = usersId.ToString() },
-                new FieldConfig { Name = "hostname",            Type = "hidden", Value = Request.Host.Value },
+                new FieldConfig { Name = "redirectAction",Type="hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController",Type = "hidden", Value = ControllerName},
+                new FieldConfig { Name = "pageName_",Type="hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",Type="hidden", Value = "UPDATE" },
+                new FieldConfig { Name = "idaraID",Type ="hidden", Value = IdaraId.ToString() },
+                new FieldConfig { Name = "entrydata",Type="hidden", Value = usersId.ToString() },
+                new FieldConfig { Name = "hostname",Type="hidden", Value = Request.Host.Value },
                 new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
-                new FieldConfig { Name = rowIdField,            Type = "hidden" },
+                new FieldConfig { Name = rowIdField,Type="hidden" },
 
 
 
-                new FieldConfig { Name = "p01", Label = "الرقم المرجعي",             Type = "hidden", ColCss = "3" },
-                new FieldConfig { Name = "p02", Label = "رقم الهوية", Type = "nationalid", ColCss = "6" , Readonly=true},
-                new FieldConfig { Name = "p03", Label = "الرقم العام", Type = "number", ColCss = "6", Required = true },
+                new FieldConfig { Name = "p01", Label = "الرقم المرجعي",Type ="hidden", ColCss = "3" },
+                new FieldConfig { Name = "p02", Label = "رقم الهوية",Type ="nationalid", ColCss = "6" , Readonly=true,Icon = "fa-solid fa-address-card"},
+                new FieldConfig { Name = "p03", Label = "الرقم العام",Type = "number", ColCss = "6", Required = true, Icon = "fa-solid fa-user-tag" },
 
-                new FieldConfig { Name = "p04", Label = "الاسم الاول بالعربي", Type = "text", Required = true, Placeholder = "حقل عربي فقط",  Icon = "fa-solid fa-user", ColCss = "3", MaxLength = 50, TextMode = "arabic",},
-                new FieldConfig { Name = "p05", Label = "اسم الاب بالعربي", Type = "text", Required = true, Placeholder = "حقل عربي فقط",  Icon = "fa-solid fa-user", ColCss = "3", MaxLength = 50, TextMode = "arabic",},
-                new FieldConfig { Name = "p06", Label = "اسم الجد بالعربي", Type = "text", Required = true, Placeholder = "حقل عربي فقط",  Icon = "fa-solid fa-user", ColCss = "3", MaxLength = 50, TextMode = "arabic",},
-                new FieldConfig { Name = "p07", Label = "الاسم الاخير بالعربي", Type = "text", Required = true, Placeholder = "حقل عربي فقط",  Icon = "fa-solid fa-user", ColCss = "3", MaxLength = 50, TextMode = "arabic",},
+                new FieldConfig { Name = "p04", Label = "الاسم الاول بالعربي",Type= "text", Required = true, Placeholder = "حقل عربي فقط",  Icon = "fa-solid fa-user", ColCss = "3", MaxLength = 50, TextMode = "arabic",},
+                new FieldConfig { Name = "p05", Label = "اسم الاب بالعربي", Type="text", Required = true, Placeholder = "حقل عربي فقط",  Icon = "fa-solid fa-user", ColCss = "3", MaxLength = 50, TextMode = "arabic",},
+                new FieldConfig { Name = "p06", Label = "اسم الجد بالعربي", Type="text", Required = true, Placeholder = "حقل عربي فقط",  Icon = "fa-solid fa-user", ColCss = "3", MaxLength = 50, TextMode = "arabic",},
+                new FieldConfig { Name = "p07", Label = "الاسم الاخير بالعربي",Type ="text", Required = true, Placeholder = "حقل عربي فقط",  Icon = "fa-solid fa-user", ColCss = "3", MaxLength = 50, TextMode = "arabic",},
 
 
                 new FieldConfig { Name = "p08", Label = "الاسم الاول بالانجليزي", Type = "text",  Placeholder = "حقل انجليزي فقط",  Icon = "fa-solid fa-user", ColCss = "3", MaxLength = 50, TextMode = "english",},
@@ -333,29 +326,28 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                 new FieldConfig { Name = "p14", Label = "الرتبة", Type = "select", ColCss = "3", Required = true, Options= rankOptions,Select2 = true },
                 new FieldConfig { Name = "p16", Label = "الوحدة", Type = "select", ColCss = "6", Required = true, Options= militaryUnitOptions,Select2 = true },
-                new FieldConfig { Name = "p18", Label = "الحالة الاجتماعية", Type = "select", ColCss = "3", Required = true, Options= MaritalStatusOptions },
+                new FieldConfig { Name = "p18", Label = "الحالة الاجتماعية", Type = "select", ColCss = "3", Required = true, Options= MaritalStatusOptions,Select2 = true },
                 new FieldConfig { Name = "p21", Label = "الجنسية", Type = "select", ColCss = "3", Required = true, Options= NationalityOptions,Select2 = true },
 
-                new FieldConfig { Name = "p20", Label = "عدد التابعين", Type = "number", ColCss = "3" },
-                new FieldConfig { Name = "p23", Label = "الجنس", Type = "select", ColCss = "3", Required = true, Options= GenderOptions },
-                new FieldConfig { Name = "p25", Label = "تاريخ الميلاد", Type = "date", ColCss = "3" },
-                new FieldConfig { Name = "p26", Label = "رقم الجوال", Type = "tel", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p20", Label = "عدد التابعين", Type = "number", ColCss = "3",Icon = "fa-solid fa-user-group" },
+                new FieldConfig { Name = "p23", Label = "الجنس", Type = "select", ColCss = "3", Required = true, Options= GenderOptions,Select2 = true },
+                new FieldConfig { Name = "p25", Label = "تاريخ الميلاد", Type = "date", ColCss = "3",Icon = "fa fa-calendar" },
+                new FieldConfig { Name = "p26", Label = "رقم الجوال", Type = "tel", ColCss = "3", Required = true,Icon = "fa fa-square-phone" },
 
-                new FieldConfig { Name = "p27", Label = "ملاحظات", Type = "text", ColCss = "6", Required = false }
+                new FieldConfig { Name = "p27", Label = "ملاحظات", Type = "textarea", ColCss = "6", Required = false }
             };
 
             // DELETE fields
             var deleteFields = new List<FieldConfig>
             {
-                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
-                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "DELETE" },
-                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId.ToString() },
-                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId.ToString() },
-                new FieldConfig { Name = "hostname",           Type = "hidden", Value = Request.Host.Value },
-                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
-                new FieldConfig { Name = rowIdField, Type = "hidden" },
+                new FieldConfig { Name = "redirectAction",Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController",Type="hidden", Value = ControllerName },
+                new FieldConfig { Name = "pageName_",Type="hidden",Value=PageName },
+                new FieldConfig { Name = "ActionType",Type="hidden",Value="DELETE" },
+                new FieldConfig { Name = "idaraID",Type="hidden",Value= IdaraId.ToString() },
+                new FieldConfig { Name = "hostname",Type ="hidden",Value = Request.Host.Value },
+                new FieldConfig { Name = "__RequestVerificationToken",Type="hidden",Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+                new FieldConfig { Name = rowIdField,Type = "hidden" },
                 new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "residentInfoID" }
             };
 
@@ -370,48 +362,109 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 QuickSearchFields = dynamicColumns.Select(c => c.Field).Take(4).ToList(),
                 Searchable = true,
                 AllowExport = true,
+                ShowPageSizeSelector=true,
                 PanelTitle = "المستفيدين",
                 //TabelLabel = "بيانات المستفيدين",
                 //TabelLabelIcon = "fa-solid fa-user-group",
-                EnableCellCopy = true, // تفعيل نسخ الخلايا 
+                EnableCellCopy = true,
                 Toolbar = new TableToolbarConfig
                 {
                     ShowRefresh = false,
                     ShowColumns = true,
                     ShowExportCsv = false,
                     ShowExportExcel = true,
+                    ShowExportPdf = true,
                     ShowAdd = canInsert,
                     ShowEdit = canUpdate,
                     ShowDelete = canDelete,
+                    ShowPrint1 = true,
                     ShowBulkDelete = false,
-
-
-                    CustomActions = new List<TableAction>   //عرظ تفاصيل الصف 
+                    Print1 = new TableAction
                     {
-                        new TableAction   
-                        {
-                            Label = "عرض التفاصيل",
-                            ModalTitle="تفاصيل المستفيد",
-                            Icon = "fa-regular fa-file",
-                            OpenModal = true,
-                            RequireSelection = true,
-                            MinSelection = 1,
-                            MaxSelection = 1,
-                        }
+                        Label = "طباعة تقرير",
+                        Icon = "fa fa-print",
+                        Color = "info",
+                        RequireSelection = false,
+                        OnClickJs = @"
+                                sfPrintWithBusy(table, {
+                                  pdf: 1,
+                                  busy: { title: 'طباعة بيانات المستفيدين'}
+                                });
+                              "
                     },
 
-
-
-
-                    Add = new TableAction
+                    ExportConfig = new TableExportConfig
                     {
-                        Label = "إضافة مستفيد جديد",
-                        Icon = "fa fa-plus",
-                        Color = "success",
-                        OpenModal = true,
-                        ModalTitle = "إدخال بيانات مستفيد جديد",
-                        OpenForm = new FormConfig
+                        EnablePdf = true,
+                        PdfEndpoint = "/exports/pdf/table",
+                        PdfTitle = "المستفيدين",
+                        PdfPaper = "A4",
+                        PdfOrientation = "landscape",
+                        PdfShowPageNumbers = true,
+                        Filename = "Residents",
+                        PdfShowGeneratedAt = true, 
+                        PdfShowSerial = true,  
+                        PdfSerialLabel = "م",  
+                        RightHeaderLine1 = "المملكة العربية السعودية",
+                        RightHeaderLine2 = "وزارة الدفاع",
+                        RightHeaderLine3 = "القوات البرية الملكية السعودية",
+                        RightHeaderLine4 = "الإدارة الهندسية للتشغيل والصيانة",
+                        RightHeaderLine5 = "مدينة الملك فيصل العسكرية",
+                        PdfLogoUrl="/img/ppng.png",
+
+
+                    },
+
+                            CustomActions = new List<TableAction>
+                            {
+                            //  Excel "
+                            new TableAction
+                            {
+                                Label = "تصدير Excel",
+                                Icon = "fa-regular fa-file-excel",
+                                Color = "info",
+                                Placement = TableActionPlacement.ActionsMenu,
+                                RequireSelection = false,
+                                OnClickJs = "table.exportData('excel');"
+                            },
+
+                            //  PDF "
+                            new TableAction
+                            {
+                                Label = "تصدير PDF",
+                                Icon = "fa-regular fa-file-pdf",
+                                Color = "danger",
+                                Placement = TableActionPlacement.ActionsMenu,
+                                RequireSelection = false,
+                                OnClickJs = "table.exportData('pdf');"
+                            },
+
+                             //  details "       
+                            new TableAction
+                            {
+                                Label = "عرض التفاصيل",
+                                ModalTitle = "<i class='fa-solid fa-circle-info text-emerald-600 text-xl mr-2'></i> تفاصيل المستفيد",
+                                Icon = "fa-regular fa-file",
+                                OpenModal = true,
+                                RequireSelection = true,
+                                MinSelection = 1,
+                                MaxSelection = 1,
+                                
+
+                            },
+                        },
+
+
+                        Add = new TableAction
                         {
+                            Label = "إضافة مستفيد",
+                            Icon = "fa fa-plus",
+                            Color = "success",
+                            OpenModal = true,
+                            ModalTitle = "<i class='fa-solid fa-user-plus text-emerald-600 text-xl mr-2'></i> إدخال بيانات مستفيد جديد",
+
+                            OpenForm = new FormConfig
+                            {
                             FormId = "BuildingTypeInsertForm",
                             Title = "بيانات مستفيد جديد",
                             Method = "post",
@@ -428,12 +481,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     Edit = new TableAction
                     {
                         Label = "تعديل بيانات مستفيد",
-                        Icon = "fa fa-pen-to-square",
+                        Icon = "fa-solid fa-pen",
                         Color = "info",
-                        Placement = TableActionPlacement.ActionsMenu, //  أي زر بعد ما نسويه ونبيه يظهر في الاجراءات نحطه هذا السطر فقط 
+                        Placement = TableActionPlacement.ActionsMenu,  
                         IsEdit = true,
                         OpenModal = true,
-                        ModalTitle = "تعديل بيانات مستفيد",
+                        ModalTitle = "<i class='fa-solid fa-user-pen text-emerald-600 text-xl mr-2'></i> تعديل بيانات مستفيد",
                         OpenForm = new FormConfig
                         {
                             FormId = "BuildingTypeEditForm",
@@ -453,14 +506,14 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     Delete = new TableAction
                     {
                         Label = "حذف بيانات مستفيد",
-                        Icon = "fa fa-trash",
+                        Icon = "fa-regular fa-trash-can",
                         Color = "danger",
-                        Placement = TableActionPlacement.ActionsMenu, //   أي زر بعد ما نسويه ونبيه يظهر في الاجراءات نحط هذا السطر فقط عشان ما يصير زحمة في التيبل اكشن
+                        Placement = TableActionPlacement.ActionsMenu,
                         IsEdit = true,
                         OpenModal = true,
                         ModalTitle = "<i class='fa fa-exclamation-triangle text-red-600 text-xl mr-2'></i> تحذير",
                         ModalMessage = "هل أنت متأكد من حذف بيانات المستفيد؟",
-                        ModalMessageClass = "bg-red-100 border border-red-200 text-red-700",
+                        ModalMessageClass = "bg-red-100 text-red-700",
                         OpenForm = new FormConfig
                         {
                             FormId = "BuildingTypeDeleteForm",
@@ -481,61 +534,6 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 }
             };
 
-
-
-            //dsModel.StyleRules = new List<TableStyleRule>
-            //    {
-                   
-            //        new TableStyleRule
-            //        {
-            //            Target = "row",
-            //            Field = "rankNameA",
-            //            Op = "eq",
-            //            Value = "جندي اول",
-            //            CssClass = "row-blue",
-            //            Priority = 1
-            //        },
-            //        new TableStyleRule
-            //        {
-            //            Target = "cell",
-            //            Field = "nationalityName_A",
-            //            Op = "neq",
-            //            Value = "سعودي",
-            //            CssClass = "cell-green",
-            //            Priority = 1
-            //        },
-
-            //        new TableStyleRule
-            //        {
-            //            Target = "cell",
-            //            Field = "dependinceCounter",
-            //            Op = "gt",            // أكبر من
-            //            Value = 2,            
-            //            CssClass = "cell-orange",
-            //            Priority = 1
-            //        },
-            //        new TableStyleRule
-            //        {
-            //            Target = "cell",                    
-            //            Field = "maritalStatusName_A",    
-            //            Op = "eq",                         
-            //            Value = "أعزب",                   
-            //            CssClass = "cell-red",            
-            //            Priority = 1
-            //        },
-            //         new TableStyleRule
-            //        {
-            //            Target = "column",
-            //            Field = "note",
-            //            Op = "contains",
-            //            CssClass = "col-pink",
-            //            Priority = 1
-            //        }
-
-            //    };
-
-            //return View("HousingDefinitions/BuildingType", dsModel);
-
             var page = new SmartPageViewModel
             {
                 PageTitle = dsModel.PageTitle,
@@ -544,8 +542,112 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 TableDS = dsModel
             };
 
-            return View("WaitingList/Residents", page);
 
+            if (pdf == 1)
+            {
+                //var printTable = dt1;
+                //int start1Based = 1; // يبدأ من الصف 200
+                //int count = 100;       // يطبع 50 سجل
+
+                //int startIndex = start1Based - 1;
+                //int endIndex = Math.Min(dt1.Rows.Count, startIndex + dt1.Rows.Count);
+
+                // جدول خفيف للطباعة
+                var printTable = new DataTable();
+                printTable.Columns.Add("NationalID", typeof(string));
+                printTable.Columns.Add("FullName_A", typeof(string));
+                printTable.Columns.Add("generalNo_FK", typeof(string));
+                printTable.Columns.Add("rankNameA", typeof(string));
+                printTable.Columns.Add("militaryUnitName_A", typeof(string));
+                printTable.Columns.Add("maritalStatusName_A", typeof(string));
+                printTable.Columns.Add("dependinceCounter", typeof(string));
+                printTable.Columns.Add("nationalityName_A", typeof(string));
+                printTable.Columns.Add("genderName_A", typeof(string));
+                printTable.Columns.Add("birthdate", typeof(string));
+                printTable.Columns.Add("residentcontactDetails", typeof(string));
+
+                //for (int i = startIndex; i < endIndex; i++)
+                foreach (DataRow r in dt1.Rows)
+                {
+                    //var r = dt1.Rows[i];
+
+                    printTable.Rows.Add(
+                        r["NationalID"],
+                        r["FullName_A"],
+                        r["generalNo_FK"],
+                        r["rankNameA"],
+                        r["militaryUnitName_A"],
+                        r["maritalStatusName_A"],
+                        r["dependinceCounter"],
+                        r["nationalityName_A"],
+                        r["genderName_A"],
+                        r["birthdate"],
+                        r["residentcontactDetails"]
+                    );
+                }
+
+                if (printTable == null || printTable.Rows.Count == 0)
+                    return Content("لا توجد بيانات للطباعة.");
+                var reportColumns = new List<ReportColumn>
+                    {
+                        new("NationalID", "رقم الهوية", Align:"center", Weight:2, FontSize:9),
+                        new("FullName_A", "الاسم", Align:"center", Weight:5, FontSize:9),
+                        new("generalNo_FK", "الرقم العام", Align:"center", Weight:2, FontSize:9),
+                        new("rankNameA", "الرتبة", Align:"center", Weight:2, FontSize:9),
+                        new("militaryUnitName_A", "الوحدة", Align:"center", Weight:3, FontSize:9),
+                        new("maritalStatusName_A", "الحالة الاجتماعية", Align:"center", Weight:3, FontSize:9),
+                        new("dependinceCounter", "عدد التابعين", Align:"center", Weight:2, FontSize:9),
+                        new("nationalityName_A", "الجنسية", Align:"center", Weight:2, FontSize:9),
+                        new("genderName_A", "الجنس", Align:"center", Weight:2, FontSize:9),
+                        new("birthdate", "تاريخ الميلاد", Align:"center", Weight:2, FontSize:9),
+                        new("residentcontactDetails", "رقم الجوال", Align:"center", Weight:2, FontSize:9),
+                    };
+
+                var logo = Path.Combine(_env.WebRootPath, "img", "ppng.png");
+                var header = new Dictionary<string, string>
+                {
+                    ["no"] = usersId,//"١٢٣/٤٥",
+                    ["date"] = DateTime.Now.ToString("yyyy/MM/dd"),
+                    ["attach"] = "—",
+                    ["subject"] = "قائمة المستفيدين",
+
+                    ["right1"] = "المملكة العربية السعودية",
+                    ["right2"] = "وزارة الدفاع",
+                    ["right3"] = "القوات البرية الملكية السعودية",
+                    ["right4"] = "الادارة الهندسية للتشغيل والصيانة",
+                    ["right5"] = "إدارة مدينة الملك فيصل العسكرية",
+
+                    //["bismillah"] = "بسم الله الرحمن الرحيم",
+                    ["midCaption"] = ""
+                };
+
+                var report = DataTableReportBuilder.FromDataTable(
+                    reportId: "BuildingType",
+                    title: "قائمة المستفيدين",
+                    table: printTable,
+                    columns: reportColumns,
+                    headerFields: header,
+                   //footerFields: new(),
+                   footerFields: new Dictionary<string, string>
+                   {
+                       ["تمت الطباعة بواسطة"] = FullName,
+                       ["ملاحظة"] = " هذا التقرير للاستخدام الرسمي",
+                       ["عدد السجلات"] = dt1.Rows.Count.ToString(),
+                       ["تاريخ ووقت الطباعة"] = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")
+                   },
+
+                    orientation: ReportOrientation.Landscape,
+                    headerType: ReportHeaderType.LetterOfficial,
+                    logoPath: logo,
+                    headerRepeat: ReportHeaderRepeat.FirstPageOnly
+                    //headerRepeat: ReportHeaderRepeat.AllPages
+                );
+
+                var pdfBytes = QuestPdfReportRenderer.Render(report);
+                Response.Headers["Content-Disposition"] = "inline; filename=BuildingType.pdf";
+                return File(pdfBytes, "application/pdf");
+            }
+            return View("WaitingList/Residents", page);
         }
     }
 }

@@ -191,6 +191,7 @@ namespace SmartFoundation.Mvc.Controllers
                         Name="Country",
                         Label="الدولة",
                         Type="select",
+                        Select2=true,
                         Required=true,
                         Options=new List<OptionItem>
                         {
@@ -198,17 +199,18 @@ namespace SmartFoundation.Mvc.Controllers
                             new OptionItem { Value="EG", Text="مصر" },
                             new OptionItem { Value="JO", Text="الأردن" }
                         },
-                        ColCss="col-span-12 md:col-span-3",
+                        ColCss="col-span-3 md:col-span-3",
                     },
                     new FieldConfig
                     {
                         Name="City",
                         Label="المدينة",
                         Type="select",
+                        Select2=true,
                         Required=true,
                         DependsOn="Country",
                         DependsUrl="/api/location/cities",
-                        ColCss="col-span-12 md:col-span-3",
+                        ColCss="col-span-3 md:col-span-3",
                     },
                     new FieldConfig
                     {
@@ -248,7 +250,7 @@ namespace SmartFoundation.Mvc.Controllers
                     // ========= التواريخ =========
                     new FieldConfig
                     {
-                        Name="BirthDate",
+                        Name="date",
                         Label="تاريخ ميلادي",
                         Type="date",
                         Placeholder="YYYY-MM-DD",
@@ -297,7 +299,6 @@ namespace SmartFoundation.Mvc.Controllers
                         Type="textarea",
                         MaxLength=500,
                         Placeholder="يسمح بكتابة 500 حرف",
-                        Icon="fa-solid fa-file-lines",
                         ColCss="col-span-12 md:col-span-5",
                         Spellcheck=true,
                         Autocapitalize="sentences",

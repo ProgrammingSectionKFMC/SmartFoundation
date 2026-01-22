@@ -1,0 +1,36 @@
+﻿@* _PrintLayout\SmartFoundation\SmartFoundation.Mvc\Views\Shared *@
+
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>@ViewData["Title"]</title>
+
+
+    <link rel="stylesheet" href="~/css/smartprint/smartprint-a4portrait.css" />
+    <!-- FontAwesome -->
+    <link rel="stylesheet" type="text/css" href="/css/Fontawesome6-5-0.min.css" />
+    <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" />
+
+    @RenderSection("Styles", required: false)
+
+    <style>
+        
+        body {
+            background: #fff;
+        }
+        @@media print {
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body data-smartprint-standalone="1">
+    @RenderBody()
+    <script src="~/js/smartprint/smartprint.js"></script>
+    <script src="~/js/smartprint/smartprint-a4portrait.js"></script>
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

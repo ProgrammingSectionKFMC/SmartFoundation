@@ -17,6 +17,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
     {
         private readonly MastersServies _mastersServies;
         private readonly CrudController _CrudController;
+        private readonly IWebHostEnvironment _env;
 
         protected string? ControllerName;
         protected string? PageName;
@@ -54,10 +55,11 @@ namespace SmartFoundation.Mvc.Controllers.Housing
         protected DataTable? dt8;
         protected DataTable? dt9;
 
-        public HousingController(MastersServies mastersServies,CrudController crudController)
+        public HousingController(MastersServies mastersServies,CrudController crudController, IWebHostEnvironment env   )
         {
             _mastersServies = mastersServies;
             _CrudController = crudController;
+            _env = env;
         }
 
         public IActionResult Index()

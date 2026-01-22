@@ -1,0 +1,55 @@
+﻿@* SmartFoundation\SmartFoundation.Mvc\Views\Housing\WaitingList\ResidentsPrint.cshtml
+ *@
+ @*هذي الصفحة ثابتة لكل اكشنات الطباعة كل اكشن طباعة جديد داخل أي كنترول لازم نسوي له فيو نسخ لصق مع السكربت*@
+@* 
+@model SmartFoundation.UI.ViewModels.SmartPage.SmartPageViewModel
+@{
+    Layout = "_PrintLayout";
+    ViewData["Title"] = Model.PageTitle;
+}
+
+@if (Model.Print is not null)
+{
+    @await Component.InvokeAsync("SmartPrint", new { model = Model.Print, embedded = true })
+}
+
+@* تفعيل الطباعة التلقائية عند تحميل الصفحة داخل iframe *@
+@* <script>
+    (function() {
+        
+        const isInIframe = window.self !== window.top;
+        
+        function autoPrint() {
+            const firstDoc = document.querySelector(".smart-a4p");
+            if (!firstDoc) {
+                console.warn('لم يتم العثور على عنصر التقرير');
+                return;
+            }
+            if (isInIframe) {
+                console.log('الصفحة جاهزة للطباعة من iframe');
+                return;
+            }
+            const checkInterval = setInterval(() => {
+                if (window.SmartPrint?.printDom) {
+                    clearInterval(checkInterval);
+                    
+                    setTimeout(() => {
+                        window.SmartPrint.printDom(firstDoc.id);
+                    }, 300);
+                }
+            }, 100);
+
+            setTimeout(() => {
+                clearInterval(checkInterval);
+                if (!window.SmartPrint?.printDom) {
+                    console.error('فشل تحميل مكتبة الطباعة');
+                }
+            }, 5000);
+        }
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', autoPrint);
+        } else {
+            autoPrint();
+        }
+    })();
+</script>  *@

@@ -148,43 +148,53 @@ function deleteForm() { console.log("deleteForm: نفّذ تأكيد ثم submit
 
 
 
-// =========================
-// Select2 init (SmartForm)
-// =========================
 function sfInitSelect2(root = document) {
     if (!window.jQuery || !jQuery.fn || !jQuery.fn.select2) return;
 
-    jQuery(root).find('select.js-select2').each(function () {
-        const $s = jQuery(this);
-        if ($s.data('select2')) return;
+    const $root = jQuery(root);
 
-        const ph = $s.data('s2-placeholder') || '';
-        const min = $s.data('s2-min-results');
+    $root
+        .find('select.js-select2')
+        .add($root.is('select.js-select2') ? $root : [])
+        .each(function () {
+            const $s = jQuery(this);
+            if ($s.data('select2')) return;
 
-        $s.select2({
-            width: '100%',
-            dir: 'rtl',
-            placeholder: ph,
-            minimumResultsForSearch:
-                (min !== undefined && min !== null && min !== '')
-                    ? parseInt(min, 10)
-                    : 0
+            const ph = $s.data('s2-placeholder') || '';
+            const min = $s.data('s2-min-results');
+
+            $s.select2({
+                width: '100%',
+                dir: 'rtl',
+                placeholder: ph,
+                minimumResultsForSearch:
+                    (min !== undefined && min !== null && min !== '')
+                        ? parseInt(min, 10)
+                        : 0
+            });
+
         });
-    });
 }
 
-// أول تحميل
-document.addEventListener('DOMContentLoaded', () => sfInitSelect2());
 
-// بعد ما Alpine يجهز (مهم)
-document.addEventListener('alpine:init', () => {
-    queueMicrotask(() => sfInitSelect2());
-});
+(function () {
+    const run = () => sfInitSelect2(document);
 
-// إذا عندك تحديث ديناميكي للحقول/الخيارات
-document.addEventListener('form-rendered', (e) => {
-    sfInitSelect2(e.target || document);
-});
+    document.addEventListener("DOMContentLoaded", run);
+
+    const obs = new MutationObserver((mutations) => {
+        for (const m of mutations) {
+            for (const node of m.addedNodes) {
+                if (node.nodeType !== 1) continue;
+                if (node.matches?.("select.js-select2") || node.querySelector?.("select.js-select2")) {
+                    sfInitSelect2(node);
+                }
+            }
+        }
+    });
+
+    obs.observe(document.body, { childList: true, subtree: true });
+})();
 
 
 (function () {
@@ -219,4 +229,142 @@ document.addEventListener('form-rendered', (e) => {
     // لو عندك Turbo/HTMX (اختياري ومفيد)
     document.addEventListener("turbo:before-visit", closeAllDropdowns);
     document.addEventListener("htmx:beforeRequest", closeAllDropdowns);
+})();
+
+
+
+
+// sfNav: دالة تنقّل عامة لـ SmartForm تقرأ قيمة الحقل (input/select)، تتحقق منها (Required / Reject / Regex)، تبني الرابط من data-sf-url و data-sf-key، تعرض toastr عند الخطأ، ثم تنفّذ التنقّل — تُستخدم مع onclick / onchange وتعتمد على data-* من FieldConfig و FormButtonConfig.
+// ===== SmartForm: Navigation Helper (Generic) =====
+window.sfNav = function (el, forcedValue) {
+    const d = el?.dataset || {};
+    const fieldName = d.sfField;
+    let value = (forcedValue != null)
+        ? String(forcedValue).trim()
+        : (fieldName
+            ? (document.querySelector(`[name="${fieldName}"]`)?.value ?? '').trim()
+            : (el?.value ?? '').trim());
+
+   
+    // required
+    if (d.sfRequired === "1" && !value) {
+        return (window.toastr?.error(d.sfRequiredMsg || "الرجاء تعبئة الحقل"));
+    }
+
+    // reject (مثل -1 للـ select)
+    if (d.sfReject != null && String(value) === String(d.sfReject)) {
+        const type = d.sfToastType || "info";
+        return (window.toastr?.[type]?.(d.sfRejectMsg || "الرجاء الاختيار اولا"));
+    }
+
+    // pattern (regex)
+    if (d.sfPattern) {
+        const re = new RegExp(d.sfPattern);
+        if (!re.test(value)) {
+            return (window.toastr?.error(d.sfPatternMsg || "قيمة غير صحيحة"));
+        }
+    }
+
+    // 3) بناء الرابط 
+    const url = d.sfUrl;
+    const key = d.sfKey;
+
+    if (!url) {
+        return (window.toastr?.error("sfUrl غير موجود"));
+    }
+    const qs = new URLSearchParams();
+    if (key) qs.set(key, value);
+
+    // مفاتيح إضافية (ثابتة NavValX أو ديناميكية من حقول أخرى NavFieldX)
+    for (let i = 2; i <= 5; i++) {
+        const k = d[`sfKey${i}`];
+        if (!k) continue;
+
+        // 1) ثابت
+        let v = d[`sfVal${i}`];
+
+        // 2) ديناميكي من حقل آخر
+        if ((v == null || v === "") && d[`sfField${i}`]) {
+            const srcName = d[`sfField${i}`];
+            v = (document.querySelector(`[name="${srcName}"]`)?.value ?? "").trim();
+
+            // إذا المصدر فاضي، امنع التنقّل
+            if (!v) {
+                return window.toastr?.info("اكمل الاختيارات المطلوبة أولاً");
+            }
+        }
+
+        if (v != null && v !== "") qs.set(k, v);
+    }
+
+    const finalUrl = qs.toString() ? `${url}?${qs}` : url;
+    window.location.href = finalUrl;
+};
+
+// sfToggle: دالة عامة للتحكم في إظهار/إخفاء حقول الفورم بناءً على قيمة الحقل الحالي
+// تستخدم data-sf-toggle-group لتجميع الحقول، و data-sf-toggle-map لتحديد أي حقول تظهر لكل قيمة
+window.sfToggle = function (el, forcedValue) {
+    const d = el?.dataset || {};
+    const value = (forcedValue != null)
+        ? String(forcedValue).trim()
+        : String(el?.value ?? "").trim();
+
+    const group = d.sfToggleGroup;
+    const mapStr = d.sfToggleMap || "";
+    if (!group || !mapStr) return;
+
+    const root = el.closest('form') || document;
+
+    // اخفاء كل العناصر التابعة للمجموعة
+    root.querySelectorAll(`[data-sf-toggle-group="${group}"]`)
+        .forEach(x => x.closest('.form-group')?.style.setProperty('display', 'none'));
+
+    if (!value) return;
+
+    // استخراج القائمة المطلوبة من الخريطة: "1:A,B|2:C"
+    const rules = mapStr.split('|').map(s => s.trim()).filter(Boolean);
+    const rule = rules.find(r => r.startsWith(value + ':'));
+    if (!rule) return;
+
+    const names = rule.slice((value + ':').length).split(',').map(s => s.trim()).filter(Boolean);
+    names.forEach(n => {
+        const target = root.querySelector(`[name="${n}"]`);
+        if (target) target.closest('.form-group')?.style.setProperty('display', 'block');
+    });
+};
+
+
+// تفعيل الانتر على نفس الحقل + منع التكرار
+window.sfEnter = (function () {
+
+    let locked = false; // قفل لمنع الضغط المتكرر
+
+    return function (inputEl) {
+        if (!inputEl || locked) return;
+
+        locked = true; // اقفل فورًا
+
+        try {
+            // 1) لو فيه زر inline (بحث / تنقّل)
+            const btn = inputEl.closest('.form-group')?.querySelector('button[data-sf-field]');
+            if (btn) {
+                window.sfNav(btn);
+                return;
+            }
+
+            // 2) غير كذا: submit الفورم
+            const form = inputEl.closest('form');
+            if (!form) return;
+
+            form.requestSubmit?.();
+            if (!form.requestSubmit) {
+                form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+            }
+
+        } finally {
+            // فك القفل بعد 300ms
+            setTimeout(() => { locked = false; }, 500);
+        }
+    };
+
 })();

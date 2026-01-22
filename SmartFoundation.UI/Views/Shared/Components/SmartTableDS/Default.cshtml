@@ -3,56 +3,94 @@
 @using SmartFoundation.UI.ViewModels.SmartTable
 @using SmartFoundation.UI.ViewModels.SmartForm
 @model SmartTableDsModel
-
 @{
-    // ✅ 1) هذا أهم سطرين: يخلي Enum (Placement) يطلع كنص "ActionsMenu" بدل رقم 1
     var webJson = new JsonSerializerOptions(JsonSerializerDefaults.Web);
     webJson.Converters.Add(new JsonStringEnumConverter());
-
     var tableConfig = new
     {
         clientSideMode = true,
         endpoint = "/smart/execute",
-        spName = Model.StoredProcedureName,           // لو تحتاجه في js
-        operation = Model.Operation,                  // لو تحتاجه في js
-
+        spName = Model.StoredProcedureName,         
+        operation = Model.Operation,                  
         pageSize = Model.PageSize,
         pageSizes = Model.PageSizes,
         searchable = Model.Searchable,
         searchPlaceholder = Model.SearchPlaceholder ?? "بحث…",
         quickSearchFields = Model.QuickSearchFields ?? new List<string>(),
-
         allowExport = Model.AllowExport,
         showHeader = Model.ShowHeader,
         showFooter = Model.ShowFooter,
+        enablePagination = Model.EnablePagination,
         autoRefresh = true,
-
         columns = Model.Columns ?? new List<TableColumn>(),
         actions = new List<object>(),
-
         selectable = Model.Selectable,
         singleSelect = true,
         rowIdField = Model.RowIdField ?? "Id",
         rows = Model.Rows ?? new List<Dictionary<string, object?>>(),
-
         toolbar = Model.Toolbar ?? new TableToolbarConfig(),
         styleRules = Model.StyleRules ?? new List<TableStyleRule>(),
-
         tabelLabel = Model.TabelLabel ?? "",
         showToolbar = Model.ShowToolbar,
         enableCellCopy = Model.EnableCellCopy,
+        //Profile View config
+        viewMode = Model.ViewMode.ToString(), 
+        profileTitleField = Model.ProfileTitleField,
+        profileSubtitleField = Model.ProfileSubtitleField,
+        profileFields = Model.ProfileFields ?? new List<string>(),
+        profileColumns = Model.ProfileColumns,
+        profileCssClass = Model.ProfileCssClass ?? "",
+        profileShowHeader = Model.ProfileShowHeader,
+        profileIcon = Model.ProfileIcon ?? "fa-solid fa-id-card",
+        profileTitleText = Model.ProfileTitleText ?? "",
+        profileMetaFields = Model.ProfileMetaFields ?? new List<object>(),
+        showPageSizeSelector = Model.ShowPageSizeSelector,
+        profileBadges = Model.ProfileBadges ?? new List<ProfileBadge>(),
     };
 }
+@{
+    var useToggle = Model.RenderAsToggle;
+    var toggleLabel = Model.ToggleLabel ?? "عرض";
+    var toggleIcon = Model.ToggleIcon ?? "fa-solid fa-table";
+    var toggleOpen = Model.ToggleDefaultOpen;
+}
 
-<div x-data='sfTable(@Html.Raw(JsonSerializer.Serialize(tableConfig, webJson)))'
-     x-init="init()"
-     x-cloak
-     x-on:refresh-table.window="refresh()">
+<div class="sf-toggle"
+     x-data="{ open: @(toggleOpen ? "true" : "false") }"
+     x-cloak>
+
+@if (useToggle)
+{
+        <button type="button"
+                class="sf-toggle__btn"
+                x-on:click="open = !open">
+            <span class="sf-toggle__left">
+                <i class="@toggleIcon sf-toggle__icon"></i>
+                <span class="sf-toggle__label">@toggleLabel</span>
+            </span>
+
+            <i class="fa-solid fa-chevron-down sf-toggle__chev"
+               :class="open ? 'is-open' : ''"></i>
+        </button>
+
+}
+
+
+    <div class="@(useToggle ? "sf-toggle__content" : "mt-3")"
+         x-show="@(useToggle ? "open" : "true")"
+         x-transition>
+
+
+        <div x-data='sfTable(@Html.Raw(JsonSerializer.Serialize(tableConfig, webJson)))'
+             x-init="init()"
+             x-on:refresh-table.window="refresh()">
+
+
 
     @* ================= LABEL ================= *@
     @if (!string.IsNullOrWhiteSpace(Model.TabelLabel))
     {
-        <div class="my-6 rounded-sm border border-gray-300 bg-sky-50 px-4 py-3 shadow-sm">
+        <div class="my-6 rounded-sm border border-gray-300 bg-gray-50 px-4 py-3 shadow-sm">
             <div class="flex items-center gap-4">
                 <div class="h-px flex-1 bg-sky-200/60"></div>
                 <div class="flex items-center gap-2 text-lg font-semibold whitespace-nowrap text-green-700">
@@ -74,11 +112,20 @@
 
             @* البحث فقط يتبع searchable *@
             <div class="toolbar-search" x-show="searchable">
-                <input type="text"
+                @* <input type="text"
                        class="sf-input search-input"
                        x-model="q"
                        x-on:input.debounce.500="debouncedSearch()"
-                       :placeholder="searchPlaceholder" />
+                       :placeholder="searchPlaceholder" /> *@
+                        <input type="text"
+                               class="sf-input search-input"
+                               name="tableSearch"
+                               x-model="q"
+                               x-on:input.debounce.500="debouncedSearch()"
+                               :placeholder="searchPlaceholder"
+                               aria-label="بحث" />
+
+
 
                 <button type="button"
                         class="btn btn-secondary"
@@ -89,8 +136,8 @@
                 </button>
             </div>
 
-            @* ✅ 2) لا تربط أزرار التولبار بـ searchable (عشان ما تختفي) *@
-            <div class="toolbar-actions">
+           
+            @* <div class="toolbar-actions">
 
                 <label class="label-sm">صف/صفحة</label>
                 <select class="sf-input select-sm"
@@ -100,19 +147,73 @@
                         <option x-text="s"></option>
                     </template>
                 </select>
+                    <template x-if="enablePagination">
+                        <div class="inline-flex items-center gap-2">
+                            <label class="label-sm">صف/صفحة</label>
+                            <select class="sf-input select-sm"
+                                    x-model.number="pageSize"
+                                    x-on:change="page=1; load()">
+                                <template x-for="s in pageSizes" :key="s">
+                                    <option x-text="s"></option>
+                                </template>
+                            </select>
+                        </div>
+                    </template> *@
+                   
+                    <div class="toolbar-actions">
+
+                        @* ✅ صف/صفحة (يتبع ShowPageSizeSelector) *@
+                        @* <template x-if="showPageSizeSelector">
+                            <div class="inline-flex items-center gap-2">
+                                <label class="label-sm">صف/صفحة</label>
+                                <select class="sf-input select-sm"
+                                        x-model.number="pageSize"
+                                        x-on:change="page=1; load()">
+                                    <template x-for="s in pageSizes" :key="s">
+                                        <option x-text="s"></option>
+                                    </template>
+                                </select>
+                            </div>
+                        </template> *@
+                        <template x-if="showPageSizeSelector">
+                            <div class="inline-flex items-center gap-2">
+                                <label class="label-sm" for="pageSizeSelect">صف/صفحة</label>
+                                <select id="pageSizeSelect"
+                                        class="sf-input select-sm"
+                                        x-model.number="pageSize"
+                                        x-on:change="page=1; load()">
+                                    <template x-for="s in pageSizes" :key="s">
+                                        <option x-text="s"></option>
+                                    </template>
+                                </select>
+                            </div>
+                        </template>
+
+
 
                 @* ===== تصدير ===== *@
-                <template x-if="allowExport && toolbar.showExportExcel">
+                <!-- Excel -->
+                @* <template x-if="allowExport && toolbar.showExportExcel">
                     <button type="button" class="btn btn-info" x-on:click="exportData('excel')">
                         <i class="fa fa-file-excel"></i> Excel
                     </button>
-                </template>
+                </template> *@
 
-                <template x-if="allowExport && toolbar.showExportCsv">
+                <!-- CSV -->
+                @* <template x-if="allowExport && toolbar.showExportCsv">
                     <button type="button" class="btn btn-warning" x-on:click="exportData('csv')">
                         <i class="fa fa-file-csv"></i> CSV
                     </button>
-                </template>
+                </template> *@
+
+                <!-- PDF -->
+                @* <template x-if="allowExport && toolbar.showExportPdf">
+                    <button type="button" class="btn btn-danger" x-on:click="exportData('pdf')">
+                        <i class="fa fa-file-pdf"></i> PDF
+                    </button>
+                </template> *@
+
+
 
                 @* ===== أزرار مباشرة: Placement غير ActionsMenu ===== *@
                 <template x-for="act in [
@@ -125,6 +226,8 @@
           ...(toolbar.showDelete !== false && toolbar.delete ? [toolbar.delete] : []),
           ...(toolbar.showDelete1 !== false && toolbar.delete1 ? [toolbar.delete1] : []),
           ...(toolbar.showDelete2 !== false && toolbar.delete2 ? [toolbar.delete2] : []),
+          ...(toolbar.showPrint !== false && toolbar.print ? [toolbar.print] : []),
+          ...(toolbar.showPrint1 !== false && toolbar.print1 ? [toolbar.print1] : []),
           ...(toolbar.customActions || [])
           ].filter(a => a && a.show !== false && (a.placement ?? 'Button') !== 'ActionsMenu')"
     :key="act.label">
@@ -150,6 +253,8 @@
           ...(toolbar.showDelete !== false && toolbar.delete ? [toolbar.delete] : []),
           ...(toolbar.showDelete1 !== false && toolbar.delete1 ? [toolbar.delete1] : []),
           ...(toolbar.showDelete2 !== false && toolbar.delete2 ? [toolbar.delete2] : []),
+          ...(toolbar.showPrint !== false && toolbar.print ? [toolbar.print] : []),
+          ...(toolbar.showPrint1 !== false && toolbar.print1 ? [toolbar.print1] : []),
           ...(toolbar.customActions || [])
           ].some(a => a && a.show !== false && a.placement === 'ActionsMenu')">
 
@@ -176,6 +281,8 @@
                       ...(toolbar.showDelete !== false && toolbar.delete ? [toolbar.delete] : []),
                       ...(toolbar.showDelete1 !== false && toolbar.delete1 ? [toolbar.delete1] : []),
                       ...(toolbar.showDelete2 !== false && toolbar.delete2 ? [toolbar.delete2] : []),
+                      ...(toolbar.showPrint !== false && toolbar.print ? [toolbar.print] : []),
+                      ...(toolbar.showPrint1 !== false && toolbar.print1 ? [toolbar.print1] : []),
                       ...(toolbar.customActions || [])
                       ].filter(a => a && a.show !== false && a.placement === 'ActionsMenu')"
                 :key="act.label">
@@ -202,7 +309,10 @@
     }
 
     @* ================= TABLE ================= *@
-    <div class="table-box">
+    @* <div class="table-box"> *@
+    <div class="table-box" x-show="viewMode === 'Table'">
+
+
         <table class="sf-table">
             <thead x-show="showHeader" class="table-head">
                 <tr>
@@ -254,13 +364,22 @@
 
 
 
-                <template x-if="!loading && !error && rows.length===0">
+                @* <template x-if="!loading && !error && rows.length===0">
                     <tr>
                         <td :colspan="visibleColumns().length + (selectable?1:0)" class="td-empty">
                             لا توجد بيانات.
                         </td>
                     </tr>
-                </template>
+                </template> *@
+                        <template x-if="!loading && !error && rows.length===0">
+                            <tr>
+                                <td :colspan="visibleColumns().length + (selectable?1:0)"
+                                    class="py-6 text-center">
+                                    لا توجد بيانات.
+                                </td>
+                            </tr>
+                        </template>
+
 
                 <template x-for="(row, idx) in rows" :key="row[rowIdField] ?? idx">
                     <tr class="tr-row"
@@ -289,8 +408,96 @@
         </table>
     </div>
 
+
+
+    @* ================= PROFILE VIEW (Dynamic) ================= *@
+    <div class="sf-profile" x-show="viewMode === 'Profile'">
+
+        <template x-if="loading">
+            <div class="sf-profile__state sf-profile__state--loading">
+                <i class="fa fa-spinner animate-spin"></i>
+                <span>جاري التحميل...</span>
+            </div>
+        </template>
+
+        <template x-if="!loading && error">
+            <div class="sf-profile__state sf-profile__state--error">
+                <span x-text="error"></span>
+            </div>
+        </template>
+
+        <template x-if="!loading && !error && rows.length===0">
+            <div class="sf-profile__state sf-profile__state--empty">
+                لا توجد بيانات.
+            </div>
+        </template>
+
+        <template x-if="!loading && !error && rows.length>0">
+            <template x-for="(row, idx) in rows" :key="row[rowIdField] ?? idx">
+
+                <section class="sf-profile__panel">
+
+                    <header class="sf-profile__header">
+                        <div class="sf-profile__title">
+                            <i class="sf-profile__titleIcon" :class="profileIcon"></i>
+
+                            <div class="sf-profile__titleText">
+
+                               
+                                <template x-if="profileTitleText">
+                                    <div class="sf-profile__headingStatic" x-text="profileTitleText"></div>
+                                </template>
+
+                               
+                                @* <div class="sf-profile__headingName" x-text="getProfileTitle(row)"></div> *@
+
+                                <template x-if="getProfileSubtitle(row)">
+                                    <div class="sf-profile__subheading" x-text="getProfileSubtitle(row)"></div>
+                                </template>
+
+                         
+                                <template x-if="profileBadges && profileBadges.length">
+                                    <div class="sf-profile__badges">
+                                        <template x-for="b in profileBadges" :key="b.field">
+                                            <span class="sf-profile__pill">
+                                                <span class="sf-profile__pillLabel" x-text="b.label"></span>
+                                                <span class="sf-profile__pillValue" x-text="row?.[b.field] ?? '-'"></span>
+                                            </span>
+                                        </template>
+                                    </div>
+                                </template>
+
+                            </div>
+                        </div>
+                    </header>
+
+                    <div class="sf-profile__body">
+                        <dl class="sf-profile__grid" :class="'sf-profile__grid--cols-' + (profileColumns || 2)">
+                            <template x-for="col in profileColumnsList()" :key="col.field">
+                                <div class="sf-profile__item">
+                                    <dt class="sf-profile__label" x-text="col.label"></dt>
+                                    <dd class="sf-profile__value" x-html="formatCell(row, col)"></dd>
+                                </div>
+                            </template>
+                           
+                            <template x-for="n in profilePlaceholderCount(profileColumnsList().length, (profileColumns || 2))" :key="'ph-' + n">
+                                <div class="sf-profile__item sf-profile__item--placeholder" aria-hidden="true"></div>
+                            </template>
+                        </dl>
+                        
+                    </div>
+
+                </section>
+
+            </template>
+        </template>
+    </div>
+
+
+
     @* ================= PAGINATION ================= *@
-    <div class="pagination" x-show="showFooter">
+    @* <div class="pagination" x-show="showFooter"> *@
+        <div class="pagination" x-show="showFooter && enablePagination">
         <div class="pagination-info">
             <span class="pagination-range" x-text="rangeText()"></span>
         </div>
@@ -319,20 +526,41 @@
                         <template x-if="modal.message">
                             <div class="mb-7 flex items-center justify-center gap-2 rounded-sm px-4 py-2 text-center"
                                  :class="modal.messageClass || 'border border-sky-200 bg-sky-50 text-sky-700'">
+
+                                <i x-show="modal.messageIcon"
+                                   :class="modal.messageIcon"
+                                   class="text-lg opacity-90"></i>
+
+                                <!-- ✅ نص عادي -->
+                                <span x-show="!modal.messageIsHtml" x-text="modal.message"></span>
+
+                                <!-- ✅ HTML -->
+                                <span x-show="modal.messageIsHtml" x-html="modal.message"></span>
+                            </div>
+                        </template>
+
+
+                        @* <template x-if="modal.message">
+                            <div class="mb-7 flex items-center justify-center gap-2 rounded-sm px-4 py-2 text-center"
+                                 :class="modal.messageClass || 'border border-sky-200 bg-sky-50 text-sky-700'">
                                 <i x-show="modal.messageIcon"
                                    :class="modal.messageIcon"
                                    class="text-lg opacity-90"></i>
                                 <span x-text="modal.message"></span>
                             </div>
                         </template>
-
-                        <template x-if="modal.loading">
+ *@
+                       
+                        @* <template x-if="modal.loading">
                             <div class="td-loading">
-                                <i class="fa fa-spinner animate-spin"></i> جاري التحميل...
+                                <i class="fa fa-spinner animate-spin"></i>
+                                جاري التحميل...
                             </div>
-                        </template>
+                        </template> *@
 
-                        <template x-if="!modal.loading && !modal.error && modal.html">
+
+
+                        <template x-if="!modal.lloading && !modal.error && modal.html">
                             <div x-html="modal.html"></div>
                         </template>
 
@@ -344,3 +572,5 @@
 
 
 </div>
+</div>  
+</div>      

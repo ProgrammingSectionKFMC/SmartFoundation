@@ -1,0 +1,214 @@
+﻿@model SmartFoundation.UI.ViewModels.SmartPrint.PrintDocConfig
+@using SmartFoundation.UI.ViewModels.SmartPrint
+@using System.Text.Json
+@using System.Text.Encodings.Web
+
+@{
+    var hostId = $"spr_a4p_{Model.Id}";
+    var cfgId = $"{hostId}_cfg";
+
+    string logoSrc = "";
+    if (Model.Logo != null)
+    {
+        if (!string.IsNullOrWhiteSpace(Model.Logo.Base64))
+            logoSrc = $"data:image/png;base64,{Model.Logo.Base64}";
+        else if (!string.IsNullOrWhiteSpace(Model.Logo.Url))
+            logoSrc = Model.Logo.Url!;
+    }
+
+    var cfg = new
+    {
+        id = hostId,
+        dir = (Model.Dir ?? "rtl").ToLower(),
+        paper = Model.Paper,
+        orientation = Model.Orientation,
+        marginMm = Model.MarginMm,
+        footer = new { showPageNumbers = Model.Footer?.ShowPageNumbers ?? true }
+    };
+
+    var json = JsonSerializer.Serialize(cfg, new JsonSerializerOptions
+    {
+        Encoder = JavaScriptEncoder.Default,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    });
+}
+
+<div id="@hostId" class="smart-a4p" dir="@Model.Dir" data-config-id="@cfgId">
+
+    <div class="smart-a4p__toolbar no-print">
+        <button type="button" class="smart-a4p__btn" onclick="SmartPrint.printDom('@hostId')">
+            <i class="fa-solid fa-print"></i>
+            <span>طباعة</span>
+        </button>
+    </div>
+
+    <div class="smart-a4p__page">
+
+        <div class="smart-a4p__header">
+            <div class="smart-a4p__hdr-side smart-a4p__hdr-side--right">
+                @if (!string.IsNullOrWhiteSpace(Model.HeaderRight?.Title))
+                {
+                    <div class="smart-a4p__hdr-line smart-a4p__hdr-title">@Model.HeaderRight.Title</div>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.HeaderRight?.Subtitle))
+                {
+                    <div class="smart-a4p__hdr-line smart-a4p__hdr-sub">@Model.HeaderRight.Subtitle</div>
+                }
+                @if (Model.HeaderRight?.Meta?.Any() == true)
+                {
+                    <div class="smart-a4p__meta smart-a4p__meta--hdr">
+                        @foreach (var m in Model.HeaderRight.Meta)
+                        {
+                            <div class="smart-a4p__meta-row">
+                                <div class="smart-a4p__meta-k">@m.Key</div>
+                                <div class="smart-a4p__meta-v">@m.Value</div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="smart-a4p__hdr-mid">
+                @if (!string.IsNullOrWhiteSpace(logoSrc))
+                {
+                    <img class="smart-a4p__logo" src="@logoSrc" alt="@(Model.Logo?.Alt ?? "Logo")" />
+                }
+            </div>
+
+            <div class="smart-a4p__hdr-side smart-a4p__hdr-side--left">
+                @if (!string.IsNullOrWhiteSpace(Model.HeaderLeft?.Title))
+                {
+                    <div class="smart-a4p__hdr-line smart-a4p__hdr-title">@Model.HeaderLeft.Title</div>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.HeaderLeft?.Subtitle))
+                {
+                    <div class="smart-a4p__hdr-line smart-a4p__hdr-sub">@Model.HeaderLeft.Subtitle</div>
+                }
+                @if (Model.HeaderLeft?.Meta?.Any() == true)
+                {
+                    <div class="smart-a4p__meta smart-a4p__meta--hdr">
+                        @foreach (var m in Model.HeaderLeft.Meta)
+                        {
+                            <div class="smart-a4p__meta-row">
+                                <div class="smart-a4p__meta-k">@m.Key</div>
+                                <div class="smart-a4p__meta-v">@m.Value</div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="smart-a4p__body">
+            @foreach (var b in (Model.Blocks ?? new List<PrintBlock>()))
+            {
+                var blockExtra = b.ExtraCss ?? "";
+                var blockDir = b.Dir;
+                var isTableBlock = b.Type == PrintBlockType.Table;
+
+                <div class="smart-a4p__block @(isTableBlock ? "smart-a4p__block--table" : "") @blockExtra" dir="@blockDir">
+
+                    @if (!string.IsNullOrWhiteSpace(b.Title))
+                    {
+                        <div class="smart-a4p__block-title">@b.Title</div>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(b.Subtitle))
+                    {
+                        <div class="smart-a4p__block-sub">@b.Subtitle</div>
+                    }
+
+                    @switch (b.Type)
+                    {
+                        case PrintBlockType.Paragraph:
+                            <div class="smart-a4p__p">@Html.Raw((b.Text ?? "").Replace("\n", "<br/>"))</div>
+                            break;
+
+                        case PrintBlockType.KeyValueGrid:
+                            {
+                                var cols = b.GridCols <= 0 ? 2 : b.GridCols;
+                                var items = (b.Items ?? new List<PrintKeyValue>());
+                                var perRow = cols;
+
+                                <table class="smart-a4p__kv-table" data-cols="@cols">
+                                    <tbody>
+                                        @for (int i = 0; i < items.Count; i += perRow)
+                                        {
+                                            <tr>
+                                                @for (int j = 0; j < perRow; j++)
+                                                {
+                                                    var idx = i + j;
+                                                    if (idx < items.Count)
+                                                    {
+                                                        <td class="smart-a4p__kv-cell">
+                                                            <div class="smart-a4p__kv-k">@items[idx].Key</div>
+                                                            <div class="smart-a4p__kv-v">@items[idx].Value</div>
+                                                        </td>
+                                                    }
+                                                    else
+                                                    {
+                                                        <td class="smart-a4p__kv-cell smart-a4p__kv-cell--empty"></td>
+                                                    }
+                                                }
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            }
+                            break;
+
+                        case PrintBlockType.Table:
+                            {
+                                var cols = (b.Columns ?? new List<PrintTableColumn>()).Where(x => x.Visible).ToList();
+                                var rows = (b.Rows ?? new List<Dictionary<string, object?>>());
+
+                                <div class="smart-a4p__table-wrap">
+                                    <table class="smart-a4p__table">
+                                        <thead>
+                                            <tr>
+                                                @foreach (var c in cols)
+                                                {
+                                                    var align = string.IsNullOrWhiteSpace(c.Align) ? "right" : c.Align!;
+                                                    var thStyle = "";
+                                                    if (!string.IsNullOrWhiteSpace(c.Width)) thStyle += $"width:{c.Width};";
+                                                    thStyle += $"text-align:{align};";
+                                                    <th style="@thStyle" title="@c.Label">@c.Label</th>
+                                                }
+                                            </tr>
+                                        </thead>
+
+                                        <tbody>
+                                            @foreach (var r in rows)
+                                            {
+                                                <tr>
+                                                    @foreach (var c in cols)
+                                                    {
+                                                        var align = string.IsNullOrWhiteSpace(c.Align) ? "right" : c.Align!;
+                                                        r.TryGetValue(c.Field, out var v);
+                                                        var txt = v == null ? "" : v.ToString();
+                                                        <td style="text-align:@align;" title="@txt">@txt</td>
+                                                    }
+                                                </tr>
+                                            }
+                                        </tbody>
+
+                                    </table>
+
+                                    
+                                    <div class="smart-a4p__footer">
+                                        <div class="smart-a4p__ft-left">@Model.Footer?.LeftText</div>
+                                        <div class="smart-a4p__ft-center">@Model.Footer?.CenterText</div>
+                                        <div class="smart-a4p__ft-right">@Model.Footer?.RightText</div>
+                                     </div>
+                                </div>
+                            }
+                            break;
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<script type="application/json" id="@cfgId">@Html.Raw(json)</script>
+

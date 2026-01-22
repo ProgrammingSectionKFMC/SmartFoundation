@@ -1,0 +1,393 @@
+﻿/* =========================
+   SmartPrint A4 Portrait (Official) - Revised (FIXED v2)
+   ========================= */
+:root {
+    --spr-ink: #0b1f2a;
+    --spr-muted: #5b6b75;
+    --spr-line: #d7dde2;
+    --spr-fill: #f2f5f7;
+    --spr-accent: #0f4c3a;
+}
+
+/* =========================
+   Base
+   ========================= */
+html, body {
+    margin: 0;
+    padding: 0;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+.smart-a4p {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    color: var(--spr-ink);
+    background: #fff;
+}
+
+.smart-a4p__sheet {
+    width: 100%;
+    margin: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+/*تكرار الهيدر/الفوتر بالطباعة) */
+.smart-a4p__thead {
+    display: table-header-group;
+}
+
+.smart-a4p__tfoot {
+    display: table-footer-group;
+}
+
+.smart-a4p__tbody {
+    display: table-row-group;
+}
+
+.smart-a4p__th, .smart-a4p__td, .smart-a4p__tf {
+    padding: 0;
+    vertical-align: top;
+}
+
+/* =========================
+   Toolbar
+   ========================= */
+.smart-a4p__toolbar {
+    display: flex;
+    justify-content: flex-start;
+    gap: 8px;
+    margin: 8px 0 10px;
+}
+
+.smart-a4p__btn {
+    border: 1px solid var(--spr-line);
+    background: #fff;
+    color: var(--spr-ink);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+    .smart-a4p__btn i {
+        margin-inline-end: 8px;
+    }
+
+/* =========================
+   Header
+   ========================= */
+.smart-a4p__header {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 14px;
+    padding: 10mm 10mm 6mm;
+    border-bottom: 0.25px solid var(--spr-accent);
+}
+
+.smart-a4p__hdr-side {
+    min-width: 0;
+}
+
+.smart-a4p__hdr-side--right {
+    text-align: right;
+}
+
+.smart-a4p__hdr-side--left {
+    text-align: left;
+}
+
+.smart-a4p__hdr-mid {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/*  الشعار  */
+.smart-a4p__logo {
+    width: 34mm !important;
+    height: 34mm !important;
+    max-width: none !important;
+    max-height: none !important;
+    object-fit: contain;
+    image-rendering: auto; 
+    filter: contrast(1.05) saturate(1.05);
+}
+
+.smart-a4p__hdr-line {
+    padding: 2px 0;
+    border-bottom: 1px solid var(--spr-line);
+}
+
+.smart-a4p__hdr-title {
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.smart-a4p__hdr-sub {
+    font-weight: 400;
+    font-size: 12px;
+    color: var(--spr-muted);
+}
+
+.smart-a4p__meta--hdr {
+    margin-top: 6px;
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
+}
+
+.smart-a4p__meta-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--spr-line);
+}
+
+    .smart-a4p__meta-row:last-child {
+        border-bottom: 0;
+    }
+
+.smart-a4p__meta-k {
+    color: var(--spr-muted);
+    font-weight: 700;
+    font-size: 11px;
+}
+
+.smart-a4p__meta-v {
+    font-weight: 700;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+/* =========================
+   Body
+   ========================= */
+.smart-a4p__body {
+    padding: 6mm 10mm 0;
+}
+
+/* =========================
+   Blocks
+   ========================= */
+.smart-a4p__block {
+    margin: 0 0 6mm 0;
+}
+
+.smart-a4p__block-title {
+    font-weight: 700;
+    font-size: 13px;
+    text-align: center;
+    padding: 2mm 0;
+    border-bottom: 0;
+    margin: 0 0 2mm 0;
+}
+
+.smart-a4p__block-sub {
+    margin: 0 0 2mm 0;
+    color: var(--spr-muted);
+    font-size: 12px;
+    text-align: center;
+}
+
+.smart-a4p__p {
+    margin-top: 6px;
+    line-height: 1.8;
+    font-size: 12px;
+}
+
+/* =========================
+    KeyValueGrid (CENTER)
+   ========================= */
+.smart-a4p__kv-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    margin-top: 0;
+    margin-inline: auto;
+}
+
+.smart-a4p__kv-cell {
+    border: 1px solid var(--spr-line);
+    padding: 8px 10px;
+    vertical-align: top;
+    text-align: center;
+}
+
+.smart-a4p__kv-k {
+    font-weight: 700;
+    font-size: 11px;
+    color: var(--spr-muted);
+    margin-bottom: 4px;
+    text-align: center;
+}
+
+.smart-a4p__kv-v {
+    font-weight: 800;
+    font-size: 13px;
+    color: var(--spr-ink);
+    text-align: center;
+    white-space: nowrap;
+}
+
+.smart-a4p__kv-cell--empty {
+    background: #fff;
+}
+
+/* =========================
+    Main table (FULL BORDER ON ALL SIDES)
+   - no wrapping
+   - no missing left line
+   ========================= */
+.smart-a4p__table-wrap {
+    margin-top: 0;
+    overflow: visible;
+}
+
+.smart-a4p__table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+    border: 1px solid var(--spr-line);
+}
+
+    .smart-a4p__table thead th,
+    .smart-a4p__table tbody td {
+        border: 1px solid var(--spr-line); 
+        padding: 7px 8px;
+        font-size: 12px;
+        color: var(--spr-ink);
+        white-space: nowrap; 
+        overflow: hidden;
+        text-overflow: ellipsis;
+        word-break: normal;
+    }
+
+    .smart-a4p__table thead th {
+        background: var(--spr-fill);
+        font-weight: 700;
+        padding: 8px 8px;
+    }
+
+    .smart-a4p__table tbody tr:nth-child(even) td {
+        background: #fafbfd;
+    }
+
+/* =========================
+   Footer (ONLY 3 columns)
+   ========================= */
+.smart-a4p__footer {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    align-items: center;
+    padding: 4mm 10mm 6mm;
+    border-top: 1px solid var(--spr-line);
+    color: var(--spr-muted);
+    font-size: 11px;
+}
+
+.smart-a4p__ft-left {
+    text-align: right;
+}
+
+.smart-a4p__ft-center {
+    text-align: center;
+}
+
+.smart-a4p__ft-right {
+    text-align: left;
+}
+
+/* ✅ LeftText as plain line UNDER the footer (NO BOX, NO BORDER) */
+/*.smart-a4p__footer-note {
+    padding: 0 10mm 8mm;
+    margin-top: -2mm;
+    color: var(--spr-muted);
+    font-size: 11px;
+    text-align: center;
+    border: 0;
+    outline: 0;
+    background: transparent;
+}*/
+
+/* =========================
+   Print
+   ========================= */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    .smart-a4p__page-num {
+        display: none !important;
+    }
+
+    body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        margin: 0;
+        padding: 0;
+    }
+
+    .smart-a4p, .smart-a4p__sheet {
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+    }
+
+      
+    .smart-a4p__table thead th,
+    .smart-a4p__table tbody td {
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+        word-break: break-word !important;
+    }
+
+    @page {
+        size: A4 portrait;
+        margin: 10mm 10mm 10mm 10mm;
+
+    }
+}
+
+
+
+
+
+/* =========================
+   Custom Page Numbers (NO URL)
+   ========================= */
+
+@page {
+    counter-increment: page;
+}
+
+@media print {
+    body {
+        counter-reset: page;
+    }
+
+    .smart-a4p__page {
+        position: relative;
+        page-break-after: always;
+    }
+
+        .smart-a4p__page::after {
+            content: counter(page);
+            position: absolute;
+            bottom: 6mm;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: #555;
+        }
+}

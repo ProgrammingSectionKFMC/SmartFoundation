@@ -2,6 +2,7 @@
 using SmartFoundation.UI.ViewModels.SmartDatePicker;
 using SmartFoundation.UI.ViewModels.SmartForm;
 using SmartFoundation.UI.ViewModels.SmartTable;
+using SmartFoundation.UI.ViewModels.SmartPrint;
 
 namespace SmartFoundation.UI.ViewModels.SmartPage
 {
@@ -26,6 +27,9 @@ namespace SmartFoundation.UI.ViewModels.SmartPage
         public SmartTableDsModel? TableDS5 { get; set; } 
         public DatepickerViewModel? DatePicker { get; set; }
         public SmartChartsConfig? Charts { get; set; }
+        public SmartPrintConfig? Print { get; set; }
+
+
 
     }
 }

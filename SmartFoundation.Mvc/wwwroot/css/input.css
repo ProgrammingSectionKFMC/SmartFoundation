@@ -6,8 +6,9 @@
 @font-face {
     font-family: "Tajawal";
     src: url("../fonts/Tajawal-Regular.ttf") format("truetype");
-    font-weight: 400;
+    font-weight: 500;
     font-style: normal;
+    font-display: swap;
 }
 
 @font-face {
@@ -15,12 +16,26 @@
     src: url("../fonts/Tajawal-Bold.ttf") format("truetype");
     font-weight: 700;
     font-style: normal;
+    font-display: swap;
 }
+
 
 body,
 h1, h2, h3, h4, h5, h6,
 input, textarea, select, button {
     font-family: "Tajawal", sans-serif !important;
+}
+
+body {
+    font-family: "Tajawal", sans-serif !important;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
+    font-variant-ligatures: common-ligatures;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: 0; 
+    word-spacing: 0.02em; 
+    line-height: 1.6;
 }
 
 /* =========================
@@ -75,7 +90,7 @@ input, textarea, select, button {
    ========================= */
 @layer components {
     .form-container {
-        @apply w-full rounded-lg border border-gray-400 bg-gray-100 p-4 shadow md:p-8;
+        @apply w-full rounded-sm border border-gray-400 bg-gray-100 p-4 shadow md:p-8;
     }
 
     .form-header {
@@ -123,7 +138,7 @@ input, textarea, select, button {
     }
 
     .input {
-        @apply placeholder-gray-500 block h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-base leading-relaxed text-gray-800 transition-colors duration-200 read-only:cursor-not-allowed read-only:bg-gray-100 read-only:text-gray-500 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500;
+        @apply placeholder-gray-500 block h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-base leading-relaxed text-gray-800 transition-colors duration-200 read-only:cursor-not-allowed read-only:bg-gray-100 read-only:text-gray-500 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500 focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500;
         font-family: "Tajawal", ui-sans-serif, system-ui, sans-serif;
     }
 
@@ -143,11 +158,11 @@ input, textarea, select, button {
 
         .section-title::before {
             content: "";
-            @apply absolute top-0 left-0 h-full w-1 rounded-l-md bg-emerald-500;
+            @apply absolute top-0 left-0 h-full w-1 rounded-sm bg-emerald-500;
         }
 
     .section-box {
-        @apply /*shadow-sm*/ col-span-12 rounded-sm border border-gray-300 bg-gray-50 p-4 md:p-5;
+        @apply /*shadow-sm*/ col-span-12 rounded-sm border border-gray-300 bg-gray-50 p-4 md:p-3;
     }
 
     .section-legend {
@@ -159,11 +174,11 @@ input, textarea, select, button {
     }
 
     .sf-input {
-        @apply w-full rounded-md border border-gray-300 bg-gray-50 text-sm text-gray-900 focus:border-emerald-500 focus:ring-emerald-500;
+        @apply w-full rounded-sm border border-gray-300 bg-gray-50 text-sm text-gray-900 focus:border-emerald-500 focus:ring-emerald-500;
     }
 
     .sf-textarea {
-        @apply min-h-[100px] w-full rounded-md border border-gray-300 bg-gray-50 text-sm text-gray-900 focus:border-emerald-600 focus:ring-emerald-500;
+        @apply min-h-[100px] w-full rounded-sm border border-gray-300 bg-gray-50 text-sm text-gray-900 focus:border-emerald-600 focus:ring-emerald-500;
     }
 
     .sf-select {
@@ -197,35 +212,25 @@ input, textarea, select, button {
         }
 
     .sf-date {
-        @apply block w-full rounded-lg border border-gray-300 bg-white text-base text-gray-900 shadow-sm transition-colors duration-150 focus:border-emerald-600 focus:outline-none disabled:bg-gray-100 disabled:text-gray-500;
+        @apply block w-full rounded-sm border border-gray-300 bg-white text-base text-gray-900 shadow-sm transition-colors duration-150 focus:border-emerald-600 focus:outline-none disabled:bg-gray-100 disabled:text-gray-500;
         font-family: "Tajawal", sans-serif;
         direction: ltr;
         text-align: right;
     }
 
     .date-info-box {
-        @apply space-y-1 rounded-md border border-emerald-100 bg-emerald-100 p-2 text-sm text-gray-700 shadow-sm;
+        @apply space-y-1 rounded-sm border border-emerald-100 bg-emerald-100 p-2 text-sm text-gray-700 shadow-sm;
     }
 
     .days-counter-box {
-        @apply mt-2 inline-flex items-center gap-2 rounded-md border border-emerald-100 bg-emerald-100 px-3 py-2 text-sm text-gray-700;
+        @apply mt-2 inline-flex items-center gap-2 rounded-sm border border-emerald-100 bg-emerald-100 px-3 py-2 text-sm text-gray-700;
     }
 
     .sf-file {
-        @apply block w-full rounded-lg border border-gray-300 bg-white text-base text-gray-900 shadow-sm transition-colors duration-150 focus:border-emerald-600 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60;
+        @apply block w-full rounded-sm border border-gray-300 bg-white text-base text-gray-900 shadow-sm transition-colors duration-150 focus:border-emerald-600 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60;
         font-family: "Tajawal", sans-serif;
         padding: 0;
     }
-
-        .sf-file::file-selector-button {
-            @apply cursor-pointer rounded-md border-0 bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors duration-150 hover:bg-emerald-700;
-            margin-inline-start: auto;
-        }
-
-        .sf-file::-webkit-file-upload-text {
-            @apply text-sm text-gray-500;
-            visibility: hidden;
-        }
 
     .sf-checkbox {
         @apply h-4 w-4 cursor-pointer appearance-none rounded-none border border-gray-300 bg-white text-emerald-700 shadow-sm checked:border-emerald-700 checked:bg-emerald-700 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100;
@@ -237,18 +242,19 @@ input, textarea, select, button {
     }
 
     /* =========================
-     Modal Input (كان مكرر داخل @layer components)
+     Modal Input 
      ========================= */
     .sf-modal-input {
         @apply w-full rounded-sm border border-gray-300 bg-gray-50 px-3 py-2 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-600 focus:outline-none;
     }
 }
 
+
 /* =========================
    Buttons Table
    ========================= */
 .btn {
-    @apply inline-flex h-8.5 items-center justify-center gap-2 rounded-sm px-2 text-sm font-medium transition focus:ring-2 focus:ring-offset-0 focus:outline-none disabled:pointer-events-none disabled:opacity-60;
+    @apply inline-flex h-8 items-center justify-center gap-2 rounded-sm px-2 text-sm font-medium transition focus:ring-2 focus:ring-offset-0 focus:outline-none disabled:pointer-events-none disabled:opacity-60;
 }
 
     .btn i {
@@ -259,13 +265,17 @@ input, textarea, select, button {
     @apply bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-400;
 }
 
+
 .btn-secondary {
     @apply bg-gray-300 text-gray-800 hover:bg-gray-400 focus:ring-gray-500;
 }
 
+
 .btn-success {
     @apply bg-emerald-700 text-white hover:bg-emerald-800 focus:ring-emerald-600;
 }
+
+
 
 .btn-danger {
     @apply bg-red-700 text-white hover:bg-red-800 focus:ring-red-400;
@@ -279,174 +289,175 @@ input, textarea, select, button {
     @apply bg-sky-600 text-white hover:bg-sky-700 focus:ring-sky-400;
 }
 
-
-
-
-
 input[readonly],
 textarea[readonly] {
     @apply cursor-not-allowed bg-gray-200 text-gray-500;
 }
 
 
+/* =========================
+   Table Wrapper
+   ========================= */
+.sf-table-wrapper {
+    @apply mx-auto w-full max-w-7xl rounded-sm border border-gray-200 bg-white p-4;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+/* =========================
+   Table Container
+   ========================= */
+.table-box {
+    @apply relative w-full overflow-x-auto rounded-sm border border-gray-300 bg-gray-50;
+}
+
+    /* Scrollbar */
+    .table-box::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    .table-box::-webkit-scrollbar-track {
+        background: #f9fafb;
+    }
+
+    .table-box::-webkit-scrollbar-thumb {
+        background: #d1d5db;
+        border-radius: 4px;
+    }
+
+        .table-box::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
 
 /* =========================
    Table
    ========================= */
-
-
-.sf-table-wrapper {
-    @apply mx-auto w-full max-w-7xl;
-    @apply rounded-md border border-gray-300 bg-gray-50;
-    @apply shadow-sm;
-    @apply p-3;
-}
-
-/* Table container */
-.table-box {
-    @apply relative w-full overflow-x-auto;
-    @apply rounded-sm border border-gray-300 bg-white;
-}
-
-    /* Scrollbar (هادئ) */
-    .table-box::-webkit-scrollbar {
-        height: 10px;
-    }
-
-    .table-box::-webkit-scrollbar-track {
-        @apply bg-gray-100;
-    }
-
-    .table-box::-webkit-scrollbar-thumb {
-        @apply rounded bg-gray-300;
-    }
-
-        .table-box::-webkit-scrollbar-thumb:hover {
-            @apply bg-gray-400;
-        }
-
-/* Table */
 .sf-table {
-    @apply w-full;
-    @apply border-collapse;
+    @apply w-full border-collapse;
 }
-
 
 /* =========================
-   Table Head (Formal / Government UI)
+   Table Head
    ========================= */
 .table-head {
-    @apply sticky top-0 z-20;
-    @apply bg-gray-100; 
-    @apply border-b-1 border-gray-900; 
-    box-shadow: inset 0 -1px 0 rgba(0,0,0,0.06), 
-    0 2px 6px rgba(0,0,0,0.05);
-}
-    .table-head::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        /* لمعان داخلي خفيف جدًا */
-        background: linear-gradient( to bottom, rgba(255,255,255,0.35), rgba(255,255,255,0.0) );
-    }
-
-/* فصل بصري أدق بين الرأس والمحتوى */
-.sf-table tbody {
-    border-top: 1px solid rgba(0,0,0,0.04);
+    @apply sticky top-0 z-10 border-b border-gray-300 bg-gray-50;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
 }
 
+/* =========================
+   Head Cell
+   ========================= */
 
 
-/* TH */
 .th-cell {
-    @apply px-4 py-3 text-center align-middle;
-    @apply text-sm font-semibold text-gray-800;
-    @apply whitespace-nowrap;
-    @apply border-b border-gray-300;
-}
-
-/* TD */
-.td-cell {
-    @apply px-4 py-2.5 text-center align-middle;
-    @apply text-sm font-medium text-gray-700;
-    @apply whitespace-nowrap;
-    @apply border-b border-gray-200;
+    @apply border-b border-gray-200 px-4 py-2 text-center whitespace-nowrap;
+    background: #f9fafb;
+    /*color: #066d6d; */
+    color: #0f766e;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: -0.1px;
+    line-height: 1.85;
+    font-family: "Inter", "Tajawal", sans-serif;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    /* تحسين القراءة  */
-    line-height: 1.55;
 }
 
-/* Rows */
+/* =========================
+   Body Cell
+   ========================= */
+
+/* الخلية الأساسية */
+.td-cell {
+    @apply border-b border-gray-200 px-4 py-2.5 text-center text-sm font-normal whitespace-nowrap text-gray-700;
+    font-family: "Inter", "Tajawal", sans-serif;
+    letter-spacing: -0.2px;
+    line-height: 1.7;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.03), 0 0 0 0.5px rgba(0, 0, 0, 0.01);
+    transition: background 150ms ease, box-shadow 150ms ease;
+}
+
+/* الصف العادي */
+.tr-row:not(.tr-row-selected) .td-cell {
+    background: #ffffff;
+}
+
+
+.tr-row:not(.tr-row-selected):nth-child(even) .td-cell {
+    background: #f9f9f9; /* رمادي  فاتح */
+}
+
+.tr-row:not(.tr-row-selected):nth-child(odd) .td-cell {
+    background: #ffffff; /* أبيض */
+}
+
+/* عند تمرير الماوس */
+.tr-row:hover .td-cell {
+    background: #f0f0f0 !important;
+}
+
+/* إذا الصف محدد */
+.tr-row.tr-row-selected .td-cell {
+    background: #e0f0ff !important; 
+}
+
+/* =========================
+   Rows
+   ========================= */
 .tr-row {
-    @apply bg-white;
-    transition: background-color 120ms ease, box-shadow 120ms ease, transform 80ms ease;
-    will-change: background-color, box-shadow, transform;
+    @apply bg-white transition-colors duration-100 ease-in-out;
 }
 
-
-
-
-    /* Zebra خفيف */
     .tr-row:nth-child(even) {
         @apply bg-gray-50;
     }
 
-    /*  المؤشر على خلايا الصف ثابت */
     .tr-row > td:first-child {
-        border-right: 4px solid transparent; /* بداية الصف في RTL */
+        border-right: 4px solid transparent;
     }
-
-
-/* ===== Row indicator (RTL) — stable, no side effects وخط ===== */
-
-.sf-table .tr-row > td.td-cell:first-child {
-    border-right: 4px solid transparent;
-    box-sizing: border-box;
-}
-
-.sf-table .tr-row > td.td-cell:not(:first-child) {
-    border-right: 0 !important;
-    border-left: 0 !important;
-}
 
 /* Hover */
-.sf-table .tr-row:hover > td.td-cell:first-child {
-    border-right-color: rgba(5,150,105,.55);
+.sf-table .tr-row:hover {
+    background-color: #d1fae5;
 }
+
+    .sf-table .tr-row:hover > td:first-child {
+        border-right-color: rgba(5,150,105,0.5);
+    }
 
 /* Selected */
-.sf-table .tr-row.tr-row-selected > td.td-cell:first-child {
-    border-right-color: rgba(5,150,105,.75);
+.sf-table .tr-row.tr-row-selected {
+    background-color: #d1fae5;
 }
 
-/* خلفية التحديد */
-.sf-table .tr-row.tr-row-selected {
-    background-color: rgba(5,150,105,.10) !important;
-}
+    .sf-table .tr-row.tr-row-selected > td:first-child {
+        border-right-color: rgba(5,150,105,0.7);
+    }
 
 /* Active */
-.sf-table .tr-row:active > td {
-    filter: brightness(0.97);
+.sf-table .tr-row:active {
+    filter: brightness(0.98) ;
 }
 
+/* Focus */
+.tr-row:focus-within {
+    outline: none;
+    box-shadow: inset 4px 0 0 rgba(5,150,105,0.55), inset -4px 0 0 rgba(5,150,105,0.55);
+}
 
+.tr-row.tr-row-selected:focus-within {
+    box-shadow: inset 4px 0 0 rgba(5,150,105,0.75), inset -4px 0 0 rgba(5,150,105,0.75);
+}
 
+/* Active Row */
+.tr-row.tr-row-active {
+    outline: 2px solid rgba(5,150,105,0.35);
+    outline-offset: -2px;
+}
 
-
-    /* Focus للكيبورد (مفيد جدًا للتنقل) */
-    /* اشتغل حتى لو ما عندك tabindex على tr بشرط يكون داخل الصف عنصر عليه focus */
-    .tr-row:focus-within {
-        outline: none;
-        box-shadow: inset 4px 0 0 0 rgba(5, 150, 105, 0.55), inset -4px 0 0 0 rgba(5, 150, 105, 0.55), 0 0 0 2px rgba(16, 185, 129, 0.18);
-    }
-
-    
-    .tr-row.tr-row-selected:focus-within {
-        box-shadow: inset 4px 0 0 0 rgba(5, 150, 105, 0.70), inset -4px 0 0 0 rgba(5, 150, 105, 0.70), 0 0 0 2px rgba(16, 185, 129, 0.22);
-    }
-
+/* Truncate */
 .td-cell.truncate-cell {
     max-width: 260px;
     overflow: hidden;
@@ -455,39 +466,13 @@ textarea[readonly] {
 }
 
     .td-cell.truncate-cell > * {
-        display: inline-block; /* بدل block */
+        display: inline-block;
         max-width: 100%;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
         vertical-align: top;
     }
-
-
-
-
-/* الصف النشط من الكيبورد (غير التحديد) */
-.tr-row.tr-row-active {
-    outline: 2px solid rgba(5, 150, 105, 0.35);
-    outline-offset: -2px;
-}
-
-
-/* Respect reduced motion */
-@media (prefers-reduced-motion: reduce) {
-    .tr-row {
-        transition: none;
-    }
-
-        .tr-row:active {
-            transform: none;
-        }
-}
-
-/* آخر صف بدون حد سفلي زائد */
-.sf-table tbody .tr-row:last-child .td-cell {
-    @apply border-b-0;
-}
 
 /* Density */
 .sf-table[data-density="compact"] .th-cell {
@@ -506,19 +491,80 @@ textarea[readonly] {
     @apply py-4;
 }
 
-
+/* Last Row No Bottom Border */
+.sf-table tbody .tr-row:last-child .td-cell {
+    @apply border-b-0;
+}
 
 /* =========================
-   الوان الصفوف والخلايا في خاصية TableStyleRule 
+   Color Variants
    ========================= */
+.td-cell.cell-green {
+    background-color: #d1fae5 !important;
+    color: #065f46 !important;
+}
 
-/* =========================
-   Column Colors 
-   ========================= */
+.td-cell.cell-blue {
+    background-color: #dbeafe !important;
+    color: #1e3a8a !important;
+}
 
+.td-cell.cell-purple {
+    background-color: #e9d5ff !important;
+    color: #6b21a8 !important;
+}
 
+.td-cell.cell-yellow {
+    background-color: #fef08a !important;
+    color: #78350f !important;
+}
 
-/* ===== Column colors (override row colors) ===== */
+.td-cell.cell-orange {
+    background-color: #fed7aa !important;
+    color: #7c2d12 !important;
+}
+
+.td-cell.cell-red {
+    background-color: #fecaca !important;
+    color: #7f1d1d !important;
+}
+
+.tr-row.row-green > td {
+    background-color: #d1fae5 !important;
+}
+
+.tr-row.row-blue > td {
+    background-color: #dbeafe !important;
+}
+
+.tr-row.row-purple > td {
+    background-color: #ede9fe !important;
+}
+
+.tr-row.row-red > td {
+    background-color: #fecaca !important;
+}
+
+.tr-row.row-yellow > td {
+    background-color: #fef08a !important;
+}
+
+.tr-row.row-orange > td {
+    background-color: #fed7aa !important;
+}
+
+.tr-row.row-cyan > td {
+    background-color: #cffafe !important;
+}
+
+.tr-row.row-gray > td {
+    background-color: #f3f4f6 !important;
+}
+
+.tr-row.row-pink > td {
+    background-color: #fbcfe8 !important;
+}
+
 .tr-row > .td-cell.col-green {
     background-color: #dcfce7 !important;
 }
@@ -551,105 +597,16 @@ textarea[readonly] {
     background-color: #fce7f3 !important;
 }
 
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .tr-row {
+        transition: none;
+    }
 
-/* =========================
-   row Colors 
-   ========================= */
-
-/* أخضر  */
-.tr-row.row-green > td {
-    background-color: #d1fae5 !important; /* green-100 → أقرب لـ 200 */
+        .tr-row:active {
+            transform: none;
+        }
 }
-
-/* أزرق  */
-.tr-row.row-blue > td {
-    background-color: #dbeafe !important; /* blue-100 → 200 */
-}
-
-/* بنفسجي  */
-.tr-row.row-purple > td {
-    background-color: #ede9fe !important; /* violet-100 → 200 */
-}
-
-/* أحمر  */
-.tr-row.row-red > td {
-    background-color: #fecaca !important; /* red-100 → 200 */
-}
-
-/* أصفر */
-.tr-row.row-yellow > td {
-    background-color: #fef08a !important;
-}
-
-/* برتقالي */
-.tr-row.row-orange > td {
-    background-color: #fed7aa !important;
-}
-
-/* سماوي */
-.tr-row.row-cyan > td {
-    background-color: #cffafe !important;
-}
-
-/* رمادي */
-.tr-row.row-gray > td {
-    background-color: #e5e7eb !important;
-}
-
-/* وردي */
-.tr-row.row-pink > td {
-    background-color: #fbcfe8 !important;
-}
-
-
-/* =========================
-   cell Colors 
-   ========================= */
-/* أخضر (نجاح / طبيعي) */
-.td-cell.cell-green {
-    background-color: #bbf7d0 !important; /* أغمق شوي */
-    color: #14532d !important;
-    
-}
-
-/* أزرق (معلومة) */
-.td-cell.cell-blue {
-    background-color: #dbeafe !important;
-    color: #1e3a8a !important;
-    
-}
-
-/* بنفسجي (حالة خاصة) */
-.td-cell.cell-purple {
-    background-color: #e9d5ff !important;
-    color: #581c87 !important;
-    
-}
-
-/* أصفر (تنبيه) */
-.td-cell.cell-yellow {
-    background-color: #fde68a !important;
-    color: #78350f !important;
-    
-}
-
-/* برتقالي (مراجعة) */
-.td-cell.cell-orange {
-    background-color: #fed7aa !important;
-    color: #7c2d12 !important;
-    
-}
-
-/* أحمر (تحذير / غير مطابق) */
-.td-cell.cell-red {
-    background-color: #fecaca !important;
-    color: #7f1d1d !important;
-    
-}
-
-
-
-
 
 /* =========================
    Badges (Classic)
@@ -679,121 +636,130 @@ textarea[readonly] {
 /* =========================
    Toolbar (Classic + Matched)
    ========================= */
-/*.toolbar {
-    @apply mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between;
-    @apply rounded-sm border border-gray-200 bg-gray-50;
-    @apply px-3 py-3;
-}*/
 
-/* =========================
-   Toolbar – Match Table Head / Panel Header
-   ========================= */
 .toolbar {
-    @apply mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between;
-    @apply relative; /* مهم للـ ::before */
-    @apply rounded-sm border border-gray-300;
-    @apply bg-gray-50; /* نفس table-head */
-    @apply px-3 py-3;
-    box-shadow: inset 0 -1px 0 rgba(0,0,0,0.06), 0 2px 6px rgba(0,0,0,0.05); /* نفس الظل */
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem; /* أقل */
+    margin-bottom: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: #fdfefe;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    box-shadow: none; /* ❌ إزالة السمنة */
+
+    color: #374151;
+    font-weight: 400;
+    letter-spacing: -0.1px;
+    font-family: "Inter", "Tajawal", sans-serif;
+    flex-wrap: wrap;
 }
 
-    /* لمعان داخلي مثل table-head::before */
-    .toolbar::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        background: linear-gradient( to bottom, rgba(255,255,255,0.35), rgba(255,255,255,0.0) );
+
+@media (min-width: 768px) {
+    .toolbar {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
     }
+}
 
+.toolbar::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0));
+}
 
+/* =========================
+   Shared Input Styling
+   ========================= */
 .search-input,
 .select-sm {
     @apply border-gray-300 bg-white;
-    @apply focus:border-emerald-600 focus:ring-0 focus:outline-none;
+    @apply focus:border-emerald-700 focus:ring-1 focus:ring-emerald-700 focus:outline-none;
 }
 
-
-
+/* Select Field */
 .select-sm {
     @apply h-10 w-20;
-    @apply rounded-md border border-gray-300 bg-white px-2;
+    @apply rounded-sm border border-gray-300 bg-white px-2;
     @apply text-sm text-gray-700;
     @apply transition duration-100;
-    @apply focus:border-emerald-600 focus:ring-1 focus:ring-emerald-100 focus:outline-none;
+    @apply focus:border-transparent focus:ring-1 focus:ring-emerald-700;
 }
 
-
-
-
 /* =========================
-   Actions (Classic buttons) + Actions Dropdown + Tooltip (FINAL FIX)
+   Actions (Classic buttons) + Dropdown + Tooltip
    ========================= */
-
-/* ========== الأساسيات (كما هي) ========== */
 .actions-list {
     @apply flex flex-wrap items-center justify-start gap-2;
 }
 
+/* Search Section */
 .toolbar-search {
     @apply flex w-full items-center gap-2 md:w-auto;
 }
 
 .search-input {
     @apply h-9 w-full md:w-72;
-    @apply rounded-md border border-gray-300 bg-white;
+    @apply rounded-sm border border-gray-300 bg-white;
     @apply px-3 text-sm text-gray-700 placeholder:text-gray-400;
     @apply transition duration-150;
-    @apply focus:border-emerald-700 focus:ring-0 focus:ring-emerald-700 focus:outline-none;
+    @apply focus:border-transparent focus:ring-1 focus:ring-emerald-700;
 }
 
+/* Buttons */
 .actions-list .btn {
-    @apply inline-flex h-9 items-center justify-center gap-2;
-    @apply rounded-md border px-3;
+    @apply inline-flex h-5 items-center justify-center gap-2;
+    @apply rounded-sm border px-3;
     @apply text-sm font-semibold;
     @apply transition duration-100;
     @apply focus:ring-2 focus:outline-none;
 }
 
+/* Edit Button */
 .actions-list .btn-edit {
     @apply border-sky-300 bg-sky-100 text-sky-800;
     @apply hover:bg-sky-200;
     @apply focus:ring-sky-200;
 }
 
+/* Delete Button */
 .actions-list .btn-delete {
     @apply border-red-300 bg-red-100 text-red-800;
     @apply hover:bg-red-200;
     @apply focus:ring-red-200;
 }
 
+/* View Button */
 .actions-list .btn-view {
     @apply border-emerald-300 bg-emerald-100 text-emerald-900;
     @apply hover:bg-emerald-200;
     @apply focus:ring-emerald-200;
 }
 
+/* Select Input (Fixed duplicate) */
 .select-sm {
-    @apply h-9 w-20;
+    @apply h-8.5 w-20;
     @apply rounded-sm border border-gray-300 bg-white px-2;
     @apply text-sm text-gray-700;
     @apply transition duration-100;
-    @apply focus:border-emerald-600 focus:ring-1 focus:ring-emerald-700 focus:outline-none;
+    @apply focus:border-transparent focus:ring-1 focus:ring-emerald-700;
 }
 
+/* Group Alignment */
 .toolbar .actions-list,
 .toolbar .toolbar-actions {
     @apply flex flex-wrap items-center gap-2;
 }
 
+/* Dropdown Anchor */
 .toolbar-actions {
     position: relative;
 }
-
-
-
-
-
 
 /* =========================
    Dropdown Actions (Menu)
@@ -817,37 +783,43 @@ textarea[readonly] {
             z-index: 60; /* فوق العناصر اللي حولها */
         }
 
+@media (min-width: 768px) {
+    .toolbar-actions {
+        margin-inline-start: auto; /* يدفع الأزرار للجهة الثانية حتى لو اختفى البحث */
+    }
+}
+
+
             /* زر الإجراءات */
             .toolbar-actions .relative > button.btn.btn-outline-secondary,
             .toolbar-actions .relative > button.btn-outline-secondary,
             .toolbar-actions .btn-outline-secondary {
                 @apply border border-gray-300 bg-white text-gray-800;
                 @apply hover:bg-gray-50 hover:text-gray-900;
-                /* الأخضر فقط وقت الضغط */
-                @apply focus:ring-1 focus:ring-emerald-600 focus:outline-none;
-                @apply focus:border-emerald-700;
-
-                @apply h-9 rounded-sm px-3;
-                @apply inline-flex items-center gap-2;
-                
-                transition: transform 80ms ease, background-color 120ms ease;
+                @apply focus:border-transparent focus:ring-1 focus:ring-emerald-700;
+                @apply h-8.5 rounded-sm px-3;
+                @apply inline-flex items-center gap-1;
+                background: linear-gradient(to bottom, #ffffff, #fdfdfd);
+                box-shadow: inset 0 0 0 1px rgba(0,0,0,0.02), 0 1px 1px rgba(0,0,0,0.03);
+                font-family: "Inter", "Tajawal", sans-serif;
+                font-weight: 500;
+                letter-spacing: -0.2px;
+                transition: transform 80ms ease, background-color 120ms ease, box-shadow 150ms ease;
                 position: relative;
                 z-index: 70;
             }
 
-                /* تفاعل الضغط */
                 .toolbar-actions .relative > button.btn.btn-outline-secondary:active,
                 .toolbar-actions .relative > button.btn-outline-secondary:active,
                 .toolbar-actions .btn-outline-secondary:active {
                     transform: translateY(1px);
+                    box-shadow: inset 0 2px 3px rgba(0,0,0,0.06);
                 }
 
-                /* أيقونة النقاط */
                 .toolbar-actions .relative > button.btn.btn-outline-secondary i,
                 .toolbar-actions .btn-outline-secondary i {
                     @apply text-gray-600;
                 }
-
 
 
             /* صندوق القائمة */
@@ -857,7 +829,7 @@ textarea[readonly] {
                 left: 0 !important;
                 right: auto !important;
 
-                @apply rounded-md border border-gray-200 bg-white;
+                @apply rounded-sm border border-gray-200 bg-white;
                 @apply shadow-xl;
                 z-index: 99999 !important;
                 min-width: 260px;
@@ -903,6 +875,7 @@ textarea[readonly] {
                         text-align: center;
                         opacity: .85;
                         flex: 0 0 18px;
+                        color: #6b7280;
                     }
 
                     /* Disabled */
@@ -915,9 +888,6 @@ textarea[readonly] {
                             background: #fff;
                             color: #374151;
                         }
-
-
-
 
 
 
@@ -990,8 +960,6 @@ textarea[readonly] {
         display: none !important;
     }
 
-
-
     /* سهم صغير (فوق العنصر) */
     .sf-tipwrap[data-tip]::before {
         content: "";
@@ -1016,61 +984,57 @@ textarea[readonly] {
 }
 
 
-
-
-
-
-
-
 /* =========================
-   Pagination (Classic)
+   Pagination (Modern)
    ========================= */
 .pagination {
-    @apply mt-3 mb-6 flex flex-col gap-1 md:flex-row md:items-center md:justify-between;
+    @apply mt-3 mb-2 flex flex-col gap-2 md:flex-row md:items-center md:justify-between;
     @apply text-sm text-gray-700;
 }
 
+/* =========================
+   Pagination Navigation Buttons
+   ========================= */
 .pagination-nav {
-    @apply inline-flex items-center gap-2;
-    @apply rounded-sm border border-gray-200 bg-gray-50;
-    @apply px-2 py-1;
+    @apply inline-flex items-center gap-1;
+    @apply rounded-sm border border-gray-200 bg-gray-50 px-2 py-1;
 }
 
     .pagination-nav button {
-        @apply inline-flex h-7 min-w-[70px] items-center justify-center;
-        @apply rounded-sm border border-gray-200 bg-gray-50;
-        @apply text-sm text-gray-700;
-        @apply transition duration-100;
-        @apply hover:bg-gray-100;
-        @apply focus:ring-1 focus:ring-emerald-600 focus:outline-none;
+        @apply inline-flex h-6 min-w-[50px] items-center justify-center;
+        @apply rounded-sm border border-gray-200 bg-white px-2 text-sm text-gray-700;
+        @apply transition duration-100 ease-in-out;
+        @apply hover:bg-gray-100 hover:text-gray-900;
+        @apply focus:ring-1 focus:ring-emerald-700 focus:outline-none;
     }
 
+    /* Active Page */
     .pagination-nav .active {
-        @apply border-emerald-700 bg-emerald-700 text-white;
-        @apply hover:bg-emerald-800;
-        @apply focus:ring-emerald-200;
+        @apply border-emerald-600 bg-emerald-600 text-white;
+        @apply hover:bg-emerald-700;
+        @apply focus:ring-emerald-300;
     }
 
+    /* Text between buttons (ex: "Page 1 of 3") */
     .pagination-nav .page-text {
         @apply mx-2 text-xs font-medium text-gray-600;
     }
 
+    /* Disabled Buttons */
     .pagination-nav button:disabled {
-        @apply cursor-not-allowed opacity-50 hover:bg-gray-900;
+        @apply cursor-not-allowed opacity-50;
+        @apply bg-gray-50 text-gray-400;
     }
 
-
-
-
+/* =========================
+   Pagination Range Info (left-side)
+   ========================= */
 .pagination-range {
-    @apply inline-flex items-center;
-    @apply h-7 px-3;
-    @apply rounded-sm;
-    @apply text-xs font-medium;
-    @apply bg-gray-100 text-gray-700;
-    @apply border-0;
+    @apply inline-flex h-6 items-center px-3;
+    @apply rounded-sm bg-gray-100 text-xs font-medium text-gray-700;
     @apply select-none;
 }
+
 
 
 /* =========================
@@ -1080,15 +1044,6 @@ textarea[readonly] {
     content: "";
     @apply absolute inset-0 bg-white/50;
 }
-
-
-
-
-
-
-
-
-
 
 /* =========================================================
    MODAL — Compatibility + Sidebar-safe
@@ -1111,6 +1066,7 @@ textarea[readonly] {
     background: rgba(0,0,0,.70);
     padding: 12px;
     overscroll-behavior: contain;
+
 }
 
 /* Modal Frame */
@@ -1119,38 +1075,33 @@ textarea[readonly] {
     z-index: 99991 !important;
     display: flex;
     flex-direction: column;
-    width: min(1000px, calc(100vw - 24px));
+    width: clamp(360px, 85vw, 680px);
     max-height: calc(100vh - 24px);
-    background: #f3f4f6; /* gray-100 */
-    border: 1px solid #064e3b;
-    border-radius: 0.500rem; /* rounded-sm */
+    background: linear-gradient(to bottom, #064e3b 0px, #f3f4f6 48px);
+    border: 0px solid #064e3b;
+    border-radius: 0.500rem;
     overflow: hidden;
     max-width: calc(100vw - 24px);
     max-height: calc(100vh - 24px);
-    /* تمركز افتراضي بالمنتصف */
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
-    box-shadow: inset 0 -1px 0 rgba(0,0,0,0.06), 0 10px 30px rgba(0,0,0,0.20);
-    /* ===== NEW: Allow user resize (with JS handles) ===== */
+    box-shadow: none;
     min-width: 320px;
     min-height: 220px;
-    /* تكرار مقصود حسب كودك: */
-    max-width: calc(100vw - 24px);
-    max-height: calc(100vh - 24px);
-    /* مهم: لا نستخدم resize هنا لأننا بنعمل handles */
 }
+
 
 /* Mobile: nearly fullscreen */
 @media (max-width: 768px) {
     .sf-modal {
         width: calc(100vw - 16px);
         max-width: calc(100vw - 16px);
-        height: calc(100vh - 16px);
+        height: auto; /*calc(100vh - 16px);*/
         max-height: calc(100vh - 16px);
         left: 8px;
         top: 8px;
-        transform: none; /* مهم: لا تستخدم translate بالهواتف */
+        transform: none;
         border-radius: 0.5rem;
     }
 }
@@ -1246,14 +1197,17 @@ textarea[readonly] {
 .sf-modal-header {
     position: relative;
     display: flex;
+    overflow: hidden;
     align-items: center;
     justify-content: center;
     padding: 12px 20px;
-    border-bottom: 1px solid #d1d5db;
+    border-bottom: 0px solid #d1d5db;
     background-color: #064e3b;
     color: #fff !important;
-    box-shadow: inset 0 -1px 0 rgba(0,0,0,0.22);
-    /* للسحب بالماوس */
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    box-shadow: none;
+    border-top-left-radius: 0.5rem;
+    border-top-right-radius: 0.5rem;
     cursor: move;
     user-select: none;
 }
@@ -1304,30 +1258,31 @@ textarea[readonly] {
 
 /* Body */
 .sf-modal-body {
-    background: #ffffff;
+    background: #fcfcfc;
     padding: 16px 20px;
-    overflow-y: auto;
     overflow-x: hidden;
     border-top: 1px solid rgba(0,0,0,0.04);
-    /* كان: max-height: calc(100vh - 24px - 48px - 56px); */
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
     max-height: none;
 }
 
 /* Tablet / Medium */
 @media (min-width: 769px) and (max-width: 1200px) {
     .sf-modal {
-        width: min(900px, calc(100vw - 24px));
+        width: min(900px, 92vw);
     }
 }
 
 /* Desktop / Large */
 @media (min-width: 1201px) {
     .sf-modal {
-        width: min(1000px, calc(100vw - 24px));
+        width: min(1000px, 92vw);
     }
 }
 
-/* Footer */
+/*Footer */
 .sf-modal-footer {
     display: flex;
     align-items: center;
@@ -1339,286 +1294,337 @@ textarea[readonly] {
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.55);
 }
 
-
-
-
-
-
-        /* =========================
+/* =========================
    Inputs / Focus + Labels
    ========================= */
-        /* امنع outline الافتراضي */
-        .sf-modal input,
-        .sf-modal select,
-        .sf-modal textarea {
-            outline: none;
-        }
-        /* ألوان فوكس أخضر أغمق */
-        :root {
-            --sf-focus-border: rgba(4,120,87,0.95); /* emerald-700-ish */
-            --sf-focus-ring: rgba(4,120,87,0.22); /* ring subtle */
-        }
-        /* Input */
-        .sf-modal .input,
-        .sf-modal .sf-modal-input {
-            width: 100%;
-            height: 40px;
-            border-radius: 0.400rem;
-            border: 1px solid #d1d5db;
-            background: #ffffff;
-            padding: 8px 12px;
-            color: #1f2937;
-            box-shadow: none;
-            transition: border-color 160ms ease, box-shadow 160ms ease;
-        }
+/* امنع outline الافتراضي */
+.sf-modal input,
+.sf-modal select,
+.sf-modal textarea {
+    outline: none;
+}
+/* ألوان فوكس أخضر أغمق */
+:root {
+    --sf-focus-border: rgba(4,120,87,0.95); 
+    --sf-focus-ring: rgba(4,120,87,0.22); 
+}
+/* Input */
+.sf-modal .input,
+.sf-modal .sf-modal-input {
+    width: 100%;
+    height: 38px;
+    border-radius: 0.400rem;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    padding: 8px 12px;
+    color: #1f2937;
+    box-shadow: none;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+}
 
-            .sf-modal .input:focus,
-            .sf-modal .sf-modal-input:focus {
-                border-color: var(--sf-focus-border);
-                box-shadow: 0 0 0 0px var(--sf-focus-ring);
-            }
-        /* Labels — أخف للعين */
-        .sf-modal .form-group > label,
-        .sf-modal .form-label,
-        .sf-modal .sf-label {
-            margin-bottom: 6px;
-            display: block;
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: #4b5563; /* gray-600 بدل الأسود */
-        }
-        /* =========================
+    .sf-modal .input:focus,
+    .sf-modal .sf-modal-input:focus {
+        border-color: var(--sf-focus-border);
+        box-shadow: 0 0 0 0px var(--sf-focus-ring);
+    }
+/* Labels — أخف للعين */
+.sf-modal .form-group > label,
+.sf-modal .form-label,
+.sf-modal .sf-label {
+    margin-bottom: 3px;
+    display: block;
+    font-size: 0.975rem;
+    font-weight: 500;
+    color: #434d59; /* gray-600 بدل الأسود */
+}
+
+
+/* ===== SF Modal Icon Fix ===== */
+.sf-modal .sf-field-wrap {
+    position: relative;
+}
+
+.sf-modal .sf-input-icon {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    pointer-events: none;
+}
+
+    /* مكان الأيقونة */
+    .sf-modal .sf-input-icon.sf-icon-right {
+        right: 10px;
+    }
+
+    .sf-modal .sf-input-icon.sf-icon-left {
+        left: 10px;
+    }
+
+
+.sf-modal .sf-modal-input.sf-has-icon.sf-icon-right {
+    padding-right: 2rem !important;
+}
+
+.sf-modal .sf-modal-input.sf-has-icon.sf-icon-left {
+    padding-left: 2rem !important;
+}
+
+/* textarea: خلي الأيقونة فوق شوي */
+.sf-modal textarea.sf-modal-input ~ .sf-input-icon {
+    top: 14px;
+    transform: none;
+}
+
+/* =========================
+   مكان ايقونات الفورم 
+   ========================= */
+/* Move the input icon wrapper to the right */
+.sf-form .pointer-events-none.absolute.inset-y-0.left-0 {
+    left: auto !important;
+    right: 0 !important;
+    padding-left: 0 !important;
+    padding-right: .75rem !important; /* نفس pl-3 */
+}
+
+/* Replace input left padding with right padding */
+.sf-form input.input.pl-10 {
+    padding-left: .75rem !important;
+    padding-right: 2.5rem !important; /* نفس  pl-10 */
+}
+
+/* =========================
    Readonly / Disabled fields (Modal)
    ========================= */
-        /* أي عنصر إدخال عليه readonly أو disabled */
-        .sf-modal input[readonly],
-        .sf-modal input:disabled,
-        .sf-modal textarea[readonly],
-        .sf-modal textarea:disabled,
-        .sf-modal select[readonly],
-        .sf-modal select:disabled,
-        /* مكوناتك المخصصة */
-        .sf-modal .input[readonly],
-        .sf-modal .input:disabled,
-        .sf-modal .sf-modal-input[readonly],
-        .sf-modal .sf-modal-input:disabled,
-        .sf-modal .sf-textarea[readonly],
-        .sf-modal .sf-textarea:disabled,
-        .sf-modal .sf-date[readonly],
-        .sf-modal .sf-date:disabled,
-        /* select المخصص */
-        .sf-modal .sf-select[aria-disabled="true"],
-        .sf-modal .sf-select[disabled] {
-            background-color: #f3f4f6; /* gray-100 */
-            color: #6b7280; /* gray-500 */
-            border-color: #d1d5db; /* gray-300 */
-            cursor: not-allowed;
-        }
-            /* امنع أي فوكس أو ring للـ readonly / disabled */
-            .sf-modal input[readonly]:focus,
-            .sf-modal input:disabled:focus,
-            .sf-modal textarea[readonly]:focus,
-            .sf-modal textarea:disabled:focus,
-            .sf-modal select[readonly]:focus,
-            .sf-modal select:disabled:focus,
-            .sf-modal .input[readonly]:focus,
-            .sf-modal .input:disabled:focus,
-            .sf-modal .sf-modal-input[readonly]:focus,
-            .sf-modal .sf-modal-input:disabled:focus,
-            .sf-modal .sf-textarea[readonly]:focus,
-            .sf-modal .sf-textarea:disabled:focus,
-            .sf-modal .sf-date[readonly]:focus,
-            .sf-modal .sf-date:disabled:focus,
-            .sf-modal .sf-select[aria-disabled="true"]:focus {
-                border-color: #d1d5db;
-                box-shadow: none;
-            }
-        /* =========================================================
+/* أي عنصر إدخال عليه readonly أو disabled */
+.sf-modal input[readonly],
+.sf-modal input:disabled,
+.sf-modal textarea[readonly],
+.sf-modal textarea:disabled,
+.sf-modal select[readonly],
+.sf-modal select:disabled,
+/* مكوناتك المخصصة */
+.sf-modal .input[readonly],
+.sf-modal .input:disabled,
+.sf-modal .sf-modal-input[readonly],
+.sf-modal .sf-modal-input:disabled,
+.sf-modal .sf-textarea[readonly],
+.sf-modal .sf-textarea:disabled,
+.sf-modal .sf-date[readonly],
+.sf-modal .sf-date:disabled,
+/* select المخصص */
+.sf-modal .sf-select[aria-disabled="true"],
+.sf-modal .sf-select[disabled] {
+    background-color: #f3f4f6; /* gray-100 */
+    color: #6b7280; /* gray-500 */
+    border-color: #d1d5db; /* gray-300 */
+    cursor: not-allowed;
+}
+    /* امنع أي فوكس أو ring للـ readonly / disabled */
+    .sf-modal input[readonly]:focus,
+    .sf-modal input:disabled:focus,
+    .sf-modal textarea[readonly]:focus,
+    .sf-modal textarea:disabled:focus,
+    .sf-modal select[readonly]:focus,
+    .sf-modal select:disabled:focus,
+    .sf-modal .input[readonly]:focus,
+    .sf-modal .input:disabled:focus,
+    .sf-modal .sf-modal-input[readonly]:focus,
+    .sf-modal .sf-modal-input:disabled:focus,
+    .sf-modal .sf-textarea[readonly]:focus,
+    .sf-modal .sf-textarea:disabled:focus,
+    .sf-modal .sf-date[readonly]:focus,
+    .sf-modal .sf-date:disabled:focus,
+    .sf-modal .sf-select[aria-disabled="true"]:focus {
+        border-color: #d1d5db;
+        box-shadow: none;
+    }
+/* =========================================================
    SF Modal – Select + Select2 (RTL) – Unified Look
    ========================================================= */
-        /* ===== Wrapper ===== */
-        .sf-modal .sf-select-wrap {
-            position: relative;
-            width: 100%;
-            z-index: 80;
-        }
-            /* =========================================================
+/* ===== Wrapper ===== */
+.sf-modal .sf-select-wrap {
+    position: relative;
+    width: 100%;
+    z-index: 80;
+}
+    /* =========================================================
    1) Native Select (بدون Select2)
    ========================================================= */
-            .sf-modal .sf-select-wrap select {
-                width: 100%;
-                min-height: 40px;
-                height: 40px;
-                border: 1px solid #d1d5db;
-                background-color: #fff;
-                border-radius: 0.400rem;
-                direction: rtl;
-                text-align: right;
-                /* مساحة للسهم (يسار) */
-                padding: 8px 12px 8px 12px;
-                color: #111827;
-                line-height: 1.3;
-                transition: border-color 160ms ease, box-shadow 160ms ease;
-                box-sizing: border-box;
-                outline: none;
-                -webkit-appearance: none;
-                -moz-appearance: none;
-                appearance: none;
-            }
-                /*  لو استخدمت size (Listbox) */
-                .sf-modal .sf-select-wrap select[size] {
-                    height: auto;
-                    max-height: 200px;
-                    overflow-y: auto;
-                }
-            /* سهم native */
-            .sf-modal .sf-select-wrap::after {
-                content: "";
-                position: absolute;
-                left: 14px;
-                top: 50%;
-                width: 8px;
-                height: 8px;
-                pointer-events: none;
-                transform: translateY(-50%) rotate(45deg);
-                border-right: 2.5px solid #6b7280;
-                border-bottom: 2.5px solid #6b7280;
-            }
-            /* Focus native */
-            .sf-modal .sf-select-wrap select:focus {
-                border-color: var(--sf-focus-border);
-                box-shadow: 0 0 0 0px var(--sf-focus-ring);
-            }
-        /* options */
-        .sf-modal select option {
-            direction: rtl;
-            text-align: right;
+    .sf-modal .sf-select-wrap select {
+        width: 100%;
+        min-height: 38px;
+        height: 38px;
+        border: 1px solid #d1d5db;
+        background-color: #fff;
+        border-radius: 0.400rem;
+        direction: rtl;
+        text-align: right;
+        /* مساحة للسهم (يسار) */
+        padding: 8px 12px 8px 12px;
+        color: #111827;
+        line-height: 1.3;
+        transition: border-color 160ms ease, box-shadow 160ms ease;
+        box-sizing: border-box;
+        outline: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+    }
+        /*  لو استخدمت size (Listbox) */
+        .sf-modal .sf-select-wrap select[size] {
+            height: auto;
+            max-height: 200px;
+            overflow-y: auto;
         }
-        /* =========================================================
+    /* سهم native */
+    .sf-modal .sf-select-wrap::after {
+        content: "";
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        width: 8px;
+        height: 8px;
+        pointer-events: none;
+        transform: translateY(-50%) rotate(45deg);
+        border-right: 2.5px solid #6b7280;
+        border-bottom: 2.5px solid #6b7280;
+    }
+    /* Focus native */
+    .sf-modal .sf-select-wrap select:focus {
+        border-color: var(--sf-focus-border);
+        box-shadow: 0 0 0 0px var(--sf-focus-ring);
+    }
+/* options */
+.sf-modal select option {
+    direction: rtl;
+    text-align: right;
+}
+/* =========================================================
    2) Base Input class (توحيد شكل الحقول داخل المودال)
    ========================================================= */
-        .sf-modal .sf-modal-input {
-            width: 100%;
-            min-height: 40px;
-            height: 40px;
-            border: 1px solid #d1d5db;
-            background-color: #fff;
-            border-radius: 0.400rem;
-            direction: rtl;
-            text-align: right;
-            color: #111827;
-            line-height: 1.2;
-            transition: border-color 160ms ease, box-shadow 160ms ease;
-            box-sizing: border-box;
-            outline: none;
-        }
-            /* focus عام */
-            .sf-modal .sf-modal-input:focus {
-                border-color: var(--sf-focus-border);
-                box-shadow: 0 0 0 0px var(--sf-focus-ring);
-            }
-        /* =========================================================
+.sf-modal .sf-modal-input {
+    width: 100%;
+    min-height: 38px;
+    height: 38px;
+    border: 1px solid #d1d5db;
+    background-color: #fff;
+    border-radius: 0.400rem;
+    direction: rtl;
+    text-align: right;
+    color: #111827;
+    line-height: 1.2;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+    box-sizing: border-box;
+    outline: none;
+}
+    /* focus عام */
+    .sf-modal .sf-modal-input:focus {
+        border-color: var(--sf-focus-border);
+        box-shadow: 0 0 0 0px var(--sf-focus-ring);
+    }
+/* =========================================================
    3) Select2 – Make it look exactly like native select
    ========================================================= */
-        /* اخفِ سهم native فقط إذا كان select2 مفعّل */
-        .sf-modal .sf-select-wrap select.select2-hidden-accessible ~ .sf-select-arrow,
-        .sf-modal .sf-select-wrap select.select2-hidden-accessible + .sf-select-arrow {
-            display: none !important;
+/* اخفِ سهم native فقط إذا كان select2 مفعّل */
+.sf-modal .sf-select-wrap select.select2-hidden-accessible ~ .sf-select-arrow,
+.sf-modal .sf-select-wrap select.select2-hidden-accessible + .sf-select-arrow {
+    display: none !important;
+}
+/* أهم نقطة: لا نعرض سهم ::after إذا كان select2 مفعّل (لأن select2 عنده سهم) */
+.sf-modal .sf-select-wrap:has(select.select2-hidden-accessible)::after {
+    display: none !important;
+}
+/* container بعرض كامل */
+.sf-modal .select2-container {
+    width: 100% !important;
+    direction: rtl;
+}
+/* selection (المربع الظاهر) */
+.sf-modal .select2-container--default .select2-selection--single {
+    height: 38px !important;
+    min-height: 38px !important;
+    border: 1px solid #d1d5db !important;
+    background-color: #fff !important;
+    border-radius: 0.400rem !important;
+    box-sizing: border-box !important;
+    outline: none !important;
+}
+    /* النص داخل select2 */
+    .sf-modal .select2-container--default .select2-selection--single .select2-selection__rendered {
+        height: 38px !important;
+        line-height: 38px !important;
+        padding: 0 10px 0 44px !important; /* مساحة للسهم (يسار) */
+        text-align: right !important;
+        direction: rtl !important;
+        color: #111827 !important;
+        font-size: 0.95rem;
+    }
+    /* زر السهم داخل select2 */
+    .sf-modal .select2-container--default .select2-selection--single .select2-selection__arrow {
+        position: absolute !important;
+        left: 0px !important; /* RTL */
+        right: auto !important;
+        top: 38% !important;
+        transform: translateY(-50%) !important;
+        height: 40px !important;
+        width: 30px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+        /* شكل السهم (chevron) */
+        .sf-modal .select2-container--default .select2-selection--single .select2-selection__arrow b {
+            border: none !important;
+            width: 8px !important;
+            height: 8px !important;
+            display: inline-block !important;
+            /* تمركز + شكل */
+            margin: 0 !important;
+            transform: rotate(45deg) !important;
+            border-right: 2.5px solid #6b7280 !important;
+            border-bottom: 2.5px solid #6b7280 !important;
         }
-        /* أهم نقطة: لا نعرض سهم ::after إذا كان select2 مفعّل (لأن select2 عنده سهم) */
-        .sf-modal .sf-select-wrap:has(select.select2-hidden-accessible)::after {
-            display: none !important;
-        }
-        /* container بعرض كامل */
-        .sf-modal .select2-container {
-            width: 100% !important;
-            direction: rtl;
-        }
-        /* selection (المربع الظاهر) */
-        .sf-modal .select2-container--default .select2-selection--single {
-            height: 40px !important;
-            min-height: 40px !important;
-            border: 1px solid #d1d5db !important;
-            background-color: #fff !important;
-            border-radius: 0.400rem !important;
-            box-sizing: border-box !important;
-            outline: none !important;
-        }
-            /* النص داخل select2 */
-            .sf-modal .select2-container--default .select2-selection--single .select2-selection__rendered {
-                height: 40px !important;
-                line-height: 40px !important;
-                padding: 0 12px 0 44px !important; /* مساحة للسهم (يسار) */
-                text-align: right !important;
-                direction: rtl !important;
-                color: #111827 !important;
-                font-size: 0.95rem;
-            }
-            /* زر السهم داخل select2 */
-            .sf-modal .select2-container--default .select2-selection--single .select2-selection__arrow {
-                position: absolute !important;
-                left: 0px !important; /* RTL */
-                right: auto !important;
-                top: 40% !important;
-                transform: translateY(-50%) !important;
-                height: 40px !important;
-                width: 30px !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-            }
-                /* شكل السهم (chevron) */
-                .sf-modal .select2-container--default .select2-selection--single .select2-selection__arrow b {
-                    border: none !important;
-                    width: 8px !important;
-                    height: 8px !important;
-                    display: inline-block !important;
-                    /* تمركز + شكل */
-                    margin: 0 !important;
-                    transform: rotate(45deg) !important;
-                    border-right: 2.5px solid #6b7280 !important;
-                    border-bottom: 2.5px solid #6b7280 !important;
-                }
-        /* focus select2 */
-        .sf-modal .select2-container--default.select2-container--focus .select2-selection--single,
-        .sf-modal .select2-container--default.select2-container--open .select2-selection--single {
-            border-color: var(--sf-focus-border) !important;
-            box-shadow: 0 0 0 0px var(--sf-focus-ring) !important;
-        }
-        /* placeholder */
-        .sf-modal .select2-container--default .select2-selection--single .select2-selection__placeholder {
-            color: #6b7280 !important;
-        }
-        /* dropdown */
-        .sf-modal .select2-dropdown {
-            border: 1px solid #d1d5db !important;
-            border-radius: 0.400rem !important;
-            overflow: hidden;
-            direction: rtl;
-        }
-            /* خيارات dropdown - حد ارتفاع + سكرول */
-            .sf-modal .select2-dropdown .select2-results__options {
-                max-height: 160px; /* حد الارتفاع */
-                overflow-y: auto;
-            }
+/* focus select2 */
+.sf-modal .select2-container--default.select2-container--focus .select2-selection--single,
+.sf-modal .select2-container--default.select2-container--open .select2-selection--single {
+    border-color: var(--sf-focus-border) !important;
+    box-shadow: 0 0 0 0px var(--sf-focus-ring) !important;
+}
+/* placeholder */
+.sf-modal .select2-container--default .select2-selection--single .select2-selection__placeholder {
+    color: #6b7280 !important;
+}
+/* dropdown */
+.sf-modal .select2-dropdown {
+    border: 1px solid #d1d5db !important;
+    border-radius: 0.400rem !important;
+    overflow: hidden;
+    direction: rtl;
+}
+    /* خيارات dropdown - حد ارتفاع + سكرول */
+    .sf-modal .select2-dropdown .select2-results__options {
+        max-height: 160px; /* حد الارتفاع */
+        overflow-y: auto;
+    }
 
-        .sf-modal .select2-results__option {
-            padding: 6px 10px;
-            line-height: 1.2;
-            font-size: 0.90rem;
-            direction: rtl;
-            text-align: right;
-        }
-        /* تمييز الخيار */
+.sf-modal .select2-results__option {
+    padding: 6px 10px;
+    line-height: 1.2;
+    font-size: 0.90rem;
+    direction: rtl;
+    text-align: right;
+}
+/* تمييز الخيار */
 .sf-modal .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable {
     background-color: #047857 !important;
     color: #fff !important;
 }
-        /* الخيار المحدد */
-        .sf-modal .select2-container--default .select2-results__option--selected {
-            background-color: #e5e7eb !important;
-            color: #111827 !important;
-        }
+/* الخيار المحدد */
+.sf-modal .select2-container--default .select2-results__option--selected {
+    background-color: #e5e7eb !important;
+    color: #111827 !important;
+}
 
 
 /*  Select2 فوق المودال  */
@@ -1627,76 +1633,76 @@ textarea[readonly] {
     z-index: 1000000 !important;
 }
 
-        
-        .sf-main,
-        main {
-            position: relative !important;
-            z-index: 0 !important;
-        }
-            /* اللودر يغطي main فقط */
-            .sf-main #main-loading,
-            main #main-loading {
-                position: absolute !important;
-                inset: 0 !important;
-                z-index: 40 !important; /* داخل main فقط */
-                pointer-events: all !important;
-            }
-        /* الهيدر فوق أي شيء */
-        header,
-        .sf-header,
-        .navbar {
-            position: relative !important;
-            z-index: 9999999 !important;
-        }
-        /* =========================================================
+
+.sf-main,
+main {
+    position: relative !important;
+    z-index: 0 !important;
+}
+    /* اللودر يغطي main فقط */
+    .sf-main #main-loading,
+    main #main-loading {
+        position: absolute !important;
+        inset: 0 !important;
+        z-index: 40 !important; /* داخل main فقط */
+        pointer-events: all !important;
+    }
+/* الهيدر فوق أي شيء */
+header,
+.sf-header,
+.navbar {
+    position: relative !important;
+    z-index: 9999999 !important;
+}
+/* =========================================================
    4) Fix: native select + select2 داخل نفس wrap بدون اختلافات
    ========================================================= */
-        /* لو عنصر select عليه js-select2، خلِ padding حقه ما يهم لأن select2 يخفيه */
-        .sf-modal .sf-select-wrap select.js-select2 {
-            padding: 8px 44px 8px 12px;
-        }
-        /* منع أي هوامش غريبة من select2 */
-        .sf-modal .select2-container .select2-selection--single {
-            margin: 0 !important;
-        }
-        /* مربع البحث داخل Select2 */
-        .sf-modal .select2-container--default .select2-search--dropdown .select2-search__field {
-            height: 34px;
-            padding: 6px 10px;
-            border: 1px solid #d1d5db;
-            border-radius: 0.25rem; /* ✅ rounded-sm */
+/* لو عنصر select عليه js-select2، خلِ padding حقه ما يهم لأن select2 يخفيه */
+.sf-modal .sf-select-wrap select.js-select2 {
+    padding: 8px 44px 8px 12px;
+}
+/* منع أي هوامش غريبة من select2 */
+.sf-modal .select2-container .select2-selection--single {
+    margin: 0 !important;
+}
+/* مربع البحث داخل Select2 */
+.sf-modal .select2-container--default .select2-search--dropdown .select2-search__field {
+    height: 34px;
+    padding: 6px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 0.25rem; /* ✅ rounded-sm */
 
-            direction: rtl;
-            text-align: right;
-            font-size: 0.90rem;
-            color: #111827;
-            outline: none;
-            box-sizing: border-box;
-        }
-            /* focus لحقل البحث */
-            .sf-modal .select2-container--default .select2-search--dropdown .select2-search__field:focus {
-                border-color: var(--sf-focus-border);
-                box-shadow: 0 0 0 0px var(--sf-focus-ring);
-            }
-        /* Textarea */
-        .sf-modal textarea,
-        .sf-modal .sf-textarea {
-            width: 100%;
-            min-height: 100px;
-            border-radius: 0.400rem;
-            border: 1px solid #d1d5db;
-            background: #f9fafb;
-            padding: 10px 12px;
-            color: #111827;
-            transition: border-color 160ms ease, box-shadow 160ms ease;
-            box-shadow: none;
-        }
+    direction: rtl;
+    text-align: right;
+    font-size: 0.90rem;
+    color: #111827;
+    outline: none;
+    box-sizing: border-box;
+}
+    /* focus لحقل البحث */
+    .sf-modal .select2-container--default .select2-search--dropdown .select2-search__field:focus {
+        border-color: var(--sf-focus-border);
+        box-shadow: 0 0 0 0px var(--sf-focus-ring);
+    }
+/* Textarea */
+.sf-modal textarea,
+.sf-modal .sf-textarea {
+    width: 100%;
+    min-height: 100px;
+    border-radius: 0.400rem;
+    border: 1px solid #d1d5db;
+    background: #f9fafb;
+    padding: 10px 12px;
+    color: #111827;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+    box-shadow: none;
+}
 
-            .sf-modal textarea:focus,
-            .sf-modal .sf-textarea:focus {
-                border-color: var(--sf-focus-border);
-                box-shadow: 0 0 0 2px var(--sf-focus-ring);
-            }
+    .sf-modal textarea:focus,
+    .sf-modal .sf-textarea:focus {
+        border-color: var(--sf-focus-border);
+        box-shadow: 0 0 0 2px var(--sf-focus-ring);
+    }
 
 /* =========================
    Buttons ( modal style )
@@ -1706,13 +1712,13 @@ textarea[readonly] {
     align-items: center;
     justify-content: center;
     height: 33px;
-    padding: 0 20px;
-    border-radius: 6px;
+    padding: 0 25px;
+    border-radius: 4px;
     font-size: 12px;
-    font-weight: 400;
+    font-weight: 500;
     border: none;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
     user-select: none;
     color: #fff;
 }
@@ -1761,419 +1767,406 @@ textarea[readonly] {
 }
 
 
-  /* =========================
+/* =========================
            Responsive 
    ========================= */
-        @media (max-width: 1024px) {
-            .sf-modal {
-                width: calc(100vw - 24px);
-                max-height: calc(100vh - 24px);
-            }
-        }
+@media (max-width: 1024px) {
+    .sf-modal {
+        width: calc(100vw - 24px);
+        max-height: calc(100vh - 24px);
+    }
+}
 
-        @media (max-width: 768px) {
-            .sf-modal-backdrop {
-                padding: 10px;
-            }
+@media (max-width: 768px) {
+    .sf-modal-backdrop {
+        padding: 10px;
+    }
 
-            .sf-modal {
-                width: calc(100vw - 20px);
-                max-height: calc(100vh - 20px);
-                border-radius: 0.125rem; /* rounded-sm */
-            }
+    .sf-modal {
+        width: calc(100vw - 20px);
+        max-height: calc(100vh - 20px);
+        border-radius: 0.125rem; /* rounded-sm */
+    }
 
-            .sf-modal-body {
-                max-height: calc(100vh - 20px - 48px - 56px);
-            }
+    .sf-modal-body {
+        max-height: calc(100vh - 20px - 48px - 56px);
+    }
 
-            .sf-modal .form-row {
-                grid-template-columns: 1fr !important;
-                gap: 12px !important;
-            }
+    .sf-modal .form-row {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
 
-            .sf-modal .form-group {
-                grid-column: 1 / -1 !important;
-            }
-        }
+    .sf-modal .form-group {
+        grid-column: 1 / -1 !important;
+    }
+}
 
-        @media (max-width: 420px) {
-            .sf-modal-header {
-                padding: 10px 14px;
-            }
+@media (max-width: 420px) {
+    .sf-modal-header {
+        padding: 10px 14px;
+    }
 
-            .sf-modal-close {
-                right: 10px;
-                width: 20px;
-                height: 20px;
-            }
+    .sf-modal-close {
+        right: 10px;
+        width: 20px;
+        height: 20px;
+    }
 
-            .sf-modal-body {
-                padding: 12px 14px;
-            }
+    .sf-modal-body {
+        padding: 12px 14px;
+    }
 
-            .sf-modal-footer {
-                padding: 10px 12px;
-            }
-        }
-        /* =========================
+    .sf-modal-footer {
+        padding: 10px 12px;
+    }
+}
+
+
+/* =========================
    Panel (صفحة الرندر)
    ========================= */
+/*.sf-panel {*/
+    /*@apply relative mx-auto mt-6 mb-9 overflow-visible;*/
+    /*@apply relative mx-auto mt-6 mb-9 overflow-hidden;
+    @apply w-[99%];
+    @apply rounded-sm border border-gray-300 bg-gray-50;
 
-        .sf-panel {
-            @apply relative mx-auto mt-10 mb-6 w-full overflow-hidden;
-            @apply rounded-md border border-gray-300 bg-gray-100;
-            overflow: visible !important;
-            @apply shadow-sm;
-        }
-        
-        .sf-panel-header {
-            @apply sticky top-0 z-20; 
-            @apply relative flex items-center justify-between;
-            @apply px-5 py-3;
+}*/
 
-            @apply bg-gray-100; 
-            @apply border-b border-gray-300; 
-            border-bottom-width: 1px;
-            box-shadow: inset 0 -1px 0 rgba(0,0,0,0.06), 0 2px 6px rgba(0,0,0,0.05);
-        }
-            
-            .sf-panel-header::before {
-                content: "";
-                position: absolute;
-                inset: 0;
-                pointer-events: none;
-                background: linear-gradient( to bottom, rgba(255,255,255,0.35), rgba(255,255,255,0.0) );
-            }
-        /* Title مثل TH */
-        .sf-panel-title {
-            @apply flex items-center gap-2;
-            @apply text-sm font-semibold text-gray-800; /* مثل .th-cell */
-            @apply whitespace-nowrap;
-            letter-spacing: 0;
-        }
-            /* Icon بنفس روح الهيدر */
-            .sf-panel-title i {
-                color: #374151; /* gray-700 مثل ألوان الجدول */
-                font-size: 14px;
-                opacity: .9;
-            }
-        /* Body (يفصل نفس tbody border-top) */
-        .sf-panel-body {
-            @apply bg-white;
-            @apply p-3 md:p-3;
-            border-top: 1px solid rgba(0,0,0,0.04);
-        }
-        /* =========================
-   Panel Actions (Modern icon buttons)
+/* =========================
+   Panel Header
    ========================= */
-        .sf-panel-actions {
-            @apply flex items-center gap-2;
-        }
 
+.sf-panel {
+    @apply relative mx-auto mt-6 mb-9;
+    @apply w-[99%];
+    @apply rounded-sm border border-gray-200 bg-white; 
+    box-shadow: none !important; 
+    overflow: hidden; 
 
+}
 
-        .sf-panel-btn {
-            @apply inline-flex h-6 w-6 items-center justify-center;
-            @apply rounded-sm border border-gray-300 bg-white;
-            @apply text-gray-700;
-            @apply transition duration-150;
-            @apply hover:bg-gray-50 hover:text-gray-900;
-            @apply focus:ring-1 focus:ring-emerald-600 focus:outline-none;
-            box-shadow: none;
-        }
-
-            .sf-panel-btn i,
-            .sf-panel-btn svg {
-                opacity: .85;
-            }
-
-            .sf-panel-btn:hover i,
-            .sf-panel-btn:hover svg {
-                opacity: 1;
-            }
-
-
-
-            .sf-panel-btn:active {
-                transform: translateY(1px);
-                box-shadow: inset 0 2px 3px rgba(0,0,0,0.10);
-            }
-
-            .sf-panel-btn i {
-                font-size: 10px;
-                color: #374151;
-                opacity: 0.85;
-            }
-
-            .sf-panel-btn svg {
-                width: 10px;
-                height: 10px;
-                stroke-width: 2;
-                stroke: #374151;
-                opacity: 0.85;
-            }
-            /* Hover:*/
-            .sf-panel-btn:hover i,
-            .sf-panel-btn:hover svg {
-                opacity: 1;
-            }
-        /* زر الإغلاق */
-        .sf-panel-btn-close {
-            @apply border-gray-300 bg-white text-gray-600;
-            @apply hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700;
-        }
-        /* =========================
-   Loader – Pulse Dots (Premium)
+/* =========================
+   Panel Header (Flat)
    ========================= */
-        .sf-loader-dots {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
 
-            .sf-loader-dots span {
-                width: 10px;
-                height: 10px;
-                border-radius: 9999px;
-                background: #20876a;
-                opacity: .35;
-                transform: scale(.75);
-                animation: sf-pulse 900ms infinite ease-in-out;
-            }
+.sf-panel-header {
+    @apply relative z-10 flex items-center justify-between;
+    @apply px-4 py-2; 
+    @apply border-b border-gray-200; 
+    background: #f9fafb; 
+    color: #4b5563; 
+    font-weight: 500;
+    letter-spacing: -0.1px;
+    font-family: "Inter", "Tajawal", sans-serif;
+    box-shadow: none !important; 
+}
 
-                .sf-loader-dots span:nth-child(2) {
-                    animation-delay: 150ms;
-                }
+    /* ❌ شيل طبقة اللمعة اللي تعطي إحساس منتفخ */
+    .sf-panel-header::before {
+        content: none !important;
+    }
 
-                .sf-loader-dots span:nth-child(3) {
-                    animation-delay: 300ms;
-                }
 
-        @keyframes sf-pulse {
-            0%, 100% {
-                transform: scale(.75);
-                opacity: .35;
-            }
+/* =========================
+   Panel Title
+   ========================= */
+.sf-panel-title {
+    @apply flex items-center gap-2 text-sm font-semibold whitespace-nowrap text-gray-900;
+    letter-spacing: -0.2px;
+    font-weight: 500;
+    font-size: 16px;
+    color: #0f766e;
+}
 
-            50% {
-                transform: scale(1.15);
-                opacity: 1;
-            }
-        }
-        /* =========================
+    .sf-panel-title i {
+        font-size: 15px;
+        /*color: #293545;*/
+        color: #0f766e;
+        opacity: 1;
+    }
+
+/* =========================
+   Panel Body
+   ========================= */
+.sf-panel-body {
+    background: #fcfcfc;
+    @apply p-4 md:p-3;
+    border-top: 0px solid rgba(0, 0, 0, 0.06);
+}
+
+
+/* =========================
+   Panel Actions
+   ========================= */
+.sf-panel-actions {
+    @apply flex items-center gap-2;
+}
+
+/* =========================
+   Panel Button
+   ========================= */
+.sf-panel-btn {
+    @apply inline-flex h-5 w-5 items-center justify-center;
+    @apply rounded-sm border border-gray-300 bg-white text-gray-800;
+    @apply hover:bg-gray-200 hover:text-gray-900;
+    @apply transition duration-150 ease-in-out;
+    @apply focus:ring-2 focus:ring-emerald-700 focus:outline-none;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+}
+
+    .sf-panel-btn i,
+    .sf-panel-btn svg {
+        opacity: 0.9;
+        transition: all 0.2s ease;
+    }
+
+    .sf-panel-btn:hover i,
+    .sf-panel-btn:hover svg {
+        opacity: 1;
+    }
+
+    .sf-panel-btn:active {
+        transform: scale(0.98);
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .sf-panel-btn i {
+        font-size: 10px;
+        color: #1f2937;
+    }
+
+    .sf-panel-btn svg {
+        width: 10px;
+        height: 10px;
+        stroke-width: 2;
+        stroke: #1f2937;
+    }
+
+/* =========================
+   Close Button
+   ========================= */
+.sf-panel-btn-close {
+    @apply border-gray-300 bg-white text-gray-600;
+    @apply hover:border-gray-400 hover:bg-gray-200 hover:text-gray-800;
+}
+
+/* =========================
    Modal Responsive
    ========================= */
-        @media (max-width: 768px) {
-            .sf-modal {
-                width: calc(100vw - 16px);
-                max-width: 95vw;
-                max-height: 90vh;
-                border-radius: 10px;
-            }
+@media (max-width: 768px) {
+    .sf-modal {
+        width: calc(100vw - 16px);
+        max-width: 95vw;
+        max-height: 90vh;
+        border-radius: 10px;
+    }
 
-            .sf-modal-body {
-                max-height: calc(90vh - 70px);
-                overflow-y: auto;
-            }
+    .sf-modal-body {
+        max-height: calc(90vh - 70px);
+        overflow-y: auto;
+    }
 
-            .sf-modal .form-row {
-                grid-template-columns: 1fr !important;
-                gap: 12px !important;
-            }
+    .sf-modal .form-row {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
 
-            .sf-modal .form-group {
-                grid-column: 1 / -1 !important;
-            }
-        }
-        /* =========================
+    .sf-modal .form-group {
+        grid-column: 1 / -1 !important;
+    }
+}
+
+/* =========================
    Hidden Fields on Page Load
    ========================= */
-        .hidden-field {
-            display: none !important;
-        }
+.hidden-field {
+    display: none !important;
+}
 
-        .form-group:has(.hidden-field) {
-            display: none !important;
-        }
+.form-group:has(.hidden-field) {
+    display: none !important;
+}
 
-        .form-group:has(.search-field) {
-            display: none !important;
-        }
+.form-group:has(.search-field) {
+    display: none !important;
+}
 
-        .form-group.active {
-            display: block !important;
-        }
-        /* =========================
+.form-group.active {
+    display: block !important;
+}
+
+/* =========================
    Modal Header text forced white
    ========================= */
-        .sf-modal-header {
-            color: #fff !important;
-        }
+.sf-modal-header {
+    color: #fff !important;
+}
 
-            .sf-modal-header .sf-modal-title,
-            .sf-modal-header h1,
-            .sf-modal-header h2,
-            .sf-modal-header h3 {
-                color: #fff !important;
-            }
-        /* منع التحديد الأزرق عند dblclick على خلايا النسخ فقط */
+    .sf-modal-header .sf-modal-title,
+    .sf-modal-header h1,
+    .sf-modal-header h2,
+    .sf-modal-header h3 {
+        color: #fff !important;
+    }
+/* منع التحديد الأزرق عند dblclick على خلايا النسخ فقط */
 
-        .sf-copy-cell {
-            user-select: none;
-            -webkit-user-select: none;
-            -ms-user-select: none;
-            cursor: pointer;
-        }
-        /* =========================
+.sf-copy-cell {
+    user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    cursor: pointer;
+}
+/* =========================
    SF Form – Select + Select2 (Reuse Modal Styles)
    ========================= */
 
-        :where(.sf-modal, .sf-form) .sf-select-wrap {
-            position: relative;
-            width: 100%;
-            z-index: 80;
-        }
+:where(.sf-modal, .sf-form) .sf-select-wrap {
+    position: relative;
+    width: 100%;
+    z-index: 80;
+}
 
-            :where(.sf-modal, .sf-form) .sf-select-wrap select {
-                width: 100%;
-                min-height: 40px;
-                height: 40px;
-                border: 1px solid #d1d5db;
-                background-color: #fff;
-                border-radius: 0.400rem;
-                direction: rtl;
-                text-align: right;
-                padding: 8px 12px 8px 12px;
-                color: #111827;
-                line-height: 1.3;
-                transition: border-color 160ms ease, box-shadow 160ms ease;
-                box-sizing: border-box;
-                outline: none;
-                -webkit-appearance: none;
-                -moz-appearance: none;
-                appearance: none;
-            }
-            /* سهم native */
-            :where(.sf-modal, .sf-form) .sf-select-wrap::after {
-                content: "";
-                position: absolute;
-                left: 14px;
-                top: 50%;
-                width: 8px;
-                height: 8px;
-                pointer-events: none;
-                transform: translateY(-50%) rotate(45deg);
-                border-right: 2.5px solid #6b7280;
-                border-bottom: 2.5px solid #6b7280;
-            }
-            /* Focus native */
-            :where(.sf-modal, .sf-form) .sf-select-wrap select:focus {
-                border-color: var(--sf-focus-border);
-                box-shadow: 0 0 0 0px var(--sf-focus-ring);
-            }
-        /* options */
-        :where(.sf-modal, .sf-form) select option {
-            direction: rtl;
-            text-align: right;
-        }
-        /* ===== Select2 ===== */
-        /* لا تعرض سهم ::after لما يكون select2 شغال */
-        :where(.sf-modal, .sf-form) .sf-select-wrap:has(select.select2-hidden-accessible)::after {
-            display: none !important;
-        }
-        /* container */
-        :where(.sf-modal, .sf-form) .select2-container {
-            width: 100% !important;
-            direction: rtl;
-        }
-        /* selection */
-        :where(.sf-modal, .sf-form) .select2-container--default .select2-selection--single {
-            height: 40px !important;
-            min-height: 40px !important;
-            border: 1px solid #d1d5db !important;
-            background-color: #fff !important;
-            border-radius: 0.400rem !important;
-            box-sizing: border-box !important;
-            outline: none !important;
-        }
+    :where(.sf-modal, .sf-form) .sf-select-wrap select {
+        width: 100%;
+        min-height: 40px;
+        height: 40px;
+        border: 1px solid #d1d5db;
+        background-color: #fff;
+        border-radius: 0.400rem;
+        direction: rtl;
+        text-align: right;
+        padding: 8px 12px 8px 12px;
+        color: #111827;
+        line-height: 1.3;
+        transition: border-color 160ms ease, box-shadow 160ms ease;
+        box-sizing: border-box;
+        outline: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+    }
+    /* سهم native */
+    :where(.sf-modal, .sf-form) .sf-select-wrap::after {
+        content: "";
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        width: 8px;
+        height: 8px;
+        pointer-events: none;
+        transform: translateY(-50%) rotate(45deg);
+        border-right: 2.5px solid #6b7280;
+        border-bottom: 2.5px solid #6b7280;
+    }
+    /* Focus native */
+    :where(.sf-modal, .sf-form) .sf-select-wrap select:focus {
+        border-color: var(--sf-focus-border);
+        box-shadow: 0 0 0 0px var(--sf-focus-ring);
+    }
+/* options */
+:where(.sf-modal, .sf-form) select option {
+    direction: rtl;
+    text-align: right;
+}
+/* ===== Select2 ===== */
+/* لا تعرض سهم ::after لما يكون select2 شغال */
+:where(.sf-modal, .sf-form) .sf-select-wrap:has(select.select2-hidden-accessible)::after {
+    display: none !important;
+}
+/* container */
+:where(.sf-modal, .sf-form) .select2-container {
+    width: 100% !important;
+    direction: rtl;
+}
+/* selection */
+:where(.sf-modal, .sf-form) .select2-container--default .select2-selection--single {
+    height: 40px !important;
+    min-height: 40px !important;
+    border: 1px solid #d1d5db !important;
+    background-color: #fff !important;
+    border-radius: 0.400rem !important;
+    box-sizing: border-box !important;
+    outline: none !important;
+}
 
-            :where(.sf-modal, .sf-form) .select2-container--default .select2-selection--single .select2-selection__rendered {
-                height: 40px !important;
-                line-height: 40px !important;
-                padding: 0 12px 0 44px !important;
-                text-align: right !important;
-                direction: rtl !important;
-                color: #111827 !important;
-                font-size: 0.95rem;
-            }
+    :where(.sf-modal, .sf-form) .select2-container--default .select2-selection--single .select2-selection__rendered {
+        height: 40px !important;
+        line-height: 40px !important;
+        padding: 0 12px 0 44px !important;
+        text-align: right !important;
+        direction: rtl !important;
+        color: #111827 !important;
+        font-size: 0.95rem;
+    }
 
-            :where(.sf-modal, .sf-form) .select2-container--default .select2-selection--single .select2-selection__arrow {
-                position: absolute !important;
-                left: 0px !important;
-                right: auto !important;
-                top: 40% !important;
-                transform: translateY(-50%) !important;
-                height: 40px !important;
-                width: 30px !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-            }
+    :where(.sf-modal, .sf-form) .select2-container--default .select2-selection--single .select2-selection__arrow {
+        position: absolute !important;
+        left: 0px !important;
+        right: auto !important;
+        top: 40% !important;
+        transform: translateY(-50%) !important;
+        height: 40px !important;
+        width: 30px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
 
-                :where(.sf-modal, .sf-form) .select2-container--default .select2-selection--single .select2-selection__arrow b {
-                    border: none !important;
-                    width: 8px !important;
-                    height: 8px !important;
-                    display: inline-block !important;
-                    margin: 0 !important;
-                    transform: rotate(45deg) !important;
-                    border-right: 2.5px solid #6b7280 !important;
-                    border-bottom: 2.5px solid #6b7280 !important;
-                }
-        /* focus select2 */
-        :where(.sf-modal, .sf-form) .select2-container--default.select2-container--focus .select2-selection--single,
-        :where(.sf-modal, .sf-form) .select2-container--default.select2-container--open .select2-selection--single {
-            border-color: var(--sf-focus-border) !important;
-            box-shadow: 0 0 0 0px var(--sf-focus-ring) !important;
+        :where(.sf-modal, .sf-form) .select2-container--default .select2-selection--single .select2-selection__arrow b {
+            border: none !important;
+            width: 8px !important;
+            height: 8px !important;
+            display: inline-block !important;
+            margin: 0 !important;
+            transform: rotate(45deg) !important;
+            border-right: 2.5px solid #6b7280 !important;
+            border-bottom: 2.5px solid #6b7280 !important;
         }
-        /* placeholder */
-        :where(.sf-modal, .sf-form) .select2-container--default .select2-selection--single .select2-selection__placeholder {
-            color: #6b7280 !important;
-        }
-        /* dropdown */
-        :where(.sf-modal, .sf-form) .select2-dropdown {
-            border: 1px solid #d1d5db !important;
-            border-radius: 0.400rem !important;
-            overflow: hidden;
-            direction: rtl;
-        }
+/* focus select2 */
+:where(.sf-modal, .sf-form) .select2-container--default.select2-container--focus .select2-selection--single,
+:where(.sf-modal, .sf-form) .select2-container--default.select2-container--open .select2-selection--single {
+    border-color: var(--sf-focus-border) !important;
+    box-shadow: 0 0 0 0px var(--sf-focus-ring) !important;
+}
+/* placeholder */
+:where(.sf-modal, .sf-form) .select2-container--default .select2-selection--single .select2-selection__placeholder {
+    color: #6b7280 !important;
+}
+/* dropdown */
+:where(.sf-modal, .sf-form) .select2-dropdown {
+    border: 1px solid #d1d5db !important;
+    border-radius: 0.400rem !important;
+    overflow: hidden;
+    direction: rtl;
+}
 
-            :where(.sf-modal, .sf-form) .select2-dropdown .select2-results__options {
-                max-height: 160px;
-                overflow-y: auto;
-            }
+    :where(.sf-modal, .sf-form) .select2-dropdown .select2-results__options {
+        max-height: 160px;
+        overflow-y: auto;
+    }
 
-        :where(.sf-modal, .sf-form) .select2-results__option {
-            padding: 6px 10px;
-            line-height: 1.2;
-            font-size: 0.90rem;
-            direction: rtl;
-            text-align: right;
-        }
-        /* search field */
-        :where(.sf-modal, .sf-form) .select2-container--default .select2-search--dropdown .select2-search__field {
-            height: 34px;
-            padding: 6px 10px;
-            border: 1px solid #d1d5db;
-            border-radius: 0.25rem;
-            direction: rtl;
-            text-align: right;
-            font-size: 0.90rem;
-            color: #111827;
-            outline: none;
-            box-sizing: border-box;
-        }
+:where(.sf-modal, .sf-form) .select2-results__option {
+    padding: 6px 10px;
+    line-height: 1.2;
+    font-size: 0.90rem;
+    direction: rtl;
+    text-align: right;
+}
+/* search field */
+:where(.sf-modal, .sf-form) .select2-container--default .select2-search--dropdown .select2-search__field {
+    height: 34px;
+    padding: 6px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 0.25rem;
+    direction: rtl;
+    text-align: right;
+    font-size: 0.90rem;
+    color: #111827;
+    outline: none;
+    box-sizing: border-box;
+}
 
 .sf-form .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable {
     background-color: #047857 !important;
@@ -2181,82 +2174,79 @@ textarea[readonly] {
 }
 
 
-            :where(.sf-modal, .sf-form) .select2-container--default .select2-search--dropdown .select2-search__field:focus {
-                border-color: var(--sf-focus-border);
-                box-shadow: 0 0 0 0px var(--sf-focus-ring);
-            }
-        /* Fix: prevent double arrow on native select (Tailwind/Flowbite adds bg arrow) */
-        :where(.sf-modal, .sf-form) .sf-select-wrap select:not(.select2-hidden-accessible) {
-            background-image: none !important;
-        }
+:where(.sf-modal, .sf-form) .select2-container--default .select2-search--dropdown .select2-search__field:focus {
+    border-color: var(--sf-focus-border);
+    box-shadow: 0 0 0 0px var(--sf-focus-ring);
+}
+/* Fix: prevent double arrow on native select (Tailwind/Flowbite adds bg arrow) */
+:where(.sf-modal, .sf-form) .sf-select-wrap select:not(.select2-hidden-accessible) {
+    background-image: none !important;
+}
 
-            :where(.sf-modal, .sf-form) .sf-select-wrap select:not(.select2-hidden-accessible)::-ms-expand {
-                display: none;
-            }
+    :where(.sf-modal, .sf-form) .sf-select-wrap select:not(.select2-hidden-accessible)::-ms-expand {
+        display: none;
+    }
 
-        body.sf-navigating .select2-dropdown,
-        body.sf-navigating .sf-select-panel {
-            display: none !important;
-        }
-        /* ===== Detail View (Formal / Clean)  مودال التفاصيل ===== */
-        .sf-detail-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 12px 20px;
-        }
-        /* Row */
-        .sf-detail-row {
-            display: grid;
-            grid-template-columns: 140px 1fr;
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-        }
-        /* Label */
-        .sf-detail-label {
-            background: #f3f4f6;
-            color: #374151;
-            font-size: 13px;
-            font-weight: 600;
-            padding: 10px 12px;
-            border-left: 1px solid #e5e7eb;
-            text-align: right;
-            white-space: nowrap;
-        }
-        /* Value */
-        .sf-detail-value {
-            padding: 10px 14px;
-            font-size: 14px;
-            font-weight: 400;
-            color: #111827;
-            line-height: 1.6;
-            word-break: break-word;
-        }
-        /* Mobile */
-        @media (max-width: 768px) {
-            .sf-detail-grid {
-                grid-template-columns: 1fr;
-            }
+body.sf-navigating .select2-dropdown,
+body.sf-navigating .sf-select-panel {
+    display: none !important;
+}
+/* ===== Detail View (Formal / Clean)  مودال التفاصيل ===== */
+.sf-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 20px;
+}
+/* Row */
+.sf-detail-row {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+}
+/* Label */
+.sf-detail-label {
+    background: #f3f4f6;
+    color: #374151;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 12px;
+    border-left: 1px solid #e5e7eb;
+    text-align: right;
+    white-space: nowrap;
+}
+/* Value */
+.sf-detail-value {
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: 400;
+    color: #111827;
+    line-height: 1.6;
+    word-break: break-word;
+}
+/* Mobile */
+@media (max-width: 768px) {
+    .sf-detail-grid {
+        grid-template-columns: 1fr;
+    }
 
-            .sf-detail-row {
-                grid-template-columns: 1fr;
-            }
+    .sf-detail-row {
+        grid-template-columns: 1fr;
+    }
 
-            .sf-detail-label {
-                border-left: none;
-                border-bottom: 1px solid #e5e7eb;
-            }
-        }
-        /* Empty */
-        .sf-detail-empty {
-            padding: 24px;
-            text-align: center;
-            color: #6b7280;
-            font-size: 14px;
-        }
-
-
-
+    .sf-detail-label {
+        border-left: none;
+        border-bottom: 1px solid #e5e7eb;
+    }
+}
+/* Empty */
+.sf-detail-empty {
+    padding: 24px;
+    text-align: center;
+    color: #6b7280;
+    font-size: 14px;
+}
 
 /*   لون التمرير Select2 في كل الحالات */
 .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable,
@@ -2265,4 +2255,384 @@ textarea[readonly] {
     background-color: #047857 !important;
     color: #fff !important;
 }
+
+/* Loading overlay - centered */
+
+.td-loading {
+    height: 100%;
+    min-height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
+}
+
+
+/* Responsive Modal Fix for Small Screens */
+@media (max-width: 1080px) {
+
+    
+    .sf-modal {
+        width: min(780px, 92vw) !important;
+        max-width: min(780px, 92vw) !important;
+        max-height: 85vh !important;
+        left: 50% !important;
+        top: 50% !important;
+        transform: translate(-50%, -50%) !important;
+    }
+
+    
+    .sf-modal-body {
+        overflow-y: auto !important;
+    }
+
+    
+    .sf-modal .sf-modal-form > .grid.grid-cols-12 {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+
+        .sf-modal .sf-modal-form > .grid.grid-cols-12 > * {
+            grid-column: 1 / -1 !important;
+        }
+}
+
+@media (max-height: 800px) {
+    .sf-modal {
+        max-height: calc(100vh - 16px);
+    }
+
+    .sf-modal-body {
+        padding: 12px 16px;
+    }
+}
+
+@media (max-width: 1366px) {
+    .sf-modal {
+        width: min(900px, 92vw);
+    }
+}
+
+
+
+
+
+/* =====================================
+   SF Profile (Gov v1.6) - Fill last row placeholders
+   ===================================== */
+
+/* =====================================
+   SF Profile (Gov v1.7)
+   - Centered title + icon
+   - ✅ Placeholders via REAL items (NOT ::before/::after)
+   - ✅ Emerald-700 for icon + title
+   ===================================== */
+
+.sf-profile {
+    width: 100%;
+    margin-top: 1rem;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
+    overflow: hidden;
+    color: #111827;
+}
+
+/* ================= HEADER ================= */
+
+.sf-profile__header {
+    background: #f9fafb;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+/* العنوان + الأيقونة (توسيط كامل) */
+.sf-profile__title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    text-align: center;
+}
+
+.sf-profile__titleIcon {
+    font-size: 1rem;
+    color: #047857; /*  emerald-700 */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.sf-profile__titleText {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    min-width: 0;
+    white-space: nowrap;
+}
+
+.sf-profile__headingStatic {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #047857; /* ✅ emerald-700 */
+    line-height: 1.25;
+    margin: 0;
+}
+
+.sf-profile__headingName {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #374151;
+    line-height: 1.25;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sf-profile__subheading,
+.sf-profile__badges,
+.sf-profile__pill {
+    display: none;
+}
+
+/* ================= BODY ================= */
+
+.sf-profile__body {
+    background: #fff;
+    padding: 0;
+}
+
+/* ================= GRID ================= */
+
+.sf-profile__grid {
+    display: grid;
+    background: #fff;
+}
+
+.sf-profile__grid--cols-2 {
+    grid-template-columns: 1fr 1fr;
+}
+
+.sf-profile__grid--cols-3 {
+    grid-template-columns: 1fr 1fr 1fr;
+}
+
+/* ================= ITEM ================= */
+
+.sf-profile__item {
+    padding: 0.75rem 1rem;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+    outline: 1px solid #eef2f7;
+    outline-offset: -1px;
+}
+
+/* Label */
+.sf-profile__label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #6b7280;
+    margin: 0;
+    line-height: 1.25;
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+
+    .sf-profile__label::after {
+        content: " :";
+        margin-inline-start: 0.15rem;
+        color: #9ca3af;
+        font-weight: 500;
+    }
+
+/* Value */
+.sf-profile__value {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #111827;
+    line-height: 1.35;
+    margin: 0;
+    min-width: 0;
+    flex: 1 1 auto;
+    word-break: break-word;
+}
+
+/* ================= PLACEHOLDERS (REAL ITEMS) ================= */
+/* ✅ هذا بديل ::before/::after — لازم يكون عندك عناصر div.sf-profile__item--placeholder بالـ HTML */
+.sf-profile__item--placeholder {
+    background: #fff;
+}
+
+    .sf-profile__item--placeholder .sf-profile__label,
+    .sf-profile__item--placeholder .sf-profile__value {
+        visibility: hidden;
+    }
+
+/* ================= STATE ================= */
+
+.sf-profile__state {
+    padding: 1rem;
+    border: 1px solid #e5e7eb;
+    margin: 1rem;
+    border-radius: 6px;
+    background: #fff;
+    color: #374151;
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width:768px) {
+    .sf-profile__grid--cols-2,
+    .sf-profile__grid--cols-3 {
+        grid-template-columns: 1fr;
+    }
+
+    .sf-profile__item {
+        align-items: flex-start;
+    }
+}
+
+/* ================= RTL ================= */
+
+[dir="rtl"] .sf-profile__label,
+[dir="rtl"] .sf-profile__value {
+    text-align: right;
+}
+
+
+
+/* ===============================
+   SF Toggle ازرار اخفاء الجدول
+   =============================== */
+
+/* ===============================
+   SF Toggle (Gov Minimal / Emerald)
+   - رسمي خفيف
+   - لا تدرج ولا ظلال
+   - Emerald 700 فقط (خط يمين)
+   =============================== */
+
+:root {
+    --sf-emerald-700: #047857;
+    --sf-border: #e5e7eb;
+    --sf-border-2: #d1d5db;
+    --sf-text: #4b525e;
+    --sf-muted: #6b7280;
+    --sf-surface: #ffffff;
+    --sf-surface-2: #f9fafb;
+}
+
+[x-cloak] {
+    display: none !important;
+}
+
+.sf-toggle {
+    width: 100%;
+    margin-top: .5rem;
+}
+
+/* ===============================
+   زر التوجل
+   =============================== */
+.sf-toggle__btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    padding: .6rem .85rem;
+    background: var(--sf-surface);
+    color: var(--sf-text);
+    border: 1px solid var(--sf-border);
+    border-right: 3px solid var(--sf-emerald-700); /* ← المكان الوحيد للأخضر */
+
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: .95rem;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: background .12s ease, border-color .12s ease;
+}
+
+    /* Hover خفيف */
+    .sf-toggle__btn:hover {
+        background: var(--sf-surface-2);
+        border-color: var(--sf-border-2);
+    }
+
+    /* ===============================
+   FOCUS — emerald 700 فقط
+   =============================== */
+    .sf-toggle__btn:focus,
+    .sf-toggle__btn:focus-visible,
+    .sf-toggle__btn:focus-within {
+        outline: none !important;
+        box-shadow: none !important; /* ❌ لا ظل */
+        border-color: var(--sf-border); /* الإطار يبقى رمادي */
+        border-right-color: var(--sf-emerald-700); /* ✅ الأخضر فقط هنا */
+    }
+
+/* ===============================
+   محتوى الزر
+   =============================== */
+.sf-toggle__left {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    min-width: 0;
+}
+
+.sf-toggle__icon {
+    color: var(--sf-emerald-700);
+    font-size: .95rem;
+    width: 1.1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sf-toggle__label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* السهم */
+.sf-toggle__chev {
+    color: var(--sf-muted);
+    font-size: .9rem;
+    transition: transform .15s ease;
+}
+
+    .sf-toggle__chev.is-open {
+        transform: rotate(180deg);
+    }
+
+/* ===============================
+   محتوى التوجل
+   =============================== */
+.sf-toggle__content {
+    margin-top: .45rem;
+    padding: .7rem;
+    background: var(--sf-surface);
+    border: 1px solid var(--sf-border);
+    border-radius: 6px;
+}
+
+/* مسافات بين التوجلات */
+.sf-toggle + .sf-toggle {
+    margin-top: .45rem;
+}
+
+
 

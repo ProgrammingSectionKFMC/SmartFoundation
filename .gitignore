@@ -415,3 +415,4 @@ docs/PRD.md
 .taskmaster/reports/
 .taskmaster/.initialized
 /SmartFoundation.Mvc/Controllers/MastersCrudController.cs
+/SmartFoundation.Mvc/AiModels/qwen2.5-3b-instruct-q4_k_m.gguf

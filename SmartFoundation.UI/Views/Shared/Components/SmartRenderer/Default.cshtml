@@ -2,21 +2,23 @@
 
 @{
     var hasPanelContent =
-        Model.Form is not null
-        || Model.DatePicker is not null
-        || Model.TableDS is not null
-        || Model.TableDS1 is not null
-        || Model.TableDS2 is not null
-        || Model.TableDS3 is not null
-        || Model.TableDS4 is not null
-        || Model.TableDS5 is not null
-        || Model.Table is not null;
+    Model.Form is not null
+    || Model.DatePicker is not null
+    || Model.Print is not null
+    || Model.TableDS is not null
+    || Model.TableDS1 is not null
+    || Model.TableDS2 is not null
+    || Model.TableDS3 is not null
+    || Model.TableDS4 is not null
+    || Model.TableDS5 is not null
+    || Model.Table is not null;
+
 }
 
 @if (Model.Charts is not null)
 {
     <div class="w-full">
-        <div class="bg-white rounded-sm border border-gray-100 shadow-sm p-6">
+        <div class="rounded-sm border border-gray-100 bg-white p-6 shadow-sm">
             @await Component.InvokeAsync("SmartCharts", new { model = Model.Charts, embedded = true })
         </div>
     </div>
@@ -27,7 +29,7 @@
     <div x-data="{ open:true }" class="sf-panel mt-6">
         <div class="sf-panel-header">
             <h3 class="sf-panel-title flex items-center gap-2">
-                <i class="fa-solid @(Model.PanelIcon ?? "fa-layer-group") text-emerald-600 text-sm"></i>
+                <i class="fa-solid @(Model.PanelIcon ?? "fa-layer-group") text-sm text-emerald-600"></i>
                 @(Model.PanelTitle ?? Model.PageTitle)
             </h3>
 
@@ -40,7 +42,7 @@
                         x-on:click="$el.closest('.sf-panel').remove()"
                         class="sf-panel-btn sf-panel-btn-close"
                         title="إغلاق">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
@@ -56,6 +58,10 @@
             @if (Model.DatePicker is not null)
             {
                 @await Component.InvokeAsync("SmartDatePicker", new { model = Model.DatePicker, embedded = true })
+            }
+            @if (Model.Print is not null)
+            {
+                @await Component.InvokeAsync("SmartPrint", new { model = Model.Print, embedded = true })
             }
 
             @if (Model.TableDS is not null)
@@ -91,3 +97,94 @@
         </div>
     </div>
 }
+
+@* ===== Global Print Iframe (ONE TIME) ===== *@
+<iframe id="sf-print-frame"
+        style="display:none;width:0;height:0;border:0"></iframe>
+
+
+<script>
+    // جلسة طباعة عامة
+    window.__sfPrintSession = window.__sfPrintSession || { active: false, canceled: false };
+
+    window.sfOpenPrint = function (url, opts) {
+        opts = opts || {};
+        const onReady = typeof opts.onReady === "function" ? opts.onReady : null;
+        const onBeforePrint = typeof opts.onBeforePrint === "function" ? opts.onBeforePrint : null;
+        const onAfterPrint = typeof opts.onAfterPrint === "function" ? opts.onAfterPrint : null;
+        const onError = typeof opts.onError === "function" ? opts.onError : null;
+
+        const frame = document.getElementById('sf-print-frame');
+        if (!frame) {
+            console.error('sf-print-frame not found');
+            onError && onError(new Error("sf-print-frame not found"));
+            return null;
+        }
+
+        // بدء جلسة
+        window.__sfPrintSession.active = true;
+        window.__sfPrintSession.canceled = false;
+
+        // cache buster
+        try {
+            const u = new URL(url, window.location.origin);
+            u.searchParams.set('_t', Date.now().toString());
+            url = u.toString();
+        } catch { }
+
+        const cleanup = () => {
+            try { frame.onload = null; } catch {}
+            frame.src = "about:blank";
+            window.__sfPrintSession.active = false;
+            window.__sfPrintSession.canceled = false;
+        };
+
+        frame.onload = function () {
+            try {
+                // إذا المستخدم لغى قبل ما يخلص التحميل
+                if (window.__sfPrintSession.canceled) {
+                    cleanup();
+                    return;
+                }
+
+                if (onReady) onReady();
+
+                const w = frame.contentWindow;
+                if (!w) throw new Error("frame.contentWindow is null");
+
+                // بعد/قبل الطباعة (قد لا تعمل دائمًا مع PDF viewer)
+                if (onAfterPrint) { try { w.addEventListener("afterprint", onAfterPrint, { once: true }); } catch {} }
+                if (onBeforePrint) { try { w.addEventListener("beforeprint", onBeforePrint, { once: true }); } catch {} }
+
+                // اخفِ Busy قبل الطباعة
+                if (onBeforePrint) onBeforePrint();
+
+                // إذا المستخدم لغى آخر لحظة
+                if (window.__sfPrintSession.canceled) {
+                    cleanup();
+                    return;
+                }
+
+                w.focus();
+                w.print();
+
+                // fallback
+                setTimeout(() => { onAfterPrint && onAfterPrint(); }, 1500);
+
+            } catch (e) {
+                console.error('Print failed:', e);
+                onError && onError(e);
+            }
+        };
+
+        frame.src = url;
+
+        // ✅ يرجع Handle للإلغاء
+        return {
+            cancel: function () {
+                window.__sfPrintSession.canceled = true;
+                cleanup();
+            }
+        };
+    };
+</script>

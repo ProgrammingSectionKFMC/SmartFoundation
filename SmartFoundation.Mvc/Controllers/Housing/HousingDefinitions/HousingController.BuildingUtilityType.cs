@@ -194,8 +194,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             {
                 new FieldConfig { Name = rowIdField, Type = "hidden" },
 
-                new FieldConfig { Name = "p01", Label = "نوع المرفق بالعربي", Type = "text", ColCss = "6",Placeholder = "حقل عربي فقط", Required = true,MaxLength = 50,TextMode = "arabic" },
-                new FieldConfig { Name = "p02", Label = "اسم نوع المرفق بالانجليزي", Type = "text", Required = true,Placeholder = "حقل انجليزي فقط",Icon = "fa-solid fa-user",ColCss = "6",MaxLength = 50,TextMode = "english",},
+                new FieldConfig { Name = "p01", Label = "نوع المرفق بالعربي", Type = "text", ColCss = "6",Placeholder = "حقل عربي فقط",Icon = "fa fa-home", Required = true,MaxLength = 50,TextMode = "arabic" },
+                new FieldConfig { Name = "p02", Label = "اسم نوع المرفق بالانجليزي", Type = "text", Required = true,Placeholder = "حقل انجليزي فقط",Icon = "fa fa-home",ColCss = "6",MaxLength = 50,TextMode = "english",},
                 new FieldConfig { Name = "p04", Label = "بداية المرفق", Type = "date", ColCss = "3", Required = true, Icon = "fa fa-calendar", HelpText = "يجب اختيار التاريخ" },
                 new FieldConfig { Name = "p05", Label = "نهاية المرفق", Type = "date", ColCss = "3", Required = false,Icon = "fa fa-calendar" },
                 new FieldConfig { Name = "p06", Label = "يتطلب ايجار", Type = "select",Options=IsRentOptions, ColCss = "3", Required = true },

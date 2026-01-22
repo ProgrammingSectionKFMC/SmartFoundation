@@ -4,13 +4,17 @@ using SmartFoundation.UI.ViewModels.SmartPage;
 using SmartFoundation.UI.ViewModels.SmartTable;
 using System.Data;
 using System.Linq;
+using SmartFoundation.MVC.Reports;
+
 
 
 namespace SmartFoundation.Mvc.Controllers.Housing
 {
     public partial class HousingController : Controller
     {
-        public async Task<IActionResult> BuildingType()
+
+        
+        public async Task<IActionResult> BuildingType(int pdf = 0)
         {
             //  قراءة السيشن والكونتكست
             if (!InitPageContext(out var redirect))
@@ -134,9 +138,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             {
                 new FieldConfig { Name = rowIdField, Type = "hidden" },
 
-                new FieldConfig { Name = "p01", Label = "رمز نوع المباني", Type ="text", ColCss ="3", },
-                new FieldConfig { Name = "p02", Label = "اسم نوع المباني بالعربي", Type = "text", Required = true,Placeholder = "حقل عربي فقط",Icon = "fa-solid fa-user",ColCss = "3",MaxLength = 50,TextMode = "arabic",},
-                new FieldConfig { Name = "p03", Label = "اسم نوع المباني بالانجليزي", Type = "text", ColCss = "3" , Required = true, TextMode = "english"},
+                new FieldConfig { Name = "p01", Label = "رمز نوع المباني", Type ="text", ColCss ="3",Icon = "fa fa-building" },
+                new FieldConfig { Name = "p02", Label = "اسم نوع المباني بالعربي", Type = "text", Required = true,Placeholder = "حقل عربي فقط",Icon = "fa fa-home",ColCss = "3",MaxLength = 50,TextMode = "arabic",},
+                new FieldConfig { Name = "p03", Label = "اسم نوع المباني بالانجليزي", Type = "text", ColCss = "3" , Required = true,Icon = "fa fa-home", TextMode = "english",Placeholder = "حقل انجليزي فقط"},
                 new FieldConfig { Name = "p04", Label = "ملاحظات", Type = "textarea", ColCss = "6", Required = false }
             };
 
@@ -164,9 +168,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = rowIdField,            Type = "hidden" },
 
                 new FieldConfig { Name = "p01", Label = "الرقم المرجعي",Type ="hidden", Readonly = true, ColCss = "3" },
-                new FieldConfig { Name = "p02", Label = "رمز نوع المباني",Type ="text", Required = true,  ColCss = "3" },
-                new FieldConfig { Name = "p03", Label = "اسم نوع المباني بالعربي", Type ="text",ColCss = "3", Required = true, TextMode = "arabic" },
-                new FieldConfig { Name = "p04", Label = "اسم نوع المباني بالانجليزي", Type ="text", Required = true, ColCss = "3",TextMode = "english" },
+                new FieldConfig { Name = "p02", Label = "رمز نوع المباني",Type ="text", Required = true,  ColCss = "3",Icon = "fa fa-building" },
+                new FieldConfig { Name = "p03", Label = "اسم نوع المباني بالعربي", Type ="text",ColCss = "3", Required = true, TextMode = "arabic",Icon = "fa fa-home" },
+                new FieldConfig { Name = "p04", Label = "اسم نوع المباني بالانجليزي", Type ="text", Required = true, ColCss = "3",TextMode = "english",Icon = "fa fa-home" },
                 new FieldConfig { Name = "p05", Label = "ملاحظات",Type ="textarea",ColCss = "6" }
             };
 
@@ -206,6 +210,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowAdd = canInsert,
                     ShowEdit = canUpdate,
                     ShowDelete = canDelete,
+                    ShowPrint = true, // شرطك
+                    ShowPrint1 = true, // شرطك
                     ShowBulkDelete = false,
 
                     Add = new TableAction
@@ -264,7 +270,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         OpenModal = true,
                         ModalTitle = "<i class='fa fa-exclamation-triangle text-red-600 text-xl mr-2'></i> تحذير",
                         ModalMessage = "هل أنت متأكد من حذف هذا نوع المباني؟",
-                        ModalMessageClass = "bg-red-50 border border-red-200 text-red-700",
+                        ModalMessageClass = "bg-red-50 text-red-700",
                         OpenForm = new FormConfig
                         {
                             FormId = "BuildingTypeDeleteForm",
@@ -282,6 +288,39 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         MinSelection = 1,
                         MaxSelection = 1
                     },
+
+                    Print = new TableAction
+                    {
+                        Label = "طباعة أنواع المباني",
+                        Icon = "fa fa-print",
+                        Color = "primary",
+                        Placement = TableActionPlacement.ActionsMenu,
+                        RequireSelection = false,
+                        OnClickJs = @"
+                                sfPrintWithBusy(table, {
+                                  pdf: 1,
+                                  busy: { title: 'طباعة أنواع المباني'}
+                                });
+                                "
+
+                    },
+
+                    Print1 = new TableAction
+                    {
+                        Label = "طباعة خطاب تجريبي",
+                        Icon = "fa fa-print",
+                        Color = "primary",
+                        Placement = TableActionPlacement.ActionsMenu,
+                        RequireSelection = false,
+                        OnClickJs = @"
+                                sfPrintWithBusy(table, {
+                                  pdf: 2,
+                                  busy: { title: 'طباعة خطاب تجريبي'}
+                                });
+                                "
+
+                    },
+
                 }
             };
 
@@ -295,8 +334,177 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 TableDS = dsModel
             };
 
+
+
+            // ===== PDF Export (same request, no extra DB call) =====
+            if (pdf == 1)
+            {
+                var printTable = dt1;
+
+                if (printTable == null || printTable.Rows.Count == 0)
+                    return Content("لا توجد بيانات للطباعة.");
+
+
+                var reportColumns = new List<ReportColumn>
+{
+    new("buildingTypeCode",   "رمز نوع المباني",       Align:"center", Weight:1, FontSize:9),
+    new("buildingTypeName_A", "اسم نوع المباني بالعربي",Align:"center", Weight:2, FontSize:10),
+    new("buildingTypeName_E", "اسم نوع المباني بالإنجليزي",Align:"center", Weight:2, FontSize:9),
+    //new ReportColumn("buildingTypeDescription", "ملاحظات",Align: "right",  Weight: 4, FontSize:9),
+};
+
+              
+
+                var logo = Path.Combine(_env.WebRootPath, "img", "ppng.png");
+
+                var header = new Dictionary<string, string>
+                {
+                    ["no"] = "١٢٣/٤٥",
+                    ["date"] = DateTime.Now.ToString("yyyy/MM/dd"),
+                    ["attach"] = "—",
+                    ["subject"] = "تقرير أنواع المباني",
+
+                    ["right1"] = "المملكة العربية السعودية",
+                    ["right2"] = "وزارة الدفاع",
+                    ["right3"] = "القوات البرية الملكية السعودية",
+                    ["right4"] = "الادارة الهندسية للتشغيل والصيانة",
+                    ["right5"] = "إدارة مدينة الملك فيصل العسكرية",
+
+                    ["bismillah"] = "بسم الله الرحمن الرحيم",
+                    ["midCaption"] = ""
+                };
+
+                var report = DataTableReportBuilder.FromDataTable(
+                    reportId: "BuildingType",
+                    title: "تقرير أنواع المباني",
+                    table: printTable,
+                    columns: reportColumns,
+                    headerFields: header,
+                    //footerFields: new(),
+                   footerFields: new(),
+                    
+                    orientation: ReportOrientation.Landscape,
+                    headerType: ReportHeaderType.LetterOfficial,
+                    logoPath: logo
+                );
+                
+
+
+                
+
+                var pdfBytes = QuestPdfReportRenderer.Render(report);
+                Response.Headers["Content-Disposition"] = "inline; filename=BuildingType.pdf";
+                return File(pdfBytes, "application/pdf");
+
+
+            }
+
+
+            if (pdf == 2)
+            {
+                var logo = Path.Combine(_env.WebRootPath, "img", "ppng.png");
+
+                var header = new Dictionary<string, string>
+                {
+                    ["no"] = "١٢٣/٤٥",
+                    ["date"] = DateTime.Now.ToString("yyyy/MM/dd"),
+                    ["attach"] = "—",
+                    ["subject"] = "خطاب رسمي",
+
+                    ["right1"] = "المملكة العربية السعودية",
+                    ["right2"] = "وزارة الدفاع",
+                    ["right3"] = "القوات البرية الملكية السعودية",
+                    ["right4"] = "الادارة الهندسية للتشغيل والصيانة",
+                    ["right5"] = "إدارة مدينة الملك فيصل العسكرية",
+
+                    ["bismillah"] = "بسم الله الرحمن الرحيم",
+                    ["midCaption"] = ""
+                };
+
+                var report = new ReportResult
+                {
+                    ReportId = "OfficialLetter01",
+                    Title = "خطاب رسمي",
+                    Kind = ReportKind.Letter,
+
+                    // هنا اختَر الاتجاه اللي تبيه للخطاب
+                    Orientation = ReportOrientation.Portrait, // أو Landscape
+
+                    HeaderType = ReportHeaderType.LetterOfficial,
+                    LogoPath = logo,
+                    ShowFooter = false,
+
+                    HeaderFields = header,
+
+                    LetterBlocks = new List<LetterBlock>
+        {
+            new LetterBlock
+            {
+                Text = "سعادة قائد إدارة مدينة الملك فيصل العسكرية حفظه الله",
+                FontSize = 13,
+                Bold = true,
+                PaddingBottom = 12,
+                PaddingTop = 30,
+                Align = TextAlign.Center
+            },
+
+            new LetterBlock
+            {
+                Text = "السلام عليكم ورحمة الله وبركاته،",
+                FontSize = 12,
+                PaddingBottom = 10,
+                PaddingTop = 15,
+                Align = TextAlign.Right
+            },
+
+            new LetterBlock
+            {
+                Text = "نفيد سعادتكم بأنه بناءً على توجيهاتكم الكريمة ...",
+                FontSize = 12,
+                Align = TextAlign.Justify,
+                LineHeight = 1.8f,
+                PaddingBottom = 16
+            },
+
+            new LetterBlock
+            {
+                Text = "وتفضلوا بقبول فائق الاحترام والتقدير،",
+                FontSize = 12,
+                PaddingTop = 20,
+                Align = TextAlign.Right
+            },
+
+            new LetterBlock
+            {
+                Text = "مدير الإدارة الهندسية\nالاسم / ..................\nالتوقيع / ...............",
+                FontSize = 11,
+                Align = TextAlign.Left,
+                PaddingTop = 30,
+                PaddingLeft = 120
+            }
+        }
+                };
+
+                var pdfBytes = QuestPdfReportRenderer.Render(report);
+                Response.Headers["Content-Disposition"] = "inline; filename=Letter.pdf";
+                return File(pdfBytes, "application/pdf");
+            }
+
+
+
+
             return View("HousingDefinitions/BuildingType", page);
 
         }
+
+        public IActionResult Print()
+        {
+            if (TempData["PdfBytes"] == null)
+                return Content("لا يوجد ملف للطباعة");
+
+            ViewBag.PdfBase64 = TempData["PdfBytes"];
+            return View();
+        }
+
     }
 }

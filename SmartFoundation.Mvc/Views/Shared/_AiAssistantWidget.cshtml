@@ -1,0 +1,29 @@
+﻿@* Floating AI Assistant widget (offline/on-prem) *@
+<div id="sf-ai" class="sf-ai">
+    <button id="sf-ai-btn" type="button" class="sf-ai-btn" title="تحريك">
+    <span class="sf-ai-icon">🤖</span>
+    <span class="sf-ai-text">وحيد المساعد الذكي</span>
+</button>
+    <input type="hidden" id="sf-ai-userid" value="@Context.Session.GetString("usersID")" />
+
+    <div id="sf-ai-panel" class="sf-ai-panel" aria-hidden="true">
+        <div class="sf-ai-header">
+            <div class="sf-ai-title">
+                <div class="sf-ai-title-main">وحيد المساعد الذكي</div>
+                <div class="sf-ai-title-sub">مساعد شرح استخدام النظام (إطلاق تجريبي)</div>
+            </div>
+            <button id="sf-ai-close" type="button" class="sf-ai-close" title="إغلاق">×</button>
+        </div>
+
+        <div id="sf-ai-messages" class="sf-ai-messages"></div>
+
+        <div class="sf-ai-footer">
+            <input id="sf-ai-input" class="sf-ai-input" type="text" placeholder="اكتب سؤالك… مثال: كيف أطبع التقرير؟" />
+            <button id="sf-ai-send" class="sf-ai-send" type="button">إرسال</button>
+        </div>
+        <div class="sf-ai-hint">
+            تلميح: اذكر اسم الشاشة أو الزر (مثلاً: إضافة، حفظ، طباعة).
+        </div>
+    </div>
+</div>
+            

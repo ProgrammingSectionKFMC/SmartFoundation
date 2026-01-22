@@ -1,0 +1,482 @@
+﻿/* SmartFoundation AI Assistant Widget (Icon + "المساعد الذكي") */
+
+.sf-ai {
+    position: fixed;
+    bottom: 18px;
+    left: 18px;
+    right: auto;
+    top: auto;
+    z-index: 99999;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans Arabic", "Noto Kufi Arabic", sans-serif;
+}
+.sf-ai-panel {
+    left: 0;
+    right: auto;
+}
+    /*  السحب */
+    .sf-ai.dragging {
+        user-select: none;
+        cursor: grabbing;
+    }
+
+        .sf-ai.dragging * {
+            cursor: grabbing !important;
+        }
+
+/* =========================
+   Floating Button
+   ========================= */
+
+.sf-ai-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    /* size */
+    height: 48px;
+    padding: 0 16px;
+    /* look */
+    border-radius: 999px;
+    border: 0;
+    cursor: pointer;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.22);
+    background: #111827;
+    color: #fff;
+    /* text */
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 5;
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.sf-ai-btn .sf-ai-icon {
+    font-size: 20px;
+    line-height: 1;
+}
+
+.sf-ai-btn .sf-ai-text {
+    white-space: nowrap;
+}
+
+/* hover/active */
+.sf-ai-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 30px rgba(0,0,0,0.28);
+}
+
+.sf-ai-btn:active {
+    transform: translateY(0px);
+}
+
+/* =========================
+   Panel
+   ========================= */
+
+.sf-ai-panel {
+    position: absolute;
+    bottom: 70px;
+    top: auto; /*جديد */
+    right: 0;
+    width: 360px;
+    max-width: calc(100vw - 36px);
+    height: 520px;
+    max-height: calc(100vh - 120px);
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 18px 50px rgba(0,0,0,0.28);
+    border: 1px solid rgba(0,0,0,0.08);
+    display: none;
+    overflow: hidden;
+    direction: rtl;
+}
+
+/* إذا الويدجت قريب من أعلى الشاشة: افتح تحت الزر */
+.sf-ai.open-down .sf-ai-panel {
+    bottom: auto;
+    top: 70px;
+}
+
+/* افتراضي: البانل يطلع لليسار (لأنه right:0) */
+.sf-ai-panel {
+    right: 0;
+    left: auto;
+}
+
+/* إذا الويدجت قريب من يسار الشاشة: خل البانل يطلع لليمين */
+.sf-ai.open-left .sf-ai-panel {
+    left: 0;
+    right: auto;
+}
+
+.sf-ai-panel.open {
+    display: flex;
+    flex-direction: column;
+}
+
+.sf-ai-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 12px 10px 12px;
+    background: #0f172a;
+    color: #fff;
+}
+
+.sf-ai-title {
+    line-height: 1.15;
+}
+
+.sf-ai-title-main {
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.sf-ai-title-sub {
+    opacity: 0.9;
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+.sf-ai-close {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border: 0;
+    cursor: pointer;
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    font-size: 20px;
+    line-height: 1;
+}
+
+.sf-ai-close:hover {
+    background: rgba(255,255,255,0.18);
+}
+
+/* =========================
+   Messages
+   ========================= */
+
+.sf-ai-messages {
+    flex: 1;
+    padding: 12px;
+    overflow: auto;
+    background: #f8fafc;
+}
+
+.sf-ai-msg {
+    margin: 10px 0;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.sf-ai-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    font-size: 14px;
+    flex: 0 0 auto;
+}
+
+.sf-ai-avatar.bot {
+    background: #e0f2fe;
+    color: #0c4a6e;
+}
+
+.sf-ai-avatar.user {
+    background: #dcfce7;
+    color: #14532d;
+}
+
+.sf-ai-bubble {
+    max-width: 85%;
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 14px;
+    padding: 10px 12px;
+    font-size: 13px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.sf-ai-bubble.user {
+    background: #f0fdf4;
+    border-color: rgba(20, 83, 45, 0.15);
+}
+
+.sf-ai-bubble.bot {
+    background: #fff;
+}
+
+/* ✅ رسالة النظام (إلغاء/إيقاف) */
+.sf-ai-bubble.system {
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    color: #6b7280;
+    font-style: italic;
+}
+
+.sf-ai-meta {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #475569;
+}
+
+/* ✅ "جاري التفكير..." مع زر الإيقاف */
+.sf-ai-msg.thinking .sf-ai-bubble {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fef3c7;
+    border-color: #fbbf24;
+}
+
+.sf-ai-thinking-indicator {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.sf-ai-thinking-indicator span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #f59e0b;
+    animation: sf-ai-bounce 1.4s infinite ease-in-out both;
+}
+
+.sf-ai-thinking-indicator span:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.sf-ai-thinking-indicator span:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+@keyframes sf-ai-bounce {
+    0%, 80%, 100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.sf-ai-thinking-text {
+    font-size: 13px;
+    color: #92400e;
+}
+
+.sf-ai-thinking-timer {
+    font-size: 11px;
+    color: #92400e;
+    font-family: monospace;
+    min-width: 30px;
+    opacity: 0.7;
+}
+
+/* ✅ زر الإيقاف */
+.sf-ai-stop-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-right: auto;
+}
+
+.sf-ai-stop-btn:hover {
+    background: #dc2626;
+    transform: scale(1.05);
+}
+
+.sf-ai-stop-btn:active {
+    transform: scale(0.95);
+}
+
+.sf-ai-stop-btn svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* citations */
+.sf-ai-citations {
+    margin-top: 8px;
+    border-top: 1px dashed rgba(0,0,0,0.12);
+    padding-top: 8px;
+}
+
+.sf-ai-cit-btn {
+    border: 0;
+    background: transparent;
+    color: #0f172a;
+    cursor: pointer;
+    padding: 0;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+.sf-ai-cit-list {
+    margin-top: 8px;
+    display: none;
+    gap: 8px;
+    flex-direction: column;
+}
+
+.sf-ai-cit-list.open {
+    display: flex;
+}
+
+.sf-ai-cit-item {
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.06);
+    border-radius: 12px;
+    padding: 8px 10px;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.sf-ai-cit-src {
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: #0f172a;
+}
+
+/* =========================
+   Footer
+   ========================= */
+
+.sf-ai-footer {
+    padding: 10px;
+    display: flex;
+    gap: 8px;
+    background: #fff;
+    border-top: 1px solid rgba(0,0,0,0.08);
+}
+
+.sf-ai-input {
+    flex: 1;
+    border: 1px solid rgba(0,0,0,0.14);
+    border-radius: 12px;
+    padding: 10px 10px;
+    font-size: 13px;
+    outline: none;
+}
+
+.sf-ai-input:focus {
+    border-color: rgba(2,132,199,0.55);
+    box-shadow: 0 0 0 4px rgba(2,132,199,0.12);
+}
+
+.sf-ai-send {
+    border: 0;
+    cursor: pointer;
+    border-radius: 12px;
+    padding: 10px 12px;
+    background: #0284c7;
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.sf-ai-send:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.sf-ai-hint {
+    padding: 6px 12px 10px 12px;
+    font-size: 11px;
+    color: #64748b;
+    background: #fff;
+    border-top: 1px solid rgba(0,0,0,0.06);
+}
+
+/* =========================
+   Mobile tweaks
+   ========================= */
+
+@media (max-width: 480px) {
+    .sf-ai {
+        right: 12px;
+        bottom: 12px;
+    }
+
+    .sf-ai-btn {
+        width: 56px;
+        padding: 0;
+        justify-content: center;
+        border-radius: 50%;
+    }
+
+    .sf-ai-btn .sf-ai-text {
+        display: none;
+    }
+
+    .sf-ai-panel {
+        width: 94vw;
+        height: 70vh;
+    }
+
+    @keyframes sf-ai-pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(17,24,39,0.55);
+        }
+        70% {
+            box-shadow: 0 0 0 14px rgba(17,24,39,0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(17,24,39,0);
+        }
+    }
+
+    .sf-ai-btn.sf-ai-pulse {
+        animation: sf-ai-pulse 1.6s ease-out 2;
+    }
+}
+
+/* =========================
+   Feedback Buttons
+   ========================= */
+
+.sf-ai-feedback {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed rgba(0,0,0,0.1);
+}
+
+.sf-ai-feedback-btn {
+    background: transparent;
+    border: 1px solid rgba(0,0,0,0.12);
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+    line-height: 1;
+}
+
+.sf-ai-feedback-btn:hover:not(:disabled) {
+    background: rgba(0,0,0,0.05);
+    transform: scale(1.15);
+    border-color: rgba(0,0,0,0.2);
+}
+
+.sf-ai-feedback-btn:disabled {
+    cursor: not-allowed;
+}
