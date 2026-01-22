@@ -5,6 +5,7 @@ using SmartFoundation.UI.ViewModels.SmartPage;
 using SmartFoundation.UI.ViewModels.SmartTable;
 using System.Data;
 using System.Linq;
+using System.Reflection;
 using System.Text.Json;
 using static System.Collections.Specialized.BitVector32;
 
@@ -890,8 +891,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 Selectable = false,
                 ShowToolbar = false,
                 EnableCellCopy = true,
+                ShowHeader = true,
 
-                // نستبدل هنا عرظ الداتا تيبل لبروفايل لأن مافيه عمليات فقط عرظ اختياري)
+
+                // نستبدل هنا عرظ الداتا تيبل لبروفايل لأن مافيه عمليات فقط عرض اختياري)
                 ViewMode = TableViewMode.Table,
 
                 ProfileIcon = "fa-solid fa-user",    
@@ -943,7 +946,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 ToggleLabel = "عرض قوائم الانتظار",
                 ToggleIcon = "fa-solid fa-list",
                 ToggleDefaultOpen = false,
-                
+                ShowToggleCount = true,
+
+
 
 
 
@@ -1100,7 +1105,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 ToggleLabel = "عرض خطابات التسكين",
                 ToggleIcon = "fa-solid fa-file-signature",
                 ToggleDefaultOpen = false,
-                
+                ShowToggleCount = true,
+
 
                 Toolbar = new TableToolbarConfig
                 {
@@ -1320,6 +1326,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 PageTitle = dsModel1.PageTitle,
                 PanelTitle = dsModel1.PanelTitle,
                 PanelIcon = "fa fa-list",
+
                 Form =form,
                 TableDS = dsModelHasRows ? dsModel : null,
                 TableDS2 = dsModelHasRows ? dsModel1 : null,

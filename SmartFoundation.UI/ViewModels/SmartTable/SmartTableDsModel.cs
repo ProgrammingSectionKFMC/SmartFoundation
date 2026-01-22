@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using SmartFoundation.UI.ViewModels.SmartForm;
+using System.Linq;
 
 namespace SmartFoundation.UI.ViewModels.SmartTable
 {
@@ -114,6 +115,10 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         public string ToggleLabel { get; set; } = "عرض";          // نص الزر
         public string? ToggleIcon { get; set; } = "fa-solid fa-table";
         public bool ToggleDefaultOpen { get; set; } = false;      // مفتوح افتراضياً؟
+
+        public bool ShowToggleCount { get; set; } = false;   // عرض العداد؟
+
+        public int ToggleCount => Rows?.Count() ?? 0;  // يحسب عدد الصفوف في الجدول ويظهر العداد في التوقل
 
 
         public List<ProfileBadge> ProfileBadges { get; set; } = new();

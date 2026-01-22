@@ -2,6 +2,8 @@
 @using System.Text.Json.Serialization
 @using SmartFoundation.UI.ViewModels.SmartTable
 @using SmartFoundation.UI.ViewModels.SmartForm
+
+
 @model SmartTableDsModel
 @{
     var webJson = new JsonSerializerOptions(JsonSerializerDefaults.Web);
@@ -45,7 +47,10 @@
         profileTitleText = Model.ProfileTitleText ?? "",
         profileMetaFields = Model.ProfileMetaFields ?? new List<object>(),
         showPageSizeSelector = Model.ShowPageSizeSelector,
+        showToggleCount = Model.ShowToggleCount,
+        toggleCount = Model.ToggleCount,
         profileBadges = Model.ProfileBadges ?? new List<ProfileBadge>(),
+
     };
 }
 @{
@@ -55,25 +60,36 @@
     var toggleOpen = Model.ToggleDefaultOpen;
 }
 
+
+
 <div class="sf-toggle"
      x-data="{ open: @(toggleOpen ? "true" : "false") }"
      x-cloak>
 
-@if (useToggle)
-{
+
+    @if (useToggle)
+    {
         <button type="button"
                 class="sf-toggle__btn"
                 x-on:click="open = !open">
             <span class="sf-toggle__left">
                 <i class="@toggleIcon sf-toggle__icon"></i>
-                <span class="sf-toggle__label">@toggleLabel</span>
+
+                <span class="sf-toggle__label">
+                    @toggleLabel
+                    @if (Model.ShowToggleCount)
+                    {
+                        <span class="ms-2">(@Model.ToggleCount)</span>
+                    }
+
+                </span>
             </span>
 
             <i class="fa-solid fa-chevron-down sf-toggle__chev"
                :class="open ? 'is-open' : ''"></i>
         </button>
+    }
 
-}
 
 
     <div class="@(useToggle ? "sf-toggle__content" : "mt-3")"
@@ -88,7 +104,7 @@
 
 
     @* ================= LABEL ================= *@
-    @if (!string.IsNullOrWhiteSpace(Model.TabelLabel))
+    @* @if (!string.IsNullOrWhiteSpace(Model.TabelLabel))
     {
         <div class="my-6 rounded-sm border border-gray-300 bg-gray-50 px-4 py-3 shadow-sm">
             <div class="flex items-center gap-4">
@@ -103,7 +119,32 @@
                 <div class="h-px flex-1 bg-sky-200/60"></div>
             </div>
         </div>
-    }
+    } *@
+
+
+            @if (!string.IsNullOrWhiteSpace(Model.TabelLabel))
+            {
+                <div class="relative my-6 rounded-sm border border-gray-300 bg-gray-50 px-4 py-3 shadow-sm">
+
+                    <!-- خط يمين الحاوية -->
+                    <div class="absolute top-0 right-0 h-full w-1 bg-green-700"></div>
+
+                    <div class="flex items-center gap-4">
+                        <div class="h-px flex-1 bg-sky-200/60"></div>
+
+                        <div class="flex items-center gap-2 text-lg font-semibold whitespace-nowrap text-green-700">
+                            @if (!string.IsNullOrWhiteSpace(Model.TabelLabelIcon))
+                            {
+                                <i class="@Model.TabelLabelIcon text-green-700"></i>
+                            }
+                            <span>@Model.TabelLabel</span>
+                        </div>
+
+                        <div class="h-px flex-1 bg-sky-200/60"></div>
+                    </div>
+                </div>
+            }
+
 
     @* ================= TOOLBAR ================= *@
     @if (Model.ShowToolbar)

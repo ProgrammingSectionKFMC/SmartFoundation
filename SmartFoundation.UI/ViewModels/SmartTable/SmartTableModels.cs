@@ -1,5 +1,5 @@
 ﻿using SmartFoundation.UI.ViewModels.SmartForm;
-
+using System.Linq;
 namespace SmartFoundation.UI.ViewModels.SmartTable
 {
 
@@ -284,6 +284,7 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         public string? AriaLabel { get; set; }
         public bool HighContrast { get; set; } = false;
         public string? Autocomplete { get; set; }
+
 
         //public bool ShowPageSizeSelector { get; set; } = true;
         public List<TableStyleRule> StyleRules { get; set; } = new();

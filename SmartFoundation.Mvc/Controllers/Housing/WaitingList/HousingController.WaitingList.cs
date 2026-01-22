@@ -357,7 +357,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 AllowExport = true,
                 PageTitle = "نقل لقائمة التخصيص",
                 PanelTitle = "نقل لقائمة التخصيص ",
-                EnableCellCopy = false,
+                EnableCellCopy = true,
 
                 Toolbar = new TableToolbarConfig
                 {
