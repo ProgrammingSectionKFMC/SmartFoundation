@@ -21,13 +21,49 @@ namespace SmartFoundation.UI.ViewModels.SmartCharts
         StatsGrid,
         Pie3D,
         OpsBoard,
-        ExecWatch
+        ExecWatch,
+        HealthKpiRoadmap
     }
 
     public enum ChartTone { Neutral, Success, Warning, Danger, Info }
     public enum ChartCardSize { Sm, Md, Lg }
     public enum ChartCardVariant { Soft, Outline, Solid }
 
+
+
+
+    public class HealthKpiMilestone
+    {
+        public string Key { get; set; } = Guid.NewGuid().ToString("N");
+        public int Year { get; set; } = DateTime.UtcNow.Year;
+
+        public decimal Target { get; set; } = 0m;     // الهدف (مثلاً 1000)
+        public string Unit { get; set; } = "مشارك";   // "مشارك/مشترك" حسب صياغتك
+
+        public string Title { get; set; } = "";       // عنوان السنة/المرحلة
+        public string? Subtitle { get; set; }         // وصف الفعالية/المبادرة
+        public string? Badge { get; set; }            // مثل: "مستهدف"
+        public string? Tone { get; set; }             // neutral|info|success|warning|danger
+        public string? Href { get; set; }             // Drilldown
+        public string? Icon { get; set; }        // FontAwesome مثل: "fa-solid fa-heart-pulse"
+        public string? Emoji { get; set; }       // اختياري سريع: "💚"
+        public string? ImageUrl { get; set; }    // اختياري: مسار صورة صغيرة (مثلاً ~/images/health/awareness.svg)
+
+    }
+
+    public class HealthKpiSummary
+    {
+        public string Label { get; set; } = "الهدف";
+        public decimal Goal { get; set; } = 0m;       // الهدف النهائي
+        public string Unit { get; set; } = "مشارك";
+        public decimal? Current { get; set; }         // اختياري: المنجز الحالي
+        public string? Hint { get; set; }             // نص توضيحي
+        public string ValueFormat { get; set; } = "0";
+        public string? Href { get; set; }
+        public string? Icon { get; set; }        // أيقونة للعنوان
+        public string? AccentTone { get; set; }  // info/success/warning/danger
+
+    }
 
 
     public class ExecWatchKpi
@@ -471,6 +507,12 @@ namespace SmartFoundation.UI.ViewModels.SmartCharts
         public string? ExecWatchSlaHint { get; set; }
         public string? ExecWatchSlaTone { get; set; }  // info/success/warning/danger
         public string? ExecWatchSlaHref { get; set; }
+
+        // -------- Health KPI Roadmap (NEW) --------
+        public HealthKpiSummary? HealthKpiSummary { get; set; }
+        public List<HealthKpiMilestone> HealthKpiMilestones { get; set; } = new();
+        public bool HealthKpiShowProgress { get; set; } = true;
+        public bool HealthKpiAnimate { get; set; } = true;
 
 
 

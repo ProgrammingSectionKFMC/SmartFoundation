@@ -1,0 +1,696 @@
+﻿/* =========================
+   SmartCharts - Health KPI Roadmap (v2)
+   Bigger typography + premium borders + stronger cards
+   ========================= */
+
+.smart-healthkpi {
+    width: 100%;
+    --hk-text: #0f172a;
+    --hk-muted: #64748b;
+    --hk-border: rgba(226,232,240,.95);
+    --hk-border-strong: rgba(203,213,225,.95);
+    --hk-surface: #ffffff;
+    --hk-shadow: 0 14px 40px rgba(15,23,42,.08);
+    --hk-shadow-2: 0 20px 56px rgba(15,23,42,.10);
+    --hk-radius: 22px;
+}
+
+/* =========================
+   HERO
+   ========================= */
+/* =========================
+   HERO (government-grade, softer blues)
+   Very calm • formal • executive-ready
+   ========================= */
+.smart-healthkpi__hero {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 18px;
+    border-radius: var(--hk-radius);
+    /* calmer official border */
+    border: 1px solid rgba(200, 215, 235, .85);
+    /* 🔵 very soft blue-only background (no visual noise) */
+    background: radial-gradient(900px 260px at 85% -45%, rgba(59,130,246,.12), transparent 62%), radial-gradient(820px 260px at 10% 130%, rgba(99,102,241,.10), transparent 64%), linear-gradient(135deg, rgba(255,255,255,.995), rgba(242,248,255,.985));
+    box-shadow: 0 14px 36px rgba(2, 6, 23, .10), 0 6px 14px rgba(59,130,246,.05);
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+
+    /* subtle official outline */
+    .smart-healthkpi__hero::after {
+        content: "";
+        position: absolute;
+        inset: -1px;
+        border-radius: calc(var(--hk-radius) + 1px);
+        background: linear-gradient( 135deg, rgba(59,130,246,.22), rgba(99,102,241,.20) );
+        opacity: .18;
+        pointer-events: none;
+        mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+        -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+        padding: 1px;
+        box-sizing: border-box;
+    }
+
+@media (min-width: 980px) {
+    .smart-healthkpi__hero {
+        grid-template-columns: 1.35fr .65fr;
+        align-items: stretch;
+    }
+}
+
+.smart-healthkpi__hero-left {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    min-width: 0;
+}
+
+/* Icon tile – restrained & official */
+.smart-healthkpi__hero-ico {
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(200, 215, 235, .85);
+    background: linear-gradient(180deg, rgba(255,255,255,.99), rgba(240,246,252,.97));
+    box-shadow: 0 12px 28px rgba(2, 6, 23, .12);
+    color: var(--hk-text);
+    flex-shrink: 0;
+}
+
+    .smart-healthkpi__hero-ico i {
+        font-size: 22px;
+    }
+
+.smart-healthkpi__hero-text {
+    min-width: 0;
+}
+
+.smart-healthkpi__hero-label {
+    font-size: 14px;
+    color: #475569;
+    font-weight: 900;
+    letter-spacing: .2px;
+}
+
+.smart-healthkpi__hero-val {
+    margin-top: 8px;
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    flex-wrap: wrap;
+}
+
+.smart-healthkpi__num {
+    font-size: 30px;
+    font-weight: 1000;
+    color: var(--hk-text);
+    line-height: 1;
+}
+
+.smart-healthkpi__unit {
+    font-size: 14px;
+    font-weight: 900;
+    color: #334155;
+}
+
+.smart-healthkpi__hint {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #64748b;
+    font-weight: 800;
+    line-height: 1.55;
+}
+
+/* Right block (progress OR mini) */
+.smart-healthkpi__hero-right {
+    height: 100%;
+}
+
+/* Mini panel – government neutral */
+.smart-healthkpi__mini {
+    height: 100%;
+    border: 1px solid rgba(200, 215, 235, .85);
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(255,255,255,.97), rgba(242,247,252,.95));
+    box-shadow: 0 12px 30px rgba(2, 6, 23, .08);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    justify-content: center;
+}
+
+.smart-healthkpi__mini-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+/* Mini icon – flat, official */
+.smart-healthkpi__mini-ico {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, rgba(236,244,252,.96), rgba(226,236,246,.90));
+    border: 1px solid rgba(200, 215, 235, .85);
+    box-shadow: 0 6px 14px rgba(2, 6, 23, .10);
+    color: #0f172a;
+}
+
+    .smart-healthkpi__mini-ico i {
+        font-size: 14px;
+    }
+
+.smart-healthkpi__mini-txt {
+    font-size: 13px;
+    font-weight: 900;
+    color: var(--hk-text);
+    letter-spacing: .1px;
+}
+
+
+/* Progress */
+.smart-healthkpi__progress {
+    height: 100%;
+    border: 1px solid var(--hk-border);
+    border-radius: 18px;
+    background: rgba(255,255,255,.96);
+    box-shadow: 0 10px 26px rgba(15,23,42,.04);
+    padding: 14px 16px;
+}
+
+.smart-healthkpi__progress-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: baseline;
+    flex-wrap: wrap;
+}
+
+.smart-healthkpi__progress-label {
+    font-size: 13px;
+    font-weight: 900;
+    color: var(--hk-muted);
+}
+
+.smart-healthkpi__progress-val {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    font-weight: 1000;
+    color: var(--hk-text);
+}
+
+.smart-healthkpi__pct {
+    font-size: 12px;
+    color: var(--hk-muted);
+    font-weight: 900;
+}
+
+.smart-healthkpi__bar {
+    margin-top: 12px;
+    height: 14px;
+    border-radius: 999px;
+    background: rgba(226,232,240,.9);
+    border: 1px solid rgba(226,232,240,.95);
+    overflow: hidden;
+    position: relative;
+}
+
+    .smart-healthkpi__bar::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(255,255,255,.35), transparent);
+        pointer-events: none;
+    }
+
+.smart-healthkpi__bar-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #0ea5e9, #22c55e);
+    box-shadow: 0 10px 30px rgba(34,197,94,.25);
+}
+
+/* =========================
+   TIMELINE
+   ========================= */
+.smart-healthkpi__timeline {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(260px, 1fr));
+    gap: 16px;
+    padding: 10px 2px 6px;
+}
+
+@media (max-width: 1180px) {
+    .smart-healthkpi__timeline {
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(300px, 1fr);
+        grid-template-columns: none;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        padding-bottom: 12px;
+    }
+
+    .smart-healthkpi__node {
+        scroll-snap-align: start;
+    }
+}
+
+/* rail */
+.smart-healthkpi__rail {
+    position: absolute;
+    top: 34px;
+    left: 10px;
+    right: 10px;
+    height: 4px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(226,232,240,.95), rgba(226,232,240,.45));
+    pointer-events: none;
+}
+
+    .smart-healthkpi__rail::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 999px;
+        background: linear-gradient(90deg, rgba(14,165,233,.10), rgba(34,197,94,.10));
+        opacity: .55;
+    }
+
+/* node */
+.smart-healthkpi__node {
+    position: relative;
+    display: grid;
+    grid-template-rows: 64px auto;
+    gap: 12px;
+}
+
+.smart-healthkpi__pin {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 2;
+}
+
+    /* pin glow */
+    .smart-healthkpi__pin::before {
+        content: "";
+        position: absolute;
+        width: 74px;
+        height: 74px;
+        border-radius: 999px;
+        background: radial-gradient(circle, rgba(14,165,233,.12), transparent 60%);
+        opacity: .9;
+        pointer-events: none;
+    }
+
+.smart-healthkpi__pin-ico {
+    width: 56px;
+    height: 56px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--hk-border);
+    background: rgba(255,255,255,.98);
+    box-shadow: 0 16px 46px rgba(15,23,42,.10);
+    color: var(--hk-text);
+}
+
+    .smart-healthkpi__pin-ico i {
+        font-size: 22px;
+    }
+
+.smart-healthkpi__emoji {
+    font-size: 22px;
+    line-height: 1;
+}
+
+/* card (premium border) */
+.smart-healthkpi__card {
+    position: relative;
+    border-radius: 22px;
+    background: rgba(255,255,255,.98);
+    padding: 16px 16px 14px;
+    box-shadow: 0 10px 26px rgba(15,23,42,.05);
+    border: 1px solid var(--hk-border);
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    overflow: hidden;
+}
+
+    .smart-healthkpi__card::before {
+        content: "";
+        position: absolute;
+        inset: -2px;
+        border-radius: 24px;
+        background: linear-gradient(135deg, rgba(14,165,233,.22), rgba(34,197,94,.18), rgba(245,158,11,.14));
+        opacity: .18;
+        pointer-events: none;
+        mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+        -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+        padding: 1px;
+        box-sizing: border-box;
+    }
+
+    .smart-healthkpi__card::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background exporter;
+    }
+
+    /* fix invalid 'background exporter' */
+    .smart-healthkpi__card::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(248,250,252,.55), transparent 45%);
+        pointer-events: none;
+        opacity: .6;
+    }
+
+.smart-healthkpi__node:hover .smart-healthkpi__card {
+    transform: translateY(-6px);
+    box-shadow: var(--hk-shadow-2);
+    border-color: var(--hk-border-strong);
+}
+
+/* top row */
+.smart-healthkpi__card-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.smart-healthkpi__year {
+    font-size: 15px;
+    font-weight: 1000;
+    color: var(--hk-text);
+}
+
+.smart-healthkpi__badge {
+    font-size: 12px;
+    font-weight: 1000;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(226,232,240,.65);
+    border: 1px solid rgba(226,232,240,.9);
+    color: var(--hk-text);
+}
+
+/* title/subtitle */
+.smart-healthkpi__title {
+    font-size: 14px;
+    font-weight: 1000;
+    color: var(--hk-text);
+    line-height: 1.35;
+}
+
+.smart-healthkpi__subtitle {
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--hk-muted);
+    font-weight: 800;
+    line-height: 1.55;
+}
+
+/* target */
+.smart-healthkpi__target {
+    margin-top: 12px;
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(226,232,240,.95);
+}
+
+.smart-healthkpi__target-label {
+    font-size: 12px;
+    color: var(--hk-muted);
+    font-weight: 900;
+}
+
+.smart-healthkpi__target-num {
+    font-size: 16px;
+    font-weight: 1000;
+    color: var(--hk-text);
+}
+
+/* image */
+.smart-healthkpi__img {
+    margin-top: 12px;
+}
+
+    .smart-healthkpi__img img {
+        width: 100%;
+        max-height: 110px;
+        object-fit: contain;
+        opacity: .97;
+    }
+
+/* =========================
+   TONES (stronger accent)
+   ========================= */
+.smart-healthkpi__node--success .smart-healthkpi__pin::before {
+    background: radial-gradient(circle, rgba(34,197,94,.16), transparent 62%);
+}
+
+.smart-healthkpi__node--info .smart-healthkpi__pin::before {
+    background: radial-gradient(circle, rgba(14,165,233,.16), transparent 62%);
+}
+
+.smart-healthkpi__node--warning .smart-healthkpi__pin::before {
+    background: radial-gradient(circle, rgba(245,158,11,.16), transparent 62%);
+}
+
+.smart-healthkpi__node--danger .smart-healthkpi__pin::before {
+    background: radial-gradient(circle, rgba(239,68,68,.16), transparent 62%);
+}
+
+.smart-healthkpi__node--neutral .smart-healthkpi__pin::before {
+    background: radial-gradient(circle, rgba(148,163,184,.16), transparent 62%);
+}
+
+.smart-healthkpi__node--success .smart-healthkpi__card {
+    border-top: 6px solid #22c55e;
+}
+
+.smart-healthkpi__node--info .smart-healthkpi__card {
+    border-top: 6px solid #0ea5e9;
+}
+
+.smart-healthkpi__node--warning .smart-healthkpi__card {
+    border-top: 6px solid #f59e0b;
+}
+
+.smart-healthkpi__node--danger .smart-healthkpi__card {
+    border-top: 6px solid #ef4444;
+}
+
+.smart-healthkpi__node--neutral .smart-healthkpi__card {
+    border-top: 6px solid #94a3b8;
+}
+
+/* =========================
+   Accessibility / crispness
+   ========================= */
+.smart-healthkpi * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.smart-healthkpi__node:focus-within .smart-healthkpi__card {
+    outline: 2px solid rgba(14,165,233,.25);
+    outline-offset: 2px;
+}
+
+/* =========================
+   Optional: compact on very small screens
+   ========================= */
+@media (max-width: 520px) {
+    .smart-healthkpi__hero {
+        padding: 14px;
+    }
+
+    .smart-healthkpi__num {
+        font-size: 26px;
+    }
+
+    .smart-healthkpi__pin-ico {
+        width: 52px;
+        height: 52px;
+        border-radius: 18px;
+    }
+
+    .smart-healthkpi__card {
+        padding: 14px 14px 12px;
+    }
+}
+
+/* =========================
+   ICON COLORS (ADDED)
+   - Colors are applied per icon class (Font Awesome)
+   - Keeps your existing layout; only adds tasteful official colors
+   ========================= */
+
+/* Default icon styling (safe) */
+.smart-healthkpi__pin-ico i,
+.smart-healthkpi__hero-ico i,
+.smart-healthkpi__mini-ico i {
+    color: #0f172a; /* fallback */
+}
+
+    /* HERO summary icon (heart/health) */
+    .smart-healthkpi__hero-ico i.fa-heart-pulse,
+    .smart-healthkpi__hero-ico i.fa-heart,
+    .smart-healthkpi__hero-ico i.fa-hand-holding-heart {
+        color: #e11d48; /* rose */
+    }
+
+    /* Mini panel icons */
+    .smart-healthkpi__mini-ico i.fa-calendar-check,
+    .smart-healthkpi__mini-ico i.fa-calendar-days,
+    .smart-healthkpi__mini-ico i.fa-calendar {
+        color: #2563eb; /* blue */
+    }
+
+    .smart-healthkpi__mini-ico i.fa-people-group,
+    .smart-healthkpi__mini-ico i.fa-users,
+    .smart-healthkpi__mini-ico i.fa-user-group {
+        color: #0f766e; /* teal */
+    }
+
+    /* Timeline / milestone icon mappings (common KPI icons) */
+    .smart-healthkpi__pin-ico i.fa-bullseye,
+    .smart-healthkpi__pin-ico i.fa-target,
+    .smart-healthkpi__pin-ico i.fa-crosshairs {
+        color: #0ea5e9; /* sky */
+    }
+
+    .smart-healthkpi__pin-ico i.fa-flag-checkered,
+    .smart-healthkpi__pin-ico i.fa-flag {
+        color: #16a34a; /* green */
+    }
+
+    .smart-healthkpi__pin-ico i.fa-chart-line,
+    .smart-healthkpi__pin-ico i.fa-chart-simple,
+    .smart-healthkpi__pin-ico i.fa-arrow-trend-up {
+        color: #2563eb; /* blue */
+    }
+
+    .smart-healthkpi__pin-ico i.fa-chart-pie,
+    .smart-healthkpi__pin-ico i.fa-chart-column,
+    .smart-healthkpi__pin-ico i.fa-chart-bar {
+        color: #7c3aed; /* violet */
+    }
+
+    .smart-healthkpi__pin-ico i.fa-stethoscope,
+    .smart-healthkpi__pin-ico i.fa-hospital,
+    .smart-healthkpi__pin-ico i.fa-kit-medical,
+    .smart-healthkpi__pin-ico i.fa-briefcase-medical {
+        color: #0891b2; /* cyan */
+    }
+
+    .smart-healthkpi__pin-ico i.fa-shield-heart,
+    .smart-healthkpi__pin-ico i.fa-shield,
+    .smart-healthkpi__pin-ico i.fa-shield-halved {
+        color: #0f766e; /* teal */
+    }
+
+    .smart-healthkpi__pin-ico i.fa-syringe,
+    .smart-healthkpi__pin-ico i.fa-vial,
+    .smart-healthkpi__pin-ico i.fa-vials,
+    .smart-healthkpi__pin-ico i.fa-flask {
+        color: #9333ea; /* purple */
+    }
+
+    .smart-healthkpi__pin-ico i.fa-user-doctor,
+    .smart-healthkpi__pin-ico i.fa-user-nurse,
+    .smart-healthkpi__pin-ico i.fa-user-injured {
+        color: #0ea5e9; /* sky */
+    }
+
+    .smart-healthkpi__pin-ico i.fa-handshake,
+    .smart-healthkpi__pin-ico i.fa-people-carry-box,
+    .smart-healthkpi__pin-ico i.fa-people-arrows {
+        color: #0f766e; /* teal */
+    }
+
+    .smart-healthkpi__pin-ico i.fa-building,
+    .smart-healthkpi__pin-ico i.fa-building-columns,
+    .smart-healthkpi__pin-ico i.fa-landmark {
+        color: #475569; /* slate */
+    }
+
+    .smart-healthkpi__pin-ico i.fa-globe,
+    .smart-healthkpi__pin-ico i.fa-earth,
+    .smart-healthkpi__pin-ico i.fa-earth-americas {
+        color: #16a34a; /* green */
+    }
+
+    .smart-healthkpi__pin-ico i.fa-bolt,
+    .smart-healthkpi__pin-ico i.fa-wand-magic-sparkles,
+    .smart-healthkpi__pin-ico i.fa-lightbulb {
+        color: #f59e0b; /* amber */
+    }
+
+    .smart-healthkpi__pin-ico i.fa-triangle-exclamation,
+    .smart-healthkpi__pin-ico i.fa-exclamation,
+    .smart-healthkpi__pin-ico i.fa-circle-exclamation {
+        color: #f97316; /* orange */
+    }
+
+    .smart-healthkpi__pin-ico i.fa-bug,
+    .smart-healthkpi__pin-ico i.fa-skull-crossbones {
+        color: #ef4444; /* red */
+    }
+
+    .smart-healthkpi__pin-ico i.fa-check,
+    .smart-healthkpi__pin-ico i.fa-circle-check,
+    .smart-healthkpi__pin-ico i.fa-check-double {
+        color: #16a34a; /* green */
+    }
+
+    .smart-healthkpi__pin-ico i.fa-xmark,
+    .smart-healthkpi__pin-ico i.fa-circle-xmark,
+    .smart-healthkpi__pin-ico i.fa-ban {
+        color: #dc2626; /* red */
+    }
+
+/* If you want icon color to gently follow node tone too (without overriding the specific icon maps)
+   keep this at the end with lower priority by targeting only when icon has no FA class matches.
+   (No change needed; provided for safety.) */
+.smart-healthkpi__node--success .smart-healthkpi__pin-ico i {
+    /* tone fallback */
+    filter: saturate(1.05);
+}
+
+.smart-healthkpi__node--info .smart-healthkpi__pin-ico i {
+    filter: saturate(1.05);
+}
+
+.smart-healthkpi__node--warning .smart-healthkpi__pin-ico i {
+    filter: saturate(1.05);
+}
+
+.smart-healthkpi__node--danger .smart-healthkpi__pin-ico i {
+    filter: saturate(1.05);
+}
+
+.smart-healthkpi__node--neutral .smart-healthkpi__pin-ico i {
+    filter: saturate(1.02);
+}

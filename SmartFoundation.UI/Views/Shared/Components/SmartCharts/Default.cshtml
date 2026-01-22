@@ -1,4 +1,4 @@
-@model SmartFoundation.UI.ViewModels.SmartCharts.SmartChartsConfig
+ï»¿@model SmartFoundation.UI.ViewModels.SmartCharts.SmartChartsConfig
 @using SmartFoundation.UI.ViewModels.SmartCharts
 @using Microsoft.AspNetCore.Html
 @using System.Text
@@ -29,7 +29,7 @@
             <div class="min-w-0 text-center">
                 @if (!string.IsNullOrWhiteSpace(Model.Title))
                 {
-                    <div class="mx-auto max-w-[1100px] text-lg font-semibold text-gray-800 mb-3">
+                    <div class="mx-auto mb-3 max-w-[1100px] text-lg font-semibold text-gray-800">
                         @Model.Title
                     </div>
                 }
@@ -56,7 +56,7 @@
                     @* Make whole card clickable (optional) *@
                     @if (clickable)
                     {
-                        <a class="absolute inset-0 rounded-2xl focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300/50"
+                        <a class="absolute inset-0 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300/50 focus-visible:outline-none"
                            href="@(string.IsNullOrWhiteSpace(card.Href) ? "#" : card.Href)"
                            target="@(card.OpenNewTab ? "_blank" : null)"
                            rel="@(card.OpenNewTab ? "noopener" : null)"
@@ -83,7 +83,7 @@
                                 }
                             </div>
 
-                            <div class="shrink-0 flex items-center gap-2">
+                            <div class="flex shrink-0 items-center gap-2">
                                 <span class="@TonePillClass(card.Tone)"></span>
 
                                 @if (card.Actions?.Any(a => a.Show) == true)
@@ -104,8 +104,8 @@
                         @if (!string.IsNullOrWhiteSpace(card.ErrorMessage))
                         {
                             <div class="rounded-xl border border-red-200 bg-red-50 p-4">
-                                <div class="text-sm font-semibold text-red-700">ÍÏË ÎØÃ</div>
-                                <div class="mt-1 break-words text-xs text-red-600">@card.ErrorMessage</div>
+                                <div class="text-sm font-semibold text-red-700">ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½</div>
+                                <div class="mt-1 text-xs break-words text-red-600">@card.ErrorMessage</div>
                             </div>
                         }
                         else if (card.IsLoading)
@@ -115,8 +115,8 @@
                         else if (card.IsEmpty)
                         {
                             <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                                <div class="text-sm font-semibold text-gray-700">áÇ ÊæÌÏ ÈíÇäÇÊ</div>
-                                <div class="mt-1 text-xs text-gray-500">@((card.EmptyMessage ?? "áÇ ÊæÌÏ ÈíÇäÇÊ"))</div>
+                                <div class="text-sm font-semibold text-gray-700">ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½</div>
+                                <div class="mt-1 text-xs text-gray-500">@((card.EmptyMessage ?? "ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"))</div>
                             </div>
                         }
                         else
@@ -191,10 +191,14 @@
                                     @await Html.PartialAsync("~/Views/Shared/Components/SmartCharts/Cards/_ExecWatch.cshtml", card)
                                     break;
 
+                                case ChartCardType.HealthKpiRoadmap:
+                                    @await Html.PartialAsync("~/Views/Shared/Components/SmartCharts/Cards/_HealthKpiRoadmap.cshtml", card)
+                                    break;
+
 
                                 default:
                                     <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                                        <div class="text-sm font-semibold text-gray-700">äæÚ ÛíÑ ãÏÚæã</div>
+                                        <div class="text-sm font-semibold text-gray-700">ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½</div>
                                         <div class="mt-1 text-xs text-gray-500">ChartCardType: @card.Type</div>
                                     </div>
                                     break;
@@ -227,7 +231,7 @@
             _ => "p-5"
         };
 
-        // Border ÑãÇÏí ÝÇÊÍ "ÙÇåÑ" + Ùá ÎÝíÝ (ÈÏæä ! ÍÊì áÇ ÊÎÊÝí ãÚ ÅÚÏÇÏÇÊ Tailwind)
+        // Border ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ "ï¿½ï¿½ï¿½ï¿½" + ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ ! ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Tailwind)
         var baseLook =
             "bg-white " +
             "border border-gray-300 " +
@@ -235,7 +239,7 @@
             "hover:shadow-[0_8px_22px_rgba(15,23,42,0.06)] " +
             "hover:-translate-y-[20px]";
 
-        // 
+        
         var softLook =
             "bg-white/95 " +
             "border border-slate-200/60 " +
@@ -270,9 +274,9 @@
 
         var sb = new StringBuilder();
         sb.AppendLine("<div class='animate-pulse space-y-3'>");
-        sb.AppendLine("<div class='h-4 bg-gray-200 rounded w-2/3'></div>");
+        sb.AppendLine("<div class='h-4 w-2/3 rounded bg-gray-200'></div>");
         for (int i = 0; i < rows; i++)
-            sb.AppendLine("<div class='h-3 bg-gray-100 rounded'></div>");
+            sb.AppendLine("<div class='h-3 rounded bg-gray-100'></div>");
         sb.AppendLine("</div>");
 
         return new HtmlString(sb.ToString());

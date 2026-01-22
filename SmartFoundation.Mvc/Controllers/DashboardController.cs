@@ -750,7 +750,7 @@ namespace SmartFoundation.Mvc.Controllers
                         LineMaxXTicks = 6
                     },
 
-                    // ================== 12) KPI ==================
+                     //================== 12) KPI ==================
                     //new ChartCardConfig
                     //{
                     //    Type = ChartCardType.Kpi,
@@ -767,7 +767,7 @@ namespace SmartFoundation.Mvc.Controllers
                     //    Dir = "rtl"
                     //},
 
-                     //================== 13) BarHorizontal ==================
+                    // ================== 13) BarHorizontal ==================
                     //new ChartCardConfig
                     //{
                     //    Type = ChartCardType.BarHorizontal,

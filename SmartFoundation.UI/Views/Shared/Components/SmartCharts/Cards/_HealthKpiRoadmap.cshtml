@@ -1,0 +1,144 @@
+﻿@model SmartFoundation.UI.ViewModels.SmartCharts.ChartCardConfig
+@using SmartFoundation.UI.ViewModels.SmartCharts
+@using System.Globalization
+
+@{
+    var sum = Model.HealthKpiSummary;
+    var ms = (Model.HealthKpiMilestones ?? new List<HealthKpiMilestone>()).OrderBy(x => x.Year).ToList();
+
+    var valueFormat = sum?.ValueFormat ?? "0";
+    decimal goal = sum?.Goal ?? (ms.Any() ? ms.Max(x => x.Target) : 0m);
+    decimal current = sum?.Current ?? 0m;
+
+    var hasProgress = Model.HealthKpiShowProgress && goal > 0 && (sum?.Current != null);
+    var pct = (goal <= 0) ? 0 : Math.Max(0, Math.Min(100, (double)(current / goal * 100m)));
+    var hostId = $"healthkpi_{Model.Id}";
+
+    string tone = (sum?.AccentTone ?? "info").ToLower();
+    string sumIcon = sum?.Icon ?? "fa-solid fa-heart-pulse";
+}
+
+<div id="@hostId" class="smart-healthkpi smart-healthkpi--@tone" dir="@Model.Dir"
+     data-animate="@(Model.HealthKpiAnimate ? "1" : "0")"
+     data-has-progress="@(hasProgress ? "1" : "0")"
+     data-pct="@pct.ToString("0.##", CultureInfo.InvariantCulture)">
+
+    @* HERO SUMMARY *@
+    <div class="smart-healthkpi__hero">
+        <div class="smart-healthkpi__hero-left">
+            <div class="smart-healthkpi__hero-ico">
+                <i class="@sumIcon"></i>
+            </div>
+
+            <div class="smart-healthkpi__hero-text">
+                <div class="smart-healthkpi__hero-label">@((sum?.Label ?? "المستهدف النهائي للخطة"))</div>
+
+                <div class="smart-healthkpi__hero-val">
+                    <span class="smart-healthkpi__num">@goal.ToString(valueFormat)</span>
+                    <span class="smart-healthkpi__unit">@((sum?.Unit ?? "مشارك"))</span>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(sum?.Hint))
+                {
+                    <div class="smart-healthkpi__hint">@sum!.Hint</div>
+                }
+            </div>
+        </div>
+
+        <div class="smart-healthkpi__hero-right">
+            @if (hasProgress)
+            {
+                <div class="smart-healthkpi__progress">
+                    <div class="smart-healthkpi__progress-head">
+                        <div class="smart-healthkpi__progress-label">المنجز الحالي</div>
+                        <div class="smart-healthkpi__progress-val">
+                            <span class="smart-healthkpi__num">@current.ToString(valueFormat)</span>
+                            <span class="smart-healthkpi__unit">@((sum?.Unit ?? "مشارك"))</span>
+                            <span class="smart-healthkpi__pct">(@pct.ToString("0.#")%)</span>
+                        </div>
+                    </div>
+                    <div class="smart-healthkpi__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@pct.ToString("0")">
+                        <div class="smart-healthkpi__bar-fill"></div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="smart-healthkpi__mini">
+                    <div class="smart-healthkpi__mini-row">
+                        <span class="smart-healthkpi__mini-ico"><i class="fa-solid fa-calendar-check"></i></span>
+                        <span class="smart-healthkpi__mini-txt">خطة مرحلية (2026 - 2028)</span>
+                    </div>
+                    <div class="smart-healthkpi__mini-row">
+                        <span class="smart-healthkpi__mini-ico"><i class="fa-solid fa-people-group"></i></span>
+                        <span class="smart-healthkpi__mini-txt">توعية • توسّع • مبادرات</span>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    @* TIMELINE *@
+    <div class="smart-healthkpi__timeline" role="list">
+        <div class="smart-healthkpi__rail" aria-hidden="true"></div>
+
+        @for (int i = 0; i < ms.Count; i++)
+        {
+            var x = ms[i];
+            var t = (x.Tone ?? "info").ToLower();
+            var clickable = !string.IsNullOrWhiteSpace(x.Href);
+
+            var icon = string.IsNullOrWhiteSpace(x.Icon) ? "fa-solid fa-bullseye" : x.Icon;
+            var emo = string.IsNullOrWhiteSpace(x.Emoji) ? "" : x.Emoji!.Trim();
+
+            <div class="smart-healthkpi__node smart-healthkpi__node--@t"
+                 role="listitem"
+                 data-href="@(x.Href ?? "")"
+                 style="cursor:@(clickable ? "pointer" : "default")">
+
+                <div class="smart-healthkpi__pin">
+                    <div class="smart-healthkpi__pin-ico">
+                        @if (!string.IsNullOrWhiteSpace(emo))
+                        {
+                            <span class="smart-healthkpi__emoji">@emo</span>
+                        }
+                        else
+                        {
+                            <i class="@icon"></i>
+                        }
+                    </div>
+                </div>
+
+                <div class="smart-healthkpi__card">
+                    <div class="smart-healthkpi__card-top">
+                        <div class="smart-healthkpi__year">@x.Year</div>
+                        @if (!string.IsNullOrWhiteSpace(x.Badge))
+                        {
+                            <div class="smart-healthkpi__badge">@x.Badge</div>
+                        }
+                    </div>
+
+                    <div class="smart-healthkpi__title">@x.Title</div>
+
+                    @if (!string.IsNullOrWhiteSpace(x.Subtitle))
+                    {
+                        <div class="smart-healthkpi__subtitle">@x.Subtitle</div>
+                    }
+
+                    <div class="smart-healthkpi__target">
+                        <span class="smart-healthkpi__target-label">المستهدف</span>
+                        <span class="smart-healthkpi__target-num">@x.Target.ToString(valueFormat)</span>
+                        <span class="smart-healthkpi__unit">@x.Unit</span>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(x.ImageUrl))
+                    {
+                        <div class="smart-healthkpi__img">
+                            <img src="@x.ImageUrl" alt="" />
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>

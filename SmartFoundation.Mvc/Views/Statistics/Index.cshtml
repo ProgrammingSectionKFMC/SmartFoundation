@@ -1,0 +1,138 @@
+﻿@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@model SmartFoundation.UI.ViewModels.SmartPage.SmartPageViewModel
+
+@{
+    Layout = null;
+    ViewData["Title"] = Model.PageTitle ?? "لوحة الإحصاءات";
+}
+
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"]</title>
+
+    <!-- Site / Tailwind -->
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+    <!-- SmartCharts CSS -->
+    <link rel="stylesheet" href="~/css/smartcharts.donut.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/smartcharts.line.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/smartcharts.kpi.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/smartcharts.barh.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/smartcharts.funnel.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/smartcharts.gauge.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/smartcharts.occupancy.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/smartcharts.columnpro.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/smartcharts.rings.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/smartcharts.bullet.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/smartcharts.treemap.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/smartcharts.statusstack.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/smartcharts.waterfall.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/smartcharts.statsgrid.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/smartcharts.pie3d.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/smartcharts.opsboard.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/smartcharts.execwatch.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/statistics.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/smartcharts.healthkpiroadmap.css" asp-append-version="true" />
+
+    <!-- FontAwesome (إذا غير موجودة عندك احذفها) -->
+@*     <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+          referrerpolicy="no-referrer" /> *@
+
+</head>
+
+<body class="p-6">
+    <div class="page">
+
+        <!-- Header -->
+        <header class="topbar">
+            <div class="topbar-inner">
+                <div class="brand">
+                    <div class="brand-badge" aria-hidden="true">
+                        <i class="fa-solid fa-chart-simple" style="font-size:20px;"></i>
+                    </div>
+                    <div>
+                        <h1 class="brand-title">@Model.PageTitle</h1>
+                        <p class="brand-sub">لوحة مؤشرات الأداء والاتجاهات الزمنية</p>
+                    </div>
+                </div>
+
+                <div class="meta">
+                    <div class="pill">
+                        <i class="fa-regular fa-calendar"></i>
+                        <span>@DateTime.Now.ToString("yyyy/MM/dd")</span>
+                    </div>
+                    <div class="pill">
+                        <i class="fa-regular fa-clock"></i>
+                        <span>@DateTime.Now.ToString("HH:mm")</span>
+                    </div>
+                    <div class="pill">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        <span>النسخة الأولى</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Body -->
+        <main class="shell">
+            <div class="shell-head">
+                <h2>
+                    <i class="fa-solid fa-chart-line" style="color:var(--gov-primary);"></i>
+                    <span>المؤشرات والرسوم البيانية</span>
+                </h2>
+                @* <p class="hint">عرض مدمج للرسوم ضمن الصفحة</p> *@
+            </div>
+
+            <div class="content">
+                @if (Model?.Charts is not null)
+                {
+                    <div class="charts-wrap">
+                        @await Component.InvokeAsync(
+                        "SmartCharts",
+                                        new { model = Model.Charts, embedded = true }
+                                        )
+                </div>
+                                }
+                else
+                {
+                    <div class="empty">
+                        <i class="fa-solid fa-circle-info"></i>
+                        <div>
+                            <div style="font-weight:800; color:var(--gov-text);">لا توجد بيانات لعرضها</div>
+                            <div style="margin-top:4px; font-size:12px;">
+                                تأكد من تعبئة <b>Model.Charts</b> قبل استدعاء الصفحة.
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </main>
+
+    </div>
+
+    <!-- SmartCharts JS -->
+    <script src="~/js/smartcharts.donut.js" asp-append-version="true"></script>
+    <script src="~/js/smartcharts.line.js" asp-append-version="true"></script>
+    <script src="~/js/smartcharts.kpi.js" asp-append-version="true"></script>
+    <script src="~/js/smartcharts.barh.js" asp-append-version="true"></script>
+    <script src="~/js/smartcharts.funnel.js" asp-append-version="true"></script>
+    <script src="~/js/smartcharts.gauge.js" asp-append-version="true"></script>
+    <script src="~/js/smartcharts.occupancy.js" asp-append-version="true"></script>
+    <script src="~/js/smartcharts.columnpro.js" asp-append-version="true"></script>
+    <script src="~/js/smartcharts.rings.js" asp-append-version="true"></script>
+    <script src="~/js/smartcharts.bullet.js" asp-append-version="true"></script>
+    <script src="~/js/smartcharts.treemap.js" asp-append-version="true"></script>
+    <script src="~/js/smartcharts.statusstack.js" asp-append-version="true"></script>
+    <script src="~/js/smartcharts.waterfall.js" asp-append-version="true"></script>
+    <script src="~/js/smartcharts.statsgrid.js" asp-append-version="true"></script>
+    <script src="~/js/smartcharts.pie3d.js" asp-append-version="true"></script>
+    <script src="~/js/smartcharts.opsboard.js" asp-append-version="true"></script>
+    <script src="~/js/smartcharts.execwatch.js" asp-append-version="true"></script>
+    <script src="~/js/smartcharts.healthkpiroadmap.js" asp-append-version="true"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+</body>
+</html>
