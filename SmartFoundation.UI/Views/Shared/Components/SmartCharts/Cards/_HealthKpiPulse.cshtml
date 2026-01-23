@@ -1,0 +1,167 @@
+@model SmartFoundation.UI.ViewModels.SmartCharts.ChartCardConfig
+@using SmartFoundation.UI.ViewModels.SmartCharts
+@using System.Globalization
+
+@{
+    var sum = Model.HealthKpiSummary;
+    var ms = (Model.HealthKpiMilestones ?? new List<HealthKpiMilestone>()).OrderBy(x => x.Year).ToList();
+
+    var fmt = sum?.ValueFormat ?? "0";
+    decimal goal = sum?.Goal ?? (ms.Any() ? ms.Max(x => x.Target) : 0m);
+    decimal actual = sum?.Current ?? 0m;
+
+    // „Œÿÿ Õ Ï «·”‰… «·Õ«·Ì… ( —«ﬂ„Ì Õ”» «·”‰…)
+    var nowYear = DateTime.Now.Year;
+    decimal plannedToDate = 0m;
+
+    // ·Ê ⁄‰œﬂ Targets (600 + 200 + 200) ﬂﬁÌ„ „—«Õ· ì≈÷«›Ì…î° ‰Ã„⁄Â« Õ Ï ”‰… «·ÌÊ„
+    foreach (var m in ms)
+    {
+        if (m.Year <= nowYear)
+            plannedToDate += m.Target;
+    }
+
+    plannedToDate = Math.Min(plannedToDate, goal);
+
+    decimal remaining = Math.Max(0m, goal - actual);
+
+    double pctActual = goal <= 0 ? 0 : (double)(actual / goal * 100m);
+    pctActual = Math.Max(0, Math.Min(100, pctActual));
+
+    double pctPlan = goal <= 0 ? 0 : (double)(plannedToDate / goal * 100m);
+    pctPlan = Math.Max(0, Math.Min(100, pctPlan));
+
+    var hostId = $"healthkpipulse_{Model.Id}";
+    var dir = string.IsNullOrWhiteSpace(Model.Dir) ? "rtl" : Model.Dir;
+
+    var payload = new
+    {
+        id = hostId,
+        dir,
+        goal = (double)goal,
+        actual = (double)actual,
+        plannedToDate = (double)plannedToDate,
+        unit = sum?.Unit ?? "",
+        fmt,
+        animate = Model.HealthKpiAnimate,
+        milestones = ms.Select(x => new
+        {
+            key = x.Key,
+            year = x.Year,
+            title = x.Title,
+            subtitle = x.Subtitle,
+            target = (double)x.Target,
+            unit = x.Unit ?? "",
+            badge = x.Badge ?? "",
+            tone = x.Tone ?? "info",
+            icon = x.Icon ?? "",
+            emoji = x.Emoji ?? "",
+            href = x.Href ?? ""
+        }).ToList()
+    };
+}
+
+<div id="@hostId" class="smart-healthkpipulse @Model.ExtraCss" dir="@dir">
+    <div class="smart-healthkpipulse__top">
+        <div class="smart-healthkpipulse__title">
+            <div class="smart-healthkpipulse__head">
+                @if (!string.IsNullOrWhiteSpace(Model.Icon))
+                {
+                    <i class="@Model.Icon smart-healthkpipulse__head-ic"></i>
+                }
+                <div class="smart-healthkpipulse__head-txt">
+                    <div class="smart-healthkpipulse__h1">@Model.Title</div>
+                    @if (!string.IsNullOrWhiteSpace(Model.Subtitle))
+                    {
+                        <div class="smart-healthkpipulse__h2">@Model.Subtitle</div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="smart-healthkpipulse__kpis">
+            <div class="smart-healthkpipulse__kpi">
+                <div class="smart-healthkpipulse__kpi-lbl">«·Âœ›</div>
+                <div class="smart-healthkpipulse__kpi-val" data-num="goal"></div>
+            </div>
+            <div class="smart-healthkpipulse__kpi">
+                <div class="smart-healthkpipulse__kpi-lbl">«·„‰Ã“</div>
+                <div class="smart-healthkpipulse__kpi-val" data-num="actual"></div>
+            </div>
+            <div class="smart-healthkpipulse__kpi">
+                <div class="smart-healthkpipulse__kpi-lbl">«·„ »ﬁÌ</div>
+                <div class="smart-healthkpipulse__kpi-val" data-num="remaining"></div>
+            </div>
+            <div class="smart-healthkpipulse__kpi">
+                <div class="smart-healthkpipulse__kpi-lbl">«·„Œÿÿ Õ Ï «·¬‰</div>
+                <div class="smart-healthkpipulse__kpi-val" data-num="planned"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="smart-healthkpipulse__grid">
+        <div class="smart-healthkpipulse__gauge">
+            <div class="smart-healthkpipulse__gaugeWrap">
+                <svg class="smart-healthkpipulse__donut" viewBox="0 0 120 120" aria-hidden="true">
+                    <circle class="smart-healthkpipulse__donutBg" cx="60" cy="60" r="46"></circle>
+                    <circle class="smart-healthkpipulse__donutFg" cx="60" cy="60" r="46"></circle>
+                </svg>
+
+                <div class="smart-healthkpipulse__gaugeCenter">
+                    <div class="smart-healthkpipulse__pct" data-pct="actual">@pctActual.ToString("0", CultureInfo.InvariantCulture)%</div>
+                    <div class="smart-healthkpipulse__sub">
+                        <span class="smart-healthkpipulse__subA" data-num="actual"></span>
+                        <span class="smart-healthkpipulse__subSep">/</span>
+                        <span class="smart-healthkpipulse__subB" data-num="goal"></span>
+                        <span class="smart-healthkpipulse__unit">@sum?.Unit</span>
+                    </div>
+                    <div class="smart-healthkpipulse__plan">
+                        «·„Œÿÿ: <span data-pct="plan">@pctPlan.ToString("0", CultureInfo.InvariantCulture)%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="smart-healthkpipulse__bars">
+            <div class="smart-healthkpipulse__barsHead">
+                <div class="smart-healthkpipulse__barsT"> ›«’Ì· «·„—«Õ·</div>
+                <div class="smart-healthkpipulse__barsHint">‰”»… «·„—Õ·… „‰ «·Âœ› + „ƒ‘—  Õﬁﬁ (≈–«  Ê›— Actual)</div>
+            </div>
+
+            <div class="smart-healthkpipulse__list">
+                @foreach (var m in ms)
+                {
+                    var pctOfGoal = goal <= 0 ? 0 : (double)(m.Target / goal * 100m);
+                    pctOfGoal = Math.Max(0, Math.Min(100, pctOfGoal));
+
+                    <a class="smart-healthkpipulse__row" href="@(string.IsNullOrWhiteSpace(m.Href) ? "#" : m.Href)">
+                        <div class="smart-healthkpipulse__rowTop">
+                            <div class="smart-healthkpipulse__rowTitle">
+                                <span class="smart-healthkpipulse__emoji">@m.Emoji</span>
+                                <span class="smart-healthkpipulse__t">@m.Title</span>
+                                <span class="smart-healthkpipulse__badge">@m.Badge</span>
+                            </div>
+                            <div class="smart-healthkpipulse__rowVal">
+                                <span class="smart-healthkpipulse__num">@m.Target.ToString(fmt, CultureInfo.InvariantCulture)</span>
+                                <span class="smart-healthkpipulse__u">@m.Unit</span>
+                            </div>
+                        </div>
+
+                        <div class="smart-healthkpipulse__track" title="‰”»… «·„—Õ·… „‰ «·Âœ› «·‰Â«∆Ì">
+                            <div class="smart-healthkpipulse__fill" style="width:@pctOfGoal.ToString("0.##", CultureInfo.InvariantCulture)%"></div>
+                        </div>
+
+                        <div class="smart-healthkpipulse__meta">
+                            <span>„‰ «·Âœ›: @pctOfGoal.ToString("0", CultureInfo.InvariantCulture)%</span>
+                            <span>«·”‰…: @m.Year</span>
+                        </div>
+                    </a>
+                }
+            </div>
+        </div>
+    </div>
+
+    <script type="application/json" id="@($"{hostId}_cfg")">
+        @Html.Raw(System.Text.Json.JsonSerializer.Serialize(payload))
+    </script>
+</div>

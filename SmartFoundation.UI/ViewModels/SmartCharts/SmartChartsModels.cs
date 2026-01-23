@@ -22,13 +22,56 @@ namespace SmartFoundation.UI.ViewModels.SmartCharts
         Pie3D,
         OpsBoard,
         ExecWatch,
-        HealthKpiRoadmap
+        HealthKpiRoadmap,
+        HealthKpiPulse,
+        HealthKpiAnnual
     }
 
     public enum ChartTone { Neutral, Success, Warning, Danger, Info }
     public enum ChartCardSize { Sm, Md, Lg }
     public enum ChartCardVariant { Soft, Outline, Solid }
 
+
+
+    // =========================
+    // HealthKpiAnnual - Program (7 Indicators)
+    // =========================
+    public class HealthKpiIndicator
+    {
+        public string Key { get; set; } = "";
+        public string Title { get; set; } = "";
+        public string Subtitle { get; set; } = "";
+
+        public string Unit { get; set; } = "";         // "مشارك" / "%" / "منزل" ...
+        public string Icon { get; set; } = "";         // fontawesome
+        public string Emoji { get; set; } = "";        // 🧠 🚲 💧 ...
+        public string Tone { get; set; } = "info";     // info/warning/success/danger...
+
+        public decimal? PlanGoal { get; set; }         // الهدف النهائي للمؤشر (اختياري)
+        public string Hint { get; set; } = "";
+        public string Href { get; set; } = "";
+
+        public List<HealthKpiIndicatorYear> Years { get; set; } = new();
+    }
+
+    public class HealthKpiIndicatorYear
+    {
+        public string Key { get; set; } = "";          // y2026 ...
+        public int Year { get; set; }
+
+        public string Title { get; set; } = "";        // وصف سنة (التوعية... التوسع...)
+        public string Subtitle { get; set; } = "";
+
+        public decimal? Target { get; set; }           // هدف السنة (اختياري)
+        public decimal? Actual { get; set; }           // منجز السنة (اختياري)
+
+        public string Badge { get; set; } = "";        // "مستهدف 2026"
+        public string Tone { get; set; } = "info";
+        public string Icon { get; set; } = "";
+        public string Emoji { get; set; } = "";
+
+        public string Href { get; set; } = "";
+}
 
 
 
@@ -48,6 +91,7 @@ namespace SmartFoundation.UI.ViewModels.SmartCharts
         public string? Icon { get; set; }        // FontAwesome مثل: "fa-solid fa-heart-pulse"
         public string? Emoji { get; set; }       // اختياري سريع: "💚"
         public string? ImageUrl { get; set; }    // اختياري: مسار صورة صغيرة (مثلاً ~/images/health/awareness.svg)
+        public decimal? Actual { get; set; }
 
     }
 
@@ -513,6 +557,9 @@ namespace SmartFoundation.UI.ViewModels.SmartCharts
         public List<HealthKpiMilestone> HealthKpiMilestones { get; set; } = new();
         public bool HealthKpiShowProgress { get; set; } = true;
         public bool HealthKpiAnimate { get; set; } = true;
+        // داخل ChartCardConfig (نفس مكان HealthKpiSummary / HealthKpiMilestones)
+        public List<HealthKpiIndicator>? HealthKpiIndicators { get; set; }
+
 
 
 

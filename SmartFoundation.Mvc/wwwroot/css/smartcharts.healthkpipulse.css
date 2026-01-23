@@ -1,0 +1,283 @@
+﻿.smart-healthkpipulse {
+    width: 100%;
+    padding: 18px;
+    border-radius: 14px;
+    background: rgba(248,250,252,.85);
+}
+
+.smart-healthkpipulse__top {
+    display: grid;
+    grid-template-columns: 1.2fr .8fr;
+    gap: 14px;
+    align-items: stretch;
+}
+
+.smart-healthkpipulse__head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.smart-healthkpipulse__head-ic {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: rgba(15,118,110,.10);
+    color: rgba(15,118,110,1);
+}
+
+.smart-healthkpipulse__h1 {
+    font-weight: 800;
+    font-size: 16px;
+    color: #0f172a;
+    line-height: 1.2
+}
+
+.smart-healthkpipulse__h2 {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #64748b;
+    line-height: 1.4
+}
+
+.smart-healthkpipulse__kpis {
+    display: grid;
+    grid-template-columns: repeat(4,1fr);
+    gap: 10px;
+}
+
+.smart-healthkpipulse__kpi {
+    background: rgba(255,255,255,.8);
+    border: 1px solid rgba(203,213,225,.65);
+    border-radius: 12px;
+    padding: 10px 12px;
+}
+
+.smart-healthkpipulse__kpi-lbl {
+    font-size: 11px;
+    color: #64748b
+}
+
+.smart-healthkpipulse__kpi-val {
+    margin-top: 6px;
+    font-size: 18px;
+    font-weight: 900;
+    color: #0f172a
+}
+
+.smart-healthkpipulse__grid {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 14px;
+}
+
+.smart-healthkpipulse__gauge {
+    background: rgba(255,255,255,.8);
+    border: 1px solid rgba(203,213,225,.65);
+    border-radius: 14px;
+    padding: 14px;
+    display: grid;
+    place-items: center;
+}
+
+.smart-healthkpipulse__gaugeWrap {
+    position: relative;
+    width: 240px;
+    height: 240px
+}
+
+.smart-healthkpipulse__donut {
+    width: 240px;
+    height: 240px;
+    transform: rotate(-90deg)
+}
+
+.smart-healthkpipulse__donutBg {
+    fill: none;
+    stroke: rgba(148,163,184,.35);
+    stroke-width: 14;
+}
+
+.smart-healthkpipulse__donutFg {
+    fill: none;
+    stroke: rgba(15,118,110,1);
+    stroke-width: 14;
+    stroke-linecap: round;
+    stroke-dasharray: 0 999;
+    transition: stroke-dasharray .9s ease;
+}
+
+.smart-healthkpipulse__gaugeCenter {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    padding: 10px;
+}
+
+.smart-healthkpipulse__pct {
+    font-size: 30px;
+    font-weight: 950;
+    color: #0f172a
+}
+
+.smart-healthkpipulse__sub {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #334155
+}
+
+.smart-healthkpipulse__unit {
+    margin-inline-start: 6px;
+    color: #64748b
+}
+
+.smart-healthkpipulse__plan {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #64748b
+}
+
+.smart-healthkpipulse__bars {
+    background: rgba(255,255,255,.8);
+    border: 1px solid rgba(203,213,225,.65);
+    border-radius: 14px;
+    padding: 14px;
+}
+
+.smart-healthkpipulse__barsHead {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.smart-healthkpipulse__barsT {
+    font-size: 13px;
+    font-weight: 900;
+    color: #0f172a
+}
+
+.smart-healthkpipulse__barsHint {
+    font-size: 11px;
+    color: #64748b
+}
+
+.smart-healthkpipulse__list {
+    display: grid;
+    gap: 10px
+}
+
+.smart-healthkpipulse__row {
+    display: block;
+    padding: 10px 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(226,232,240,.9);
+    background: rgba(248,250,252,.7);
+    text-decoration: none;
+}
+
+    .smart-healthkpipulse__row:hover {
+        background: rgba(248,250,252,.95)
+    }
+
+.smart-healthkpipulse__rowTop {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: center;
+}
+
+.smart-healthkpipulse__rowTitle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0
+}
+
+.smart-healthkpipulse__emoji {
+    font-size: 16px
+}
+
+.smart-healthkpipulse__t {
+    font-size: 12px;
+    font-weight: 850;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 520px;
+}
+
+.smart-healthkpipulse__badge {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(203,213,225,.9);
+    background: rgba(255,255,255,.75);
+    color: #334155;
+}
+
+.smart-healthkpipulse__rowVal {
+    font-size: 12px;
+    color: #0f172a;
+    font-weight: 900;
+    white-space: nowrap
+}
+
+.smart-healthkpipulse__u {
+    margin-inline-start: 6px;
+    color: #64748b;
+    font-weight: 700
+}
+
+.smart-healthkpipulse__track {
+    margin-top: 8px;
+    height: 10px;
+    border-radius: 999px;
+    background: rgba(148,163,184,.25);
+    overflow: hidden;
+}
+
+.smart-healthkpipulse__fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(15,118,110,.95), rgba(2,132,199,.95));
+}
+
+.smart-healthkpipulse__meta {
+    margin-top: 8px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #64748b;
+}
+
+@media (max-width: 1024px) {
+    .smart-healthkpipulse__top {
+        grid-template-columns: 1fr
+    }
+
+    .smart-healthkpipulse__kpis {
+        grid-template-columns: repeat(2,1fr)
+    }
+
+    .smart-healthkpipulse__grid {
+        grid-template-columns: 1fr
+    }
+
+    .smart-healthkpipulse__gaugeWrap {
+        width: 220px;
+        height: 220px
+    }
+
+    .smart-healthkpipulse__donut {
+        width: 220px;
+        height: 220px
+    }
+}

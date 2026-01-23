@@ -3,7 +3,7 @@
 
 @{
     Layout = null;
-    ViewData["Title"] = Model.PageTitle ?? "لوحة الإحصاءات";
+    ViewData["Title"] = Model.PageTitle ?? "المدن الصحية";
 }
 
 <!doctype html>
@@ -36,83 +36,28 @@
     <link rel="stylesheet" href="~/css/smartcharts.execwatch.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/statistics.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/smartcharts.healthkpiroadmap.css" asp-append-version="true" />
-
-    <!-- FontAwesome (إذا غير موجودة عندك احذفها) -->
-@*     <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
-          referrerpolicy="no-referrer" /> *@
-
+    <link rel="stylesheet" href="~/css/smartcharts.healthkpipulse.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/smartcharts.healthkpiy.css" asp-append-version="true" />
 </head>
 
 <body class="p-6">
-    <div class="page">
 
-        <!-- Header -->
-        <header class="topbar">
-            <div class="topbar-inner">
-                <div class="brand">
-                    <div class="brand-badge" aria-hidden="true">
-                        <i class="fa-solid fa-chart-simple" style="font-size:20px;"></i>
-                    </div>
-                    <div>
-                        <h1 class="brand-title">@Model.PageTitle</h1>
-                        <p class="brand-sub">لوحة مؤشرات الأداء والاتجاهات الزمنية</p>
-                    </div>
-                </div>
-
-                <div class="meta">
-                    <div class="pill">
-                        <i class="fa-regular fa-calendar"></i>
-                        <span>@DateTime.Now.ToString("yyyy/MM/dd")</span>
-                    </div>
-                    <div class="pill">
-                        <i class="fa-regular fa-clock"></i>
-                        <span>@DateTime.Now.ToString("HH:mm")</span>
-                    </div>
-                    <div class="pill">
-                        <i class="fa-solid fa-shield-halved"></i>
-                        <span>النسخة الأولى</span>
-                    </div>
-                </div>
+    @if (Model?.Charts is not null)
+    {
+        @await Component.InvokeAsync(
+        "SmartCharts",
+        new { model = Model.Charts, embedded = true }
+        )
+        }
+    else
+    {
+        <div class="rounded-xl border border-slate-200 bg-white p-4">
+            <div class="text-sm font-semibold text-slate-700">لا توجد بيانات لعرضها</div>
+            <div class="mt-1 text-xs text-slate-500">
+                تأكد من تعبئة <b>Model.Charts</b> قبل استدعاء الصفحة.
             </div>
-        </header>
-
-        <!-- Body -->
-        <main class="shell">
-            <div class="shell-head">
-                <h2>
-                    <i class="fa-solid fa-chart-line" style="color:var(--gov-primary);"></i>
-                    <span>المؤشرات والرسوم البيانية</span>
-                </h2>
-                @* <p class="hint">عرض مدمج للرسوم ضمن الصفحة</p> *@
-            </div>
-
-            <div class="content">
-                @if (Model?.Charts is not null)
-                {
-                    <div class="charts-wrap">
-                        @await Component.InvokeAsync(
-                        "SmartCharts",
-                                        new { model = Model.Charts, embedded = true }
-                                        )
-                </div>
-                                }
-                else
-                {
-                    <div class="empty">
-                        <i class="fa-solid fa-circle-info"></i>
-                        <div>
-                            <div style="font-weight:800; color:var(--gov-text);">لا توجد بيانات لعرضها</div>
-                            <div style="margin-top:4px; font-size:12px;">
-                                تأكد من تعبئة <b>Model.Charts</b> قبل استدعاء الصفحة.
-                            </div>
-                        </div>
-                    </div>
-                }
-            </div>
-        </main>
-
-    </div>
+        </div>
+    }
 
     <!-- SmartCharts JS -->
     <script src="~/js/smartcharts.donut.js" asp-append-version="true"></script>
@@ -133,6 +78,28 @@
     <script src="~/js/smartcharts.opsboard.js" asp-append-version="true"></script>
     <script src="~/js/smartcharts.execwatch.js" asp-append-version="true"></script>
     <script src="~/js/smartcharts.healthkpiroadmap.js" asp-append-version="true"></script>
+    <script src="~/js/smartcharts.healthkpiy.js" asp-append-version="true"></script>
+    <script src="~/js/smartcharts.healthkpipulse.js" asp-append-version="true"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <script>
+        (function () {
+            document.querySelectorAll('.smart-healthkpipulse[id]').forEach(function (el) {
+                if (window.SmartCharts && SmartCharts.renderHealthKpiPulse) {
+                    SmartCharts.renderHealthKpiPulse(el.id);
+                }
+            });
+        })();
+    </script>
+
+    <script>
+        (function () {
+            document.querySelectorAll('.smart-healthkpiannual[id]').forEach(function (el) {
+                if (window.SmartCharts && SmartCharts.renderHealthKpiAnnual) {
+                    SmartCharts.renderHealthKpiAnnual(el.id);
+                }
+            });
+        })();
+    </script>
 </body>
 </html>
