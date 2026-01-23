@@ -34,24 +34,25 @@ namespace SmartFoundation.Mvc.Controllers
                             {
                                 // =========================================================
                                 // KPI 1) الوصول إلى المشاركين في البرنامج الصحي (1000 مشارك)
+                                // (توزيع تراكمي: 600 / +200 / +200)
                                 // =========================================================
                                 new HealthKpiIndicator
                                 {
                                     Key = "kpi1",
                                     Title = "الوصول إلى المشاركين في البرنامج الصحي",
-                                    Subtitle = "خطة 2026–2028",
+                                    Subtitle = "خطة 2026–2028 (تراكمي)",
                                     Unit = "مشارك",
                                     Emoji = "🧠",
                                     Icon = "fa-solid fa-person-walking",
                                     Tone = "info",
                                     PlanGoal = 1000,
-                                    Hint = "مستهدف البرنامج حتى نهاية 2028.",
+                                    Hint = "مستهدف تراكمي حتى نهاية 2028.",
                                     Years = new List<HealthKpiIndicatorYear>
                                     {
                                         new HealthKpiIndicatorYear{
                                             Key="y2026", Year=2026,
                                             Title="فعاليات توعوية حول نمط الحياة الصحي",
-                                            Subtitle="الوصول إلى 600 مشترك",
+                                            Subtitle="الوصول إلى 600 مشارك (مرحلة أولى)",
                                             Target=600, Actual=400,
                                             Badge="مستهدف 2026", Tone="info", Emoji="🧠",
                                             Icon="fa-solid fa-person-walking"
@@ -59,24 +60,26 @@ namespace SmartFoundation.Mvc.Controllers
                                         new HealthKpiIndicatorYear{
                                             Key="y2027", Year=2027,
                                             Title="التوسع في برنامج حياة صحية",
-                                            Subtitle="الوصول إلى 800 مشترك",
-                                            Target=800, Actual=0,
+                                            Subtitle="إضافة 200 مشارك (إجمالي 800)",
+                                            Target=200, Actual=0,
                                             Badge="مستهدف 2027", Tone="warning", Emoji="📈",
                                             Icon="fa-solid fa-up-right-and-down-left-from-center"
                                         },
                                         new HealthKpiIndicatorYear{
                                             Key="y2028", Year=2028,
                                             Title="مبادرات مجتمعية وتحسين الاستدامة",
-                                            Subtitle="الوصول إلى 1000 مشترك (اكتمال المستهدف النهائي)",
-                                            Target=1000, Actual=0,
+                                            Subtitle="إضافة 200 مشارك (اكتمال 1000)",
+                                            Target=200, Actual=0,
                                             Badge="مستهدف 2028", Tone="info", Emoji="🤝",
                                             Icon="fa-solid fa-people-group"
                                         }
                                     }
                                 },
 
+
                                 // =========================================================
                                 // KPI 2) استخدام الدراجات (10% من سكان المدينة)
+                                // (توزيع سنوي: 4% / 3% / 3% = 10%)
                                 // =========================================================
                                 new HealthKpiIndicator
                                 {
@@ -92,69 +95,67 @@ namespace SmartFoundation.Mvc.Controllers
                                         new HealthKpiIndicatorYear{
                                             Key="y2026", Year=2026,
                                             Title="حملات وتحفيز مجتمعي",
-                                            Subtitle="رفع الاستخدام للوصول إلى 4% بنهاية 2026",
+                                            Subtitle="رفع الاستخدام +4% بنهاية 2026",
                                             Target=4, Actual=3,
                                             Badge="مستهدف 2026", Tone="success", Emoji="🚲", Icon="fa-solid fa-bicycle"
                                         },
                                         new HealthKpiIndicatorYear{
                                             Key="y2027", Year=2027,
                                             Title="توسعة المسارات وبرامج الشراكات",
-                                            Subtitle="رفع الاستخدام للوصول إلى 7% بنهاية 2027",
-                                            Target=7, Actual=0,
+                                            Subtitle="رفع الاستخدام +3% بنهاية 2027",
+                                            Target=3, Actual=0,
                                             Badge="مستهدف 2027", Tone="success", Emoji="🚲", Icon="fa-solid fa-bicycle"
                                         },
                                         new HealthKpiIndicatorYear{
                                             Key="y2028", Year=2028,
                                             Title="تكامل المبادرات وتحسين الوصول",
-                                            Subtitle="رفع الاستخدام للوصول إلى 10% بنهاية 2028",
-                                            Target=10, Actual=0,
+                                            Subtitle="رفع الاستخدام +3% بنهاية 2028 (اكتمال 10%)",
+                                            Target=3, Actual=0,
                                             Badge="مستهدف 2028", Tone="success", Emoji="🚲", Icon="fa-solid fa-bicycle"
                                         },
                                     }
                                 },
 
                                 // =========================================================
-                                // KPI 3) خفض نسبة المدخنين إلى 15% (تفصيل سنوي: 8% + 4% + 3% = 15%)
-                                // ✅ هنا نعاملها كـ "تقدم نحو خفض" وليس "نسبة متبقية"
-                                // - PlanGoal = 15 (إجمالي الخفض)
-                                // - Targets السنوية = 8 / 4 / 3
-                                // - Actuals: ضع المنجز الحقيقي لكل سنة (مبدئياً 2026=8 مثال، والباقي 0)
+                                // KPI 3) خفض نسبة المدخنين (إجمالي خفض 15% خلال 3 سنوات)
+                                // (توزيع سنوي: 6% / 6% / 4% = 15%)
                                 // =========================================================
                                 new HealthKpiIndicator
                                 {
                                     Key="kpi3",
                                     Title="خفض نسبة المدخنين",
-                                    Subtitle="هدف نهائي: خفض 15% (8% + 4% + 3%)",
+                                    Subtitle="هدف نهائي: خفض 15% (6% + 6% + 4%)",
                                     Unit="%",
                                     Emoji="🚭",
                                     Icon="fa-solid fa-ban-smoking",
                                     Tone="danger",
                                     PlanGoal=15,
-                                    Hint="المستهدف سنوياً: 2026 خفض 8%، 2027 خفض 4%، 2028 خفض 3% (الإجمالي 15%).",
+                                    Hint="المستهدف سنوياً: 2026 خفض 6%، 2027 خفض 6%، 2028 خفض 4% (الإجمالي 15%).",
                                     Years=new List<HealthKpiIndicatorYear>{
                                         new HealthKpiIndicatorYear{
                                             Key="y2026", Year=2026,
                                             Title="برامج توعوية وإقلاع",
-                                            Subtitle="خفض 8% بنهاية 2026",
-                                            Target=8, Actual=5,
+                                            Subtitle="خفض 6% بنهاية 2026",
+                                            Target=6, Actual=5,
                                             Badge="مستهدف 2026", Tone="danger", Emoji="🚭", Icon="fa-solid fa-ban-smoking"
                                         },
                                         new HealthKpiIndicatorYear{
                                             Key="y2027", Year=2027,
                                             Title="توسع العيادات والبرامج المدرسية",
-                                            Subtitle="خفض 4% بنهاية 2027",
-                                            Target=4, Actual=0,
+                                            Subtitle="خفض 6% بنهاية 2027",
+                                            Target=6, Actual=0,
                                             Badge="مستهدف 2027", Tone="danger", Emoji="🚭", Icon="fa-solid fa-ban-smoking"
                                         },
                                         new HealthKpiIndicatorYear{
                                             Key="y2028", Year=2028,
                                             Title="حزم تدخل مستدامة ومتابعة",
-                                            Subtitle="خفض 3% بنهاية 2028",
-                                            Target=3, Actual=0,
+                                            Subtitle="خفض 4% بنهاية 2028 (اكتمال الهدف)",
+                                            Target=4, Actual=0,
                                             Badge="مستهدف 2028", Tone="danger", Emoji="🚭", Icon="fa-solid fa-ban-smoking"
                                         },
                                     }
                                 },
+
 
                                 // =========================================================
                                 // KPI 4) فلاتر وتحسين جودة المياه (70% من المنازل)
@@ -234,41 +235,47 @@ namespace SmartFoundation.Mvc.Controllers
 
                                 // =========================================================
                                 // KPI 6) زراعة 5000 شتلة + نقطتي إعادة التدوير
+                                // (توزيع المستهدف: 2000 / 2000 / 1000)
                                 // =========================================================
                                 new HealthKpiIndicator
                                 {
-                                    Key="kpi6",
-                                    Title="زراعة 5000 شتلة + إعادة التدوير",
-                                    Subtitle="هدف نهائي: 5000 شتلة تشغيل نقطتي تدوير",
-                                    Unit="شتلة",
-                                    Emoji="🌱",
-                                    Icon="fa-solid fa-seedling",
-                                    Tone="success",
-                                    PlanGoal=5000,
-                                    Years=new List<HealthKpiIndicatorYear>{
-                                        new HealthKpiIndicatorYear{
-                                            Key="y2026", Year=2026,
-                                            Title="زراعة + تشغيل نقاط التدوير (مرحلة أولى)",
-                                            Subtitle="الوصول إلى 1500 شتلة بنهاية 2026 + تفعيل النقطتين",
-                                            Target=1500, Actual=900,
-                                            Badge="مستهدف 2026", Tone="success", Emoji="🌱", Icon="fa-solid fa-seedling"
+                                    Key = "kpi6",
+                                    Title = "زراعة 5000 شتلة + إعادة التدوير",
+                                    Subtitle = "هدف نهائي: 5000 شتلة + تشغيل نقطتي تدوير",
+                                    Unit = "شتلة",
+                                    Emoji = "🌱",
+                                    Icon = "fa-solid fa-seedling",
+                                    Tone = "success",
+                                    PlanGoal = 5000,
+                                    Years = new List<HealthKpiIndicatorYear>
+                                    {
+                                        new HealthKpiIndicatorYear
+                                        {
+                                            Key = "y2026", Year = 2026,
+                                            Title = "المرحلة الأولى: إطلاق المبادرة",
+                                            Subtitle = "زراعة 2000 شتلة + تفعيل نقطتي إعادة التدوير",
+                                            Target = 2000, Actual = 900,
+                                            Badge = "مستهدف 2026", Tone = "success", Emoji = "🌱", Icon = "fa-solid fa-seedling"
                                         },
-                                        new HealthKpiIndicatorYear{
-                                            Key="y2027", Year=2027,
-                                            Title="مرحلة ثانية: توسعة المشاركة المجتمعية",
-                                            Subtitle="الوصول إلى 3500 شتلة بنهاية 2027 + تشغيل مستدام",
-                                            Target=3500, Actual=0,
-                                            Badge="مستهدف 2027", Tone="success", Emoji="🌱", Icon="fa-solid fa-seedling"
+                                        new HealthKpiIndicatorYear
+                                        {
+                                            Key = "y2027", Year = 2027,
+                                            Title = "المرحلة الثانية: التوسع المجتمعي",
+                                            Subtitle = "زراعة 2000 شتلة إضافية + تشغيل مستدام",
+                                            Target = 2000, Actual = 0,
+                                            Badge = "مستهدف 2027", Tone = "success", Emoji = "🌱", Icon = "fa-solid fa-seedling"
                                         },
-                                        new HealthKpiIndicatorYear{
-                                            Key="y2028", Year=2028,
-                                            Title="مرحلة ثالثة: اكتمال المستهدف",
-                                            Subtitle="الوصول إلى 5000 شتلة بنهاية 2028 + تحسين جودة التدوير",
-                                            Target=5000, Actual=0,
-                                            Badge="مستهدف 2028", Tone="success", Emoji="🌱", Icon="fa-solid fa-seedling"
+                                        new HealthKpiIndicatorYear
+                                        {
+                                            Key = "y2028", Year = 2028,
+                                            Title = "المرحلة الثالثة: استكمال المستهدف",
+                                            Subtitle = "زراعة 1000 شتلة + تحسين جودة التدوير",
+                                            Target = 1000, Actual = 0,
+                                            Badge = "مستهدف 2028", Tone = "success", Emoji = "🌱", Icon = "fa-solid fa-seedling"
                                         },
                                     }
                                 },
+
 
                                 // =========================================================
                                 // KPI 7) تقليل الحيوانات الضالة بنسبة 70% (2026–2028)
