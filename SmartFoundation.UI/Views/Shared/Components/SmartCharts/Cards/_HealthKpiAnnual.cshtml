@@ -55,28 +55,26 @@
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     });
 
-    // ✅ عنوان/وصف البانل من نفس ChartCardConfig
+    //  عنوان/وصف البانل من نفس ChartCardConfig
     var title = Model.Title ?? "مؤشر أداء المدن الصحية";
     var subtitle = Model.Subtitle ?? "خطة مستهدفات الفعاليات والمشاركات الإجتماعية للمدن الصحية (2026 - 2028)";
 }
 
 <div class="hkpa-panel" dir="@Model.Dir">
-    <!-- ✅ Panel Header (لهذا الشارت فقط) -->
+    <!--  Panel Header (لهذا الشارت فقط) -->
     <div class="hkpa-panel__head">
         <div class="hkpa-panel__title">
             <span class="hkpa-panel__heart" aria-hidden="true">
-                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
-                    <path fill="currentColor"
-                          d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5
-         2 5.42 4.42 3 7.5 3
-         9.24 3 10.91 3.81 12 5.09
-         13.09 3.81 14.76 3 16.5 3
-         19.58 3 22 5.42 22 8.5
-         22 12.28 18.6 15.36 13.45 20.04
-         L12 21.35z" />
+                <svg viewBox="0 0 64 64" width="22" height="22" aria-hidden="true" focusable="false">
+                    <!-- القلب -->
+                    <path class="hkpa-heart-shape"
+                          d="M32 56s-18-11.6-26-22C-2 24 4 8 18 8c6 0 10 3.6 14 8
+                 4-4.4 8-8 14-8 14 0 20 16 12 26-8 10.4-26 22-26 22z" />
+                    <!-- خط النبض -->
+                    <polyline class="hkpa-heart-pulse"
+                              points="12,34 20,34 24,26 30,42 36,30 40,34 52,34" />
                 </svg>
             </span>
-
             <span>@title</span>
         </div>
 
@@ -86,13 +84,13 @@
         }
     </div>
 
-    <!-- ✅ Chart Body -->
+    <!-- Chart Body -->
     <div id="@hostId"
          class="smart-healthkpiannual"
          dir="@Model.Dir"
          data-config-id="@cfgId"
          data-top-tip="full">
-        <!-- ✅ data-top-tip="full"
+        <!-- data-top-tip="full"
              إشارة للـ JS: Tooltip للمربعات العلوية لازم يعرض كل التفاصيل (سنوات/منجز/مستهدف/متبقي/عناوين) -->
         <!-- Toolbar -->
         <div class="hkpa-toolbar" aria-label="خيارات العرض">
@@ -108,7 +106,7 @@
         <!-- Compact Matrix -->
         <div class="hkpa-matrix" aria-label="مصفوفة المؤشرات حسب السنوات"></div>
 
-        <!-- ✅ Detailed (مرة واحدة فقط) -->
+        <!-- Detailed (مرة واحدة فقط) -->
         <div class="hkpa-years" aria-label="الأداء السنوي حسب السنة"></div>
 
         <!-- Tooltip portal -->

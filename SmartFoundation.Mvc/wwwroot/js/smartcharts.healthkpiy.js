@@ -1,8 +1,15 @@
-﻿/* File: wwwroot/js/smartcharts.healthkpiy.js
-*/
+﻿/* File: wwwroot/js/smartcharts.healthkpiy.js */
 (function () {
     const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-    const fmt = (n) => (n === null || n === undefined) ? "—" : ("" + Math.round(Number(n)));
+    const fmt = (n) => (n === null || n === undefined || n === "") ? "—" : ("" + Math.round(Number(n)));
+
+    //  فقط لو الوحدة % داخل (منجز/مستهدف/متبقي)
+    const isPctUnit = (u) => (String(u || "").trim() === "%");
+    const fmtChipVal = (n, unit) => {
+        const v = fmt(n);
+        if (v === "—") return v;
+        return isPctUnit(unit) ? (v + "%") : v;
+    };
 
     function calcPct(actual, target) {
         if (actual === null || actual === undefined) return null;
@@ -115,7 +122,6 @@
     }
 
     function buildFullTipFromYears(k, yearsSorted) {
-        // Full details = لكل سنة: وصف + هدف + منجز + متبقي + %
         let body = "";
         for (const y of yearsSorted) {
             const target = (y.target !== undefined) ? y.target : null;
@@ -133,7 +139,7 @@
                  <div class="hkpa-tiprow"><div class="hkpa-tipk">منجز</div><div class="hkpa-tipv">${fmt(actual)} ${k.unit || ""}</div></div>
                  <div class="hkpa-tiprow"><div class="hkpa-tipk">متبقي</div><div class="hkpa-tipv">${fmt(remain)} ${k.unit || ""}</div></div>
                  <div class="hkpa-tiprow"><div class="hkpa-tipk">النسبة</div><div class="hkpa-tipv">${pctText}</div></div>`;
-            // فاصل خفيف بين السنوات (بدون تغيير CSS)
+
             body += `<div class="hkpa-tiprow" style="border-top:1px solid rgba(226,232,240,.95); padding-top:6px; margin-top:4px"></div>`;
         }
         return body;
@@ -293,6 +299,11 @@
                 const pct = calcPct(actual, target);
                 const pctText = (pct === null) ? "—" : (Math.round(pct) + "%");
 
+                // ✅ هنا الإصلاح: لو الوحدة % نلحقها للقيم داخل chips فقط
+                const aText = fmtChipVal(actual, k.unit);
+                const tText = fmtChipVal(target, k.unit);
+                const rText = fmtChipVal(remain, k.unit);
+
                 const pill = el("div", "hkpa-mx__pill", "");
                 pill.innerHTML = `
           <div class="hkpa-mx__mini">
@@ -306,10 +317,9 @@
 
             <div>
               <div class="hkpa-mx__nums">
-                <span class="hkpa-mx__n hkpa-mx__n--actual"><b class="hkpa-mx__lbl">منجز</b><i class="hkpa-mx__val">${fmt(actual)}</i></span>
-                <span class="hkpa-mx__n hkpa-mx__n--target"><b class="hkpa-mx__lbl">مستهدف</b><i class="hkpa-mx__val">${fmt(target)}</i></span>
-                <span class="hkpa-mx__n hkpa-mx__n--remain"><b class="hkpa-mx__lbl">متبقي</b><i class="hkpa-mx__val">${fmt(remain)}</i></span>
-
+                <span class="hkpa-mx__n hkpa-mx__n--actual"><b class="hkpa-mx__lbl">منجز</b><i class="hkpa-mx__val">${aText}</i></span>
+                <span class="hkpa-mx__n hkpa-mx__n--target"><b class="hkpa-mx__lbl">مستهدف</b><i class="hkpa-mx__val">${tText}</i></span>
+                <span class="hkpa-mx__n hkpa-mx__n--remain"><b class="hkpa-mx__lbl">متبقي</b><i class="hkpa-mx__val">${rText}</i></span>
               </div>
             </div>
           </div>
@@ -364,7 +374,6 @@
             const overallTarget = (k.planGoal !== null && k.planGoal !== undefined) ? k.planGoal : sumTarget;
             const overallPct = calcPct(sumActual, overallTarget);
 
-            // ✅ changed: pass host so top tooltip can switch to full
             indicatorsWrap.appendChild(renderIndicatorChip(host, k, sumActual, overallTarget, overallPct));
         }
 
