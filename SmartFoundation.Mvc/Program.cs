@@ -82,5 +82,6 @@ app.MapControllers();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Login}/{action=Index}/{id?}");
+    //pattern: "{controller=Statistics}/{action=Index}/{id?}");
 
 app.Run();
