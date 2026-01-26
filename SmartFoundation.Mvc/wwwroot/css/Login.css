@@ -88,11 +88,17 @@ body, input, button, a, h1, h2, h3, h4, h5, h6 {
    ========================================================= */
 .login-brand {
     grid-column: 1;
-    direction: rtl;
+    grid-row: 1;
     display: flex !important;
-    align-items: center;
+    min-height: auto;
     justify-content: center;
+    align-items: center;
     color: #fff;
+    padding-top: 18px;
+    padding-bottom: 6px;
+    opacity: 0;
+    transform: translateX(-60px);
+    animation: brandIn .9s ease-out forwards;
 }
 
 .login-brand-inner {
@@ -118,10 +124,6 @@ body, input, button, a, h1, h2, h3, h4, h5, h6 {
     color: #fff;
     text-shadow: 0 10px 18px rgba(0, 0, 0, .18);
 }
-
-/* =========================================================
-   RIGHT FORM COLUMN
-   ========================================================= */
 .login-form-col {
     grid-column: 2;
     direction: rtl;
@@ -129,7 +131,27 @@ body, input, button, a, h1, h2, h3, h4, h5, h6 {
     align-items: center;
     justify-content: center;
     padding: 24px 0;
+    background: radial-gradient(closest-side at 60% 45%, rgba(255,255,255,.22), rgba(255,255,255,0) 70%);
+    border-radius: 28px;
+    opacity: 0;
+    transform: translateX(80px);
+    animation: formIn .9s ease-out forwards .15s;
 }
+
+@keyframes brandIn {
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes formIn {
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
 
 .login-form-col {
     background: radial-gradient(closest-side at 60% 45%, rgba(255,255,255,.22), rgba(255,255,255,0) 70%);
@@ -427,31 +449,6 @@ a.text-primary {
         align-items: start;
     }
 
-    .login-brand {
-        grid-column: 1;
-        grid-row: 1;
-        display: flex !important;
-        min-height: auto;
-        justify-content: center;
-        align-items: center;
-        color: #fff;
-        padding-top: 18px;
-        padding-bottom: 6px;
-    }
-
-    .login-brand-inner {
-        width: min(520px, 100%);
-        padding: 0;
-        text-align: center;
-    }
-
-    .login-brand-logo {
-        width: 120px;
-        max-width: 50%;
-        margin: 0 auto 10px;
-        filter: drop-shadow(0 14px 22px rgba(0,0,0,.22));
-    }
-
     .login-brand-title {
         font-size: 20px;
         line-height: 1.45;
@@ -608,9 +605,12 @@ a.text-primary {
 }
 
 .login-brand-top {
-    transform: translateY(-88px);
-}
 
+    opacity: 0;
+    transform: translateX(-70px) translateY(-88px);
+    animation: brandTopIn .9s ease-out forwards;
+    will-change: transform, opacity;
+}
 
     .login-brand-top .login-brand-logo {
         width: 160px;
@@ -628,6 +628,14 @@ a.text-primary {
         margin: 0;
         text-shadow: 0 10px 18px rgba(0,0,0,.18);
     }
+
+@keyframes brandTopIn {
+    to {
+        opacity: 1;
+        transform: translateX(0) translateY(-88px);
+    }
+}
+
 
 /* keep form centered */
 .login-form-col {
