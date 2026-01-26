@@ -67,15 +67,8 @@ namespace SmartFoundation.Mvc.Controllers.Login
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public async Task<IActionResult> Index()
         {
-            // Sign out (if using cookie auth) and clear all session
+            
             HttpContext.Session.Clear();
-
-            // If forced here by SessionGuard, show a message
-            //if (Request.Query.ContainsKey("logout"))
-            //{
-            //    TempData["Error"] = "تم تسجيل خروجك من النظام لعدم وجود نشاط";
-            //}
-
             if (Request.Query.ContainsKey("logout"))
             {
                 var logoutValue = Request.Query["logout"].ToString();
@@ -167,8 +160,8 @@ namespace SmartFoundation.Mvc.Controllers.Login
             //try
             //{
             string clientHostName = ResolveClientHostName(HttpContext);
-                
-                // Use ?? "" to prevent null reference exceptions
+
+            // Use ?? "" to prevent null reference exceptions
             HttpContext.Session.SetString("usersID", auth.usersId ?? "");
             HttpContext.Session.SetString("fullName", auth.fullName ?? "");
             HttpContext.Session.SetString("OrganizationID", auth.OrganizationID ?? "");

@@ -12,161 +12,18 @@
     <link rel="icon" href="~/img/Royal_Saudi_Land_Forces.png" />
 
     <title>تسجيل دخول للبوابة</title>
-
     <!-- JS -->
-
     <script src="~/js/jquery-3.7.1.min.js"></script>
     <script src="~/js/toastr.min.js"></script>
-
-    // <script>
-        //     document.getElementById("txtNationalID").addEventListener("input", function () {
-    //         this.value = this.value.replace(/[^0-9]/g, ""); // يسمح بالأرقام فقط
-    //     });
-    // </script>
-    <!-- END JS -->
-
     <!-- Custom CSS -->
     <link rel="stylesheet" type="text/css" href="~/css/Login.css" />
-
     <!-- FontAwesome -->
     <link rel="stylesheet" type="text/css" href="/css/Fontawesome6-5-0.min.css" />
     <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" />
-
-
     <link rel="stylesheet" href="~/lib/toastr/css/toastr.min.css" />
-    <style>
 
-        /* Page-only Toastr overrides (bigger & centered text) */
-        body.login-page #toast-container > div {
-            direction: rtl !important; /* نص عربي */
-            width: 500px;
-            max-width: 95vw;
-            min-height: 120px;
-            font-size: 20px;
-            line-height: 1.6;
-            /* محاذاة النص في المنتصف */
-            text-align: center;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            /*   نحرك الأيقونة لليسار */
-            background-position: left 20px center !important; /* الأيقونة يسار */
-            padding-left: 70px; /* مساحة للأيقونة في اليسار */
-            padding-right: 30px; /* أقل مساحة يمين */
-            top: 20px !important;
-        }
-
-
-        /* Center title/message */
-        body.login-page #toast-container .toast-title,
-        body.login-page #toast-container .toast-message {
-            display: block;
-            width: 100%;
-            text-align: center;
-            font-weight: 600;
-        }
-
-        /* 🔥 Move Toastr icon to LEFT */
-        body.login-page #toast-container > div:before {
-            right: auto !important;
-            left: 15px !important;
-        }
-
-        /* 🔥 Move Close Button to LEFT */
-        body.login-page #toast-container .toast-close-button {
-            right: auto !important;
-            left: 10px !important;
-        }
-
-
-        @@font-face {
-            font-family: 'Cairo-Regular';
-            src: url('/webfonts/Cairo-Regular.ttf') format('truetype');
-        }
-
-        .btn-content {
-            width: 100px;
-            height: 20px;
-        }
-
-        @@-webkit-keyframes spinner-border {
-            to {
-                -webkit-transform: rotate(-360deg);
-                transform: rotate(-360deg);
-            }
-        }
-
-        @@keyframes spinner-border {
-            to {
-                -webkit-transform: rotate(-360deg);
-                transform: rotate(-360deg);
-            }
-        }
-
-        .spinner-border {
-            display: inline-block;
-            width: 1rem;
-            height: 1rem;
-            vertical-align: text-bottom;
-            border: 0.25em solid currentColor;
-            border-left-color: transparent;
-            border-radius: 50%;
-            -webkit-animation: spinner-border .75s linear infinite;
-            animation: spinner-border .75s linear infinite;
-        }
-
-        .spinner-border-sm {
-            width: 1rem;
-            height: 1rem;
-            border-width: 0.2em;
-        }
-
-        .sr-only {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            border: 0;
-        }
-
-        .sr-only-focusable:active,
-        .sr-only-focusable:focus {
-            position: static;
-            width: auto;
-            height: auto;
-            margin: 0;
-            overflow: visible;
-            clip: auto;
-        }
-    </style>
 </head>
 <body class="login-page">
-    @* <script>
-        window.onload = function() {
-            const toggle = document.getElementById("togglePassword");
-            const password = document.getElementById("txtPassword");
-            const eye = document.getElementById("eyeIcon");
-            toggle.addEventListener("click", () => {
-                const isPwd = password.type === "password";
-                password.type = isPwd ? "text" : "password";
-                eye.classList.toggle("fa-eye");
-                eye.classList.toggle("fa-eye-slash");
-            });
-
-            const form = document.getElementById("loginForm");
-            const btnLogin = document.getElementById("btnLogin");
-            btnLogin.addEventListener("click", e => {
-                e.preventDefault();
-                document.getElementById("btnText").style.display = "none";
-                document.querySelector(".spinner-border").style.display = "block";
-                setTimeout(() => form.submit(), 500);
-            });
-        };
-    </script> *@
-
     <script>
         document.addEventListener("DOMContentLoaded", function () {
 
@@ -193,7 +50,7 @@
             }
             
              /* ===============================
-                💾 تذكرني (Remember Me)
+                 تذكرني (Remember Me)
             =============================== */
             const rememberMe = document.getElementById("remember-me");
 
@@ -206,8 +63,6 @@
                 // UX: إذا الهوية موجودة، روح مباشرة لكلمة المرور
                 if (password) password.focus();
             }
-
-            
             const form = document.getElementById("loginForm");
             const btnLogin = document.getElementById("btnLogin");
             const btnText = document.getElementById("btnText");
@@ -222,94 +77,92 @@
                     } else {
                         localStorage.removeItem("rememberedNationalID");
                     }
-                    
                     // UI Loading
+                    // if (btnText) btnText.style.display = "none";
+                    // if (spinner) spinner.style.display = "block";
+                    // btnLogin.disabled = true;
+                            // UI Loading
                     if (btnText) btnText.style.display = "none";
-                    if (spinner) spinner.style.display = "block";
+                    if (spinner) spinner.style.display = "inline-flex";
                     btnLogin.disabled = true;
                 });
             }
         });
     </script>
-
-
     <form id="loginForm" method="post" asp-controller="Login" asp-action="CheckLogin">
-        <div class="-m-3 sm:-mx-8 p-3 sm:px-8 relative h-screen lg:overflow-hidden bg-primary xl:bg-white dark:bg-darkmode-800 xl:dark:bg-darkmode-600 before:hidden before:xl:block before:content-[''] before:w-[57%] before:-mt-[28%] before:-mb-[16%] before:-ml-[13%] before:absolute before:inset-y-0 before:left-0 before:transform before:rotate-[-4.5deg] before:bg-primary/20 before:rounded-[100%] before:dark:bg-darkmode-400 after:hidden after:xl:block after:content-[''] after:w-[57%] after:-mt-[20%] after:-mb-[13%] after:-ml-[13%] after:absolute after:inset-y-0 after:left-0 after:transform after:rotate-[-4.5deg] after:bg-primary after:rounded-[100%] after:dark:bg-darkmode-700">
-            <div class="container relative z-10 sm:px-10">
-                <div class="block grid-cols-2 gap-4 xl:grid">
-                    <!-- BEGIN: Login Info -->
-                    <!-- BEGIN: Login Info -->
-                    <div class="flex-col hidden min-h-screen xl:flex">
-                        <div class="my-auto">
-                            <!-- بلوك داخلي بعرض أصغر ومزاح لليسار -->
-                            <div class="text-center"
-                                 style="max-width: 520px; margin: 0 0 0 -5rem;">
-                                <!-- الشعار -->
-                                <img class="w-1/3 mx-auto -mt-10 -intro-x"
-                                     src="~/img/Royal_Saudi_Land_Forces.png"
-                                     src="~/img/Mowahad.png"
-                                     alt="KFMC" />
-
-                                <!-- السطر الأول -->
-                               @*  <div class="mt-6 font-medium leading-tight text-white -intro-x"
-                                     style="font-size: 55px;">
-                                    نظام إدارة الأصول
-                                </div> *@
-
-                                <!-- السطر الثاني -->
-                                <div class="mt-3 font-medium leading-tight text-white -intro-x"
-                                     style="font-size: 40px;">
-                                    لإدارة مدينة الملك فيصل العسكرية
-                                </div>
-                            </div>
+        <div class="login-shell relative -m-3 h-screen p-3 sm:-mx-8 sm:px-8 lg:overflow-hidden xl:bg-white dark:bg-darkmode-800 xl:dark:bg-darkmode-600">
+            <div class="login-container relative z-10 container sm:px-10">
+                <div class="login-center">
+                    <div class="login-brand-top">
+                        <img class="login-brand-logo"
+                             src="~/img/Royal_Saudi_Land_Forces.png"
+                             alt="KFMC" />
+                        <div class="login-brand-title">
+                            لإدارة مدينة الملك فيصل العسكرية
                         </div>
                     </div>
-                    <!-- END: Login Info -->
-                    <!-- END: Login Info -->
-                    <!-- BEGIN: Login Form -->
-                    <div class="flex h-screen py-5 my-10 xl:my-0 xl:h-auto xl:py-0">
-                        <div class="w-full px-5 py-8 mx-auto my-auto bg-white rounded-md shadow-md dark:bg-darkmode-600 sm:w-3/4 sm:px-8 lg:w-2/4 xl:ml-20 xl:w-auto xl:bg-transparent xl:p-0 xl:shadow-none">
-                            <h2 class="text-2xl font-bold text-center intro-x xl:text-left xl:text-3xl">
-                                تسجيل الدخول
+                    <div class="login-form-col my-10 flex h-screen py-5 xl:my-0 xl:h-auto xl:py-0">
+                        <div class="login-form-card mx-auto my-auto w-full rounded-md bg-white px-5 py-8 shadow-md sm:w-3/4 sm:px-8 lg:w-2/4 xl:ml-20 xl:w-auto xl:bg-transparent xl:p-0 xl:shadow-none dark:bg-darkmode-600">
+                            
+                            <h2 class="intro-x login-title">
+                                <span class="login-title-inner">
+                                    <svg class="login-icon" fill="none" stroke="currentColor" stroke-width="2"
+                                         viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                                        <polyline points="10 17 15 12 10 7" />
+                                        <line x1="15" y1="12" x2="3" y2="12" />
+                                    </svg>
+                                    <span class="login-text">تسجيل الدخول</span>
+                                </span>
                             </h2>
 
-                            <!-- Show any controller-level error -->
                             @if (ViewBag.ErrorMessage != null)
                             {
-                                <div class="mt-4 alert alert-danger">
+                                <div class="alert alert-danger mt-4">
                                     @ViewBag.ErrorMessage
                                 </div>
                             }
 
-                            <div class="mt-8 intro-x">
-                                <input type="text"
-                                       name="NationalID"
-                                       id="txtNationalID"
-                                       value="@lastUser"
-                                       placeholder="رقم الهوية الوطنية"
-                                       maxlength="10"
-                                       class="form-control disabled:bg-slate-100 disabled:cursor-not-allowed dark:disabled:bg-darkmode-800/50 dark:disabled:border-transparent [&amp;[readonly]]:bg-slate-100 [&amp;[readonly]]:cursor-not-allowed [&amp;[readonly]]:dark:bg-darkmode-800/50 [&amp;[readonly]]:dark:border-transparent transition duration-200 ease-in-out w-full text-sm border-slate-200 shadow-sm rounded-md placeholder:text-slate-400/90 focus:ring-4 focus:ring-primary focus:ring-opacity-20 focus:border-primary focus:border-opacity-40 dark:bg-darkmode-800 dark:border-transparent dark:focus:ring-slate-700 dark:focus:ring-opacity-50 dark:placeholder:text-slate-500/80 intro-x login__input block min-w-full px-4 py-3 xl:min-w-[350px] intro-x login__input block min-w-full px-4 py-3 xl:min-w-[350px]" />
-                                <div class="mt-2 login__input-error text-danger" id="error-email"></div>
+                            <div class="intro-x mt-8">
+
+                                <!-- National ID with icon -->
+                                <div class="relative">
+                                    <input type="text"
+                                           name="NationalID"
+                                           id="txtNationalID"
+                                           value="@lastUser"
+                                           placeholder="رقم الهوية الوطنية"
+                                           maxlength="10"
+                                           class="form-control intro-x login__input block w-full rounded-md border-slate-200 px-4 py-3 text-sm shadow-sm transition duration-200 ease-in-out placeholder:text-slate-400/90 focus:ring-primary focus:ring-opacity-20 focus:border-primary focus:border-opacity-40 focus:ring-4 disabled:cursor-not-allowed disabled:bg-slate-100 xl:min-w-[350px] dark:bg-darkmode-800 dark:border-transparent dark:focus:ring-opacity-50 dark:disabled:border-transparent dark:placeholder:text-slate-500/80 dark:focus:ring-slate-700" />
+
+                                    <span id="nationalIdIcon"
+                                          class="justify-content-center absolute inset-y-0 right-0 flex items-center px-3">
+                                        <i class="fa fa-id-card" id="nationalIdIconI"></i>
+                                    </span>
+                                </div>
+                                <div class="login__input-error text-danger mt-2" id="error-email"></div>
 
                                 <div class="relative mt-4">
                                     <input type="password"
                                            name="password"
                                            id="txtPassword"
                                            placeholder="كلمة المرور"
-                                           class="w-full px-4 py-3 pr-10 text-sm rounded-md shadow-sm form-control border-slate-200 dark:bg-darkmode-800 dark:border-transparent placeholder:text-slate-400/90 focus:ring-4 focus:ring-primary focus:ring-opacity-20 focus:border-primary focus:border-opacity-40 dark:focus:ring-slate-700 dark:focus:ring-opacity-50 dark:placeholder:text-slate-500/80" />
-                                    <span id="togglePassword" class="absolute inset-y-0 right-0 flex items-center px-3 text-white cursor-pointer hover:text-primary">
+                                           class="form-control w-full rounded-md border-slate-200 px-4 py-3 pr-10 text-sm shadow-sm placeholder:text-slate-400/90 focus:ring-primary focus:ring-opacity-20 focus:border-primary focus:border-opacity-40 focus:ring-4 dark:bg-darkmode-800 dark:border-transparent dark:focus:ring-opacity-50 dark:placeholder:text-slate-500/80 dark:focus:ring-slate-700" />
+
+                                    <span id="togglePassword" class="absolute inset-y-0 right-0 flex cursor-pointer items-center px-3 hover:text-primary">
                                         <i class="fa fa-eye-slash" id="eyeIcon" style="font-size:20px;color:black;"></i>
                                     </span>
                                 </div>
-                                <div class="mt-2 login__input-error text-danger" id="error-password"></div>
+                                <div class="login__input-error text-danger mt-2" id="error-password"></div>
                             </div>
 
-                            <div class="flex mt-4 text-xs intro-x text-slate-600 dark:text-slate-500 sm:text-sm">
-                                <div class="flex items-center mr-auto">
+
+                            <div class="intro-x mt-4 flex text-xs text-slate-600 sm:text-sm dark:text-slate-500">
+                                <div class="mr-auto flex items-center">
                                     <input type="checkbox"
                                            name="rememberMe"
                                            id="remember-me"
-                                           class="mr-2 transition-all duration-100 ease-in-out rounded shadow-sm cursor-pointer border-slate-200 focus:ring-4 focus:ring-offset-0 focus:ring-primary focus:ring-opacity-20 dark:bg-darkmode-800 dark:border-transparent" />
+                                           class="mr-2 cursor-pointer rounded border-slate-200 shadow-sm transition-all duration-100 ease-in-out focus:ring-primary focus:ring-opacity-20 focus:ring-4 focus:ring-offset-0 dark:bg-darkmode-800 dark:border-transparent" />
                                     <label class="cursor-pointer select-none" for="remember-me">
                                         تذكرني
                                     </label>
@@ -317,30 +170,31 @@
                                 <a href="#" class="text-primary">نسيت كلمة المرور؟</a>
                             </div>
 
-                            <div class="mt-5 text-center intro-x xl:mt-8 xl:text-left">
+                            <div class="intro-x login-actions mt-5">
                                 <button id="btnLogin"
                                         type="submit"
-                                        class="transition duration-200 border shadow-sm inline-flex items-center justify-center rounded-md font-medium cursor-pointer focus:ring-4 focus:ring-primary focus:ring-opacity-20 focus-visible:outline-none dark:focus:ring-slate-700 dark:focus:ring-opacity-50 [&amp;:hover:not(:disabled)]:bg-opacity-90 [&amp;:hover:not(:disabled)]:border-opacity-90 disabled:opacity-70 disabled:cursor-not-allowed bg-primary border-primary text-white dark:border-primary w-full px-4 py-3 align-top xl:mr-3 xl:w-32">
+                                        class="login-btn login-btn-primary">
                                     <span id="btnText" class="btn-content">دخول</span>
-                                    <div class="spinner-border btn-content" role="status" style="display:none">
+                                    <span id="btnSpinner" class="spinner-border btn-content" role="status">
                                         <span class="sr-only">Loading...</span>
-                                    </div>
+                                    </span>
                                 </button>
+
                                 <a href="@Url.Action("Register", "Account")"
-                                   class="transition duration-200 border shadow-sm inline-flex items-center justify-center py-2 px-3 rounded-md font-medium cursor-pointer focus:ring-4 focus:ring-primary focus:ring-opacity-20 focus-visible:outline-none dark:focus:ring-slate-700 dark:focus:ring-opacity-50 [&amp;:hover:not(:disabled)]:bg-opacity-90 [&amp;:hover:not(:disabled)]:border-opacity-90 disabled:opacity-70 disabled:cursor-not-allowed border-secondary text-slate-500 dark:border-darkmode-100/40 dark:text-slate-300 mt-3 w-full px-4 py-3 align-top xl:mt-0 xl:w-32">
+                                   class="login-btn login-btn-outline">
                                     تسجيل
                                 </a>
                             </div>
+
+
                         </div>
                     </div>
-                    <!-- END: Login Form -->
+
                 </div>
             </div>
         </div>
+
     </form>
-
-
-
     <script>
         toastr.options = {
             closeButton: true,
@@ -369,15 +223,22 @@
         }
     </script>
 
+    <script>
+        function resetLoginButton() {
+            const btn = document.getElementById("btnLogin");
+            const txt = document.getElementById("btnText");
+            const spn = document.getElementById("btnSpinner");
 
-    <!-- JS -->
-
-    @* <script>
-        document.getElementById("txtNationalID").addEventListener("input", function () {
-            this.value = this.value.replace(/[^0-9]/g, ""); // يسمح بالأرقام فقط
+            if (btn) btn.disabled = false;
+            if (txt) txt.style.display = "inline-flex";
+            if (spn) spn.style.display = "none";
+        }
+        document.addEventListener("DOMContentLoaded", resetLoginButton);
+        window.addEventListener("pageshow", function () {
+            resetLoginButton();
         });
-    </script> *@
-    <!-- END JS -->
+    </script>
+
 
 </body>
 </html>
