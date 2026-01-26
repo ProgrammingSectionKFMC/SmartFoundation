@@ -55,22 +55,10 @@ body, input, button, a, h1, h2, h3, h4, h5, h6 {
     min-height: 100svh;
     position: relative;
     overflow: hidden;
-    background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 900'%3E%3Cpath d='M0 520c320-220 640-220 960 0s640 220 640 0v380H0V520Z' fill='%23ffffff' opacity='.10'/%3E%3Cpath d='M0 560c320-240 640-240 960 0s640 240 640 0v340H0V560Z' fill='%23000000' opacity='.08'/%3E%3C/svg%3E"),
-    linear-gradient(180deg, var(--brand) 0%, var(--brand2) 100%);
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 900'%3E <path d='M0 520c320-220 640-220 960 0s640 220 640 0v380H0V520Z' fill='%23ffffff' opacity='.10'/> <path d='M0 560c320-240 640-240 960 0s640 240 640 0v340H0V560Z' fill='%23000000' opacity='.08'/> <path d='M0 600c320-200 640-200 960 0s640 200 640 0v300H0V600Z' fill='%23000000' opacity='.04'/> </svg>"), #064E3B;
     background-repeat: no-repeat, no-repeat;
     background-position: center bottom, center;
     background-size: cover, cover;
-}
-
-@media (min-width: 1280px) {
-    body.login-page {
-        overflow: hidden;
-    }
-
-    .login-shell {
-        height: 100svh;
-    }
 }
 
 /* ---------- Layout container ---------- */
@@ -119,7 +107,7 @@ body, input, button, a, h1, h2, h3, h4, h5, h6 {
     height: auto;
     display: block;
     margin: 0 auto 14px;
-    filter: drop-shadow(0 16px 26px rgba(0, 0, 0, .22));
+
 }
 
 .login-brand-title {
@@ -678,8 +666,8 @@ a.text-primary {
 
 /* primary */
 .login-btn-primary {
-    background: var(--brand);
-    border-color: var(--brand);
+    background: #064E3B;
+    border-color: #334155;
     color: #fff;
 }
 
