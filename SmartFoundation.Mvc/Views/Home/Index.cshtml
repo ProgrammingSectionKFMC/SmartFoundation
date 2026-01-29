@@ -1,9 +1,13 @@
-﻿@{
+﻿@* @{
     ViewData["Title"] = "الرئيسية";
 }
 
 <div class="container mx-auto py-4">
     <h1 class="text-xl font-bold mb-4">الصفحة الرئيسية</h1>
 </div>
-
-
+ *@
+@model SmartFoundation.UI.ViewModels.SmartPage.SmartPageViewModel
+@{
+    ViewData["Title"] = Model.PageTitle;
+}
+@await Component.InvokeAsync("SmartRenderer", new { model = Model })

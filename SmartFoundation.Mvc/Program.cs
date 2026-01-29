@@ -10,6 +10,7 @@ using QuestPDF.Drawing;
 using SmartFoundation.Mvc.Services.Exports.Pdf;
 using SmartFoundation.Mvc.Services.AiAssistant;
 using Microsoft.Extensions.Options;
+using SmartFoundation.Mvc.Services.Chart;
 
 var builder = WebApplication.CreateBuilder(args);
 QuestPDF.Settings.License = LicenseType.Community;
@@ -63,6 +64,9 @@ builder.Services.AddSingleton<LLamaModelHolder>(sp =>
 
 // ✅ تغيير من Singleton إلى Scoped
 builder.Services.AddScoped<IAiChatService, EmbeddedLlamaChatService>();
+
+// Chart services
+builder.Services.AddScoped<Chart>();
 
 var app = builder.Build();
 

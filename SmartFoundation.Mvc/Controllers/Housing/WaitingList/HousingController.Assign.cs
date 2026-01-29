@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using SmartFoundation.MVC.Reports;
 using SmartFoundation.UI.ViewModels.SmartForm;
 using SmartFoundation.UI.ViewModels.SmartPage;
 using SmartFoundation.UI.ViewModels.SmartTable;
@@ -11,7 +12,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 {
     public partial class HousingController : Controller
     {
-        public async Task<IActionResult> Assign()
+        public async Task<IActionResult> Assign(int pdf = 0)
         {
 
             if (!InitPageContext(out IActionResult? redirectResult))
@@ -35,7 +36,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             // Sessions 
 
-            ControllerName = nameof(ControlPanel);
+            ControllerName = nameof(Housing);
             PageName = nameof(Assign);
 
             var spParameters = new object?[] { "Assign", IdaraId, usersId, HostName, waitingClassID_ };
@@ -55,11 +56,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
 
-
+            string? AssignPeriodID = null;  // تعريف المتغير هنا
 
             if (dt3 != null && dt3.Rows.Count > 0)
             {
                 var value = dt3.Rows[0]["AssignPeriodID"];
+                AssignPeriodID = dt3.Rows[0]["AssignPeriodID"].ToString();
                 var AssignPeriodStartdate = dt3.Rows[0]["AssignPeriodStartdate"];
                 var FullName = dt3.Rows[0]["FullName"];
 
@@ -67,7 +69,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             }
             else
             {
-                TempData["NoAssignPeriod"] = "لا يوجد محضر تخصيص نشط";  // ✅ غيّر من NoAssignAssignPeriod
+                TempData["NoAssignPeriod"] = "لا يوجد محضر تخصيص نشط";
             }
 
 
@@ -388,6 +390,16 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 // hidden p01 actually posted to SP
                
                 new FieldConfig { Name = "p01", Label = "ملاحظات اغلاق محضر التخصيص", Type = "textarea", ColCss = "6", Required = true },
+                new FieldConfig
+                    {
+                        SectionTitle="رفع صورة",
+                        Name="Emg",
+                        Label="اعتماد محضر التخصيص",
+                        Type="file",
+                        Required=true,
+                        Icon="fa-solid fa-check",
+                        ColCss="col-span-12 md:col-span-3"
+                    },
 
             };
 
@@ -547,6 +559,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowAdd1 = canCLOSEASSIGNPERIOD && dt3.Rows.Count != 0,
                     
                     ShowBulkDelete = false,
+
+
 
                     Add = new TableAction
                     {
@@ -769,7 +783,83 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         //}
                     },
 
+                    Print1 = new TableAction
+                    {
+                        Label = "طباعة خطاب تجريبي",
+                        Icon = "fa fa-print",
+                        Color = "primary",
+                        Placement = TableActionPlacement.ActionsMenu,
+                        RequireSelection = false,
+                        OnClickJs = @"
+                                sfPrintWithBusy(table, {
+                                  pdf: 2,
+                                  busy: { title: 'طباعة خطاب تجريبي'}
+                                });
+                                "
 
+                    },
+
+
+                    ExportConfig = new TableExportConfig
+                    {
+                        EnablePdf = true,
+                        PdfEndpoint = "/exports/pdf/table",
+                        PdfTitle = "المستفيدين",
+                        PdfPaper = "A4",
+                        PdfOrientation = "landscape",
+                        PdfShowPageNumbers = true,
+                        Filename = "Residents",
+                        PdfShowGeneratedAt = true,
+                        PdfShowSerial = true,
+                        PdfSerialLabel = "م",
+                        RightHeaderLine1 = "المملكة العربية السعودية",
+                        RightHeaderLine2 = "وزارة الدفاع",
+                        RightHeaderLine3 = "القوات البرية الملكية السعودية",
+                        RightHeaderLine4 = "الإدارة الهندسية للتشغيل والصيانة",
+                        RightHeaderLine5 = "مدينة الملك فيصل العسكرية",
+                        PdfLogoUrl = "/img/ppng.png",
+
+
+                    },
+
+                    CustomActions = new List<TableAction>
+                            {
+                            //  Excel "
+                            //new TableAction
+                            //{
+                            //    Label = "تصدير Excel",
+                            //    Icon = "fa-regular fa-file-excel",
+                            //    Color = "info",
+                            //    Placement = TableActionPlacement.ActionsMenu,
+                            //    RequireSelection = false,
+                            //    OnClickJs = "table.exportData('excel');"
+                            //},
+
+                            //  PDF "
+                            new TableAction
+                            {
+                                Label = "تصدير PDF",
+                                Icon = "fa-regular fa-file-pdf",
+                                Color = "danger",
+                                Placement = TableActionPlacement.ActionsMenu,
+                                RequireSelection = false,
+                                OnClickJs = "table.exportData('pdf');"
+                            },
+
+                             //  details "       
+                            new TableAction
+                            {
+                                Label = "عرض التفاصيل",
+                                ModalTitle = "<i class='fa-solid fa-circle-info text-emerald-600 text-xl mr-2'></i> تفاصيل المستفيد",
+                                Icon = "fa-regular fa-file",
+                                OpenModal = true,
+                                RequireSelection = true,
+                                MinSelection = 1,
+                                MaxSelection = 1,
+
+
+                            },
+                        },
                 }
             };
 
@@ -836,6 +926,100 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 Form = form,
                 TableDS = ready ? dsModel : null
             };
+
+
+
+            if (pdf == 2)
+            {
+                var logo = Path.Combine(_env.WebRootPath, "img", "ppng.png");
+
+                var header = new Dictionary<string, string>
+                {
+                    ["no"] = AssignPeriodID ?? "",
+                    ["date"] = DateTime.Now.ToString("yyyy/MM/dd"),
+                    ["attach"] = "بيان بأسماء المستفيدين المخصص لهم",
+                    ["subject"] = "محضر تخصيص مساكن",
+
+                    ["right1"] = "المملكة العربية السعودية",
+                    ["right2"] = "وزارة الدفاع",
+                    ["right3"] = "القوات البرية الملكية السعودية",
+                    ["right4"] = "الادارة الهندسية للتشغيل والصيانة",
+                    ["right5"] = "إدارة مدينة الملك فيصل العسكرية",
+
+                    ["bismillah"] = "بسم الله الرحمن الرحيم",
+                    ["midCaption"] = ""
+                };
+
+                var report = new ReportResult
+                {
+                    ReportId = "OfficialLetter01",
+                    Title = "خطاب رسمي",
+                    Kind = ReportKind.Letter,
+
+                    // هنا اختَر الاتجاه اللي تبيه للخطاب
+                    Orientation = ReportOrientation.Portrait, // أو Landscape
+
+                    HeaderType = ReportHeaderType.LetterOfficial,
+                    LogoPath = logo,
+                    ShowFooter = false,
+
+                    HeaderFields = header,
+
+                    LetterBlocks = new List<LetterBlock>
+        {
+            new LetterBlock
+            {
+                Text = "سعادة قائد إدارة مدينة الملك فيصل العسكرية حفظه الله",
+                FontSize = 13,
+                Bold = true,
+                PaddingBottom = 12,
+                PaddingTop = 30,
+                Align = TextAlign.Center
+            },
+
+            new LetterBlock
+            {
+                Text = "السلام عليكم ورحمة الله وبركاته،",
+                FontSize = 12,
+                PaddingBottom = 10,
+                PaddingTop = 15,
+                Align = TextAlign.Right
+            },
+
+            new LetterBlock
+            {
+                Text = "نفيد سعادتكم بأنه بناءً على توجيهاتكم الكريمة ...",
+                FontSize = 12,
+                Align = TextAlign.Justify,
+                LineHeight = 1.8f,
+                PaddingBottom = 16
+            },
+
+            new LetterBlock
+            {
+                Text = "وتفضلوا بقبول فائق الاحترام والتقدير،",
+                FontSize = 12,
+                PaddingTop = 20,
+                Align = TextAlign.Right
+            },
+
+            new LetterBlock
+            {
+                Text = "مدير الإدارة الهندسية\nالاسم / ..................\nالتوقيع / ...............",
+                FontSize = 11,
+                Align = TextAlign.Left,
+                PaddingTop = 30,
+                PaddingLeft = 120
+            }
+        }
+                };
+
+                var pdfBytes = QuestPdfReportRenderer.Render(report);
+                Response.Headers["Content-Disposition"] = "inline; filename=Letter.pdf";
+                return File(pdfBytes, "application/pdf");
+            }
+
+
 
             return View("WaitingList/Assign", vm);
         }
