@@ -36,9 +36,11 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             // Sessions 
 
             ControllerName = nameof(ControlPanel);
-            PageName = nameof(BuildingDetails);
+            PageName = nameof(WaitingList);
 
             var spParameters = new object?[] { "WaitingList", IdaraId, usersId, HostName, waitingClassID_ };
+
+
 
             DataSet ds;
 
@@ -51,19 +53,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
 
+            SplitDataSet(ds);
 
 
-            DataTable? permissionTable = (ds?.Tables?.Count ?? 0) > 0 ? ds.Tables[0] : null;
-
-            dt1 = (ds?.Tables?.Count ?? 0) > 1 ? ds.Tables[1] : null;
-            dt2 = (ds?.Tables?.Count ?? 0) > 2 ? ds.Tables[2] : null;
-            dt3 = (ds?.Tables?.Count ?? 0) > 3 ? ds.Tables[3] : null;
-            dt4 = (ds?.Tables?.Count ?? 0) > 4 ? ds.Tables[4] : null;
-            dt5 = (ds?.Tables?.Count ?? 0) > 5 ? ds.Tables[5] : null;
-            dt6 = (ds?.Tables?.Count ?? 0) > 6 ? ds.Tables[6] : null;
-            dt7 = (ds?.Tables?.Count ?? 0) > 7 ? ds.Tables[7] : null;
-            dt8 = (ds?.Tables?.Count ?? 0) > 8 ? ds.Tables[8] : null;
-            dt9 = (ds?.Tables?.Count ?? 0) > 9 ? ds.Tables[9] : null;
 
             if (permissionTable is null || permissionTable.Rows.Count == 0)
             {
@@ -76,7 +68,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
             string rowIdField = "";
-            bool canMOVETOCUSTOMIZATIONLIST = false;
+            bool canMOVETOASSIGNLIST = false;
 
 
 
@@ -166,7 +158,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                 };
 
-                if (ds != null && ds.Tables.Count > 0 && ds.Tables[0].Rows.Count > 0)
+                if (ds != null && ds.Tables.Count > 0 && permissionTable!.Rows.Count > 0)
                 {
                     // اقرأ الجدول الأول
 
@@ -176,8 +168,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     {
                         var permissionName = row["permissionTypeName_E"]?.ToString()?.Trim().ToUpper();
 
-                        if (permissionName == "MOVETOCUSTOMIZATIONLIST")
-                            canMOVETOCUSTOMIZATIONLIST = true;
+                        if (permissionName == "MOVETOASSIGNLIST")
+                            canMOVETOASSIGNLIST = true;
 
                        
                     }
@@ -225,7 +217,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             bool isWaitingOrderTypeID = c.ColumnName.Equals("WaitingOrderTypeID", StringComparison.OrdinalIgnoreCase);
                             bool iswaitingClassSequence = c.ColumnName.Equals("waitingClassSequence", StringComparison.OrdinalIgnoreCase);
                             bool isresidentInfoID_FK = c.ColumnName.Equals("residentInfoID_FK", StringComparison.OrdinalIgnoreCase);
-                            bool isIdaraId_FK = c.ColumnName.Equals("IdaraId_FK", StringComparison.OrdinalIgnoreCase);
+                            bool isIdaraId = c.ColumnName.Equals("IdaraId", StringComparison.OrdinalIgnoreCase);
+                            bool isresidentInfoID = c.ColumnName.Equals("residentInfoID", StringComparison.OrdinalIgnoreCase);
+                            
                             
 
                             dynamicColumns.Add(new TableColumn
@@ -237,7 +231,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                || isresidentInfoID_FK || isIdaraId_FK)
+                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID)
                             });
                         }
 
@@ -257,32 +251,31 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             if (!dict.ContainsKey(rowIdField))
                             {
                                 // Try to copy from a differently cased variant
-                                if (rowIdField.Equals("permissionID", StringComparison.OrdinalIgnoreCase) &&
-                                    dict.TryGetValue("permissionID", out var alt))
-                                    dict["permissionID"] = alt;
-                                else if (rowIdField.Equals("permissionID", StringComparison.OrdinalIgnoreCase) &&
-                                         dict.TryGetValue("permissionID", out var alt2))
-                                    dict["permissionID"] = alt2;
+                                if (rowIdField.Equals("ActionID", StringComparison.OrdinalIgnoreCase) &&
+                                    dict.TryGetValue("ActionID", out var alt))
+                                    dict["ActionID"] = alt;
+                                else if (rowIdField.Equals("ActionID", StringComparison.OrdinalIgnoreCase) &&
+                                         dict.TryGetValue("ActionID", out var alt2))
+                                    dict["ActionID"] = alt2;
                             }
 
                             // Prefill pXX fields on the row so Edit form (which uses pXX names) loads the selected row values
                             object? Get(string key) => dict.TryGetValue(key, out var v) ? v : null;
                             dict["p01"] = Get("ActionID") ?? Get("actionID");
-                            dict["p02"] = Get("WaitingListOrder");
-                            dict["p03"] = Get("FullName_A");
-                            dict["p04"] = Get("NationalID");
-                            dict["p05"] = Get("GeneralNo");
-                            dict["p06"] = Get("ActionDecisionNo");
-                            dict["p07"] = Get("ActionDecisionDate");
-                            dict["p08"] = Get("WaitingClassID");
-                            dict["p09"] = Get("WaitingClassName");
-                            dict["p10"] = Get("WaitingOrderTypeID");
-                            dict["p11"] = Get("buildingClassID_FK");
-                            dict["p12"] = Get("WaitingOrderTypeName");
-                            dict["p13"] = Get("waitingClassSequence");
-                            dict["p14"] = Get("residentInfoID_FK");
-                            dict["p15"] = Get("ActionNote");
-                            dict["p16"] = Get("IdaraId_FK");
+                            dict["p02"] = Get("residentInfoID");
+                            dict["p03"] = Get("NationalID");
+                            dict["p04"] = Get("GeneralNo");
+                            dict["p05"] = Get("ActionDecisionNo");
+                            dict["p06"] = Get("ActionDecisionDate");
+                            dict["p07"] = Get("WaitingClassID");
+                            dict["p08"] = Get("WaitingClassName");
+                            dict["p09"] = Get("WaitingOrderTypeID");
+                            dict["p10"] = Get("WaitingOrderTypeName");
+                            dict["p11"] = Get("waitingClassSequence");
+                            dict["p12"] = Get("ActionNote");
+                            dict["p13"] = Get("IdaraId");
+                            dict["p14"] = Get("WaitingListOrder");
+                            dict["p15"] = Get("FullName_A");
 
                             rowsList.Add(dict);
                         }
@@ -304,11 +297,11 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             //Delete fields: show confirmation as a label(not textbox) and show ID as label while still posting p01
 
-            var MoveToCustomizationListFields = new List<FieldConfig>
+            var MOVETOASSIGNLISTFields = new List<FieldConfig>
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "DELETE" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "MOVETOASSIGNLIST" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -323,25 +316,32 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 // selection context
                 new FieldConfig { Name = rowIdField, Type = "hidden" },
 
+
+
                 // hidden p01 actually posted to SP
                 new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "ActionID" },
-                new FieldConfig { Name = "p02", Label = "الترتيب", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p03", Label = "الاسم", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p04", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p05", Label = "الرقم العام", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p06", Label = "رقم الخطاب", Type = "text", ColCss = "3", Readonly = true  },
-                new FieldConfig { Name = "p07", Label = "تاريخ الخطاب", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p09", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p12", Label = "نوع سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p14", Label = "residentInfoID_FK", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p16", Label = "IdaraId_FK", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p15", Label = "ملاحظات", Type = "text", ColCss = "6", Readonly = true },
+                new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p14", Label = "الترتيب", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p15", Label = "الاسم", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p05", Label = "رقم الطلب", Type = "text", ColCss = "3", Readonly = true  },
+                new FieldConfig { Name = "p06", Label = "تاريخ الطلب", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p07", Label = "WaitingClassID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p12", Label = "ملاحظات", Type = "text", ColCss = "6" },
+                new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
+
 
 
             };
 
 
-         
+           
+
+
 
             // then create dsModel (snippet shows toolbar parts that use the dynamic lists)
             var dsModel = new SmartTableDsModel
@@ -355,8 +355,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 QuickSearchFields = dynamicColumns.Select(c => c.Field).Take(4).ToList(),
                 Searchable = true,
                 AllowExport = true,
-                PageTitle = "نقل لقائمة التخصيص",
-                PanelTitle = "نقل لقائمة التخصيص ",
+                PageTitle = "قوائم الانتظار",
+                PanelTitle = "قوائم الانتظار",
                 EnableCellCopy = true,
 
                 Toolbar = new TableToolbarConfig
@@ -365,7 +365,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowColumns = true,
                     ShowExportCsv = false,
                     ShowExportExcel = false,
-                    ShowDelete = canMOVETOCUSTOMIZATIONLIST,
+                    ShowDelete = canMOVETOASSIGNLIST,
                     ShowBulkDelete = false,
 
                    
@@ -393,11 +393,29 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 new FormButtonConfig { Text = "نقل المستفيد", Type = "submit", Color = "success", Icon = "fa fa-check" },
                                 new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
                             },
-                            Fields = MoveToCustomizationListFields
+                            Fields = MOVETOASSIGNLISTFields
                         },
                         RequireSelection = true,
                         MinSelection = 1,
-                        MaxSelection = 1
+                        MaxSelection = 1,
+
+
+                        Guards = new TableActionGuards
+                        {
+                            AppliesTo = "any",
+                            DisableWhenAny = new List<TableActionRule>
+                            {
+
+                                new TableActionRule
+                                {
+                                    Field = "WaitingListOrder",
+                                    Op = "neq",
+                                    Value = "1",
+                                    Message = "لايمكن التخصيص لهذا المستفيد لانه ليس براس القائمة في فئته !!",
+                                    Priority = 3
+                                }
+                            }
+                        }
                     },
                 }
             };

@@ -243,6 +243,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ["FullName_E"] = "الاسم بالانجليزي",
                             ["birthdate"] = "تاريخ الميلاد",
                             ["residentcontactDetails"] = "رقم الجوال",
+                            ["IdaraName"] = "موقع ملف المستفيد",
                             ["note"] = "ملاحظات"
                         };
 
@@ -274,6 +275,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             bool isFullName_E = c.ColumnName.Equals("FullName_E", StringComparison.OrdinalIgnoreCase);
                             bool isbirthdate = c.ColumnName.Equals("birthdate", StringComparison.OrdinalIgnoreCase);
                             bool isnote = c.ColumnName.Equals("note", StringComparison.OrdinalIgnoreCase);
+                            bool isIdaraID = c.ColumnName.Equals("IdaraID", StringComparison.OrdinalIgnoreCase);
                           
 
                             dynamicColumns.Add(new TableColumn
@@ -283,7 +285,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 Type = colType,
                                 Sortable = true
                                  ,
-                                Visible = !(isfirstName_A || isfirstName_E || issecondName_A || issecondName_E || isthirdName_A || isthirdName_E || islastName_A || islastName_E || isrankID_FK || ismilitaryUnitID_FK || ismartialStatusID_FK || isnationalityID_FK || isgenderID_FK || isFullName_E || isbirthdate || isnote )
+                                Visible = !(isfirstName_A || isfirstName_E || issecondName_A || issecondName_E || isthirdName_A || isthirdName_E || islastName_A || islastName_E || isrankID_FK || ismilitaryUnitID_FK || ismartialStatusID_FK || isnationalityID_FK || isgenderID_FK || isFullName_E || isbirthdate || isnote || isIdaraID)
                             });
                         }
 
@@ -349,7 +351,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ["ActionDecisionDate"] = "تاريخ القرار",
                             ["WaitingClassName"] = "فئة الانتظار",
                             ["WaitingOrderTypeName"] = "النوع",
-                            ["ActionNote"] = "ملاحظات",
+                            ["ActionNote"] = "ملاحظات"
                         };
 
                         // الأعمدة
@@ -380,7 +382,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 Type = colType,
                                 Sortable = true
                                  ,
-                                Visible = !(isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence || isresidentInfoID || isActionID || isNationalID || isFullName_A)
+                                Visible = !(isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence || isresidentInfoID ||  isNationalID || isFullName_A)
                             });
                         }
 
@@ -432,7 +434,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ["ActionDecisionDate"] = "تاريخ القرار",
                             ["WaitingClassName"] = "فئة الانتظار",
                             ["WaitingOrderTypeName"] = "النوع",
-                            ["ActionNote"] = "ملاحظات",
+                            ["ActionNote"] = "ملاحظات"
                         };
 
                         // الأعمدة
@@ -504,24 +506,36 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         rowIdField_dt4 = "ActionID";
                         var possibleIdNames4 = new[] { "ActionID", "actionID", "Id", "ID" };
                         rowIdField_dt4 = possibleIdNames4.FirstOrDefault(n => dt4.Columns.Contains(n))
-                                     ?? dt4.Columns[0].ColumnName;
+                         ?? dt4.Columns[0].ColumnName;
 
-                        // عناوين الأعمدة بالعربي
+                        // عناوين الأعمدة بناءً على V_MoveWaitingList
                         var headerMap4 = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                         {
-                            ["ActionID"] = "الرقم المرجعي",
+                            ["ActionID"] = "رقم الطلب",
+                            ["residentInfoID"] = "معرف المستفيد",
                             ["NationalID"] = "رقم الهوية",
                             ["GeneralNo"] = "الرقم العام",
+                            ["fullname"] = "الاسم",
                             ["ActionDecisionNo"] = "رقم قرار النقل",
                             ["ActionDecisionDate"] = "تاريخ قرار النقل",
-                            ["WaitingClassName"] = "فئة الانتظار",
-                            ["WaitingOrderTypeName"] = "النوع",
+                            ["ActionDate"] = "تاريخ الإجراء",
                             ["ActionNote"] = "ملاحظات",
-                            ["currentIdaraName"] = "الادارة المنقول منها",
-                            ["MoveToIdaraName"] = "الادارة المراد النقل اليها",
+                            ["IdaraId"] = "معرف الإدارة",
+                            ["ActionIdaraName"] = "الادارة المنقول منها",
+                            ["MainActionEntryData"] = "مُدخل الإجراء الأساسي",
+                            ["MainActionEntryDate"] = "تاريخ الطلب",
+                            ["ToIdaraID"] = "معرف الإدارة المنقول إليها",
+                            ["Toidaraname"] = "الادارة المراد النقل اليها",
+                            ["LastActionID"] = "معرف آخر إجراء",
+                            ["LastActionTypeID"] = "نوع آخر إجراء",
+                            ["LastActionIdaraID"] = "إدارة آخر إجراء",
+                            ["LastActionIdaraName"] = "منفذ آخر إجراء",
+                            ["LastActionTypeName"] = "نوع الإجراء",
+                            ["LastActionNote"] = "ملاحظات آخر إجراء",
+                            ["LastActionEntryDate"] = "تاريخ آخر إجراء",
+                            ["LastActionEntryData"] = "مُدخل آخر إجراء",
                             ["ActionStatus"] = "حالة الطلب",
-                            ["entrydate"] = "وقت وتاريخ الاجراء",
-                            
+                            ["WaitingListCount"] = "عدد سجلات الانتظار القابله للنقل"
                         };
 
                         // الأعمدة
@@ -535,34 +549,35 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                      || t == typeof(float) || t == typeof(double) || t == typeof(decimal))
                                 colType = "number";
 
-
+                            // ✅ إخفاء الأعمدة الداخلية فقط
                             bool isActionID = c.ColumnName.Equals("ActionID", StringComparison.OrdinalIgnoreCase);
-                            bool isNationalID = c.ColumnName.Equals("NationalID", StringComparison.OrdinalIgnoreCase);
-
-                            bool isWaitingClassID = c.ColumnName.Equals("WaitingClassID", StringComparison.OrdinalIgnoreCase);
-                            bool isWaitingOrderTypeID = c.ColumnName.Equals("WaitingOrderTypeID", StringComparison.OrdinalIgnoreCase);
-
-                            bool iswaitingClassSequence = c.ColumnName.Equals("waitingClassSequence", StringComparison.OrdinalIgnoreCase);
-                            
                             bool isresidentInfoID = c.ColumnName.Equals("residentInfoID", StringComparison.OrdinalIgnoreCase);
-                           
-                            bool isWaitingClassName = c.ColumnName.Equals("WaitingClassName", StringComparison.OrdinalIgnoreCase);
-                            bool isWaitingOrderTypeName = c.ColumnName.Equals("WaitingOrderTypeName", StringComparison.OrdinalIgnoreCase);
-                            bool isIdaraId_FK = c.ColumnName.Equals("IdaraId_FK", StringComparison.OrdinalIgnoreCase);
-                            bool isMoveToIdaraID = c.ColumnName.Equals("MoveToIdaraID", StringComparison.OrdinalIgnoreCase);
-                            bool iscurrentIdaraID = c.ColumnName.Equals("currentIdaraID", StringComparison.OrdinalIgnoreCase);
-                            bool isFullName_A = c.ColumnName.Equals("FullName_A", StringComparison.OrdinalIgnoreCase);
-
-
+                            bool isNationalID = c.ColumnName.Equals("NationalID", StringComparison.OrdinalIgnoreCase);
+                            bool isGeneralNo = c.ColumnName.Equals("GeneralNo", StringComparison.OrdinalIgnoreCase);
+                            bool isfullname = c.ColumnName.Equals("fullname", StringComparison.OrdinalIgnoreCase);
+                            bool isIdaraId = c.ColumnName.Equals("IdaraId", StringComparison.OrdinalIgnoreCase);
+                            bool isToIdaraID = c.ColumnName.Equals("ToIdaraID", StringComparison.OrdinalIgnoreCase);
+                            bool isLastActionID = c.ColumnName.Equals("LastActionID", StringComparison.OrdinalIgnoreCase);
+                            bool isLastActionTypeID = c.ColumnName.Equals("LastActionTypeID", StringComparison.OrdinalIgnoreCase);
+                            bool isLastActionIdaraID = c.ColumnName.Equals("LastActionIdaraID", StringComparison.OrdinalIgnoreCase);
+                            bool isMainActionEntryData = c.ColumnName.Equals("MainActionEntryData", StringComparison.OrdinalIgnoreCase);
+                            bool isMainActionEntryDate = c.ColumnName.Equals("MainActionEntryDate", StringComparison.OrdinalIgnoreCase);
+                            bool isLastActionEntryData = c.ColumnName.Equals("LastActionEntryData", StringComparison.OrdinalIgnoreCase);
+                            bool isLastActionTypeName = c.ColumnName.Equals("LastActionTypeName", StringComparison.OrdinalIgnoreCase);
+                            bool isActionDate = c.ColumnName.Equals("ActionDate", StringComparison.OrdinalIgnoreCase);
+                            bool isLastActionIdaraName = c.ColumnName.Equals("LastActionIdaraName", StringComparison.OrdinalIgnoreCase);
 
                             dynamicColumns_dt4.Add(new TableColumn
                             {
                                 Field = c.ColumnName,
                                 Label = headerMap4.TryGetValue(c.ColumnName, out var label) ? label : c.ColumnName,
                                 Type = colType,
-                                Sortable = true
-                                 ,
-                                Visible = !(isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence  || isNationalID ||  isWaitingOrderTypeName || isIdaraId_FK || isMoveToIdaraID || iscurrentIdaraID || isFullName_A || isresidentInfoID)
+                                Sortable = true,
+                                // ✅ اخفي الأعمدة الداخلية فقط (IDs و metadata)
+                                Visible = !( isresidentInfoID || isNationalID || isGeneralNo || 
+                                           isIdaraId || isToIdaraID || isLastActionID || isLastActionTypeID || 
+                                           isLastActionIdaraID || isMainActionEntryData ||  
+                                           isLastActionEntryData || isLastActionTypeName || isActionDate || isLastActionIdaraName|| isfullname)
                             });
                         }
 
@@ -578,23 +593,34 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                             // p01..p05
                             object? Get(string key) => dict4.TryGetValue(key, out var v) ? v : null;
-                            dict4["p01"] = Get("ActionID") ?? Get("actionID");
-                            dict4["p02"] = Get("residentInfoID");
-                            dict4["p03"] = Get("NationalID");
-                            dict4["p04"] = Get("GeneralNo");
+                            
+                            // ✅ Mapping صحيح للـ delete form (بناءً على الأعمدة الفعلية)
+                            dict4["p01"] = Get("residentInfoID");
+                            dict4["p02"] = Get("NationalID");
+                            dict4["p03"] = Get("GeneralNo");
+                            dict4["p04"] = Get("fullname");                 
                             dict4["p05"] = Get("ActionDecisionNo");
                             dict4["p06"] = Get("ActionDecisionDate");
-                            dict4["p07"] = Get("WaitingClassID");
-                            dict4["p08"] = Get("WaitingOrderTypeID");
-                            dict4["p09"] = Get("ActionNote");
-                            dict4["p10"] = Get("currentIdaraID");
-                            dict4["p11"] = Get("currentIdaraName");
-                            dict4["p12"] = Get("MoveToIdaraID");
-                            dict4["p13"] = Get("MoveToIdaraName");
-                            dict4["p14"] = Get("WaitingClassName");
-                            dict4["p15"] = Get("FullName_A");
-                            
-                                
+                            dict4["p07"] = Get("ActionDate");
+                            dict4["p08"] = Get("IdaraId");
+                            dict4["p09"] = Get("ActionIdaraName");                   
+                            dict4["p10"] = Get("ToIdaraID");          
+                            dict4["p11"] = Get("Toidaraname");
+                            dict4["p12"] = Get("WaitingListCount");
+                            dict4["p13"] = Get("MainActionEntryData");                 
+                            dict4["p14"] = Get("MainActionEntryDate");               
+                            dict4["p15"] = Get("LastActionID");
+                            dict4["p16"] = Get("LastActionTypeID");
+                            dict4["p17"] = Get("LastActionIdaraID");
+                            dict4["p18"] = Get("LastActionIdaraName");
+                            dict4["p19"] = Get("LastActionTypeName");
+                            dict4["p20"] = Get("LastActionNote");
+                            dict4["p21"] = Get("LastActionEntryDate");
+                            dict4["p22"] = Get("LastActionEntryData");
+                            dict4["p23"] = Get("ActionStatus");
+                            dict4["p24"] = Get("ActionNote");
+                            dict4["p25"] = Get("ActionID");
+
                             rowsList_dt4.Add(dict4);
                         }
                     }
@@ -627,6 +653,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p07", Label = "نوع سجل الانتظار", Type = "select", ColCss = "3", Required = true, Options= waitingOrderTypeOptions,Select2=true },
                 new FieldConfig { Name = "p08", Label = "ملاحظات", Type = "textarea", ColCss = "6", Required = false },
                 
+
             };
 
             // hidden fields
@@ -648,21 +675,16 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             var addFieldsMoveWaitingList = new List<FieldConfig>
             {
                 new FieldConfig { Name = rowIdField_dt2, Type = "hidden" },
-                new FieldConfig { Name = "p01", Label = "رقم اكشن السراء", Type = "hidden", ColCss = "6", Required = true},
-                new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "6",Placeholder="1xxxxxxxxx"},
-                new FieldConfig { Name = "p03", Label = "NationalID", Type = "hidden", ColCss = "6",Placeholder="1xxxxxxxxx"},
-                new FieldConfig { Name = "p04", Label = "GeneralNo", Type = "hidden", ColCss = "6", Required = true},
+                //new FieldConfig { Name = "p01", Label = "رقم اكشن السراء", Type = "hidden", ColCss = "6", Required = true},
+                new FieldConfig { Name = "p01", Label = "residentInfoID", Type = "hidden", ColCss = "6",Placeholder="1xxxxxxxxx"},
+                new FieldConfig { Name = "p02", Label = "NationalID", Type = "hidden", ColCss = "6",Placeholder="1xxxxxxxxx"},
+                new FieldConfig { Name = "p03", Label = "GeneralNo", Type = "hidden", ColCss = "6", Required = true},
 
-                new FieldConfig { Name = "p07", Label = "فئة سجل الانتظار", Type = "hidden", ColCss = "3", Required = true, Options= waitingClassOptions },
-                new FieldConfig { Name = "p08", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Required = true, Options= waitingOrderTypeOptions },
+                new FieldConfig { Name = "p30", Label = "رقم قرار النقل", Type = "text", ColCss = "3", MaxLength = 50, TextMode = "number",Required=true},
+                new FieldConfig { Name = "p31", Label = "تاريخ قرار النقل", Type = "date", ColCss = "3", MaxLength = 50, TextMode = "number",Required=true,Placeholder="YYYY-MM-DD"},
 
-
-                new FieldConfig { Name = "p05", Label = "رقم قرار النقل", Type = "text", ColCss = "3", MaxLength = 50, TextMode = "number",Required=true,Readonly = true},
-                new FieldConfig { Name = "p06", Label = "تاريخ قرار النقل", Type = "text", ColCss = "3", MaxLength = 50, TextMode = "number",Required=true,Placeholder="YYYY-MM-DD",Readonly=true},
-
-                
                 new FieldConfig { Name = "p12", Label = "الادارة المراد نقل السراء اليها", Type = "select", ColCss = "6", Required = true, Options= idaraOptions,Select2=true },
-                new FieldConfig { Name = "p13", Label = "ملاحظات", Type = "textarea", ColCss = "6", Required = false },
+                new FieldConfig { Name = "p13", Label = "ملاحظات", Type = "textarea", ColCss = "6", Required = true },
 
 
             };
@@ -836,7 +858,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p09", Label = "ملاحظات", Type = "textarea", ColCss = "3", Required = false,Readonly =true },
             };
 
-            
+           
 
             var deleteFieldsMoveWaitingList = new List<FieldConfig>
             {
@@ -850,82 +872,122 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = Request.Host.Value },
                 new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
                 new FieldConfig { Name = rowIdField_dt4, Type = "hidden" },
-                new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "ActionID" },
-                new FieldConfig { Name = "p02", Type = "hidden", MirrorName = "residentInfoID" },
-                new FieldConfig { Name = "p07", Type = "hidden", MirrorName = "WaitingClassID" },
-                new FieldConfig { Name = "p08", Type = "hidden", MirrorName = "WaitingOrderTypeID" },
-                new FieldConfig { Name = "p15", Label = "الاسم", Type = "text", ColCss = "3",Readonly =true},
-                new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3",Placeholder="1xxxxxxxxx",Readonly =true},
-                new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "3", Required = true,Readonly =true},
-
-                new FieldConfig { Name = "p14", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Required = true, Options= waitingClassOptions ,Readonly =true},
-                
-
+                new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "residentInfoID" },
+                new FieldConfig { Name = "p04", Label = "الاسم", Type = "text", ColCss = "3",Readonly =true},
+                new FieldConfig { Name = "p02", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3",Placeholder="1xxxxxxxxx",Readonly =true},
+                new FieldConfig { Name = "p03", Label = "الرقم العام", Type = "text", ColCss = "3", Required = true,Readonly =true},
 
                 new FieldConfig { Name = "p05", Label = "رقم قرار النقل", Type = "text", ColCss = "6", MaxLength = 50, TextMode = "number",Required=true ,Readonly =true},
                 new FieldConfig { Name = "p06", Label = "تاريخ قرار النقل", Type = "text", ColCss = "6", MaxLength = 50, TextMode = "number",Required=true,Placeholder="YYYY-MM-DD" ,Readonly =true},
 
-
-                new FieldConfig { Name = "p11", Label = "الادارة المراد نقل السراء منها", Type = "text", ColCss = "6", Required = true ,Readonly =true },
-                new FieldConfig { Name = "p13", Label = "الادارة المراد سنقل السراء اليها", Type = "text", ColCss = "6", Required = true,Readonly =true },
-                new FieldConfig { Name = "p09", Label = "ملاحظات", Type = "textarea", ColCss = "6", Required = false,Readonly =true },
+                new FieldConfig { Name = "p09", Label = "الادارة المراد نقل السراء منها", Type = "text", ColCss = "6", Required = true ,Readonly =true },
+                new FieldConfig { Name = "p10", Label = "ToIdaraID", Type = "hidden", ColCss = "6", Required = true,Readonly =true },
+                new FieldConfig { Name = "p11", Label = "الادارة المراد نقل السراء اليها", Type = "text", ColCss = "6", Required = true,Readonly =true },
+                new FieldConfig { Name = "p26", Label = "سبب الالغاء", Type = "textarea", ColCss = "6", Required = true },
+                new FieldConfig { Name = "p25", Label = "ActionID", Type = "hidden", ColCss = "6", Required = true },
+                
 
             };
+
+
 
 
 
 
             var dsModel = new SmartTableDsModel
             {
-                PageTitle = "المستفيدين",
+                PageTitle = "بيانات المستفيد",
                 Columns = dynamicColumns,
                 Rows = rowsList,
                 RowIdField = rowIdField,
                 PageSize = 10,
-                PageSizes = new List<int> { 10, 25, 50, 100 },
+                PageSizes = new List<int> { 10, 25, 50, 200, },
                 QuickSearchFields = dynamicColumns.Select(c => c.Field).Take(4).ToList(),
-                Searchable = false,
-                AllowExport = false,
-                PanelTitle = "المستفيدين",
-                ShowFooter = false,
-                Selectable = false,
-                ShowToolbar = false,
-                EnableCellCopy = true,
-                ShowHeader = true,
-
-
-                // نستبدل هنا عرظ الداتا تيبل لبروفايل لأن مافيه عمليات فقط عرض اختياري)
+                Searchable = false, // جديد
+                AllowExport = true,
+                ShowRowBorders = false,
+                PanelTitle = "بيانات المستفيد",
+                EnablePagination = false, // جديد
+                ShowPageSizeSelector = false, // جديد
+                ShowToolbar = true,
+                EnableCellCopy = false,
+                RenderAsToggle = true,
+                ToggleLabel = "بيانات المستفيد",
+                ToggleIcon = "fa-solid fa-list",
+                ToggleDefaultOpen = true,
+                ShowToggleCount = false,
                 ViewMode = TableViewMode.Table,
 
-                ProfileIcon = "fa-solid fa-user",    
-                ProfileTitleText = "بيانات المستفيد",
 
-                ProfileFields = new List<string>
+
+
+
+                Toolbar = new TableToolbarConfig
                 {
-                    "residentInfoID",
-                    "FullName_A",
-                    "NationalID",
-                    "generalNo_FK",
-                    "rankNameA",
-                    "militaryUnitName_A",
-                    "maritalStatusName_A",
-                    "dependinceCounter",
-                    //"nationalityName_A",
-                    //"genderName_A",
-                    "residentcontactDetails"
-                },
+                    ShowRefresh = false,
+                    ShowColumns = true,
+                    ShowExportCsv = false,
+                    ShowExportExcel = false,
+                    ShowAdd = canInsertWaitingList,
+                    ShowEdit = canUpdateWaitingList,
+                    ShowEdit1 = canMoveWaitingList,
+                    ShowDelete = canDeleteWaitingList,
+                    ShowBulkDelete = false,
 
-                ProfileColumns = 3, 
-                ProfileShowHeader = true
+                    Edit = new TableAction
+                    {
+                        Label = "تعديل بيانات المستفيد",
+                        Icon = "fa fa-pen-to-square",
+                        Color = "info",
+                        //Placement = TableActionPlacement.ActionsMenu,
+                        IsEdit = true,
+                        OpenModal = true,
+                        ModalTitle = "تعديل بيانات المستفيد",
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "BuildingTypeEditForm",
+                            Title = "تعديل بيانات المستفيد",
+                            Method = "post",
+                            ActionUrl = "/crud/update",
+                            SubmitText = "حفظ التعديلات",
+                            CancelText = "إلغاء",
+                            Fields = addFieldsMoveWaitingList
+                        },
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1
+                    },
+
+                    Edit1 = new TableAction
+                    {
+                        Label = "طلب نقل المستفيد وسجلات الانتظار لادارة اخرى",
+                        Icon = "fa fa-paper-plane",
+                        Color = "warning",
+                        //Placement = TableActionPlacement.ActionsMenu,
+                        IsEdit = true,
+                        OpenModal = true,
+                        ModalTitle = "طلب نقل سجلات انتظار لادارة اخرى",
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "BuildingTypeEditForm",
+                            Title = "طلب نقل سجلات انتظار لادارة اخرى",
+                            Method = "post",
+                            ActionUrl = "/crud/update",
+                            SubmitText = "حفظ التعديلات",
+                            CancelText = "إلغاء",
+                            Fields = addFieldsMoveWaitingList
+                        },
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1
+                    },
+
+                }
             };
-
-
-
-
 
             var dsModel1 = new SmartTableDsModel
             {
-                PageTitle = "قوائم الانتظار",
+                PageTitle = "إدارة سجلات الانتظار لمستفيد",
                 Columns = dynamicColumns_dt2,
                 Rows = rowsList_dt2,
                 RowIdField = rowIdField_dt2,
@@ -935,7 +997,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 Searchable = false, // جديد
                 AllowExport = true,
                 ShowRowBorders = false, 
-                PanelTitle = "قوائم الانتظار",
+                PanelTitle = "إدارة سجلات الانتظار لمستفيد",
                 EnablePagination = false, // جديد
                 ShowPageSizeSelector=false, // جديد
                 //TabelLabel= "قوائم الانتظار",
@@ -943,7 +1005,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 ShowToolbar =true,
                 EnableCellCopy = false,
                 RenderAsToggle = true,
-                ToggleLabel = "عرض قوائم الانتظار",
+                ToggleLabel = "عرض قوائم الانتظار للمستفيد بإدارتك",
                 ToggleIcon = "fa-solid fa-list",
                 ToggleDefaultOpen = false,
                 ShowToggleCount = true,
@@ -1025,29 +1087,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         MaxSelection = 1
                     },
 
-                    Edit1 = new TableAction
-                    {
-                        Label = "طلب نقل سجل انتظار لادارة اخرى",
-                        Icon = "fa fa-paper-plane",
-                        Color = "warning",
-                        Placement = TableActionPlacement.ActionsMenu,
-                        IsEdit = true,
-                        OpenModal = true,
-                        ModalTitle = "طلب نقل سجل انتظار لادارة اخرى",
-                        OpenForm = new FormConfig
-                        {
-                            FormId = "BuildingTypeEditForm",
-                            Title = "طلب نقل سجل انتظار لادارة اخرى",
-                            Method = "post",
-                            ActionUrl = "/crud/update",
-                            SubmitText = "حفظ التعديلات",
-                            CancelText = "إلغاء",
-                            Fields = addFieldsMoveWaitingList
-                        },
-                        RequireSelection = true,
-                        MinSelection = 1,
-                        MaxSelection = 1
-                    },
+                 
                     
 
                     Delete = new TableAction
@@ -1055,7 +1095,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         Label = "الغاء بيانات انتظار",
                         Icon = "fa fa-trash",
                         Color = "danger",
-                        Placement = TableActionPlacement.ActionsMenu,
+                        //Placement = TableActionPlacement.ActionsMenu,
                         IsEdit = true,
                         OpenModal = true,
                         ModalTitle = "تحذير",
@@ -1102,7 +1142,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 ShowToolbar = true,
                 EnableCellCopy = false,
                 RenderAsToggle = true,
-                ToggleLabel = "عرض خطابات التسكين",
+                ToggleLabel = "عرض خطابات التسكين بإدارتك",
                 ToggleIcon = "fa-solid fa-file-signature",
                 ToggleDefaultOpen = false,
                 ShowToggleCount = true,
@@ -1180,13 +1220,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     },
 
 
-
                     Delete2 = new TableAction
                     {
                         Label = "الغاء خطاب تسكين",
                         Icon = "fa fa-trash",
                         Color = "danger",
-                        Placement = TableActionPlacement.ActionsMenu,
+                        //Placement = TableActionPlacement.ActionsMenu,
                         IsEdit = true,
                         OpenModal = true,
                         ModalTitle = "تحذير",
@@ -1216,7 +1255,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             var dsModel3 = new SmartTableDsModel
             {
-                PageTitle = "طلبات نقل سجلات الانتظار",
+                PageTitle = "طلبات نقل سجلات الانتظار من ادارتك",
                 Columns = dynamicColumns_dt4,
                 Rows = rowsList_dt4,
                 RowIdField = rowIdField_dt4,
@@ -1226,11 +1265,16 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 Searchable = true,
                 AllowExport = true,
                 ShowRowBorders = false,
-                PanelTitle = "طلبات نقل سجلات الانتظار",
-                TabelLabel = "طلبات نقل سجلات الانتظار",
-                TabelLabelIcon = "fa-solid fa-list",
+                PanelTitle = "طلبات نقل سجلات الانتظار من ادارتك",
+                //TabelLabel = "طلبات نقل سجلات الانتظار من ادارتك",
+                //TabelLabelIcon = "fa-solid fa-list",
                 ShowToolbar = true,
                 EnableCellCopy = false,
+                RenderAsToggle = true,
+                ToggleLabel = "طلبات نقل سجلات الانتظار من ادارتك",
+                ToggleIcon = "fa-solid fa-file-signature",
+                ToggleDefaultOpen = false,
+                ShowToggleCount = true,
                 Toolbar = new TableToolbarConfig
                 {
                     ShowRefresh = false,
@@ -1246,7 +1290,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         Label = "الغاء طلب نقل سجل انتظار",
                         Icon = "fa fa-trash",
                         Color = "danger",
-                        Placement = TableActionPlacement.ActionsMenu,
+                        //Placement = TableActionPlacement.ActionsMenu,
                         IsEdit = true,
                         OpenModal = true,
                         ModalTitle = "تحذير",
@@ -1261,7 +1305,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ActionUrl = "/crud/delete",
                             Buttons = new List<FormButtonConfig>
                             {
-                                new FormButtonConfig { Text = "الغاء الطلب", Type = "submit", Color = "danger", },
+                                new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "danger", },
                                 new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
                             },
                             Fields = deleteFieldsMoveWaitingList

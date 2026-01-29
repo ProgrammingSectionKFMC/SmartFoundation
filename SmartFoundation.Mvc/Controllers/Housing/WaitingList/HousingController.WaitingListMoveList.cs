@@ -64,26 +64,42 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                       
                     }
 
-                    if (dt1 != null && dt1.Columns.Count > 0)
+                    if (ds != null && ds.Tables.Count > 0)
                     {
-                        // RowId
-                        rowIdField = "BuildingTypeID";
-                        var possibleIdNames = new[] { "buildingTypeID", "BuildingTypeID", "Id", "ID" };
+                        // ✅ RowId الصحيح
+                        rowIdField = "ActionID";
+                        var possibleIdNames = new[] { "ActionID", "actionID", "Id", "ID" };
                         rowIdField = possibleIdNames.FirstOrDefault(n => dt1.Columns.Contains(n))
                                      ?? dt1.Columns[0].ColumnName;
 
-                        // عناوين الأعمدة بالعربي
+                        // ✅ عناوين الأعمدة بناءً على V_MoveWaitingList
                         var headerMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                         {
+                            ["ActionID"] = "رقم الإجراء",
+                            ["residentInfoID"] = "معرف المستفيد",
                             ["NationalID"] = "رقم الهوية",
                             ["GeneralNo"] = "الرقم العام",
-                            ["ResidentFullName_A"] = "اسم المستفيد",
-                            ["ActionDecisionNo"] = "رقم القرار",
-                            ["ActionDecisionDate"] = "تاريخ القرار",
-                            ["WaitingClassName"] = "فئة سجل الانتظار",
-                            ["ActionStatus"] = "حالة الطلب",
-                            ["entrydate"] = "تاريخ الاجراء",
-                            ["entryDataName"] = "منفذ الاجراء"
+                            ["fullname"] = "اسم المستفيد",
+                            ["ActionDecisionNo"] = "رقم قرار النقل",
+                            ["ActionDecisionDate"] = "تاريخ قرار النقل",
+                            ["ActionDate"] = "تاريخ الإجراء",
+                            ["IdaraId"] = "معرف الإدارة",
+                            ["ActionIdaraName"] = "الإدارة المنقول منها",
+                            ["ToIdaraID"] = "معرف الإدارة المنقول إليها",
+                            ["Toidaraname"] = "الإدارة المنقول إليها",
+                            ["WaitingListCount"] = "عدد سجلات الانتظار",
+                            ["MainActionEntryData"] = "مُدخل الإجراء",
+                            ["MainActionEntryDate"] = "تاريخ إدخال الإجراء",
+                            ["ActionNote"] = "ملاحظات الإجراء",
+                            ["LastActionID"] = "آخر إجراء",
+                            ["LastActionTypeID"] = "نوع آخر إجراء",
+                            ["LastActionIdaraID"] = "إدارة آخر إجراء",
+                            ["LastActionIdaraName"] = "اسم إدارة آخر إجراء",
+                            ["LastActionTypeName"] = "نوع الإجراء",
+                            ["LastActionEntryDate"] = "تاريخ آخر إجراء",
+                            ["LastActionNote"] = "ملاحظات",
+                            ["LastActionEntryData"] = "مُدخل آخر إجراء",
+                            ["ActionStatus"] = "حالة الطلب"
                         };
 
                         // الأعمدة
@@ -97,29 +113,34 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                      || t == typeof(float) || t == typeof(double) || t == typeof(decimal))
                                 colType = "number";
 
-
+                            // ✅ إخفاء الأعمدة الداخلية (IDs و metadata فقط)
                             bool isActionID = c.ColumnName.Equals("ActionID", StringComparison.OrdinalIgnoreCase);
-                            bool isActionTypeID = c.ColumnName.Equals("ActionTypeID", StringComparison.OrdinalIgnoreCase);
-                            bool isActionTypeName = c.ColumnName.Equals("ActionTypeName", StringComparison.OrdinalIgnoreCase);
                             bool isresidentInfoID = c.ColumnName.Equals("residentInfoID", StringComparison.OrdinalIgnoreCase);
-                            bool isBuildingNo = c.ColumnName.Equals("BuildingNo", StringComparison.OrdinalIgnoreCase);
+                            bool isNationalID = c.ColumnName.Equals("NationalID", StringComparison.OrdinalIgnoreCase);
+                            bool isIdaraId = c.ColumnName.Equals("IdaraId", StringComparison.OrdinalIgnoreCase);
+                            bool isToIdaraID = c.ColumnName.Equals("ToIdaraID", StringComparison.OrdinalIgnoreCase);
+                            bool isLastActionID = c.ColumnName.Equals("LastActionID", StringComparison.OrdinalIgnoreCase);
+                            bool isLastActionTypeID = c.ColumnName.Equals("LastActionTypeID", StringComparison.OrdinalIgnoreCase);
+                            bool isLastActionIdaraID = c.ColumnName.Equals("LastActionIdaraID", StringComparison.OrdinalIgnoreCase);
+                            bool isMainActionEntryData = c.ColumnName.Equals("MainActionEntryData", StringComparison.OrdinalIgnoreCase);
+                            bool isLastActionEntryData = c.ColumnName.Equals("LastActionEntryData", StringComparison.OrdinalIgnoreCase);
                             bool isActionDate = c.ColumnName.Equals("ActionDate", StringComparison.OrdinalIgnoreCase);
-                            bool isActionNote = c.ColumnName.Equals("ActionNote", StringComparison.OrdinalIgnoreCase);
-                            bool isWaitingClassID = c.ColumnName.Equals("WaitingClassID", StringComparison.OrdinalIgnoreCase);
-                            bool isbuildingActionExtraInt1 = c.ColumnName.Equals("buildingActionExtraInt1", StringComparison.OrdinalIgnoreCase);
 
                             dynamicColumns.Add(new TableColumn
                             {
                                 Field = c.ColumnName,
                                 Label = headerMap.TryGetValue(c.ColumnName, out var label) ? label : c.ColumnName,
                                 Type = colType,
-                                Sortable = true
-                                  ,
-                                Visible = !( isActionTypeID || isActionTypeName || isresidentInfoID || isBuildingNo || isActionDate || isActionNote || isWaitingClassID  || isbuildingActionExtraInt1)
+                                Sortable = true,
+                                // ✅ اخفي IDs و metadata فقط
+                                Visible = !(isActionID || isresidentInfoID || isNationalID || isIdaraId || 
+                                           isToIdaraID || isLastActionID || isLastActionTypeID || 
+                                           isLastActionIdaraID || isMainActionEntryData || 
+                                           isLastActionEntryData || isActionDate)
                             });
                         }
 
-                        // الصفوف
+                        // ✅ الصفوف - mapping صحيح بناءً على V_MoveWaitingList
                         foreach (DataRow r in dt1.Rows)
                         {
                             var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
@@ -129,27 +150,34 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 dict[c.ColumnName] = val == DBNull.Value ? null : val;
                             }
 
-                            // p01..p05
                             object? Get(string key) => dict.TryGetValue(key, out var v) ? v : null;
-                            dict["p01"] = Get("ActionID") ?? Get("actionID");
-                            dict["p02"] = Get("ActionTypeID");
-                            dict["p03"] = Get("ActionTypeName");
-                            dict["p04"] = Get("residentInfoID");
-                            dict["p05"] = Get("ResidentFullName_A");
-                            dict["p06"] = Get("NationalID");
-                            dict["p07"] = Get("GeneralNo");
-                            dict["p08"] = Get("BuildingNo");
-                            dict["p09"] = Get("ActionDate");
-                            dict["p10"] = Get("ActionDecisionNo");
-                            dict["p11"] = Get("ActionDecisionDate");
-                            dict["p12"] = Get("ActionNote");
-                            dict["p13"] = Get("WaitingClassName");
-                            dict["p14"] = Get("ActionStatus");
-                            dict["p15"] = Get("entrydate");
-                            dict["p16"] = Get("entryDataName");
-                            dict["p17"] = Get("WaitingClassID");
-                            dict["p18"] = Get("buildingActionExtraInt1");
-
+                            
+                            // ✅ Mapping صحيح للـ approve/reject forms
+                            dict["p01"] = Get("ActionID");
+                            dict["p02"] = Get("residentInfoID");
+                            dict["p03"] = Get("NationalID");
+                            dict["p04"] = Get("GeneralNo");
+                            dict["p05"] = Get("fullname");
+                            dict["p06"] = Get("ActionDecisionNo");
+                            dict["p07"] = Get("ActionDecisionDate");
+                            dict["p08"] = Get("ActionDate");
+                            dict["p09"] = Get("IdaraId");
+                            dict["p10"] = Get("ActionIdaraName");
+                            dict["p11"] = Get("ToIdaraID");
+                            dict["p12"] = Get("Toidaraname");
+                            dict["p13"] = Get("WaitingListCount");
+                            dict["p14"] = Get("MainActionEntryData");
+                            dict["p15"] = Get("MainActionEntryDate");
+                            dict["p16"] = Get("ActionNote");
+                            dict["p17"] = Get("LastActionID");
+                            dict["p18"] = Get("LastActionTypeID");
+                            dict["p19"] = Get("LastActionIdaraID");
+                            dict["p20"] = Get("LastActionIdaraName");
+                            dict["p21"] = Get("LastActionTypeName");
+                            dict["p22"] = Get("LastActionEntryDate");
+                            dict["p23"] = Get("LastActionNote");
+                            dict["p24"] = Get("LastActionEntryData");
+                            dict["p25"] = Get("ActionStatus");
 
                             rowsList.Add(dict);
                         }
@@ -163,40 +191,81 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
             // DELETE fields
+            // ✅ Approve/Reject fields (نفس الـ form للاثنين)
             var approveFields = new List<FieldConfig>
             {
                 new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
                 new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "DELETE" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "MOVEWAITINGLISTAPPROVE" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId.ToString() },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId.ToString() },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = Request.Host.Value },
                 new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
-                new FieldConfig { Name = rowIdField, Type = "hidden" },
+                
+                // ✅ Hidden fields (IDs فقط)
+                new FieldConfig { Name = rowIdField, Type = "hidden" },  // ActionID
                 new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "ActionID" },
-                new FieldConfig { Name = "p04", Label = "residentInfoID", Type = "hidden", ColCss = "3",Readonly =true},
-                new FieldConfig { Name = "p05", Label = "الاسم", Type = "text", ColCss = "3",Readonly =true},
-                new FieldConfig { Name = "p06", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3",Placeholder="1xxxxxxxxx",Readonly =true},
-                new FieldConfig { Name = "p07", Label = "الرقم العام", Type = "text", ColCss = "3", Required = true,Readonly =true},
+                new FieldConfig { Name = "p02", Type = "hidden", MirrorName = "residentInfoID" },
+                //new FieldConfig { Name = "p09", Type = "hidden", MirrorName = "IdaraId" },
+                new FieldConfig { Name = "p11", Type = "hidden", MirrorName = "ToIdaraID" },
+                new FieldConfig { Name = "p17", Type = "hidden", MirrorName = "LastActionID" },
+                new FieldConfig { Name = "p18", Type = "hidden", MirrorName = "LastActionTypeID" },
+                
+                // ✅ Readonly fields للعرض
+                new FieldConfig { Name = "p05", Label = "اسم المستفيد", Type = "text", ColCss = "4", Readonly = true },
+                new FieldConfig { Name = "p03", Label = "رقم الهوية", Type = "text", ColCss = "4", Readonly = true },
+                new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "4", Readonly = true },
+                new FieldConfig { Name = "p13", Label = "عدد سجلات الانتظار", Type = "text", ColCss = "4", Readonly = true },
+                new FieldConfig { Name = "p06", Label = "رقم قرار النقل", Type = "text", ColCss = "4", Readonly = true },
+                new FieldConfig { Name = "p07", Label = "تاريخ قرار النقل", Type = "text", ColCss = "4", Readonly = true },
+                new FieldConfig { Name = "p10", Label = "الإدارة المنقول منها", Type = "text", ColCss = "6", Readonly = true },
+                new FieldConfig { Name = "p12", Label = "الإدارة المنقول إليها", Type = "text", ColCss = "6", Readonly = true },
+                new FieldConfig { Name = "p23", Label = "ملاحظات القبول", Type = "textarea", ColCss = "6", Readonly = false, Required =true },
+                new FieldConfig { Name = "p09", Label = "sendidaraid", Type = "hidden", ColCss = "6", Readonly = false },
+            };
 
-                new FieldConfig { Name = "p13", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Required = true ,Readonly =true},
 
-                new FieldConfig { Name = "p17", Label = "WaitingClassID", Type = "hidden", ColCss = "3", Required = true ,Readonly =true},
-
-
-
-                new FieldConfig { Name = "p10", Label = "رقم قرار النقل", Type = "text", ColCss = "6", MaxLength = 50, TextMode = "number",Required=true ,Readonly =true},
-                new FieldConfig { Name = "p11", Label = "تاريخ قرار النقل", Type = "text", ColCss = "6", MaxLength = 50, TextMode = "number",Required=true,Placeholder="YYYY-MM-DD" ,Readonly =true},
-
-
-                new FieldConfig { Name = "p18", Label = "buildingActionExtraInt1 -New IdaraID", Type = "hidden", ColCss = "6", Required = true,Readonly =true },
+            // ✅ Approve/Reject fields (نفس الـ form للاثنين)
+            var rejectFields = new List<FieldConfig>
+            {
+                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "MOVEWAITINGLISTREJECT" },
+                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId.ToString() },
+                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId.ToString() },
+                new FieldConfig { Name = "hostname",           Type = "hidden", Value = Request.Host.Value },
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+                
+                // ✅ Hidden fields (IDs فقط)
+                new FieldConfig { Name = rowIdField, Type = "hidden" },  // ActionID
+                new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "ActionID" },
+                new FieldConfig { Name = "p02", Type = "hidden", MirrorName = "residentInfoID" },
+                //new FieldConfig { Name = "p09", Type = "hidden", MirrorName = "IdaraId" },
+                new FieldConfig { Name = "p11", Type = "hidden", MirrorName = "ToIdaraID" },
+                new FieldConfig { Name = "p17", Type = "hidden", MirrorName = "LastActionID" },
+                new FieldConfig { Name = "p18", Type = "hidden", MirrorName = "LastActionTypeID" },
+                
+                // ✅ Readonly fields للعرض
+                new FieldConfig { Name = "p05", Label = "اسم المستفيد", Type = "text", ColCss = "4", Readonly = true },
+                new FieldConfig { Name = "p03", Label = "رقم الهوية", Type = "text", ColCss = "4", Readonly = true },
+                new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "4", Readonly = true },
+                new FieldConfig { Name = "p13", Label = "عدد سجلات الانتظار", Type = "text", ColCss = "4", Readonly = true },
+                new FieldConfig { Name = "p06", Label = "رقم قرار النقل", Type = "text", ColCss = "4", Readonly = true },
+                new FieldConfig { Name = "p07", Label = "تاريخ قرار النقل", Type = "text", ColCss = "4", Readonly = true },
+                new FieldConfig { Name = "p10", Label = "الإدارة المنقول منها", Type = "text", ColCss = "6", Readonly = true },
+                new FieldConfig { Name = "p12", Label = "الإدارة المنقول إليها", Type = "text", ColCss = "6", Readonly = true },
+                new FieldConfig { Name = "p23", Label = "ملاحظات الرفض", Type = "textarea", ColCss = "6", Readonly = false, Required =true },
+                new FieldConfig { Name = "p09", Label = "sendidaraid", Type = "text", ColCss = "6", Readonly = false },
 
             };
 
+
+
             var dsModel = new SmartTableDsModel
             {
-                PageTitle = "انواع المباني",
+                PageTitle = "طلبات نقل سجلات الانتظار الواردة",
                 Columns = dynamicColumns,
                 Rows = rowsList,
                 RowIdField = rowIdField,
@@ -205,7 +274,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 QuickSearchFields = dynamicColumns.Select(c => c.Field).Take(4).ToList(),
                 Searchable = true,
                 AllowExport = true,
-                PanelTitle = "أنواع المباني",
+                PanelTitle = "طلبات نقل سجلات الانتظار الواردة",
                 Toolbar = new TableToolbarConfig
                 {
                     ShowRefresh = false,

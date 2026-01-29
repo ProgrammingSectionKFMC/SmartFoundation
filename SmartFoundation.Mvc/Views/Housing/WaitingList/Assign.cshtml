@@ -1,0 +1,32 @@
+﻿@model SmartFoundation.UI.ViewModels.SmartPage.SmartPageViewModel
+@{
+    ViewData["Title"] = Model.PageTitle;
+}
+
+
+@if (TempData["NoAssignPeriod"] != null)
+{
+    <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
+        <i class="fa fa-info-circle me-2"></i>
+        @TempData["NoAssignPeriod"]
+    </div>
+}
+
+@if (TempData["AssignPeriodAvaliable"] != null)
+{
+    <div class="mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-green-800">
+        <i class="fa fa-check-circle me-2"></i>
+        @TempData["AssignPeriodAvaliable"]
+    </div>
+}
+
+@await Component.InvokeAsync("SmartRenderer", new { model = Model })
+
+<script>
+    (function () {
+
+      if (location.search && location.search.length > 1) {
+        history.replaceState(null, "", location.pathname + location.hash);
+      }
+    })();
+</script>
