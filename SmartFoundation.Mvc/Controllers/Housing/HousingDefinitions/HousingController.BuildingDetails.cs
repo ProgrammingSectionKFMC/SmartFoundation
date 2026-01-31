@@ -54,18 +54,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
 
-
-            DataTable? permissionTable = (ds?.Tables?.Count ?? 0) > 0 ? ds.Tables[0] : null;
-
-            dt1 = (ds?.Tables?.Count ?? 0) > 1 ? ds.Tables[1] : null;
-            dt2 = (ds?.Tables?.Count ?? 0) > 2 ? ds.Tables[2] : null;
-            dt3 = (ds?.Tables?.Count ?? 0) > 3 ? ds.Tables[3] : null;
-            dt4 = (ds?.Tables?.Count ?? 0) > 4 ? ds.Tables[4] : null;
-            dt5 = (ds?.Tables?.Count ?? 0) > 5 ? ds.Tables[5] : null;
-            dt6 = (ds?.Tables?.Count ?? 0) > 6 ? ds.Tables[6] : null;
-            dt7 = (ds?.Tables?.Count ?? 0) > 7 ? ds.Tables[7] : null;
-            dt8 = (ds?.Tables?.Count ?? 0) > 8 ? ds.Tables[8] : null;
-            dt9 = (ds?.Tables?.Count ?? 0) > 9 ? ds.Tables[9] : null;
+            SplitDataSet(ds);
 
             if (permissionTable is null || permissionTable.Rows.Count == 0)
             {
@@ -326,6 +315,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             dict["p15"] = Get("buildingDetailsStartDate");
                             dict["p16"] = Get("buildingDetailsRemark");
                             dict["p17"] = Get("IdaraId_FK");
+                            dict["p18"] = Get("buildingDetailsEndDate");
 
                             rowsList.Add(dict);
                         }
@@ -380,18 +370,21 @@ namespace SmartFoundation.Mvc.Controllers.Housing
     // keep id hidden first so row id can flow when needed
     new FieldConfig { Name = rowIdField, Type = "hidden" },
 
-    new FieldConfig { Name = "p01", Label = "اسم المبنى", Type = "text",   ColCss = "3", Required = true},
-    new FieldConfig { Name = "p02", Label = "عدد الغرف", Type = "number", ColCss = "3", Required = true },
-    new FieldConfig { Name = "p03", Label = "عدد الطوابق", Type = "number", ColCss = "3", Required = true },
-    new FieldConfig { Name = "p04", Label = "مساحة المبنى", Type = "number", ColCss = "3", Required = true },
-    new FieldConfig { Name = "p05", Label = "احداثيات المبنى", Type = "text", ColCss = "3", Required = true },
-    new FieldConfig { Name = "p06", Label = "نوع المبنى", Type = "select", ColCss = "3", Required = true, Options = BuildingTypeOptions, Select2=true  },
-    new FieldConfig { Name = "p07", Label = "موقع المبنى", Type = "select", ColCss = "6", Required = true, Options = MilitaryLocationOptions, Select2=true },
-    new FieldConfig { Name = "p08", Label = "فئة المبنى", Type = "select", ColCss = "6", Required = true, Options = BuildingClassOptions, Select2=true  },
+
+
+    new FieldConfig { Name = "p02", Label = "اسم المبنى", Type = "text",   ColCss = "3", Required = true},
+    new FieldConfig { Name = "p03", Label = "عدد الغرف", Type = "number", ColCss = "3", Required = true },
+    new FieldConfig { Name = "p04", Label = "عدد الطوابق", Type = "number", ColCss = "3", Required = true },
+    new FieldConfig { Name = "p05", Label = "مساحة المبنى", Type = "number", ColCss = "3", Required = true },
+    new FieldConfig { Name = "p06", Label = "احداثيات المبنى", Type = "text", ColCss = "3", Required = true },
+    new FieldConfig { Name = "p16", Label = "نوع المبنى", Type = "select", ColCss = "3", Required = true, Options = BuildingTypeOptions, Select2=true  },
+    new FieldConfig { Name = "p07", Label = "فئة المبنى", Type = "select", ColCss = "6", Required = true, Options = BuildingClassOptions, Select2=true  },
+    new FieldConfig { Name = "p08", Label = "موقع المبنى", Type = "select", ColCss = "6", Required = true, Options = MilitaryLocationOptions, Select2=true },
     new FieldConfig { Name = "p09", Label = "تيلفون المبنى 1", Type = "tel", ColCss = "3", Required = false },
     new FieldConfig { Name = "p10", Label = "تيلفون المبنى 2", Type = "tel", ColCss = "3", Required = false },
 
     new FieldConfig { Name = "p13", Label = "تاريخ بداية المبنى", Type = "date", ColCss = "3", Required = true },
+    new FieldConfig { Name = "p18", Label = "تاريخ نهاية المبنى", Type = "date", ColCss = "3" },
     new FieldConfig { Name = "p14", Label = "ملاحظات", Type = "text", ColCss = "3", Required = true },
     new FieldConfig { Name = "p15", Label = "UtilityTypeID_", Type = "hidden", ColCss = "3", Required = false,Value =UtilityTypeID_ },
 };
@@ -436,20 +429,22 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
                 new FieldConfig { Name = rowIdField,            Type = "hidden" },
 
-                new FieldConfig { Name = "p01", Label = "المعرف",   Type = "hidden", Readonly = true, ColCss = "3" },
+                new FieldConfig { Name = "p01", Label = "المعرف",   Type = "text", Readonly = true, ColCss = "3" },
                 new FieldConfig { Name = "p02", Label = "اسم المبنى", Type = "text",   ColCss = "3", Required = true ,Value =buildingUtilityIsRent.ToString()},
                 new FieldConfig { Name = "p03", Label = "عدد الغرف", Type = "number", ColCss = "3", Required = true },
                 new FieldConfig { Name = "p04", Label = "عدد الطوابق", Type = "number", ColCss = "3", Required = true },
                 new FieldConfig { Name = "p05", Label = "مساحة المبنى", Type = "number", ColCss = "3", Required = true },
                 new FieldConfig { Name = "p06", Label = "احداثيات المبنى", Type = "number", ColCss = "3", Required = true },
                 new FieldConfig { Name = "p07", Label = "نوع المبنى", Type = "select", ColCss = "3", Required = true,   Options =         BuildingTypeOptions },
-                new FieldConfig { Name = "p08", Label = "نوع المرفق", Type = "hidden", ColCss = "3", Required = true,   Value=UtilityTypeID_ },
+                new FieldConfig { Name = "p08", Label = "نوع المرفق", Type = "hidden", ColCss = "3", Required = true,   Value= UtilityTypeID_ },
                 new FieldConfig { Name = "p09", Label = "موقع المبنى", Type = "select", ColCss = "6", Required = true,  Options =        MilitaryLocationOptions },
                 new FieldConfig { Name = "p10", Label = "فئة المبنى", Type = "select", ColCss = "6", Required = true,   Options =         BuildingClassOptions },
                 new FieldConfig { Name = "p11", Label = "تيلفون المبنى 1", Type = "number", ColCss = "3", Required = false },
                 new FieldConfig { Name = "p12", Label = "تيلفون المبنى 2", Type = "number", ColCss = "3", Required = false },
 
                 new FieldConfig { Name = "p15", Label = "تاريخ بداية المبنى", Type = "date", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p18", Label = "تاريخ نهاية المبنى", Type = "date", ColCss = "3" },
+
                 new FieldConfig { Name = "p16", Label = "ملاحظات", Type = "text", ColCss = "3", Required = true },
                 new FieldConfig { Name = "p17", Label = "UtilityTypeID_", Type = "hidden", ColCss = "3", Required = false,Value =UtilityTypeID_ },
             };
