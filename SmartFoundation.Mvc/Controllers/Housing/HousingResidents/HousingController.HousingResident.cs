@@ -179,7 +179,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID || isLastActionTypeID || isAssignPeriodID || isbuildingDetailsID || isLastActionID)
+                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID  || isAssignPeriodID || isbuildingDetailsID || isLastActionID)
                             });
                         }
 
@@ -281,6 +281,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
             };
+
 
 
             var dsModel = new SmartTableDsModel
