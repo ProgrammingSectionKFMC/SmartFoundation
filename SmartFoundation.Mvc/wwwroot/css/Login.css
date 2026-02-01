@@ -117,7 +117,7 @@ body, input, button, a, h1, h2, h3, h4, h5, h6 {
 }
 
 .login-brand-title {
-    font-weight: 700;
+    font-weight: 400;
     font-size: 32px;
     line-height: 1.4;
     margin: 10px 0 0;
@@ -200,6 +200,8 @@ body, input, button, a, h1, h2, h3, h4, h5, h6 {
 .login-text {
     display: inline-block;
     line-height: 1;
+    position: relative;
+    top: 1px;
 }
 
 /* ---------- Alerts ---------- */
@@ -322,21 +324,27 @@ body, input, button, a, h1, h2, h3, h4, h5, h6 {
     gap: 12px;
     margin-top: 12px !important;
     color: var(--muted);
-    font-size: 13px;
+    font-size: 15px;
     flex-wrap: wrap;
 }
+
 
 #remember-me {
     width: 16px;
     height: 16px;
     accent-color: var(--brand);
-    margin-left: 8px;
+    margin-left: 2px;
+    position: relative;
+    top: 3px;
+    outline: none;
 }
 
 a.text-primary {
     color: #0f6b5d;
     text-decoration: none;
-    font-weight: 700;
+    font-weight: 500;
+    position: relative;
+    top: 3px;
 }
 
     a.text-primary:hover {
@@ -622,7 +630,7 @@ a.text-primary {
     }
 
     .login-brand-top .login-brand-title {
-        font-weight: 700;
+        font-weight: 500;
         font-size: 22px;
         line-height: 1.5;
         margin: 0;

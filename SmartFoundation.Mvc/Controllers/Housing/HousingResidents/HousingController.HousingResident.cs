@@ -242,19 +242,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
-
                 new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
                 new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
                 new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
-
-
                 new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
-
                 // selection context
                 new FieldConfig { Name = rowIdField, Type = "hidden" },
-
-              
-
                 // hidden p01 actually posted to SP
                 new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "ActionID" },
                 new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true },
@@ -276,9 +269,6 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p19", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true },
-
-
-
 
             };
             var updateFields1 = new List<FieldConfig>
@@ -331,6 +321,38 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
 
+
+
+
+
+            //  UPDATE fields (Form Default / Form 46+)  تجريبي نرجع نمسحه او نعدل عليه
+            var updateFields2 = new List<FieldConfig>
+            {
+                new FieldConfig { Name = "pageName_", Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType", Type = "hidden", Value = "HOUSINGESRESIDENTS_2" }, 
+                new FieldConfig { Name = "idaraID", Type = "hidden", Value = IdaraId },
+                new FieldConfig { Name = "entrydata", Type = "hidden", Value = usersId },
+                new FieldConfig { Name = "hostname", Type = "hidden", Value = HostName },
+
+                new FieldConfig { Name = "redirectUrl", Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectAction", Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden",
+                    Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+
+                // selection context
+                new FieldConfig { Name = rowIdField, Type = "hidden" },
+                new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "ActionID" },
+                new FieldConfig { Name = "p02", Type = "hidden" },
+                new FieldConfig { Name = "p12", Label = "سبب الإجراء", Type = "text", ColCss = "6", Required = true },
+            };
+
+
+
+
+
+
             var dsModel = new SmartTableDsModel
             {
                 PageTitle = "المستفيدين",
@@ -343,7 +365,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 Searchable = true,
                 AllowExport = true,
                 ShowPageSizeSelector=true,
-                PanelTitle = "المستفيدين",
+                PanelTitle = "إسكان المستفيدين",
                 //TabelLabel = "بيانات المستفيدين",
                 //TabelLabelIcon = "fa-solid fa-user-group",
                 EnableCellCopy = true,
@@ -435,7 +457,37 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
 
-                    // Edit button - shown when meterForBuildingCount == 0
+                    //        Edit = new TableAction
+                    //        {
+                    //            Label = "الاجراء التالي",
+                    //            Icon = "fa-solid fa-pen",
+                    //            Color = "success",
+                    //           // Placement = TableActionPlacement.ActionsMenu,  
+                    //            IsEdit = true,
+                    //            OpenModal = true,
+                    //            ModalTitle = "انهاء محضر تخصيص نشط",
+                    //            ModalMessage = "هل أنت متأكد من اتمام الاجراء التالي ؟ لايمكن التراجع عن هذا الاجراء !",
+                    //            ModalMessageClass = "bg-red-50 text-red-700",
+                    //            ModalMessageIcon = "fa-solid fa-triangle-exclamation",
+                    //            OpenForm = new FormConfig
+                    //            {
+                    //                FormId = "BuildingTypeEditForm",
+                    //                Title = "الاجراء التالي",
+                    //                Method = "post",
+                    //                ActionUrl = "/crud/update",
+                    //                SubmitText = "حفظ التعديلات",
+                    //                CancelText = "إلغاء",
+                    //                Fields = updateFields
+                    //            },
+                    //            RequireSelection = true,
+                    //            MinSelection = 1,
+                    //            MaxSelection = 1
+                    //        },
+
+                    //    }
+                    //};
+
+
                     Edit = new TableAction
                     {
                         Label = "الاجراء التالي",
@@ -443,20 +495,45 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         Color = "success",
                         IsEdit = true,
                         OpenModal = true,
-                        ModalTitle = "انهاء محضر تخصيص نشط",
-                        ModalMessage = "هل أنت متأكد من اتمام الاجراء التالي ؟ لايمكن التراجع عن هذا الاجراء !",
+
+                        ModalTitle = "",
+                        ModalMessage = "",
                         ModalMessageClass = "bg-red-50 text-red-700",
                         ModalMessageIcon = "fa-solid fa-triangle-exclamation",
+
+                        OnBeforeOpenJs = "sfRouteEditForm(table, act);",
+
                         OpenForm = new FormConfig
                         {
                             FormId = "BuildingTypeEditForm",
-                            Title = "جرد العهد والملاحظات",
+                            Title = "",
                             Method = "post",
                             ActionUrl = "/crud/update",
                             SubmitText = "حفظ التعديلات",
                             CancelText = "إلغاء",
                             Fields = updateFields
                         },
+
+                        Meta = new Dictionary<string, object?>
+                        {
+                            ["routeBy"] = "p16",
+                            ["routes"] = new Dictionary<string, object?>
+                            {
+                                ["45"] = new Dictionary<string, object?>
+                                {
+                                    ["title"] = "انهاء محضر تخصيص نشط",
+                                    ["message"] = "هل أنت متأكد من اتمام الاجراء التالي ؟ لايمكن التراجع عن هذا الاجراء !",
+                                    ["fields"] = updateFields
+                                },
+                                ["46"] = new Dictionary<string, object?>
+                                {
+                                    ["title"] = "إجراء آخر",
+                                    ["message"] = "سيتم تنفيذ إجراء مختلف حسب الحالة",
+                                    ["fields"] = updateFields2
+                                }
+                            }
+                        },
+
                         RequireSelection = true,
                         MinSelection = 1,
                         MaxSelection = 1,
@@ -480,13 +557,14 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         }
                     },
 
-
-
                 }
                 
             };
 
-            var page = new SmartPageViewModel
+
+
+
+                    var page = new SmartPageViewModel
             {
                 PageTitle = dsModel.PageTitle,
                 PanelTitle = dsModel.PanelTitle,
