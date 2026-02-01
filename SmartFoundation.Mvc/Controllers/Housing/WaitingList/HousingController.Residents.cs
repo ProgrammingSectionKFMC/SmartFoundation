@@ -18,6 +18,11 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             if (!InitPageContext(out var redirect))
                 return redirect!;
 
+            if (string.IsNullOrWhiteSpace(usersId))
+            {
+                return RedirectToAction("Index", "Login", new { logout = 4 });
+            }
+
             ControllerName = nameof(Housing);
             PageName = string.IsNullOrWhiteSpace(PageName) ? "Residents" : PageName;
 

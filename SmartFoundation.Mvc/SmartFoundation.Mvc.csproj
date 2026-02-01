@@ -14,6 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Controllers\ElectronicBillSystem\MeterRead\NewFolder\" />
     <Folder Include="wwwroot\lib\fontawesome\" />
   </ItemGroup>
 

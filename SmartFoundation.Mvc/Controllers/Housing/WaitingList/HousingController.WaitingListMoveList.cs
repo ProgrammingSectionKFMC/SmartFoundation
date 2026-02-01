@@ -257,7 +257,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p10", Label = "الإدارة المنقول منها", Type = "text", ColCss = "6", Readonly = true },
                 new FieldConfig { Name = "p12", Label = "الإدارة المنقول إليها", Type = "text", ColCss = "6", Readonly = true },
                 new FieldConfig { Name = "p23", Label = "ملاحظات الرفض", Type = "textarea", ColCss = "6", Readonly = false, Required =true },
-                new FieldConfig { Name = "p09", Label = "sendidaraid", Type = "text", ColCss = "6", Readonly = false },
+                new FieldConfig { Name = "p09", Label = "sendidaraid", Type = "hidden", ColCss = "6", Readonly = false },
 
             };
 
@@ -375,7 +375,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             new FormButtonConfig { Text = "رفض", Type = "submit", Color = "danger" },
                             new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
                         },
-                            Fields = approveFields
+                            Fields = rejectFields
                         },
                         RequireSelection = true,
                         MinSelection = 1,

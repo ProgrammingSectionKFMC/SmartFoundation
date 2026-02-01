@@ -121,7 +121,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
 
-                //// ---------------------- BuildingUtilityType ----------------------
+                //// ---------------------- WaitingListOptions ----------------------
                 result = await _CrudController.GetDDLValues(
                     "waitingClassName_A", "waitingClassID", "2", PageName, usersId, IdaraId, HostName
                ) as JsonResult;

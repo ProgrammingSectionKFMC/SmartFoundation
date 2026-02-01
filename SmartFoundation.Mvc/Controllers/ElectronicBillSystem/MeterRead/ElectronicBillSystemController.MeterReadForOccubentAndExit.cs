@@ -2,31 +2,47 @@
 using SmartFoundation.MVC.Reports;
 using SmartFoundation.UI.ViewModels.SmartForm;
 using SmartFoundation.UI.ViewModels.SmartPage;
-using SmartFoundation.UI.ViewModels.SmartPrint;
 using SmartFoundation.UI.ViewModels.SmartTable;
 using System.Data;
 using System.Linq;
 using System.Text.Json;
 
-namespace SmartFoundation.Mvc.Controllers.Housing
+namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 {
-    public partial class HousingController : Controller
+    public partial class ElectronicBillSystemController : Controller
     {
-        public async Task<IActionResult> HousingResident(int pdf = 0)
+        public async Task<IActionResult> MeterReadForOccubentAndExit(int pdf = 0)
         {
             //  قراءة السيشن والكونتكست
             if (!InitPageContext(out var redirect))
                 return redirect!;
 
+            if (string.IsNullOrWhiteSpace(usersId))
+            {
+                return RedirectToAction("Index", "Login", new { logout = 4 });
+            }
+
+
+
+            string? residentInfoID_ = Request.Query["U"].FirstOrDefault();
+
+            residentInfoID_ = string.IsNullOrWhiteSpace(residentInfoID_) ? null : residentInfoID_.Trim();
+
+            bool ready = false;
+
+            ready = !string.IsNullOrWhiteSpace(residentInfoID_);
+
+
             ControllerName = nameof(Housing);
-            PageName = string.IsNullOrWhiteSpace(PageName) ? "HousingResident" : PageName;
+            PageName = string.IsNullOrWhiteSpace(PageName) ? "MeterReadForOccubentAndExit" : PageName;
 
             var spParameters = new object?[]
             {
-             PageName ?? "HousingResident",
+             PageName ?? "MeterReadForOccubentAndExit",
              IdaraId,
              usersId,
-             HostName
+             HostName,
+             residentInfoID_
             };
 
             var rowsList = new List<Dictionary<string, object?>>();
@@ -38,88 +54,120 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             SplitDataSet(ds);
 
             //  التحقق من الصلاحيات
-            //if (permissionTable is null || permissionTable.Rows.Count == 0)
-            //{
-            //    TempData["Error"] = "تم رصد دخول غير مصرح به انت لاتملك صلاحية للوصول الى هذه الصفحة";
-            //    return RedirectToAction("Index", "Home");
-            //}
+            if (permissionTable is null || permissionTable.Rows.Count == 0)
+            {
+                TempData["Error"] = "تم رصد دخول غير مصرح به انت لاتملك صلاحية للوصول الى هذه الصفحة";
+                return RedirectToAction("Index", "Home");
+            }
 
             string rowIdField = "";
-            bool canHOUSINGESRESIDENTS = false;
+            bool canMeterReadForOccubentAndExit = false;
+            bool canUpdateMeterReadForOccubentAndExit = false;
            
 
 
-            List<OptionItem> rankOptions = new();
-            List<OptionItem> militaryUnitOptions = new();
-            List<OptionItem> MaritalStatusOptions = new();
-            List<OptionItem> NationalityOptions = new();
-            List<OptionItem> GenderOptions = new();
+            List<OptionItem> ResidentDetailsOptions = new();
+
 
             // ---------------------- DDLValues ----------------------
 
             JsonResult? result;
             string json;
 
-            //// ---------------------- rankOptions ----------------------
-            result = await _CrudController.GetDDLValues(
-                "rankNameA", "rankID", "2", nameof(Residents), usersId, IdaraId, HostName
-           ) as JsonResult;
+          
 
-
-            json = JsonSerializer.Serialize(result!.Value);
-
-            rankOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-            //// ---------------------- militaryUnitOptions ----------------------
-            result = await _CrudController.GetDDLValues(
-                "militaryUnitName_A", "militaryUnitID", "3", nameof(Residents), usersId, IdaraId, HostName
-           ) as JsonResult;
-
-
-            json = JsonSerializer.Serialize(result!.Value);
-
-            militaryUnitOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-            //// ---------------------- MaritalStatus ----------------------
-            result = await _CrudController.GetDDLValues(
-                "maritalStatusName_A", "maritalStatusID", "4", nameof(Residents), usersId, IdaraId, HostName
-           ) as JsonResult;
-
-
-            json = JsonSerializer.Serialize(result!.Value);
-
-            MaritalStatusOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-            //// ---------------------- Nationality ----------------------
-            result = await _CrudController.GetDDLValues(
-                "nationalityName_A", "nationalityID", "5", nameof(Residents), usersId, IdaraId, HostName
-           ) as JsonResult;
-
-
-            json = JsonSerializer.Serialize(result!.Value);
-
-            NationalityOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-            //// ---------------------- Gender ----------------------
-            result = await _CrudController.GetDDLValues(
-                "genderName_A", "genderID", "6", nameof(Residents), usersId, IdaraId, HostName
-           ) as JsonResult;
-
-
-            json = JsonSerializer.Serialize(result!.Value);
-
-            GenderOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-
-            //// ---------------------- END DDL ----------------------
+            FormConfig form = new();
 
             try
             {
+
+                //// ---------------------- ResidentDetailsOptions ----------------------
+                result = await _CrudController.GetDDLValues(
+                     "FullName_A", "residentInfoID", "2", PageName, usersId, IdaraId, HostName
+                ) as JsonResult;
+
+
+                json = JsonSerializer.Serialize(result!.Value);
+
+                ResidentDetailsOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+
+
+                //// ---------------------- END DDL ----------------------
+
+
+                form = new FormConfig
+                {
+                    Fields = new List<FieldConfig>
+                                {
+                                    new FieldConfig
+                                    {
+                                        SectionTitle = "اختيار الساكن",
+                                        Name = "WaitingList",
+                                        Type = "select",
+                                        Select2 = true,
+                                        Options = ResidentDetailsOptions,
+                                        ColCss = "3",
+                                        Placeholder = "اختر الساكن",
+                                        Icon = "fa fa-user",
+                                        Value = residentInfoID_,
+                                        OnChangeJs = "sfNav(this)",
+                                        NavUrl = "/ElectronicBillSystem/MeterReadForOccubentAndExit",
+                                        NavKey = "U",
+                                    },
+                                },
+
+                    Buttons = new List<FormButtonConfig>
+                    {
+                        //           new FormButtonConfig
+                        //  {
+                        //      Text="بحث",
+                        //      Icon="fa-solid fa-search",
+                        //      Type="button",
+                        //      Color="success",
+                        //      // Replace the OnClickJs of the "تجربة" button with this:
+                        //      OnClickJs = "(function(){"
+                        //+ "var hidden=document.querySelector('input[name=Users]');"
+                        //+ "if(!hidden){toastr.error('لا يوجد حقل مستخدم');return;}"
+                        //+ "var userId = (hidden.value||'').trim();"
+                        //+ "var anchor = hidden.parentElement.querySelector('.sf-select');"
+                        //+ "var userName = anchor && anchor.querySelector('.truncate') ? anchor.querySelector('.truncate').textContent.trim() : '';"
+                        //+ "if(!userId){toastr.info('اختر مستخدم أولاً');return;}"
+                        //+ "var url = '/ControlPanel/Permission?Q1=' + encodeURIComponent(userId);"
+                        //+ "window.location.href = url;"
+                        //+ "})();"
+                        //  },
+
+                    }
+
+
+                };
+
                 if (ds != null && ds.Tables.Count > 0 && permissionTable!.Rows.Count > 0)
                 {
                     // صلاحيات
+
+
+
+                
                     foreach (DataRow row in permissionTable.Rows)
                     {
-                        var permissionName = row["permissionTypeName_E"]?.ToString()?.Trim().ToUpper();
+                        var permissionName = row["permissionTypeName_E"]?.ToString()?.Trim();
 
-                        if (permissionName == "HOUSINGESRESIDENTS") canHOUSINGESRESIDENTS = true;
-                        
+                        if (string.IsNullOrWhiteSpace(permissionName))
+                            continue;
+
+                        if (permissionName.Equals("MeterReadForOccubentAndExit", StringComparison.OrdinalIgnoreCase))
+                        {
+                            canMeterReadForOccubentAndExit = true;
+                        }
+
+                        if (permissionName.Equals("UpdateMeterReadForOccubentAndExit", StringComparison.OrdinalIgnoreCase))
+                        {
+                            canUpdateMeterReadForOccubentAndExit = true;
+                        }
                     }
+
+
 
                     if (dt1 != null && dt1.Columns.Count > 0)
                     {
@@ -135,15 +183,15 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ["ActionID"] = "رقم الاكشن",
                             ["NationalID"] = "رقم الهوية",
                             ["GeneralNo"] = "الرقم العام",
-                            ["ActionDecisionNo"] = "رقم الطلب",
-                            ["ActionDecisionDate"] = "تاريخ الطلب",
                             ["WaitingClassName"] = "فئة سجل الانتظار",
-                            ["WaitingOrderTypeName"] = "نوع سجل الانتظار",
                             ["ActionNote"] = "ملاحظات",
                             ["FullName_A"] = "الاسم",
                             ["buildingActionTypeResidentAlias"] = "الحالة",
-                            ["buildingDetailsNo"] = "رقم المنزل (إن وجد)",
-                            ["WaitingListOrder"] = "الترتيب"
+                            ["meterReadValue"] = "اخر قراءة للعداد",
+                            ["meterServiceTypeName_A"] = "نوع الخدمة",
+                            ["meterTypeName_A"] = "نوع العداد",
+                            ["meterMaxRead"] = "القراءة القصوى للعداد",
+                            ["buildingDetailsNo"] = "رقم المنزل"
                         };
 
                         // الأعمدة
@@ -167,7 +215,11 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             bool isAssignPeriodID = c.ColumnName.Equals("AssignPeriodID", StringComparison.OrdinalIgnoreCase);
                             bool isbuildingDetailsID = c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase);
                             bool isLastActionID = c.ColumnName.Equals("LastActionID", StringComparison.OrdinalIgnoreCase);
+                          
+                            bool isActionDecisionNo = c.ColumnName.Equals("ActionDecisionNo", StringComparison.OrdinalIgnoreCase);
+                            bool isActionDecisionDate = c.ColumnName.Equals("ActionDecisionDate", StringComparison.OrdinalIgnoreCase);
                             bool isWaitingOrderTypeName = c.ColumnName.Equals("WaitingOrderTypeName", StringComparison.OrdinalIgnoreCase);
+                            bool ismeterID = c.ColumnName.Equals("meterID", StringComparison.OrdinalIgnoreCase);
 
 
 
@@ -180,7 +232,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID  || isAssignPeriodID || isbuildingDetailsID || isLastActionID || isLastActionTypeID || isWaitingOrderTypeName)
+                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID || isAssignPeriodID || isbuildingDetailsID || isLastActionID|| isActionDecisionNo || isActionDecisionDate || isWaitingOrderTypeName || ismeterID)
                             });
                         }
 
@@ -217,6 +269,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             dict["p19"] = Get("buildingDetailsNo");
                             dict["p20"] = Get("AssignPeriodID");
                             dict["p21"] = Get("LastActionID");
+                            dict["p22"] = Get("meterReadValue");
+                            dict["p23"] = Get("meterID");
+                            dict["p24"] = Get("meterServiceTypeName_A");
+                            dict["p25"] = Get("meterTypeName_A");
+                            dict["p26"] = Get("meterMaxRead");
+                            dict["p28"] = Get("meterReadID");
 
 
                             rowsList.Add(dict);
@@ -235,11 +293,11 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
             // UPDATE fields
-            var CustdyFields = new List<FieldConfig>
+            var MeterReadFields = new List<FieldConfig>
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "CustdyRecord" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "MeterRead" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -263,28 +321,35 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p12", Label = "تسجيل العهد والملاحظات على المنزل", Type = "textarea", ColCss = "12",Required = true,HelpText="لايجب ان يتجاوز النص 4000 حرف*",MaxLength=3900 },
-                new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p19", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true },
 
 
                
+                new FieldConfig { Name = "p23", Label = "meterID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p24", Label = "نوع الخدمة", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p25", Label = "نوع العداد", Type = "text", ColCss = "3", Readonly = true }, 
+                new FieldConfig { Name = "p22", Label = "اخر قراءة للعداد", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p26", Label = "القراءة القصوى للعداد", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p28", Label = "meterReadID", Type = "hidden", ColCss = "3", Readonly = true },
 
+                 new FieldConfig { Name = "p27", Label = "تسجيل القراءة", Type = "number", ColCss = "12",Required = true,HelpText="يجب ان تكون القراءة ارقام فقط*",MaxLength=3900 },
+
+                new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p19", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true },
 
 
             };
 
 
 
-            var FinalOccupentFields = new List<FieldConfig>
+            var UpdateMeterReadFields = new List<FieldConfig>
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "FinalOccupent" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "UpdateMeterRead" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -309,10 +374,16 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
 
-                new FieldConfig { Name = "p25", Label = "تاريخ التسكين", Type = "date", ColCss = "3", Required = true },
-                new FieldConfig { Name = "p23", Label = "رقم الخطاب الصادر", Type = "text", ColCss = "3", Required = true },
-                new FieldConfig { Name = "p24", Label = "تاريخ الخطاب الصادر", Type = "date", ColCss = "3", Required = true },
-                new FieldConfig { Name = "p12", Label = "ملاحظات التسكين", Type = "textarea", ColCss = "3",Required = true,HelpText="لايجب ان يتجاوز النص 4000 حرف*",MaxLength=3900 },
+
+
+                new FieldConfig { Name = "p23", Label = "meterID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p24", Label = "نوع الخدمة", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p25", Label = "نوع العداد", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p22", Label = "اخر قراءة للعداد", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p26", Label = "القراءة القصوى للعداد", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p28", Label = "meterReadID", Type = "text", ColCss = "3", Readonly = true },
+
+                 new FieldConfig { Name = "p27", Label = "تسجيل القراءة", Type = "number", ColCss = "12",Required = true,HelpText="يجب ان تكون القراءة ارقام فقط*",MaxLength=3900 },
 
                 new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
@@ -321,176 +392,122 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true },
 
+
             };
-
-
-
-
-
-
-
-            //  UPDATE fields (Form Default / Form 46+)  تجريبي نرجع نمسحه او نعدل عليه
-          
-
-
-
 
 
             var dsModel = new SmartTableDsModel
             {
-                PageTitle = "المستفيدين",
+
                 Columns = dynamicColumns,
                 Rows = rowsList,
                 RowIdField = rowIdField,
                 PageSize = 10,
-                PageSizes = new List<int> { 10, 25, 50, 200, },
+                PageSizes = new List<int> { 10, 25, 50, 100 },
                 QuickSearchFields = dynamicColumns.Select(c => c.Field).Take(4).ToList(),
                 Searchable = true,
                 AllowExport = true,
-                ShowPageSizeSelector=true,
-                PanelTitle = "إسكان المستفيدين",
-                //TabelLabel = "بيانات المستفيدين",
-                //TabelLabelIcon = "fa-solid fa-user-group",
+                PageTitle = "قراءة عدادات التسكين والاخلاء",
+                PanelTitle = "قراءة عدادات التسكين والاخلاء",
                 EnableCellCopy = true,
+
                 Toolbar = new TableToolbarConfig
                 {
                     ShowRefresh = false,
                     ShowColumns = true,
                     ShowExportCsv = false,
-                    ShowExportExcel = true,
-                    ShowExportPdf = true,
-                    ShowEdit = canHOUSINGESRESIDENTS,  // Button always visible
-                    ShowPrint1 = true,
+                    ShowExportExcel = false,
+                    ShowDelete = canUpdateMeterReadForOccubentAndExit,
+                    ShowEdit = canMeterReadForOccubentAndExit,
+                    ShowPrint1 = false,
+                    ShowPrint = false,
                     ShowBulkDelete = false,
-                    
-                    Print1 = new TableAction
-                    {
-                        Label = "طباعة تقرير",
-                        Icon = "fa fa-print",
-                        Color = "info",
-                        RequireSelection = false,
-                        OnClickJs = @"
-                                sfPrintWithBusy(table, {
-                                  pdf: 1,
-                                  busy: { title: 'طباعة بيانات المستفيدين'}
-                                });
-                              "
-                    },
-
-                    ExportConfig = new TableExportConfig
-                    {
-                        EnablePdf = true,
-                        PdfEndpoint = "/exports/pdf/table",
-                        PdfTitle = "المستفيدين",
-                        PdfPaper = "A4",
-                        PdfOrientation = "landscape",
-                        PdfShowPageNumbers = true,
-                        Filename = "Residents",
-                        PdfShowGeneratedAt = true, 
-                        PdfShowSerial = true,  
-                        PdfSerialLabel = "م",  
-                        RightHeaderLine1 = "المملكة العربية السعودية",
-                        RightHeaderLine2 = "وزارة الدفاع",
-                        RightHeaderLine3 = "القوات البرية الملكية السعودية",
-                        RightHeaderLine4 = "الإدارة الهندسية للتشغيل والصيانة",
-                        RightHeaderLine5 = "مدينة الملك فيصل العسكرية",
-                        PdfLogoUrl="/img/ppng.png",
-
-
-                    },
-
-                            CustomActions = new List<TableAction>
-                            {
-                            //  Excel "
-                            new TableAction
-                            {
-                                Label = "تصدير Excel",
-                                Icon = "fa-regular fa-file-excel",
-                                Color = "info",
-                                Placement = TableActionPlacement.ActionsMenu,
-                                RequireSelection = false,
-                                OnClickJs = "table.exportData('excel');"
-                            },
-
-                            //  PDF "
-                            new TableAction
-                            {
-                                Label = "تصدير PDF",
-                                Icon = "fa-regular fa-file-pdf",
-                                Color = "danger",
-                                Placement = TableActionPlacement.ActionsMenu,
-                                RequireSelection = false,
-                                OnClickJs = "table.exportData('pdf');"
-                            },
-
-                             //  details "       
-                            new TableAction
-                            {
-                                Label = "عرض التفاصيل",
-                                ModalTitle = "<i class='fa-solid fa-circle-info text-emerald-600 text-xl mr-2'></i> تفاصيل المستفيد",
-                                Icon = "fa-regular fa-file",
-                                OpenModal = true,
-                                RequireSelection = true,
-                                MinSelection = 1,
-                                MaxSelection = 1,
-                                
-
-                            },
-                        },
+                    ShowExportPdf = false,
 
 
 
-
-
+                   
                     Edit = new TableAction
                     {
-                        Label = "الاجراء التالي",
-                        Icon = "fa-solid fa-pen",
+                        Label = "قراءة عداد",
+                        Icon = "fa fa-edit",
                         Color = "success",
+                        //Placement = TableActionPlacement.ActionsMenu, //   أي زر بعد ما نسويه ونبيه يظهر في الاجراءات نحط هذا السطر فقط عشان ما يصير زحمة في التيبل اكشن
                         IsEdit = true,
                         OpenModal = true,
-
-                        ModalTitle = "",
-                        ModalMessage = "",
+                        //ModalTitle = "رسالة تحذيرية",
+                        ModalTitle = "قراءة عداد",
+                        ModalMessage = "تأكد من قراءة العداد بشكل صحيح لايمكن التراجع عن هذا الاجراء بعد التسكين النهائي",
                         ModalMessageClass = "bg-red-50 text-red-700",
                         ModalMessageIcon = "fa-solid fa-triangle-exclamation",
-
-                        OnBeforeOpenJs = "sfRouteEditForm(table, act);",
-
                         OpenForm = new FormConfig
                         {
-                            FormId = "BuildingTypeEditForm",
-                            Title = "",
+                            FormId = "employeeDeleteForm",
+                            Title = "تأكيد قراءة عداد",
                             Method = "post",
-                            ActionUrl = "/crud/update",
-                            SubmitText = "حفظ التعديلات",
-                            CancelText = "إلغاء"//,
-                           // Fields = updateFields
-                        },
-
-                        Meta = new Dictionary<string, object?>
-                        {
-                            ["routeBy"] = "p16",
-                            ["routes"] = new Dictionary<string, object?>
+                            ActionUrl = "/crud/delete",
+                            Buttons = new List<FormButtonConfig>
                             {
-                                ["45"] = new Dictionary<string, object?>
-                                {
-                                    ["title"] = "تسجيل العهد والملاحظات",
-                                    ["message"] = "ملاحظة في حال وجود عدادت مرتبطة بالمنزل سيتم احالة الطلب للقسم المسؤول لاكمال الاجراءات",
-                                    ["fields"] = CustdyFields
-                                },
-                                ["47"] = new Dictionary<string, object?>
-                                {
-                                    ["title"] = "تسكين المستفيد بشكل نهائي",
-                                    ["message"] = "سيتم تنفيذ تسكين المستفيد بشكل نهائي ولايمكن التراجع عن ذلك",
-                                    ["fields"] = FinalOccupentFields
-                                }
-                            }
+                                new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "success", Icon = "fa fa-check" },
+                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
+                            },
+                            Fields = MeterReadFields
                         },
-
                         RequireSelection = true,
                         MinSelection = 1,
                         MaxSelection = 1,
+
+
+                        Guards = new TableActionGuards
+                        {
+                                AppliesTo = "any",
+                                DisableWhenAny = new List<TableActionRule>
+                            {
+
+                                  new TableActionRule
+                                {
+                                    Field = "LastActionTypeID",
+                                    Op = "neq",
+                                    Value = "46",
+                                    Message = "تم ارسال طلب قراءة العدادات مسبقا",
+                                    Priority = 3
+                                }
+
+                            }
+                        }
+                    },
+
+
+                    Delete = new TableAction
+                    {
+                        Label = "تعديل قراءة العداد",
+                        Icon = "fa fa-edit",
+                        Color = "warning",
+                        //Placement = TableActionPlacement.ActionsMenu, //   أي زر بعد ما نسويه ونبيه يظهر في الاجراءات نحط هذا السطر فقط عشان ما يصير زحمة في التيبل اكشن
+                        IsEdit = true,
+                        OpenModal = true,
+                        //ModalTitle = "رسالة تحذيرية",
+                        ModalTitle = "تعديل قراءة العداد",
+                        ModalMessage = "يجب توخي الحذر عند تسجيل القراءة لعدم امكانية تعديلها بعد اسكان المستفيد بشكل نهائي",
+                        ModalMessageClass = "bg-red-50 text-red-700",
+                        ModalMessageIcon = "fa-solid fa-triangle-exclamation",
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "employeeDeleteForm",
+                            Title = "تأكيد تعديل قراءة العداد",
+                            Method = "post",
+                            ActionUrl = "/crud/delete",
+                            Buttons = new List<FormButtonConfig>
+                            {
+                                new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "success", Icon = "fa fa-check" },
+                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
+                            },
+                            Fields = UpdateMeterReadFields
+                        },
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1,
+
 
                         Guards = new TableActionGuards
                         {
@@ -498,74 +515,172 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             DisableWhenAny = new List<TableActionRule>
                         {
 
-                              new TableActionRule
-                            {
-                                Field = "LastActionTypeID",
-                                Op = "eq",
-                                Value = "46",
-                                Message = "تم ارسال طلب قراءة العدادات مسبقا",
-                                Priority = 3
-                            }
-                            
-                        }
+                                          new TableActionRule
+                                        {
+                                            Field = "LastActionTypeID",
+                                            Op = "neq",
+                                            Value = "47",
+                                            Message = "لايمكن تعديل قراءة العداد ",
+                                            Priority = 3
+                                        }
+
+                                    }
                         }
                     },
+
+                   
+
+
+
+                 
 
                 }
-                
             };
 
+            //var dsModel = new SmartTableDsModel
+            //{
+            //    PageTitle = "قراءة عدادات التسكين والاخلاء",
+            //    Columns = dynamicColumns,
+            //    Rows = rowsList,
+            //    RowIdField = rowIdField,
+            //    PageSize = 10,
+            //    PageSizes = new List<int> { 10, 25, 50, 200, },
+            //    QuickSearchFields = dynamicColumns.Select(c => c.Field).Take(4).ToList(),
+            //    Searchable = true,
+            //    AllowExport = true,
+            //    ShowPageSizeSelector=true,
+            //    PanelTitle = "قراءة عدادات التسكين والاخلاء",
+            //    //TabelLabel = "بيانات المستفيدين",
+            //    //TabelLabelIcon = "fa-solid fa-user-group",
+            //    EnableCellCopy = true,
+            //    Toolbar = new TableToolbarConfig
+            //    {
+            //        ShowRefresh = false,
+            //        ShowColumns = true,
+            //        ShowExportCsv = false,
+            //        ShowExportExcel = false,
+            //        ShowEdit = true,
 
-            dsModel.StyleRules = new List<TableStyleRule>
-                {
+            //        ShowPrint1 = false,
+            //        ShowPrint = false,
+            //        ShowBulkDelete = false,
+            //        ShowExportPdf = false,
 
-                    new TableStyleRule
-                    {
-                        Target = "row",
-                        Field = "LastActionTypeID",
-                        Op = "eq",
-                        Value = "46",
-                        CssClass = "row-blue",
-                        Priority = 1
 
-                    },
-                     new TableStyleRule
-                    {
-                        Target = "row",
-                        Field = "LastActionTypeID",
-                        Op = "eq",
-                        Value = "47",
-                        CssClass = "row-yellow",
-                        Priority = 1
+            //        Edit = new TableAction
+            //        {
+            //            Label = "تسجيل قراءة العداد",
+            //            Icon = "fa-solid fa-bolt",
+            //            Color = "success",
+            //            IsEdit = true,
+            //            OpenModal = true,
 
-                    },
-                      new TableStyleRule
-                    {
-                        Target = "row",
-                        Field = "LastActionTypeID",
-                        Op = "eq",
-                        Value = "2",
-                        CssClass = "row-green",
-                        Priority = 1
-                    },
-                       new TableStyleRule
-                    {
-                        Target = "row",
-                        Field = "LastActionTypeID",
-                        Op = "eq",
-                        Value = "45",
-                        CssClass = "row-gray",
-                        Priority = 1
-                    },
+            //            ModalTitle = "",
+            //            ModalMessage = "يجب توخي الحذر عند تسجيل القراءة لعدم امكانية تعديلها بعد اسكان المستفيد بشكل نهائي",
+            //            ModalMessageClass = "bg-red-50 text-red-700",
+            //            ModalMessageIcon = "fa-solid fa-triangle-exclamation",
 
-                };
+            //            OnBeforeOpenJs = "sfRouteEditForm(table, act);",
+
+            //            OpenForm = new FormConfig
+            //            {
+            //                FormId = "BuildingTypeEditForm",
+            //                Title = "",
+            //                Method = "post",
+            //                ActionUrl = "/crud/update",
+            //                SubmitText = "حفظ التعديلات",
+            //                CancelText = "إلغاء",
+            //                Fields = MeterReadFields
+            //            },
+
+            //            RequireSelection = true,
+            //            MinSelection = 1,
+            //            MaxSelection = 1,
+
+            //            Guards = new TableActionGuards
+            //            {
+            //                AppliesTo = "any",
+            //                DisableWhenAny = new List<TableActionRule>
+            //            {
+
+            //                  new TableActionRule
+            //                {
+            //                    Field = "LastActionTypeID",
+            //                    Op = "neq",
+            //                    Value = "46",
+            //                    Message = "تم ارسال طلب قراءة العدادات مسبقا",
+            //                    Priority = 3
+            //                }
+
+            //            }
+            //            }
+            //        },
+
+
+            //        Delete = new TableAction
+            //        {
+            //            Label = "تسجيل قراءة العداد",
+            //            Icon = "fa-solid fa-bolt",
+            //            Color = "success",
+            //            IsEdit = true,
+            //            OpenModal = true,
+
+            //            ModalTitle = "",
+            //            ModalMessage = "يجب توخي الحذر عند تسجيل القراءة لعدم امكانية تعديلها بعد اسكان المستفيد بشكل نهائي",
+            //            ModalMessageClass = "bg-red-50 text-red-700",
+            //            ModalMessageIcon = "fa-solid fa-triangle-exclamation",
+
+            //            OnBeforeOpenJs = "sfRouteEditForm(table, act);",
+
+            //            OpenForm = new FormConfig
+            //            {
+            //                FormId = "BuildingTypeEditForm",
+            //                Title = "",
+            //                Method = "post",
+            //                ActionUrl = "/crud/update",
+            //                SubmitText = "حفظ التعديلات",
+            //                CancelText = "إلغاء",
+            //                Fields = MeterReadFields
+            //            },
+
+            //            RequireSelection = true,
+            //            MinSelection = 1,
+            //            MaxSelection = 1,
+
+            //            Guards = new TableActionGuards
+            //            {
+            //                AppliesTo = "any",
+            //                DisableWhenAny = new List<TableActionRule>
+            //            {
+
+            //                  new TableActionRule
+            //                {
+            //                    Field = "LastActionTypeID",
+            //                    Op = "neq",
+            //                    Value = "46",
+            //                    Message = "تم ارسال طلب قراءة العدادات مسبقا",
+            //                    Priority = 3
+            //                }
+
+            //            }
+            //            }
+            //        },
+
+
+            //    }
+
+            //};
+
+
+
 
             var page = new SmartPageViewModel
             {
-                PageTitle = dsModel.PageTitle,
-                PanelTitle = dsModel.PanelTitle,
-                PanelIcon = "fa-solid fa-user-group",
-                TableDS = dsModel
+               PageTitle = dsModel.PageTitle,
+               PanelTitle = dsModel.PanelTitle,
+               PanelIcon = "fa-bolt",
+               Form = form,
+               TableDS = ready ? dsModel : null
             };
 
 
@@ -673,7 +788,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 Response.Headers["Content-Disposition"] = "inline; filename=BuildingType.pdf";
                 return File(pdfBytes, "application/pdf");
             }
-            return View("HousingResidents/HousingResident", page);
+            return View("MeterRead/MeterReadForOccubentAndExit", page);
         }
     }
 }
