@@ -53,7 +53,7 @@ namespace SmartFoundation.Mvc.Controllers
                                             Key="y2026", Year=2026,
                                             Title="فعاليات توعوية حول نمط الحياة الصحي",
                                             Subtitle="الوصول إلى 600 مشارك (مرحلة أولى)",
-                                            Target=600, Actual=400,
+                                            Target=600, Actual=600,
                                             Badge="مستهدف 2026", Tone="info", Emoji="🧠",
                                             Icon="fa-solid fa-person-walking"
                                         },
