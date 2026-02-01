@@ -162,6 +162,10 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         public TableActionPlacement Placement { get; set; } = TableActionPlacement.Button;
 
         public string? OnClickJs { get; set; }
+
+        public string? OnBeforeOpenJs { get; set; }
+        public Dictionary<string, object?>? Meta { get; set; }
+
         public bool Show { get; set; } = true;
         public bool OpenModal { get; set; } = false;
         public string? ModalSp { get; set; }
@@ -292,6 +296,7 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
     }
 
 }
+
 
 public class TableActionRule
 {

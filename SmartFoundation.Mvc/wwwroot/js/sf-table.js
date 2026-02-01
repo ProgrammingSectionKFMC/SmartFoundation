@@ -787,6 +787,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 }
             },
 
+
+
             // ===== Selection Management =====
             toggleRow(row) {
                 const key = row?.[this.rowIdField];
@@ -1536,6 +1538,26 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     if (action.confirmText && !confirm(action.confirmText)) {
                         return;
                     }
+
+
+                    //  2) OnBeforeOpenJs (قبل فتح المودال)
+                    const beforeJs = action.onBeforeOpenJs || action.OnBeforeOpenJs;
+                    if (beforeJs && String(beforeJs).trim()) {
+                        try {
+                            const code = String(beforeJs).trim();
+
+                            // نفّذ نص JS مباشرة مع سياق (table/action/row)
+                            // eslint-disable-next-line no-new-func
+                            const runner = new Function("table", "act", "row", code);
+                            runner(this, action, row || null);
+
+                        } catch (err) {
+                            console.error("OnBeforeOpenJs failed:", err);
+                            this.showToast("فشل تجهيز المودال", "error");
+                            return;
+                        }
+                    }
+
 
                     // فتح المودال مع فحص Guards
                     if (action.openModal) {
@@ -3447,3 +3469,43 @@ document.addEventListener("DOMContentLoaded", () => {
 
 });
 
+// ===== SmartTable Dynamic Edit Routing =====
+window.sfRouteEditForm = function (table, act, row) {
+    if (!table || !act) return;
+
+    const meta = act.Meta || act.meta;
+    if (!meta) return;
+
+    const routeBy = meta.routeBy || meta.RouteBy;
+    const routes = meta.routes || meta.Routes;
+    if (!routeBy || !routes) return;
+
+    const r = row || table.getSelectedRowFromCurrentData?.() || (table.getSelectedRows?.()[0] ?? null);
+    if (!r) return;
+
+    const key = String(r?.[routeBy] ?? "");
+    const route = routes[key] || routes["*"];
+    if (!route) return;
+
+    if (route.title != null) {
+        act.ModalTitle = route.title;
+        act.modalTitle = route.title;
+
+        const of = act.OpenForm || act.openForm;
+        if (of) {
+            of.Title = route.title;
+            of.title = route.title;
+        }
+    }
+
+    if (route.message != null) {
+        act.ModalMessage = route.message;
+        act.modalMessage = route.message;
+    }
+
+    const of = act.OpenForm || act.openForm;
+    if (of && route.fields) {
+        of.Fields = route.fields;
+        of.fields = route.fields;
+    }
+};
