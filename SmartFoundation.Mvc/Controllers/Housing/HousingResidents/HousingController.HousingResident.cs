@@ -281,6 +281,53 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
             };
+            var updateFields1 = new List<FieldConfig>
+            {
+
+                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "HOUSINGESRESIDENTS" },
+                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
+                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
+                new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
+
+                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+
+
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+
+                // selection context
+                new FieldConfig { Name = rowIdField, Type = "hidden" },
+
+              
+
+                // hidden p01 actually posted to SP
+                new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "ActionID" },
+                new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p14", Label = "الترتيب", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p15", Label = "الاسم", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p05", Label = "رقم الطلب", Type = "text", ColCss = "3", Readonly = true  },
+                new FieldConfig { Name = "p06", Label = "تاريخ الطلب", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p07", Label = "WaitingClassID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p12", Label = "ملاحظات", Type = "text", ColCss = "6",Required = true },
+                new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p19", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true },
+
+
+
+
+            };
 
 
 
@@ -307,9 +354,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowExportCsv = false,
                     ShowExportExcel = true,
                     ShowExportPdf = true,
-                    ShowEdit = canHOUSINGESRESIDENTS,
+                    ShowEdit = canHOUSINGESRESIDENTS,  // Button always visible
                     ShowPrint1 = true,
                     ShowBulkDelete = false,
+                    
                     Print1 = new TableAction
                     {
                         Label = "طباعة تقرير",
@@ -387,12 +435,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
 
+                    // Edit button - shown when meterForBuildingCount == 0
                     Edit = new TableAction
                     {
                         Label = "الاجراء التالي",
                         Icon = "fa-solid fa-pen",
                         Color = "success",
-                       // Placement = TableActionPlacement.ActionsMenu,  
                         IsEdit = true,
                         OpenModal = true,
                         ModalTitle = "انهاء محضر تخصيص نشط",
@@ -402,7 +450,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         OpenForm = new FormConfig
                         {
                             FormId = "BuildingTypeEditForm",
-                            Title = "الاجراء التالي",
+                            Title = "جرد العهد والملاحظات",
                             Method = "post",
                             ActionUrl = "/crud/update",
                             SubmitText = "حفظ التعديلات",
@@ -411,12 +459,31 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         },
                         RequireSelection = true,
                         MinSelection = 1,
-                        MaxSelection = 1
+                        MaxSelection = 1,
+
+                        Guards = new TableActionGuards
+                        {
+                            AppliesTo = "any",
+                            DisableWhenAny = new List<TableActionRule>
+                        {
+
+                              new TableActionRule
+                            {
+                                Field = "LastActionTypeID",
+                                Op = "eq",
+                                Value = "46",
+                                Message = "تم ارسال طلب قراءة العدادات مسبقا",
+                                Priority = 3
+                            }
+                            
+                        }
+                        }
                     },
 
-                  
-                  
+
+
                 }
+                
             };
 
             var page = new SmartPageViewModel

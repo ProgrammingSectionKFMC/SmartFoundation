@@ -487,6 +487,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             var UPDATEASSIGNHOUSEFields = new List<FieldConfig>
             {
 
+
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
                 new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "UPDATEASSIGNHOUSE" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
@@ -503,7 +504,22 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 // selection context
                 new FieldConfig { Name = rowIdField, Type = "hidden" },
 
-                new FieldConfig
+              
+
+                // hidden p01 actually posted to SP
+                new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "ActionID" },
+                new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p14", Label = "الترتيب", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p15", Label = "الاسم", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p05", Label = "رقم الطلب", Type = "text", ColCss = "3", Readonly = true  },
+                new FieldConfig { Name = "p06", Label = "تاريخ الطلب", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p07", Label = "WaitingClassID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
+                  new FieldConfig
                 {
                     Name = "p18",
                     Label = "المبنى",
@@ -514,15 +530,14 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     Required = true,
                     MirrorName = "buildingDetailsID"  // إضافة هذا السطر
                 },
-
-                // hidden p01 actually posted to SP
-                new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "ActionID" },
+                new FieldConfig { Name = "p12", Label = "ملاحظات", Type = "text", ColCss = "6",Required = true },
                 new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p19", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true },
+
 
 
 
@@ -787,7 +802,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                     Delete = new TableAction
                     {
-                        Label = "تعديل منزل",
+                        Label = "تعديلs منزل",
                         Icon = "fa fa-edit",
                         Color = "warning",
                         //Placement = TableActionPlacement.ActionsMenu, //   أي زر بعد ما نسويه ونبيه يظهر في الاجراءات نحط هذا السطر فقط عشان ما يصير زحمة في التيبل اكشن

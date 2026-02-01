@@ -304,6 +304,17 @@ public class TableActionRule
 
 public class TableActionGuards
 {
+    /// <summary>
+    /// JavaScript expression that evaluates to true/false based on selected row
+    /// Example: "row.meterForBuildingCount == 0"
+    /// </summary>
+    public string? RowCondition { get; set; }
+    
+    /// <summary>
+    /// Message to show if guard fails
+    /// </summary>
+    public string? Message { get; set; }
+    
     // لو تحقق أي شرط هنا => يتعطل الأكشن
     public List<TableActionRule> DisableWhenAny { get; set; } = new();
 
