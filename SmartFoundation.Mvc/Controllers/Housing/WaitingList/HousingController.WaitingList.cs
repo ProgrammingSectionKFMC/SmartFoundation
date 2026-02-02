@@ -420,6 +420,43 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 }
             };
 
+
+            dsModel.StyleRules = new List<TableStyleRule>
+                    {
+                        new TableStyleRule
+                        {
+                            Target = "cell",
+                            Field = "WaitingOrderTypeName",
+                            Op = "eq",
+                            Value = "جديد",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "WaitingOrderTypeName",
+                            PillTextField = "WaitingOrderTypeName",
+                            PillCssClass = "pill pill-green",
+                            PillMode = "replace"
+                        },
+
+                        new TableStyleRule
+                        {
+                            Target = "cell",
+                            Field = "WaitingOrderTypeName",
+                            Op = "eq",
+                            Value = "منقول ",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "WaitingOrderTypeName",
+                            PillTextField = "WaitingOrderTypeName",
+                            PillCssClass = "pill pill-red",
+                            PillMode = "replace"
+                        }
+                    };
+
+
+
+
             var vm = new SmartPageViewModel
             {
                 PageTitle = dsModel.PageTitle,

@@ -2697,7 +2697,6 @@ body.sf-navigating .sf-select-panel {
     border-color: rgba(107,114,128,.22);
 }
 
-/* لو داخل truncate */
 .sf-truncate .pill {
     max-width: 100%;
 }

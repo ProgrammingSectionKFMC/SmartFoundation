@@ -672,6 +672,59 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
             //};
 
 
+               dsModel.StyleRules = new List<TableStyleRule>
+                    {
+                        new TableStyleRule
+                        {
+                            Target = "row",
+                            Field = "LastActionTypeID",
+                            Op = "eq",
+                            Value = "46",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "buildingActionTypeResidentAlias",
+                            PillTextField = "buildingActionTypeResidentAlias",
+                            PillCssClass = "pill pill-blue",
+                            PillMode = "replace"
+                        },
+
+                        new TableStyleRule
+                        {
+                            Target = "row",
+                            Field = "LastActionTypeID",
+                            Op = "eq",
+                            Value = "47",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "buildingActionTypeResidentAlias",
+                            PillTextField = "buildingActionTypeResidentAlias",
+                            PillCssClass = "pill pill-yellow",
+                            PillMode = "replace"
+                        },
+
+                        
+                        //new TableStyleRule
+                        //{
+                        //    Target = "row",
+                        //    Field = "LastActionTypeID",
+                        //    Op = "eq",
+                        //    Value = "45",
+                        //    Priority = 1,
+
+                        //    PillEnabled = true,
+                        //    PillField = "buildingActionTypeResidentAlias",
+                        //    PillTextField = "buildingActionTypeResidentAlias", //  من DB
+                        //    PillCssClass = "pill pill-gray",
+                        //    PillMode = "replace"
+                        //}
+                    };
+
+
+
+
+
 
 
             var page = new SmartPageViewModel

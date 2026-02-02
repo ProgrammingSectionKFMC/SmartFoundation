@@ -461,7 +461,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     Type = "select",
                     Options = BuildingActionTypeCasesOptions,
                     ColCss = "6",
-                    Select2 = false,
+                    Select2 = true,
                     Required = true
                 },
                 new FieldConfig { Name = "p22", Label = "ملاحظات", Type = "text", ColCss = "6",Required = true },
@@ -709,7 +709,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             };
 
 
-                dsModel.StyleRules = new List<TableStyleRule>
+            dsModel.StyleRules = new List<TableStyleRule>
                     {
                         new TableStyleRule
                         {
@@ -717,12 +717,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             Field = "LastActionTypeID",
                             Op = "eq",
                             Value = "45",
-                            //CssClass = "row-green",
                             Priority = 1,
 
                             PillEnabled = true,
-                            PillField = "buildingActionTypeResidentAlias", // ✅ اسم العمود الصحيح
-                            PillText = "مقبول",
+                            PillField = "buildingActionTypeResidentAlias",
+                            PillTextField = "buildingActionTypeResidentAlias", // يقرأ من الداتا
+                            //PillText = "مقبول",
                             PillCssClass = "pill pill-green",
                             PillMode = "replace"
                         },
@@ -733,12 +733,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             Field = "LastActionTypeID",
                             Op = "eq",
                             Value = "39",
-                           // CssClass = "row-yellow",
                             Priority = 1,
 
                             PillEnabled = true,
-                            PillField = "buildingActionTypeResidentAlias", 
-                            PillText = "قيد الإجراء",
+                            PillField = "buildingActionTypeResidentAlias",
+                            PillTextField = "buildingActionTypeResidentAlias", 
+                            //PillText = "قيد الإجراء",
                             PillCssClass = "pill pill-yellow",
                             PillMode = "replace"
                         },
@@ -746,15 +746,15 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         new TableStyleRule
                         {
                             Target = "row",
-                            Field = "LastActionTypeID",         
+                            Field = "LastActionTypeID",
                             Op = "eq",
                             Value = "41",
-                           // CssClass = "row-yellow",
                             Priority = 1,
 
                             PillEnabled = true,
-                            PillField = "buildingActionTypeResidentAlias", 
-                            PillText = "تنبيه",
+                            PillField = "buildingActionTypeResidentAlias",
+                            PillTextField = "buildingActionTypeResidentAlias", 
+                            //PillText = "تنبيه",
                             PillCssClass = "pill pill-yellow",
                             PillMode = "replace"
                         },
@@ -765,16 +765,17 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             Field = "LastActionTypeID",
                             Op = "eq",
                             Value = "42",
-                           // CssClass = "row-red",
                             Priority = 1,
 
                             PillEnabled = true,
-                            PillField = "buildingActionTypeResidentAlias", 
-                            PillText = "مرفوض",
+                            PillField = "buildingActionTypeResidentAlias",
+                            PillTextField = "buildingActionTypeResidentAlias", 
+                            //PillText = "مرفوض",
                             PillCssClass = "pill pill-red",
                             PillMode = "replace"
                         }
                     };
+
 
 
 

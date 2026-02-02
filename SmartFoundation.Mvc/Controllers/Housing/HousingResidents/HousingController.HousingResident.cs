@@ -7,6 +7,7 @@ using SmartFoundation.UI.ViewModels.SmartTable;
 using System.Data;
 using System.Linq;
 using System.Text.Json;
+using static LLama.Common.ChatHistory;
 
 namespace SmartFoundation.Mvc.Controllers.Housing
 {
@@ -256,7 +257,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p05", Label = "رقم الطلب", Type = "hidden", ColCss = "3", Readonly = true  },
-                new FieldConfig { Name = "p06", Label = "تاريخ الطلب", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p06", Label = "تاريخ الطلب", Type = "hidden", ColCss = "3", Readonly = true, Icon = "fa fa-calendar" },
                 new FieldConfig { Name = "p07", Label = "WaitingClassID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
@@ -295,16 +296,16 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p05", Label = "رقم الطلب", Type = "hidden", ColCss = "3", Readonly = true  },
-                new FieldConfig { Name = "p06", Label = "تاريخ الطلب", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p06", Label = "تاريخ الطلب", Type = "hidden", ColCss = "3", Readonly = true,Icon = "fa fa-calendar" },
                 new FieldConfig { Name = "p07", Label = "WaitingClassID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
 
-                new FieldConfig { Name = "p25", Label = "تاريخ التسكين", Type = "date", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p25", Label = "تاريخ التسكين", Type = "date", ColCss = "3", Required = true,Icon = "fa fa-calendar" },
                 new FieldConfig { Name = "p23", Label = "رقم الخطاب الصادر", Type = "text", ColCss = "3", Required = true },
-                new FieldConfig { Name = "p24", Label = "تاريخ الخطاب الصادر", Type = "date", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p24", Label = "تاريخ الخطاب الصادر", Type = "date", ColCss = "3", Required = true,Icon = "fa fa-calendar" },
                 new FieldConfig { Name = "p12", Label = "ملاحظات التسكين", Type = "textarea", ColCss = "3",Required = true,HelpText="لايجب ان يتجاوز النص 4000 حرف*",MaxLength=3900 },
 
                 new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
@@ -465,6 +466,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                     ["message"] = "سيتم تنفيذ تسكين المستفيد بشكل نهائي ولايمكن التراجع عن ذلك",
                                     ["fields"] = FinalOccupentFields
                                 }
+                                
                             }
                         },
 
@@ -494,49 +496,93 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
 
-            dsModel.StyleRules = new List<TableStyleRule>
-                {
+            //dsModel.StyleRules = new List<TableStyleRule>
+            //    {
 
-                    new TableStyleRule
-                    {
-                        Target = "row",
-                        Field = "LastActionTypeID",
-                        Op = "eq",
-                        Value = "46",
-                        CssClass = "row-blue",
-                        Priority = 1
+            //        new TableStyleRule
+            //        {
+            //            Target = "row",
+            //            Field = "LastActionTypeID",
+            //            Op = "eq",
+            //            Value = "46",
+            //            CssClass = "row-blue",
+            //            Priority = 1
 
-                    },
-                     new TableStyleRule
-                    {
-                        Target = "row",
-                        Field = "LastActionTypeID",
-                        Op = "eq",
-                        Value = "47",
-                        CssClass = "row-yellow",
-                        Priority = 1
+            //        },
+            //         new TableStyleRule
+            //        {
+            //            Target = "row",
+            //            Field = "LastActionTypeID",
+            //            Op = "eq",
+            //            Value = "47",
+            //            CssClass = "row-yellow",
+            //            Priority = 1
 
-                    },
-                      new TableStyleRule
-                    {
-                        Target = "row",
-                        Field = "LastActionTypeID",
-                        Op = "eq",
-                        Value = "2",
-                        CssClass = "row-green",
-                        Priority = 1
-                    },
-                       new TableStyleRule
-                    {
-                        Target = "row",
-                        Field = "LastActionTypeID",
-                        Op = "eq",
-                        Value = "45",
-                        CssClass = "row-gray",
-                        Priority = 1
-                    },
+            //        },
+            //          new TableStyleRule
+            //        {
+            //            Target = "row",
+            //            Field = "LastActionTypeID",
+            //            Op = "eq",
+            //            Value = "2",
+            //            CssClass = "row-green",
+            //            Priority = 1
+            //        },
+            //           new TableStyleRule
+            //        {
+            //            Target = "row",
+            //            Field = "LastActionTypeID",
+            //            Op = "eq",
+            //            Value = "45",
+            //            CssClass = "row-gray",
+            //            Priority = 1
+            //        },
 
-                };
+            //    };
+
+
+
+                   dsModel.StyleRules = new List<TableStyleRule>
+                        {
+                            new TableStyleRule
+                            {
+                                Target="row", Field="LastActionTypeID", Op="eq", Value="46", Priority=1,
+                                PillEnabled=true,
+                                PillField="buildingActionTypeResidentAlias",
+                                PillTextField="buildingActionTypeResidentAlias",
+                                PillCssClass="pill pill-blue",
+                                PillMode="replace"
+                            },
+                            new TableStyleRule
+                            {
+                                Target="row", Field="LastActionTypeID", Op="eq", Value="47", Priority=1,
+                                PillEnabled=true,
+                                PillField="buildingActionTypeResidentAlias",
+                                PillTextField="buildingActionTypeResidentAlias",
+                                PillCssClass="pill pill-yellow",
+                                PillMode="replace"
+                            },
+                            new TableStyleRule
+                            {
+                                Target="row", Field="LastActionTypeID", Op="eq", Value="2", Priority=1,
+                                PillEnabled=true,
+                                PillField="buildingActionTypeResidentAlias",
+                                PillTextField="buildingActionTypeResidentAlias",
+                                PillCssClass="pill pill-green",
+                                PillMode="replace"
+                            },
+                            new TableStyleRule
+                            {
+                                Target="row", Field="LastActionTypeID", Op="eq", Value="45", Priority=1,
+                                PillEnabled=true,
+                                PillField="buildingActionTypeResidentAlias",
+                                PillTextField="buildingActionTypeResidentAlias",
+                                PillCssClass="pill pill-gray",
+                                PillMode="replace"
+                            }
+                        };
+
+
 
             var page = new SmartPageViewModel
             {

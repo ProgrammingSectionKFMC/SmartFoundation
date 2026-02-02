@@ -467,7 +467,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     Type = "select",
                     Options = buildingDetailsNoOptions,
                     ColCss = "3",
-                    Select2 = false,
+                    Select2 = true,
                     Required = true,
                     MirrorName = "buildingDetailsID"  // إضافة هذا السطر
                 },
@@ -514,7 +514,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p05", Label = "رقم الطلب", Type = "text", ColCss = "3", Readonly = true  },
-                new FieldConfig { Name = "p06", Label = "تاريخ الطلب", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p06", Label = "تاريخ الطلب", Type = "text", ColCss = "3", Readonly = true,Icon = "fa fa-calendar" },
                 new FieldConfig { Name = "p07", Label = "WaitingClassID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
@@ -526,7 +526,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     Type = "select",
                     Options = buildingDetailsNoOptions,
                     ColCss = "3",
-                    Select2 = false,
+                    Select2 = true,
                     Required = true,
                     MirrorName = "buildingDetailsID"  // إضافة هذا السطر
                 },
@@ -802,7 +802,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                     Delete = new TableAction
                     {
-                        Label = "تعديلs منزل",
+                        Label = "تعديل منزل",
                         Icon = "fa fa-edit",
                         Color = "warning",
                         //Placement = TableActionPlacement.ActionsMenu, //   أي زر بعد ما نسويه ونبيه يظهر في الاجراءات نحط هذا السطر فقط عشان ما يصير زحمة في التيبل اكشن
@@ -1041,58 +1041,98 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
             dsModel.StyleRules = new List<TableStyleRule>
-                {
+                    {
+                        new TableStyleRule
+                        {
+                            Target = "row",
+                            Field  = "LastActionTypeID",
+                            Op     = "eq",
+                            Value  = "38",
+                            Priority = 1,
 
-                    new TableStyleRule
-                    {
-                        Target = "row",
-                        Field = "buildingActionTypeResidentAlias",
-                        Op = "eq",
-                        Value = "تم التخصيص للمستفيد للمرة الاولى",
-                        CssClass = "row-green",
-                        Priority = 1
-
-                    },
-                     new TableStyleRule
-                    {
-                        Target = "row",
-                        Field = "buildingActionTypeResidentAlias",
-                        Op = "eq",
-                        Value = "تم التخصيص للمستفيد للمرة الثانية",
-                        CssClass = "row-YELLOW",
-                        Priority = 1
-
-                    },
-                      new TableStyleRule
-                    {
-                        Target = "row",
-                        Field = "buildingActionTypeResidentAlias",
-                        Op = "eq",
-                        Value = "رفض المستفيد التخصيص للمرة الاولى",
-                        CssClass = "row-yellow",
-                        Priority = 1
-                    },
-                       new TableStyleRule
-                    {
-                        Target = "row",
-                        Field = "buildingActionTypeResidentAlias",
-                        Op = "eq",
-                        Value = "رفض المستفيد التخصيص للمرة الثانية",
-                        CssClass = "row-yellow",
-                        Priority = 1
-                    },
+                            PillEnabled  = true,
+                            PillField    = "buildingActionTypeResidentAlias",
+                            PillTextField= "buildingActionTypeResidentAlias",
+                            PillCssClass = "pill pill-green",
+                            PillMode     = "replace"
+                        },
 
                         new TableStyleRule
-                    {
-                        Target = "row",
-                        Field = "buildingActionTypeResidentAlias",
-                        Op = "eq",
-                        Value = "الغاء أحقية السكن لتجاوزه عدد مرات التخصيص المسمحوة نظام",
-                        CssClass = "row-red",
-                        Priority = 1
-                    },
+                        {
+                            Target = "row",
+                            Field  = "LastActionTypeID",
+                            Op     = "eq",
+                            Value  = "40",
+                            Priority = 1,
 
-                };
+                            PillEnabled  = true,
+                            PillField    = "buildingActionTypeResidentAlias",
+                            PillTextField= "buildingActionTypeResidentAlias",
+                            PillCssClass = "pill pill-yellow",
+                            PillMode     = "replace"
+                        },
+
+                        new TableStyleRule
+                        {
+                            Target = "row",
+                            Field  = "LastActionTypeID",
+                            Op     = "eq",
+                            Value  = "45",
+                            Priority = 1,
+
+                            PillEnabled  = true,
+                            PillField    = "buildingActionTypeResidentAlias",
+                            PillTextField= "buildingActionTypeResidentAlias",
+                            PillCssClass = "pill pill-yellow",
+                            PillMode     = "replace"
+                        },
+
+                        new TableStyleRule
+                        {
+                            Target = "row",
+                            Field  = "LastActionTypeID",
+                            Op     = "eq",
+                            Value  = "39",
+                            Priority = 1,
+
+                            PillEnabled  = true,
+                            PillField    = "buildingActionTypeResidentAlias",
+                            PillTextField= "buildingActionTypeResidentAlias",
+                            PillCssClass = "pill pill-yellow",
+                            PillMode     = "replace"
+                        },
+
+                        new TableStyleRule
+                        {
+                            Target = "row",
+                            Field  = "LastActionTypeID",
+                            Op     = "eq",
+                            Value  = "41",
+                            Priority = 1,
+
+                            PillEnabled  = true,
+                            PillField    = "buildingActionTypeResidentAlias",
+                            PillTextField= "buildingActionTypeResidentAlias",
+                            PillCssClass = "pill pill-yellow",
+                            PillMode     = "replace"
+                        },
+
+                        new TableStyleRule
+                        {
+                            Target = "row",
+                            Field  = "LastActionTypeID",
+                            Op     = "eq",
+                            Value  = "42",
+                            Priority = 1,
+
+                            PillEnabled  = true,
+                            PillField    = "buildingActionTypeResidentAlias",
+                            PillTextField= "buildingActionTypeResidentAlias",
+                            PillCssClass = "pill pill-red",
+                            PillMode     = "replace"
+                        }
+                    };
+
 
             var vm = new SmartPageViewModel
             {
