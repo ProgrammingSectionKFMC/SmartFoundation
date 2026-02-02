@@ -230,7 +230,6 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             }
 
 
-
             var currentUrl = Request.Path;
 
 
@@ -272,13 +271,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true },
 
 
-               
-
-
-
             };
-
-
 
             var FinalOccupentFields = new List<FieldConfig>
             {
@@ -324,18 +317,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             };
 
 
-
-
-
-
-
             //  UPDATE fields (Form Default / Form 46+)  تجريبي نرجع نمسحه او نعدل عليه
           
-
-
-
-
-
             var dsModel = new SmartTableDsModel
             {
                 PageTitle = "المستفيدين",
@@ -439,9 +422,6 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         },
 
 
-
-
-
                     Edit = new TableAction
                     {
                         Label = "الاجراء التالي",
@@ -505,15 +485,13 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 Value = "46",
                                 Message = "تم ارسال طلب قراءة العدادات مسبقا",
                                 Priority = 3
-                            }
-                            
-                        }
-                        }
+                            },
+                          }
+                       }
                     },
-
-                }
-                
+                } 
             };
+
 
 
             dsModel.StyleRules = new List<TableStyleRule>

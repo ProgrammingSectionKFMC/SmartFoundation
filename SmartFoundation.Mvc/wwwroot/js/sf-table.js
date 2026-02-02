@@ -17,8 +17,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             profileTitleField: (cfg.profileTitleField ?? null),
             profileSubtitleField: (cfg.profileSubtitleField ?? null),
             profileBadges: Array.isArray(cfg.profileBadges) ? cfg.profileBadges : [],
-            profileMetaFields: Array.isArray(cfg.profileMetaFields) ? cfg.profileMetaFields : [], 
-            profileFields: Array.isArray(cfg.profileFields) ? cfg.profileFields : [],            
+            profileMetaFields: Array.isArray(cfg.profileMetaFields) ? cfg.profileMetaFields : [],
+            profileFields: Array.isArray(cfg.profileFields) ? cfg.profileFields : [],
             profileCssClass: (cfg.profileCssClass ?? ""),
             profileColumns: Number.isFinite(Number(cfg.profileColumns)) ? Number(cfg.profileColumns) : 2,
             profileShowHeader: (cfg.profileShowHeader !== false),
@@ -98,7 +98,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             // Pagination
             pageSize: cfg.pageSize || 10,
             pageSizes: cfg.pageSizes || [10, 25, 50, 100],
-            enablePagination: cfg.enablePagination !== false, 
+            enablePagination: cfg.enablePagination !== false,
             showPageSizeSelector: cfg.showPageSizeSelector === true,
             // NEW: Server paging (fast mode) - off by default
             serverPaging: !!cfg.serverPaging,
@@ -343,7 +343,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         return false;
                     })
                     .sort((a, b) => (a.priority || 0) - (b.priority || 0));
-                    const isMatch = (r) => {
+                const isMatch = (r) => {
                     const op = String(r.op || "eq").toLowerCase();
                     const val = r.value;
                     let left;
@@ -387,6 +387,95 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 }
                 return classes.join(" ");
             },
+
+
+
+            getPillForCell(row, col) {
+                const pick = (r, k) => r?.[k] ?? r?.[k[0].toUpperCase() + k.slice(1)];
+
+                const rules = (this.styleRules || [])
+                    .filter(r => {
+                        const en = pick(r, "pillEnabled");
+                        return en === true || String(en).toLowerCase() === "true";
+                    })
+                    .sort((a, b) => (pick(a, "priority") || 0) - (pick(b, "priority") || 0));
+
+                const isMatch = (r) => {
+                    const op = String(pick(r, "op") || "eq").toLowerCase();
+                    const v = pick(r, "value") ?? "";
+                    const field = pick(r, "field");
+                    const l = field ? (row?.[field] ?? "") : "";
+
+                    const ln = Number(l), vn = Number(v);
+                    const bothNum = !Number.isNaN(ln) && !Number.isNaN(vn);
+
+                    switch (op) {
+                        case "eq": return String(l) === String(v);
+                        case "neq": return String(l) !== String(v);
+                        case "gt": return bothNum ? ln > vn : String(l) > String(v);
+                        case "gte": return bothNum ? ln >= vn : String(l) >= String(v);
+                        case "lt": return bothNum ? ln < vn : String(l) < String(v);
+                        case "lte": return bothNum ? ln <= vn : String(l) <= String(v);
+                        case "contains": return String(l).includes(String(v));
+                        case "startswith": return String(l).startsWith(String(v));
+                        case "endswith": return String(l).endsWith(String(v));
+                        case "in":
+                            if (Array.isArray(pick(r, "value"))) return pick(r, "value").map(String).includes(String(l));
+                            return String(v).split(",").map(s => s.trim()).includes(String(l));
+                        default: return false;
+                    }
+                };
+
+                for (const r of rules) {
+                    const pillField = pick(r, "pillField") || pick(r, "field");
+                    if (!pillField) continue;
+
+                    // لازم يطابق اسم العمود (col.field) بالضبط
+                    if (pillField === col?.field && isMatch(r)) {
+                        const text =
+                            (pick(r, "pillText") != null ? String(pick(r, "pillText")) :
+                                (pick(r, "pillTextField") ? String(row?.[pick(r, "pillTextField")] ?? "") : "")
+                            ).trim();
+
+                        if (!text) continue;
+
+                        return {
+                            text,
+                            css: String(pick(r, "pillCssClass") || "pill"),
+                            mode: String(pick(r, "pillMode") || "replace").toLowerCase()
+                        };
+                    }
+                }
+                return null;
+            },
+
+
+
+            escapeHtml(s) {
+                return String(s ?? "")
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#39;");
+            },
+
+            renderCellContent(row, col, baseHtml) {
+                // baseHtml: المحتوى الأساسي اللي يرجعه formatCell قبل الكبسولة
+                const safe = (baseHtml == null) ? "" : String(baseHtml);
+
+                const pill = this.getPillForCell(row, col);
+                if (!pill) return safe;
+
+                const pillHtml = `<span class="${this.escapeHtml(pill.css)}">${this.escapeHtml(pill.text)}</span>`;
+
+                if (pill.mode === "append") return `${safe} ${pillHtml}`;
+                if (pill.mode === "prepend") return `${pillHtml} ${safe}`;
+                return pillHtml; // replace
+            },
+
+
+
             // ===== Initialization =====
             init() {
                 this.loadStoredPreferences();
@@ -494,7 +583,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     const root = document.querySelector('[x-data*="sfTable"]');
                     if (root && root.__x?.$data?.modal?.open) root.__x.$data.closeModal();
                 });
- 
+
                 document.addEventListener('click', (e) => {
                     const api = window.__sfTableActive;
                     if (!api || !api.modal?.open) return;
@@ -811,7 +900,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     }
                 }
                 this.updateSelectAllState();
-                
+
             },
 
             toggleSelectAll() {
@@ -1380,7 +1469,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     this.showToast("فشل تصدير PDF: " + (e.message || e), "error");
 
                 } finally {
-                    
+
                     this.modal.loading = false;
 
                     if (btn) {
@@ -1559,6 +1648,14 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     }
 
 
+                    //  لو sfRouteEditForm قرر ما فيه إجراء امنع فتح المودال
+                    if (action.__cancelOpen) {
+                        // (اختياري) رسالة
+                        this.showToast("لا يوجد إجراء لاحق لهذه الحالة", "error");
+                        return;
+                    }
+
+
                     // فتح المودال مع فحص Guards
                     if (action.openModal) {
                         await this.openModal(action, row);
@@ -1571,7 +1668,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     if (action.onClickJs) {
                         try {
                             // تنفيذ الكود الجافاسكربت المخصص
-                            
+
                             const fn = new Function('action', 'row', action.onClickJs);
                             fn.call(this, action, row);
                         } catch (e) {
@@ -1642,7 +1739,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 this.modal.html = "";
 
                 try {
-                    
+
                     if (action.formUrl) {
                         const url = this.fillUrl(action.formUrl, row);
                         const resp = await fetch(url);
@@ -1705,9 +1802,9 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 // تغيير شكل/نص الزر فقط
                                 btn.disabled = true;
                                 btn.classList.add("opacity-60", "pointer-events-none");
-                                btn.textContent ="جاري الحفظ .."
+                                btn.textContent = "جاري الحفظ .."
 
-                                
+
                                 clearTimeout(btn.__restoreTimer);
                                 btn.__restoreTimer = setTimeout(() => {
                                     if (this.modal?.open) {
@@ -2194,7 +2291,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             </span>`
                             : "";
 
-                            fieldHtml = `
+                        fieldHtml = `
                             <div class="form-group ${colCss}">
                             <label class="block text-sm font-medium text-gray-700 mb-1">
                                 ${this.escapeHtml(field.label)}
@@ -2221,8 +2318,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             />
                         </div>
                         ${field.helpText
-                        ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
-                        : ''}
+                                ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
+                                : ''}
                     </div>`;
                         break;
                     }
@@ -2254,11 +2351,11 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 ${autocompleteAttr}
                             >${this.escapeHtml(value)}</textarea>
                             ${field.helpText
-                            ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
-                            : ''}
+                                ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
+                                : ''}
                             </div>`;
-                          break;
-                         }
+                        break;
+                    }
 
 
 
@@ -2333,8 +2430,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                             ${field.helpText ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>` : ''}
                         </div>`;
-                                break;
-                            }
+                        break;
+                    }
 
                     case "checkbox":
                         const checked = value === true || value === "true" || value === "1" || value === 1 ? "checked" : "";
@@ -2369,9 +2466,9 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             ? `<span class="sf-input-icon ${iconSideClass}">
                                     <i class="${this.escapeHtml(field.icon)}"></i>
                                </span>`
-                                                : "";
+                            : "";
 
-                                            fieldHtml = `
+                        fieldHtml = `
                             <div class="form-group ${colCss}">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">
                                     ${this.escapeHtml(field.label)}
@@ -2394,8 +2491,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 </div>
 
                                 ${field.helpText
-                                                    ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
-                                                    : ''}
+                                ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
+                                : ''}
                             </div>`;
                         break;
                     }
@@ -2436,9 +2533,9 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             ? `<span class="sf-input-icon ${iconSideClass}">
                             <i class="${this.escapeHtml(field.icon)}"></i>
                            </span>`
-                                            : "";
+                            : "";
 
-                                        fieldHtml = `
+                        fieldHtml = `
                         <div class="form-group ${colCss}">
                             <label class="block text-sm font-medium text-gray-700 mb-1">
                                 ${this.escapeHtml(field.label)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
@@ -2465,8 +2562,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 >
                             </div>
                             ${field.helpText
-                            ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
-                            : ''}
+                                ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
+                                : ''}
                         </div>`;
                         break;
 
@@ -2501,8 +2598,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             ? `<span class="sf-input-icon ${iconSideClass}">
                                 <i class="${this.escapeHtml(field.icon)}"></i>
                            </span>`
-                                            : "";
-                                        fieldHtml = `
+                            : "";
+                        fieldHtml = `
                         <div class="form-group ${colCss}">
                             <label class="block text-sm font-medium text-gray-700 mb-1">
                                 ${this.escapeHtml(field.label)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
@@ -2539,10 +2636,10 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
 
 
-                            case "phone":
-                            case "tel": {
+                    case "phone":
+                    case "tel": {
 
-                            const normalizeFn = `
+                        const normalizeFn = `
                                         (function(el){
                                             let v = (el.value || '');
 
@@ -2571,7 +2668,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                         })(this);
                                     `;
 
-                                                        const validateFn = `
+                        const validateFn = `
                                         (function(el){
                                             // normalize first
                                             ${normalizeFn.replace(/this/g, 'el')}
@@ -2765,13 +2862,13 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             setupDependentDropdowns(form) {
                 // Find all selects with data-depends-on attribute
                 const dependentSelects = form.querySelectorAll('select[data-depends-on]');
-                
+
                 dependentSelects.forEach(dependentSelect => {
                     const parentFieldName = dependentSelect.getAttribute('data-depends-on');
                     const dependsUrl = dependentSelect.getAttribute('data-depends-url');
-                    
+
                     if (!parentFieldName || !dependsUrl) return;
-                    
+
                     // Find the parent select
                     const parentSelect = form.querySelector(`select[name="${parentFieldName}"]`);
                     if (!parentSelect) {
@@ -2792,11 +2889,11 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             const response = await fetch(url);
                             if (!response.ok) {
                                 throw new Error(`HTTP ${response.status}`);
-                            }                      
+                            }
                             const data = await response.json();
                             // Rebuild options
                             dependentSelect.innerHTML = '';
-                            
+
                             if (Array.isArray(data) && data.length > 0) {
                                 data.forEach(item => {
                                     const option = document.createElement('option');
@@ -2820,7 +2917,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 });
                             }
 
-                            
+
                         } catch (error) {
                             console.error('Error loading dependent options:', error);
                             dependentSelect.innerHTML = originalHtml;
@@ -2829,7 +2926,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             dependentSelect.disabled = false;
                         }
                     });
-                    
+
                     // Trigger initial load if parent has value
                     if (parentSelect.value && parentSelect.value !== '' && parentSelect.value !== '-1') {
                         parentSelect.dispatchEvent(new Event('change'));
@@ -2943,7 +3040,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             serializeForm(form) {
                 const formData = new FormData(form);
                 const data = {};
-                
+
                 // Handle regular form fields
                 for (const [key, value] of formData.entries()) {
                     if (data[key]) {
@@ -2957,7 +3054,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         data[key] = value;
                     }
                 }
-                
+
                 // Handle unchecked checkboxes
                 form.querySelectorAll('input[type="checkbox"][name]').forEach(checkbox => {
                     if (!formData.has(checkbox.name)) {
@@ -2966,7 +3063,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         data[checkbox.name] = true;
                     }
                 });
-                
+
                 // Clean up data types
                 Object.keys(data).forEach(key => {
                     let value = data[key];
@@ -2983,7 +3080,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         }
                     }
                 });
-                
+
                 return data;
             },
 
@@ -3010,44 +3107,44 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
             async postJson(url, body) {
                 const headers = { "Content-Type": "application/json" };
-                
+
                 // Add CSRF token if available
                 const csrfToken = this.getCsrfToken();
                 if (csrfToken) {
                     headers["RequestVerificationToken"] = csrfToken;
                 }
-                
+
                 const response = await fetch(url, {
                     method: "POST",
                     headers,
                     body: JSON.stringify(body)
                 });
-                
+
                 let json = null;
                 try {
                     json = await response.json();
                 } catch (e) {
                     // Response is not JSON
                 }
-                
+
                 if (!response.ok) {
                     const message = json?.error || `HTTP ${response.status}`;
                     throw new Error(message);
                 }
-                
+
                 if (json && json.success === false) {
                     const error = new Error(json.error || "العملية فشلت");
                     error.server = json;
                     throw error;
                 }
-                
+
                 return json;
             },
 
             getCsrfToken() {
                 const meta = document.querySelector('meta[name="request-verification-token"]');
                 if (meta?.content) return meta.content;
-                
+
                 const input = document.querySelector('input[name="__RequestVerificationToken"]');
                 return input?.value || null;
             },
@@ -3055,79 +3152,168 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             applyServerErrors(errors) {
                 const form = this.$el.querySelector('.sf-modal form');
                 if (!form || !errors) return;
-                
+
                 // Clear existing errors
                 form.querySelectorAll('[data-error-msg]').forEach(el => el.remove());
                 form.querySelectorAll('.ring-red-500, .border-red-500').forEach(el => {
                     el.classList.remove('ring-red-500', 'border-red-500', 'ring-1');
                 });
-                
+
                 // Apply new errors
                 Object.entries(errors).forEach(([fieldName, message]) => {
                     const field = form.querySelector(`[name="${fieldName}"]`);
                     if (field) {
                         field.classList.add('border-red-500', 'ring-1', 'ring-red-500');
-                        
+
                         const errorDiv = document.createElement('div');
                         errorDiv.className = 'text-red-600 text-sm mt-1';
                         errorDiv.setAttribute('data-error-msg', '1');
                         errorDiv.textContent = Array.isArray(message) ? message.join(', ') : String(message);
-                        
+
                         field.parentElement.appendChild(errorDiv);
                     }
                 });
             },
 
+            //formatCell(row, col) {
+            //    let value = row[col.field];
+            //    if (value == null) return "";
+            //    const shouldTruncate = !!(col.truncate ?? col.Truncate);
+            //    const wrapTruncate = (htmlOrText, titleText) => {
+            //        if (!shouldTruncate) return htmlOrText;
+            //        const raw = (titleText ?? "");
+            //        const clean = String(raw).replace(/\s+/g, " ").trim();
+            //        const t = this.escapeHtml(clean);
+            //        return `<span class="sf-truncate" title="${t}">${htmlOrText}</span>`;
+            //    };
+
+            //    switch (col.type) {
+            //        case "date":
+            //            try {
+            //                const txt = new Date(value).toLocaleDateString('ar-SA');
+            //                return wrapTruncate(this.escapeHtml(txt), txt);
+            //            } catch {
+            //                const txt = String(value);
+            //                return wrapTruncate(this.escapeHtml(txt), txt);
+            //            }
+
+            //        case "datetime":
+            //            try {
+            //                const txt = new Date(value).toLocaleString('ar-SA');
+            //                return wrapTruncate(this.escapeHtml(txt), txt);
+            //            } catch {
+            //                const txt = String(value);
+            //                return wrapTruncate(this.escapeHtml(txt), txt);
+            //            }
+
+            //        case "bool":
+            //            // tooltip للـ bool غير مهم عادة
+            //            return value
+            //                ? '<span class="text-green-600">✓</span>'
+            //                : '<span class="text-red-600">✗</span>';
+
+            //        case "money":
+            //            try {
+            //                const txt = new Intl.NumberFormat('ar-SA', {
+            //                    style: 'currency',
+            //                    currency: 'SAR'
+            //                }).format(value);
+            //                return wrapTruncate(this.escapeHtml(txt), txt);
+            //            } catch {
+            //                const txt = String(value);
+            //                return wrapTruncate(this.escapeHtml(txt), txt);
+            //            }
+
+            //        case "badge": {
+            //            const badgeClass =
+            //                col.badge?.map?.[value] ||
+            //                col.badge?.defaultClass ||
+            //                "bg-gray-100 text-gray-800";
+
+            //            const txt = String(value);
+            //            const html =
+            //                `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeClass}">${this.escapeHtml(txt)}</span>`;
+
+            //            return wrapTruncate(html, txt);
+            //        }
+
+            //        case "link": {
+            //            const txt = String(value);
+            //            if (col.linkTemplate) {
+            //                const href = this.fillUrl(col.linkTemplate, row);
+            //                const html =
+            //                    `<a href="${this.escapeHtml(href)}" class="text-blue-600 hover:text-blue-800 hover:underline">${this.escapeHtml(txt)}</a>`;
+            //                return wrapTruncate(html, txt);
+            //            }
+            //            return wrapTruncate(this.escapeHtml(txt), txt);
+            //        }
+
+            //        case "image":
+            //            if (col.imageTemplate) {
+            //                const src = this.fillUrl(col.imageTemplate, row);
+            //                return `<img src="${this.escapeHtml(src)}" alt="${this.escapeHtml(String(value))}" class="h-8 w-8 rounded object-cover">`;
+            //            }
+            //            return "";
+
+            //        default: {
+            //            const txt = String(value);
+            //            return wrapTruncate(this.escapeHtml(txt), txt);
+            //        }
+            //    }
+            //},
+
             formatCell(row, col) {
                 let value = row[col.field];
-                if (value == null) return "";
-                // هل العمود مطلوب له truncate؟
+                if (value == null) value = "";
+
                 const shouldTruncate = !!(col.truncate ?? col.Truncate);
-                // مساعد: يلف الناتج داخل span مع title (بعد تنظيف المسافات) لعرض النص الكامل
+
                 const wrapTruncate = (htmlOrText, titleText) => {
                     if (!shouldTruncate) return htmlOrText;
                     const raw = (titleText ?? "");
-                    const clean = String(raw).replace(/\s+/g, " ").trim(); // ✅ يشيل المسافات الزائدة ويطبعها
+                    const clean = String(raw).replace(/\s+/g, " ").trim();
                     const t = this.escapeHtml(clean);
                     return `<span class="sf-truncate" title="${t}">${htmlOrText}</span>`;
                 };
+
+                let base = "";
 
                 switch (col.type) {
                     case "date":
                         try {
                             const txt = new Date(value).toLocaleDateString('ar-SA');
-                            return wrapTruncate(this.escapeHtml(txt), txt);
+                            base = wrapTruncate(this.escapeHtml(txt), txt);
                         } catch {
                             const txt = String(value);
-                            return wrapTruncate(this.escapeHtml(txt), txt);
+                            base = wrapTruncate(this.escapeHtml(txt), txt);
                         }
+                        return this.renderCellContent(row, col, base);
 
                     case "datetime":
                         try {
                             const txt = new Date(value).toLocaleString('ar-SA');
-                            return wrapTruncate(this.escapeHtml(txt), txt);
+                            base = wrapTruncate(this.escapeHtml(txt), txt);
                         } catch {
                             const txt = String(value);
-                            return wrapTruncate(this.escapeHtml(txt), txt);
+                            base = wrapTruncate(this.escapeHtml(txt), txt);
                         }
+                        return this.renderCellContent(row, col, base);
 
                     case "bool":
-                        // tooltip للـ bool غير مهم عادة
-                        return value
+                        base = value
                             ? '<span class="text-green-600">✓</span>'
                             : '<span class="text-red-600">✗</span>';
+                        return this.renderCellContent(row, col, base);
 
                     case "money":
                         try {
-                            const txt = new Intl.NumberFormat('ar-SA', {
-                                style: 'currency',
-                                currency: 'SAR'
-                            }).format(value);
-                            return wrapTruncate(this.escapeHtml(txt), txt);
+                            const txt = new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' }).format(value);
+                            base = wrapTruncate(this.escapeHtml(txt), txt);
                         } catch {
                             const txt = String(value);
-                            return wrapTruncate(this.escapeHtml(txt), txt);
+                            base = wrapTruncate(this.escapeHtml(txt), txt);
                         }
+                        return this.renderCellContent(row, col, base);
 
                     case "badge": {
                         const badgeClass =
@@ -3139,7 +3325,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         const html =
                             `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeClass}">${this.escapeHtml(txt)}</span>`;
 
-                        return wrapTruncate(html, txt);
+                        base = wrapTruncate(html, txt);
+                        return this.renderCellContent(row, col, base);
                     }
 
                     case "link": {
@@ -3148,31 +3335,38 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             const href = this.fillUrl(col.linkTemplate, row);
                             const html =
                                 `<a href="${this.escapeHtml(href)}" class="text-blue-600 hover:text-blue-800 hover:underline">${this.escapeHtml(txt)}</a>`;
-                            return wrapTruncate(html, txt);
+                            base = wrapTruncate(html, txt);
+                            return this.renderCellContent(row, col, base);
                         }
-                        return wrapTruncate(this.escapeHtml(txt), txt);
+                        base = wrapTruncate(this.escapeHtml(txt), txt);
+                        return this.renderCellContent(row, col, base);
                     }
 
                     case "image":
                         if (col.imageTemplate) {
                             const src = this.fillUrl(col.imageTemplate, row);
-                            return `<img src="${this.escapeHtml(src)}" alt="${this.escapeHtml(String(value))}" class="h-8 w-8 rounded object-cover">`;
+                            base = `<img src="${this.escapeHtml(src)}" alt="${this.escapeHtml(String(value))}" class="h-8 w-8 rounded object-cover">`;
+                            return this.renderCellContent(row, col, base);
                         }
-                        return "";
+                        return this.renderCellContent(row, col, "");
 
                     default: {
                         const txt = String(value);
-                        return wrapTruncate(this.escapeHtml(txt), txt);
+                        base = wrapTruncate(this.escapeHtml(txt), txt);
+                        return this.renderCellContent(row, col, base);
                     }
                 }
             },
+
+
+
 
             // ===== Grouping =====
             groupedRows() {
                 if (!this.groupBy) {
                     return [{ key: null, label: null, items: this.rows }];
                 }
-                
+
                 const groups = {};
                 this.rows.forEach(row => {
                     const key = row[this.groupBy] ?? "غير محدد";
@@ -3181,7 +3375,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     }
                     groups[key].push(row);
                 });
-                
+
                 return Object.entries(groups).map(([key, items]) => ({
                     key,
                     label: `${this.groupBy}: ${key}`,
@@ -3245,7 +3439,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     .replace(/'/g, "&#039;");
             },
 
-           
+
             showToast(message, type = 'info') {
                 const toast = document.createElement('div');
                 toast.textContent = message;
@@ -3254,7 +3448,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     top: '20px',
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    padding: '1rem 2rem',
+                    padding: '0.7rem 2rem',
                     borderRadius: '0.5rem',
                     color: 'white',
                     backgroundColor:
@@ -3470,8 +3664,53 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ===== SmartTable Dynamic Edit Routing =====
+//window.sfRouteEditForm = function (table, act, row) {
+//    if (!table || !act) return;
+
+//    const meta = act.Meta || act.meta;
+//    if (!meta) return;
+
+//    const routeBy = meta.routeBy || meta.RouteBy;
+//    const routes = meta.routes || meta.Routes;
+//    if (!routeBy || !routes) return;
+
+//    const r = row || table.getSelectedRowFromCurrentData?.() || (table.getSelectedRows?.()[0] ?? null);
+//    if (!r) return;
+
+//    const key = String(r?.[routeBy] ?? "");
+//    const route = routes[key] || routes["*"];
+//    if (!route) return;
+
+//    if (route.title != null) {
+//        act.ModalTitle = route.title;
+//        act.modalTitle = route.title;
+
+//        const of = act.OpenForm || act.openForm;
+//        if (of) {
+//            of.Title = route.title;
+//            of.title = route.title;
+//        }
+//    }
+
+//    if (route.message != null) {
+//        act.ModalMessage = route.message;
+//        act.modalMessage = route.message;
+//    }
+
+//    const of = act.OpenForm || act.openForm;
+//    if (of && route.fields) {
+//        of.Fields = route.fields;
+//        of.fields = route.fields;
+//    }
+//};
+
+
+// ===== SmartTable Dynamic Edit Routing =====
 window.sfRouteEditForm = function (table, act, row) {
     if (!table || !act) return;
+
+    // reset cancel flag
+    act.__cancelOpen = false;
 
     const meta = act.Meta || act.meta;
     if (!meta) return;
@@ -3485,7 +3724,27 @@ window.sfRouteEditForm = function (table, act, row) {
 
     const key = String(r?.[routeBy] ?? "");
     const route = routes[key] || routes["*"];
-    if (!route) return;
+
+    //  لا يوجد إجراء لهذه الحالة
+    if (!route) {
+        
+        act.ModalTitle = act.modalTitle = "";
+        act.ModalMessage = act.modalMessage = "";
+
+        const of0 = act.OpenForm || act.openForm;
+        if (of0) {
+            of0.Title = of0.title = "";
+            of0.Fields = of0.fields = [];
+        }
+
+        // علّم أن الفتح ممنوع (لازم كود الفتح يشيك عليها)
+        act.__cancelOpen = true;
+
+        // (اختياري) رسالة
+        // table.toast?.warn?.("لا يوجد إجراء لاحق لهذه الحالة");
+
+        return;
+    }
 
     if (route.title != null) {
         act.ModalTitle = route.title;

@@ -709,49 +709,74 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             };
 
 
-            dsModel.StyleRules = new List<TableStyleRule>
-                {
+                dsModel.StyleRules = new List<TableStyleRule>
+                    {
+                        new TableStyleRule
+                        {
+                            Target = "row",
+                            Field = "LastActionTypeID",
+                            Op = "eq",
+                            Value = "45",
+                            //CssClass = "row-green",
+                            Priority = 1,
 
-                    new TableStyleRule
-                    {
-                        Target = "row",
-                        Field = "LastActionTypeID",
-                        Op = "eq",
-                        Value = "45",
-                        CssClass = "row-green",
-                        Priority = 1
-
-                    },
-                      new TableStyleRule
-                    {
-                        Target = "row",
-                        Field = "LastActionTypeID",
-                        Op = "eq",
-                        Value = "39",
-                        CssClass = "row-yellow",
-                        Priority = 1
-                    },
-                       new TableStyleRule
-                    {
-                        Target = "row",
-                        Field = "buildingLastActionTypeIDActionTypeResidentAlias",
-                        Op = "eq",
-                        Value = "41",
-                        CssClass = "row-yellow",
-                        Priority = 1
-                    },
+                            PillEnabled = true,
+                            PillField = "buildingActionTypeResidentAlias", // ✅ اسم العمود الصحيح
+                            PillText = "مقبول",
+                            PillCssClass = "pill pill-green",
+                            PillMode = "replace"
+                        },
 
                         new TableStyleRule
-                    {
-                        Target = "row",
-                        Field = "LastActionTypeID",
-                        Op = "eq",
-                        Value = "42",
-                        CssClass = "row-red",
-                        Priority = 1
-                    },
+                        {
+                            Target = "row",
+                            Field = "LastActionTypeID",
+                            Op = "eq",
+                            Value = "39",
+                           // CssClass = "row-yellow",
+                            Priority = 1,
 
-                };
+                            PillEnabled = true,
+                            PillField = "buildingActionTypeResidentAlias", 
+                            PillText = "قيد الإجراء",
+                            PillCssClass = "pill pill-yellow",
+                            PillMode = "replace"
+                        },
+
+                        new TableStyleRule
+                        {
+                            Target = "row",
+                            Field = "LastActionTypeID",         
+                            Op = "eq",
+                            Value = "41",
+                           // CssClass = "row-yellow",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "buildingActionTypeResidentAlias", 
+                            PillText = "تنبيه",
+                            PillCssClass = "pill pill-yellow",
+                            PillMode = "replace"
+                        },
+
+                        new TableStyleRule
+                        {
+                            Target = "row",
+                            Field = "LastActionTypeID",
+                            Op = "eq",
+                            Value = "42",
+                           // CssClass = "row-red",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "buildingActionTypeResidentAlias", 
+                            PillText = "مرفوض",
+                            PillCssClass = "pill pill-red",
+                            PillMode = "replace"
+                        }
+                    };
+
+
 
             var vm = new SmartPageViewModel
             {

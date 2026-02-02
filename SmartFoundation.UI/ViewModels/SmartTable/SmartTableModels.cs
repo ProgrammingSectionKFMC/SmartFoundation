@@ -107,6 +107,25 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
 
         // (اختياري) إذا true: أول Rule ينطبق يوقف
         public bool StopOnMatch { get; set; } = false;
+
+
+        // ✅ NEW: Pill / Badge
+        public bool PillEnabled { get; set; } = false;
+
+        // بأي عمود تنعرض الكبسولة؟ (إذا null -> نفس Field)
+        public string? PillField { get; set; }
+
+        // نص ثابت للكبسولة (اختياري)
+        public string? PillText { get; set; }
+
+        // أو جيب النص من حقل في الـ row (اختياري)
+        public string? PillTextField { get; set; }
+
+        // كلاس CSS للكبسولة (مثلاً: pill-green)
+        public string? PillCssClass { get; set; }
+
+        // طريقة العرض: append | prepend | replace
+        public string PillMode { get; set; } = "replace";
     }
 
 
