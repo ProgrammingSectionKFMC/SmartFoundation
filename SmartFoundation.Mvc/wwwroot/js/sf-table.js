@@ -93,6 +93,442 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             //========End Profile=============//
 
 
+            // ===== Column Filters (NEW) =====
+            filtersEnabled: (cfg.filtersEnabled !== false),          // افتراضي مفعلة
+            filtersRow: (cfg.filtersRow !== false),                  // إظهار صف الفلاتر تحت الهيدر
+            filtersDebounce: Number(cfg.filtersDebounce || 250),
+            filtersTimer: null,
+            columnFilters: (cfg.columnFilters && typeof cfg.columnFilters === "object") ? cfg.columnFilters : {},
+            showFilters: false,
+            // ✅ NEW: cache for select options
+            filterOptionsCache: {},   // key -> [{value,text}]
+            filterOptionsLoading: {}, // key -> true/false (اختياري)
+
+            // تجهيز القيم الافتراضية للفلاتر لكل عمود
+            //initColumnFilters() {
+            //    const cols = Array.isArray(this.columns) ? this.columns : [];
+            //    if (!this.columnFilters || typeof this.columnFilters !== "object") this.columnFilters = {};
+
+            //    for (const c of cols) {
+            //        const f = String(c?.field || "");
+            //        if (!f) continue;
+
+            //        // إذا ما فيه قيمة موجودة، حط default
+            //        if (this.columnFilters[f] === undefined) {
+            //            const def = c?.filter?.defaultValue ?? c?.Filter?.DefaultValue ?? "";
+            //            this.columnFilters[f] = (def ?? "");
+            //        }
+            //    }
+            //},
+
+
+            initColumnFilters() {
+                const cols = Array.isArray(this.columns) ? this.columns : [];
+                if (!this.columnFilters || typeof this.columnFilters !== "object") this.columnFilters = {};
+
+                for (const c of cols) {
+                    const f = String(c?.field || "");
+                    if (!f) continue;
+
+                    // لا تكتب فوق قيمة موجودة (خصوصًا اللي جاية من localStorage)
+                    if (this.columnFilters[f] !== undefined) continue;
+
+                    // DefaultValue فقط إذا كانت قيمة حقيقية
+                    const raw = (c?.filter?.defaultValue ?? c?.Filter?.DefaultValue);
+
+                    let val = "";
+                    if (raw === null || raw === undefined) {
+                        val = "";
+                    } else if (typeof raw === "string") {
+                        val = raw.trim();
+                    } else if (typeof raw === "number" || typeof raw === "boolean") {
+                        // مهم: لا نعتبر 0/false كفلتر افتراضي
+                        val = "";
+                    } else {
+                        val = "";
+                    }
+
+                    // حماية إضافية لو أحد رجّع "فلترة..." بالغلط
+                    if (val === "فلترة..." || val === "فلترة…") val = "";
+
+                    this.columnFilters[f] = val;
+                }
+            },
+
+
+            getColFilterDef(col) {
+                const cf = col?.filter || col?.Filter || null;
+                return cf;
+            },
+
+            //  NEW: هل العمود مسموح له فلترة؟ (افتراضي: لا)
+            isColFilterEnabled(col) {
+                const def = this.getColFilterDef(col);
+                if (!def) return false; //  أهم سطر: بدون Filter = ما فيه فلتر
+
+                const en = (def.enabled ?? def.Enabled);
+                return en === true || String(en).toLowerCase() === "true";
+            },
+
+
+            getColFilterType(col) {
+                const def = this.getColFilterDef(col);
+                const t = (def?.type || def?.Type || "").toLowerCase();
+                if (t) return t;
+
+                // استنتاج النوع من col.type إذا ما فيه Filter
+                const ct = String(col?.type || col?.Type || "").toLowerCase();
+                if (["date", "datetime"].includes(ct)) return "date";
+                if (["bool", "boolean"].includes(ct)) return "bool";
+                if (["number", "int", "decimal", "float", "double", "money"].includes(ct)) return "number";
+                return "text";
+            },
+
+            getColFilterMatch(col) {
+                const def = this.getColFilterDef(col) || {};
+                return String(def.match || def.Match || "contains").toLowerCase();
+            },
+
+
+            getColFilterPlaceholder(col) {
+                const def = this.getColFilterDef(col);
+                return def?.placeholder || def?.Placeholder || "فلترة…";
+            },
+
+            getColFilterOptions(col) {
+                const def = this.getColFilterDef(col) || {};
+                const type = this.getColFilterType(col);
+                if (type !== "select") return [];
+
+                // 1) لو Options جاهزة من السيرفر في cfg
+                const inline = def.options || def.Options;
+                if (Array.isArray(inline) && inline.length) return inline;
+
+                // 2) لو مصدرها server: رجّع من الكاش (لو ما انوجد = يرجع فاضي لين يحمّل)
+                const src = String(def.optionsSource || def.OptionsSource || "client").toLowerCase();
+                const key = String(def.optionsKey || def.OptionsKey || col?.field || "").trim();
+
+                if (src === "server") {
+                    return this.filterOptionsCache[key] || [];
+                }
+
+                // 3) fallback: client-side unique values
+                const field = String(col?.field || "");
+                if (!field) return [];
+
+                const srcRows =
+                    (Array.isArray(this.allRows) && this.allRows.length) ? this.allRows :
+                        (Array.isArray(this.rows) && this.rows.length) ? this.rows : [];
+
+                const uniq = new Map();
+                for (const r of srcRows) {
+                    const v = r?.[field];
+                    const s = (v == null) ? "" : String(v).trim();
+                    if (!s) continue;
+                    if (!uniq.has(s)) uniq.set(s, s);
+                    if (uniq.size >= 150) break;
+                }
+                return Array.from(uniq.keys()).sort().map(x => ({ value: x, text: x }));
+            },
+
+
+
+            async fetchFilterOptionsForCol(col) {
+                const def = this.getColFilterDef(col) || {};
+                const type = this.getColFilterType(col);
+                if (type !== "select") return;
+
+                const src = String(def.optionsSource || def.OptionsSource || "client").toLowerCase();
+                if (src !== "server") return;
+
+                const key = String(def.optionsKey || def.OptionsKey || col?.field || "").trim();
+                if (!key) return;
+
+                // ✅ كاش
+                if (this.filterOptionsCache[key]) return;
+
+                // ✅ منع تكرار التحميل
+                if (this.filterOptionsLoading[key]) return;
+                this.filterOptionsLoading[key] = true;
+
+                try {
+                    // غيّر الرابط حسب API عندك
+                    const url = `/smart/table/filter-options?key=${encodeURIComponent(key)}&sp=${encodeURIComponent(this.spName)}`;
+
+                    const res = await fetch(url, { credentials: "same-origin" });
+                    const data = await res.json();
+
+                    this.filterOptionsCache[key] = Array.isArray(data) ? data : [];
+                } catch (e) {
+                    console.error("fetchFilterOptionsForCol failed", e);
+                    this.filterOptionsCache[key] = [];
+                } finally {
+                    this.filterOptionsLoading[key] = false;
+                }
+            },
+
+            async preloadSelectFilters() {
+                const cols = this.visibleColumns?.() || [];
+                for (const col of cols) {
+                    if (!this.isColFilterEnabled(col)) continue;
+                    const def = this.getColFilterDef(col);
+
+
+                    if (this.getColFilterType(col) === "select") {
+                        await this.fetchFilterOptionsForCol(col);
+                    }
+                }
+            },
+
+
+            onColumnFilterInput() {
+                clearTimeout(this.filtersTimer);
+                this.filtersTimer = setTimeout(() => {
+                    this.page = 1;
+
+                    if (this.serverPaging) {
+                        // سيرفر سايد: load() (بعد override تحت)
+                        this.load();
+                    } else {
+                        // كلاينت سايد: applyFiltersAndSort() (بعد override تحت)
+                        this.applyFiltersAndSort();
+                    }
+
+                    this.savePreferences?.();
+                }, this.filtersDebounce);
+            },
+
+            clearAllColumnFilters() {
+                const cols = Array.isArray(this.columns) ? this.columns : [];
+                for (const c of cols) {
+                    const f = String(c?.field || "");
+                    if (!f) continue;
+                    this.columnFilters[f] = "";
+                }
+                this.onColumnFilterInput();
+            },
+
+            matchText(hay, needle) {
+                const h = (hay == null) ? "" : String(hay).toLowerCase();
+                const n = (needle == null) ? "" : String(needle).toLowerCase().trim();
+                if (!n) return true;
+                // دعم tokens AND (نفس أسلوب البحث العام)
+                const tokens = n.split(/\s+/).filter(Boolean);
+                return tokens.every(t => h.includes(t));
+            },
+
+            matchNumber(val, expr) {
+                const s = String(expr ?? "").trim();
+                if (!s) return true;
+                const n = Number(val);
+                if (Number.isNaN(n)) return false;
+
+                // دعم: >10, >=10, <10, <=10, =10, 10
+                const m = s.match(/^(>=|<=|>|<|=)?\s*(-?\d+(\.\d+)?)$/);
+                if (!m) return false;
+                const op = m[1] || "=";
+                const x = Number(m[2]);
+                if (Number.isNaN(x)) return false;
+
+                if (op === ">") return n > x;
+                if (op === ">=") return n >= x;
+                if (op === "<") return n < x;
+                if (op === "<=") return n <= x;
+                return n === x;
+            },
+
+            matchDate(val, expr) {
+                const s = String(expr ?? "").trim();
+                if (!s) return true;
+
+                const d = new Date(val);
+                if (Number.isNaN(d.getTime())) return false;
+
+                // دعم:
+                // 1) YYYY-MM-DD
+                // 2) YYYY-MM-DD..YYYY-MM-DD (range)
+                // 3) >=YYYY-MM-DD, <=YYYY-MM-DD
+                const range = s.split("..").map(x => x.trim());
+                const toDay = (x) => {
+                    const z = new Date(x);
+                    if (Number.isNaN(z.getTime())) return null;
+                    // نطبع اليوم فقط
+                    return new Date(z.getFullYear(), z.getMonth(), z.getDate());
+                };
+
+                const dd = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+                if (range.length === 2) {
+                    const a = toDay(range[0]);
+                    const b = toDay(range[1]);
+                    if (!a || !b) return false;
+                    return dd >= a && dd <= b;
+                }
+
+                const m = s.match(/^(>=|<=|>|<|=)?\s*(\d{4}-\d{2}-\d{2})$/);
+                if (m) {
+                    const op = m[1] || "=";
+                    const x = toDay(m[2]);
+                    if (!x) return false;
+                    if (op === ">") return dd > x;
+                    if (op === ">=") return dd >= x;
+                    if (op === "<") return dd < x;
+                    if (op === "<=") return dd <= x;
+                    return dd.getTime() === x.getTime();
+                }
+
+                return false;
+            },
+
+            matchBool(val, expr) {
+                const s = String(expr ?? "").toLowerCase().trim();
+                if (!s) return true;
+                const b = !!val;
+                if (["1", "true", "نعم", "yes", "y"].includes(s)) return b === true;
+                if (["0", "false", "لا", "no", "n"].includes(s)) return b === false;
+                return false;
+            },
+
+            rowPassesColumnFilters(row) {
+                if (!this.filtersEnabled) return true;
+
+                const cols = this.visibleColumns?.() || [];
+
+                for (const col of cols) {
+                    const field = String(col?.field || "");
+                    if (!field) continue;
+
+                    //  لا تطبق فلتر إلا على الأعمدة اللي عندها Filter و Enabled=true
+                    if (!this.isColFilterEnabled(col)) continue;
+
+                    const fval = this.columnFilters?.[field];
+                    if (fval == null || String(fval).trim() === "") continue;
+
+                    const type = this.getColFilterType(col);
+                    const cell = row?.[field];
+
+                    if (type === "number") {
+                        if (!this.matchNumber(cell, fval)) return false;
+                    } else if (type === "date") {
+                        if (!this.matchDate(cell, fval)) return false;
+                    } else if (type === "bool") {
+                        if (!this.matchBool(cell, fval)) return false;
+                    } else if (type === "select") {
+                        // ✅ select = مساواة دقيقة
+                        const a = String(cell ?? "").trim();
+                        const b = String(fval ?? "").trim();
+                        if (a !== b) return false;
+                    } else {
+                        // text
+                        const m = this.getColFilterMatch(col);
+                        if (m === "eq") {
+                            const a = String(cell ?? "").trim();
+                            const b = String(fval ?? "").trim();
+                            if (a !== b) return false;
+                        } else {
+                            if (!this.matchText(cell, fval)) return false;
+                        }
+                    }
+                }
+                // إذا عدّت كل الفلاتر بدون رفض = الصف ناجح
+                return true;
+            },
+
+
+
+
+            hasActiveColumnFilters() {
+                if (!this.columnFilters || typeof this.columnFilters !== "object") return false;
+                for (const k of Object.keys(this.columnFilters)) {
+                    const v = this.columnFilters[k];
+                    if (v == null) continue;
+                    const s = String(v).trim();
+                    if (s && s !== "فلترة..." && s !== "فلترة…") return true;
+                }
+                return false;
+            },
+
+
+            initFilterSelect2() {
+                // لازم jQuery + select2 تكون محملة
+                if (!window.jQuery || !jQuery.fn || !jQuery.fn.select2) return;
+
+                /*this.$nextTick(() => {*/
+                this.$nextTick(() => {
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+
+                    const root = this.$el; // جذر الكومبوننت
+                    const selects = root.querySelectorAll("select.sf-filter-select2");
+
+                    selects.forEach((el) => {
+                        const $el = jQuery(el);
+
+                        // لو متهيء من قبل: دمّره
+                        if ($el.data("select2")) {
+                            $el.off(".sfFilter");
+                            $el.select2("destroy");
+                        }
+
+                        // dropdownParent مهم جداً عشان ما ينقص داخل sticky/overflow
+                        const dropdownParent = jQuery("body");
+
+
+
+                        $el.select2({
+                            width: "100%",
+                            dir: "rtl",
+                            dropdownParent,
+                            minimumResultsForSearch: 10
+                        });
+
+                        // sync value من Alpine -> select2
+                        const field = el.getAttribute("data-field");
+                        const v = this.columnFilters?.[field] ?? "";
+                        $el.val(v).trigger("change.select2");
+
+                        // on change: حدّث Alpine ثم فلترة
+                        $el.on("change.sfFilter", () => {
+                            const f = el.getAttribute("data-field");
+                            this.columnFilters[f] = $el.val() ?? "";
+                            this.onColumnFilterInput();
+                        });
+                    });
+                        });
+
+                    });
+                });
+            },
+
+            destroyFilterSelect2() {
+                if (!window.jQuery || !jQuery.fn || !jQuery.fn.select2) return;
+
+                const root = this.$el;
+                const selects = root.querySelectorAll("select.sf-filter-select2");
+                selects.forEach((el) => {
+                    const $el = jQuery(el);
+                    if ($el.data("select2")) {
+                        $el.off(".sfFilter");
+                        $el.select2("destroy");
+                    }
+                });
+            },
+
+
+            toggleFilters() {
+                this.showFilters = !this.showFilters;
+
+                if (this.showFilters) {
+                    this.preloadSelectFilters();
+                    this.initFilterSelect2();     //  تهيئة select2
+                } else {
+                    this.destroyFilterSelect2();  //  اختياري
+                }
+            },
+
+            clearFiltersUI() {
+                this.clearAllColumnFilters(); 
+            },
 
 
             // Pagination
@@ -479,7 +915,18 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             // ===== Initialization =====
             init() {
                 this.loadStoredPreferences();
+                this.initColumnFilters(); // ✅
+                if (this.showFilters) {
+                    this.initFilterSelect2();
+                }
+
                 this.bindPrintListenerOnce();
+
+                this.load();
+                this.setupEventListeners();
+
+                if (this.showFilters) this.preloadSelectFilters(); // ✅
+                
 
 
 
@@ -508,6 +955,50 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         const prefs = JSON.parse(stored);
                         if (prefs.pageSize) this.pageSize = prefs.pageSize;
                         if (prefs.sort) this.sort = prefs.sort;
+
+
+                        if (prefs.columnFilters && typeof prefs.columnFilters === "object") {
+                            this.columnFilters = prefs.columnFilters;
+
+                            // ✅ normalize values (لا تسمح بأي object/array يكسر الفلاتر)
+                            for (const k of Object.keys(this.columnFilters)) {
+                                const v = this.columnFilters[k];
+
+                                // null/undefined
+                                if (v == null) { this.columnFilters[k] = ""; continue; }
+
+                                // string
+                                if (typeof v === "string") {
+                                    const s = v.trim();
+                                    this.columnFilters[k] = (s === "فلترة..." || s === "فلترة…") ? "" : s;
+                                    continue;
+                                }
+
+                                // number/bool -> حولها لنص (عشان يشتغل فلتر الأرقام/البول)
+                                if (typeof v === "number" || typeof v === "boolean") {
+                                    this.columnFilters[k] = String(v);
+                                    continue;
+                                }
+
+                                // أي شيء ثاني (object/array) = امسحه
+                                this.columnFilters[k] = "";
+                            }
+                        }
+
+                        // ✅ أكمل أي مفاتيح ناقصة بدون ما يضيف فلاتر
+                        this.initColumnFilters();
+
+
+                        // Sanitize stored filters (لو كانت قيمة placeholder أو أشياء غريبة)
+                        if (this.columnFilters && typeof this.columnFilters === "object") {
+                            for (const k of Object.keys(this.columnFilters)) {
+                                const v = this.columnFilters[k];
+                                const s = (v == null) ? "" : String(v).trim();
+                                if (!s || s === "فلترة..." || s === "فلترة…") this.columnFilters[k] = "";
+                            }
+                        }
+
+
                         if (prefs.columns && Array.isArray(this.columns)) {
                             this.columns.forEach(col => {
                                 const storedCol = prefs.columns.find(c => c.field === col.field);
@@ -527,6 +1018,12 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     const prefs = {
                         pageSize: this.pageSize,
                         sort: this.sort,
+
+
+                        columnFilters: this.columnFilters || {}, 
+
+
+
                         columns: this.columns.map(col => ({
                             field: col.field,
                             visible: col.visible !== false
@@ -761,6 +1258,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             applyFiltersAndSort() {
                 let filtered = [...this.allRows];
 
+                // 1) Global search (q)
                 if (this.q) {
                     const tokens = String(this.q)
                         .toLowerCase()
@@ -774,62 +1272,60 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                     if (tokens.length) {
                         filtered = filtered.filter(row => {
-                            // نجمع كل القيم القابلة للبحث في نص واحد
                             const haystack = fields
                                 .map(f => String(row?.[f] ?? "").toLowerCase())
                                 .join(" ");
-                            // لازم كل كلمات البحث موجودة (AND)
                             return tokens.every(t => haystack.includes(t));
                         });
                     }
                 }
 
-                // Apply sorting
+                // ✅ 2) Column filters (THE MISSING PART)
+                if (this.filtersEnabled && this.hasActiveColumnFilters?.()) {
+                    filtered = filtered.filter(row => this.rowPassesColumnFilters(row));
+                }
+
+                // 3) Sorting
                 if (this.sort.field) {
                     filtered.sort((a, b) => {
                         let valA = a[this.sort.field];
                         let valB = b[this.sort.field];
 
-                        // Handle nulls
                         if (valA == null && valB == null) return 0;
                         if (valA == null) return 1;
                         if (valB == null) return -1;
 
-                        // Handle numbers
                         if (typeof valA === 'number' && typeof valB === 'number') {
                             return this.sort.dir === 'asc' ? valA - valB : valB - valA;
                         }
-                        // Handle dates
+
                         const dateA = new Date(valA);
                         const dateB = new Date(valB);
                         if (!isNaN(dateA) && !isNaN(dateB)) {
                             return this.sort.dir === 'asc' ? dateA - dateB : dateB - dateA;
                         }
-                        // Handle strings
+
                         valA = String(valA).toLowerCase();
                         valB = String(valB).toLowerCase();
 
-                        if (this.sort.dir === 'asc') {
-                            return valA < valB ? -1 : valA > valB ? 1 : 0;
-                        } else {
-                            return valA > valB ? -1 : valA < valB ? 1 : 0;
-                        }
+                        if (this.sort.dir === 'asc') return valA < valB ? -1 : valA > valB ? 1 : 0;
+                        return valA > valB ? -1 : valA < valB ? 1 : 0;
                     });
                 }
 
+                // 4) Pagination
                 this.filteredRows = filtered;
                 this.total = filtered.length;
                 this.pages = Math.max(1, Math.ceil(this.total / this.pageSize));
                 this.page = Math.min(this.page, this.pages);
 
-                // Apply pagination
                 const startIdx = (this.page - 1) * this.pageSize;
                 this.rows = filtered.slice(startIdx, startIdx + this.pageSize);
 
                 this.savePreferences();
                 this.updateSelectAllState();
-
             },
+
 
             debouncedSearch() {
                 clearTimeout(this.searchTimer);
@@ -3175,93 +3671,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 });
             },
 
-            //formatCell(row, col) {
-            //    let value = row[col.field];
-            //    if (value == null) return "";
-            //    const shouldTruncate = !!(col.truncate ?? col.Truncate);
-            //    const wrapTruncate = (htmlOrText, titleText) => {
-            //        if (!shouldTruncate) return htmlOrText;
-            //        const raw = (titleText ?? "");
-            //        const clean = String(raw).replace(/\s+/g, " ").trim();
-            //        const t = this.escapeHtml(clean);
-            //        return `<span class="sf-truncate" title="${t}">${htmlOrText}</span>`;
-            //    };
-
-            //    switch (col.type) {
-            //        case "date":
-            //            try {
-            //                const txt = new Date(value).toLocaleDateString('ar-SA');
-            //                return wrapTruncate(this.escapeHtml(txt), txt);
-            //            } catch {
-            //                const txt = String(value);
-            //                return wrapTruncate(this.escapeHtml(txt), txt);
-            //            }
-
-            //        case "datetime":
-            //            try {
-            //                const txt = new Date(value).toLocaleString('ar-SA');
-            //                return wrapTruncate(this.escapeHtml(txt), txt);
-            //            } catch {
-            //                const txt = String(value);
-            //                return wrapTruncate(this.escapeHtml(txt), txt);
-            //            }
-
-            //        case "bool":
-            //            // tooltip للـ bool غير مهم عادة
-            //            return value
-            //                ? '<span class="text-green-600">✓</span>'
-            //                : '<span class="text-red-600">✗</span>';
-
-            //        case "money":
-            //            try {
-            //                const txt = new Intl.NumberFormat('ar-SA', {
-            //                    style: 'currency',
-            //                    currency: 'SAR'
-            //                }).format(value);
-            //                return wrapTruncate(this.escapeHtml(txt), txt);
-            //            } catch {
-            //                const txt = String(value);
-            //                return wrapTruncate(this.escapeHtml(txt), txt);
-            //            }
-
-            //        case "badge": {
-            //            const badgeClass =
-            //                col.badge?.map?.[value] ||
-            //                col.badge?.defaultClass ||
-            //                "bg-gray-100 text-gray-800";
-
-            //            const txt = String(value);
-            //            const html =
-            //                `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeClass}">${this.escapeHtml(txt)}</span>`;
-
-            //            return wrapTruncate(html, txt);
-            //        }
-
-            //        case "link": {
-            //            const txt = String(value);
-            //            if (col.linkTemplate) {
-            //                const href = this.fillUrl(col.linkTemplate, row);
-            //                const html =
-            //                    `<a href="${this.escapeHtml(href)}" class="text-blue-600 hover:text-blue-800 hover:underline">${this.escapeHtml(txt)}</a>`;
-            //                return wrapTruncate(html, txt);
-            //            }
-            //            return wrapTruncate(this.escapeHtml(txt), txt);
-            //        }
-
-            //        case "image":
-            //            if (col.imageTemplate) {
-            //                const src = this.fillUrl(col.imageTemplate, row);
-            //                return `<img src="${this.escapeHtml(src)}" alt="${this.escapeHtml(String(value))}" class="h-8 w-8 rounded object-cover">`;
-            //            }
-            //            return "";
-
-            //        default: {
-            //            const txt = String(value);
-            //            return wrapTruncate(this.escapeHtml(txt), txt);
-            //        }
-            //    }
-            //},
-
+            
             formatCell(row, col) {
                 let value = row[col.field];
                 if (value == null) value = "";
@@ -3662,47 +4072,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }, true);
 
 });
-
-// ===== SmartTable Dynamic Edit Routing =====
-//window.sfRouteEditForm = function (table, act, row) {
-//    if (!table || !act) return;
-
-//    const meta = act.Meta || act.meta;
-//    if (!meta) return;
-
-//    const routeBy = meta.routeBy || meta.RouteBy;
-//    const routes = meta.routes || meta.Routes;
-//    if (!routeBy || !routes) return;
-
-//    const r = row || table.getSelectedRowFromCurrentData?.() || (table.getSelectedRows?.()[0] ?? null);
-//    if (!r) return;
-
-//    const key = String(r?.[routeBy] ?? "");
-//    const route = routes[key] || routes["*"];
-//    if (!route) return;
-
-//    if (route.title != null) {
-//        act.ModalTitle = route.title;
-//        act.modalTitle = route.title;
-
-//        const of = act.OpenForm || act.openForm;
-//        if (of) {
-//            of.Title = route.title;
-//            of.title = route.title;
-//        }
-//    }
-
-//    if (route.message != null) {
-//        act.ModalMessage = route.message;
-//        act.modalMessage = route.message;
-//    }
-
-//    const of = act.OpenForm || act.openForm;
-//    if (of && route.fields) {
-//        of.Fields = route.fields;
-//        of.fields = route.fields;
-//    }
-//};
 
 
 // ===== SmartTable Dynamic Edit Routing =====

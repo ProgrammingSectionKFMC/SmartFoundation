@@ -15173,6 +15173,162 @@ body.sf-navigating .select2-dropdown, body.sf-navigating .sf-select-panel {
 tr.row-green .pill-green, tr.row-yellow .pill-yellow, tr.row-red .pill-red {
   box-shadow: 0 1px 0 rgba(0,0,0,.08), 0 0 0 2px rgba(255,255,255,.55) inset;
 }
+:root {
+  --sf-surface: #ffffff;
+  --sf-surface-2: #f7f8fb;
+  --sf-border: #d9dee7;
+  --sf-border-2: #c9d1dd;
+  --sf-text: #0f172a;
+  --sf-muted: #667085;
+  --sf-focus: #0f766e;
+  --sf-focus-soft: rgba(15,118,110,.14);
+  --sf-shadow: 0 10px 22px rgba(16,24,40,.06);
+}
+.table-box .sf-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+.sf-table thead .sf-filter-row {
+  background: linear-gradient(180deg, var(--sf-surface-2), var(--sf-surface));
+  border-bottom: 1px solid var(--sf-border);
+}
+.sf-table thead .sf-filter-cell {
+  padding: 10px;
+  border-bottom: 1px solid var(--sf-border);
+}
+.sf-table thead .sf-filter-cell + .sf-filter-cell {
+  box-shadow: inset 1px 0 0 rgba(217,222,231,.65);
+}
+.sf-filter-input {
+  width: 100%;
+  height: 36px;
+  padding: 7px 12px;
+  border: 1px solid var(--sf-border);
+  border-radius: 4px;
+  background: var(--sf-surface);
+  color: var(--sf-text);
+  font-size: 13px;
+  font-weight: 500;
+  outline: 0;
+  transition: .15s ease;
+}
+.sf-filter-input::placeholder {
+  color: var(--sf-muted);
+  font-weight: 400;
+}
+.sf-filter-input:hover {
+  border-color: var(--sf-border-2);
+  background: #fbfcfe;
+}
+.sf-filter-input:focus {
+  border-color: var(--sf-focus);
+  box-shadow: 0 0 0 4px var(--sf-focus-soft);
+}
+.sf-filter-row .select2-container {
+  width: 100% !important;
+}
+.sf-filter-row .select2-container--default .select2-selection--single {
+  height: 36px;
+  border: 1px solid var(--sf-border);
+  border-radius: 4px;
+  background: var(--sf-surface);
+  transition: .15s ease;
+}
+.sf-filter-row .select2-container--default .select2-selection--single:hover {
+  border-color: var(--sf-border-2);
+  background: #fbfcfe;
+}
+.sf-filter-row .select2-container--default .select2-selection__rendered {
+  line-height: 34px;
+  padding: 0 34px 0 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--sf-text);
+}
+.sf-filter-row .select2-container--default .select2-selection__placeholder {
+  color: var(--sf-muted);
+  font-weight: 400;
+}
+.sf-filter-row .select2-container--default .select2-selection__arrow {
+  height: 34px;
+  width: 32px;
+  left: 6px;
+  right: auto;
+}
+.sf-filter-row .select2-container--focus .select2-selection--single {
+  border-color: var(--sf-focus);
+  box-shadow: 0 0 0 4px var(--sf-focus-soft);
+}
+.select2-container--default .select2-dropdown {
+  border: 1px solid var(--sf-border);
+  border-radius: 4px;
+  box-shadow: var(--sf-shadow);
+}
+.select2-container--default .select2-search__field {
+  border: 1px solid var(--sf-border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+.select2-container--default .select2-search__field:focus {
+  border-color: var(--sf-focus);
+  box-shadow: 0 0 0 4px var(--sf-focus-soft);
+}
+.select2-container--default .select2-results__option {
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.select2-container--default .select2-results__option--highlighted {
+  background: rgba(15,118,110,.10);
+}
+.select2-container--default .select2-results__option--selected {
+  background: rgba(15,118,110,.14);
+  font-weight: 600;
+}
+.sf-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  background: #e5e7eb;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: .15s ease;
+}
+.sf-filter-btn:hover {
+  background: #dfe4ea;
+  border-color: #c7ccd3;
+}
+.sf-filter-btn:active {
+  transform: translateY(1px);
+}
+.sf-filter-clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: #6b7280;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: .15s ease;
+}
+.sf-filter-clear:hover {
+  color: #111827;
+  background: rgba(17,24,39,.04);
+  border-color: rgba(17,24,39,.08);
+  border-radius: 4px;
+}
 @property --tw-translate-x {
   syntax: "*";
   inherits: false;

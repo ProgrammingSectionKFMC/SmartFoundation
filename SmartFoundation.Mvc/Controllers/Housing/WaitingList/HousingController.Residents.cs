@@ -156,6 +156,59 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         };
 
                         // الأعمدة
+                        //foreach (DataColumn c in dt1.Columns)
+                        //{
+                        //    string colType = "text";
+                        //    var t = c.DataType;
+                        //    if (t == typeof(bool)) colType = "bool";
+                        //    else if (t == typeof(DateTime)) colType = "date";
+                        //    else if (t == typeof(byte) || t == typeof(short) || t == typeof(int) || t == typeof(long)
+                        //             || t == typeof(float) || t == typeof(double) || t == typeof(decimal))
+                        //        colType = "number";
+
+                        //    bool isfirstName_A = c.ColumnName.Equals("firstName_A", StringComparison.OrdinalIgnoreCase);
+                        //    bool issecondName_A = c.ColumnName.Equals("secondName_A", StringComparison.OrdinalIgnoreCase);
+                        //    bool isthirdName_A = c.ColumnName.Equals("thirdName_A", StringComparison.OrdinalIgnoreCase);
+                        //    bool islastName_A = c.ColumnName.Equals("lastName_A", StringComparison.OrdinalIgnoreCase);
+                        //    bool isfirstName_E = c.ColumnName.Equals("firstName_E", StringComparison.OrdinalIgnoreCase);
+                        //    bool issecondName_E = c.ColumnName.Equals("secondName_E", StringComparison.OrdinalIgnoreCase);
+                        //    bool isthirdName_E = c.ColumnName.Equals("thirdName_E", StringComparison.OrdinalIgnoreCase);
+                        //    bool islastName_E = c.ColumnName.Equals("lastName_E", StringComparison.OrdinalIgnoreCase);
+                        //    bool isrankID_FK = c.ColumnName.Equals("rankID_FK", StringComparison.OrdinalIgnoreCase);
+                        //    bool ismilitaryUnitID_FK = c.ColumnName.Equals("militaryUnitID_FK", StringComparison.OrdinalIgnoreCase);
+                        //    bool ismartialStatusID_FK = c.ColumnName.Equals("martialStatusID_FK", StringComparison.OrdinalIgnoreCase);
+                        //    bool isnationalityID_FK = c.ColumnName.Equals("nationalityID_FK", StringComparison.OrdinalIgnoreCase);
+                        //    bool isgenderID_FK = c.ColumnName.Equals("genderID_FK", StringComparison.OrdinalIgnoreCase);
+
+
+
+                        //    bool isMilitaryUnitName =   //جديد
+                        //    c.ColumnName.Equals("militaryUnitName_A", StringComparison.OrdinalIgnoreCase);
+
+                        //    bool isNote =
+                        //    c.ColumnName.Equals("note", StringComparison.OrdinalIgnoreCase);
+
+
+
+                        //    dynamicColumns.Add(new TableColumn
+                        //    {
+                        //        Field = c.ColumnName,
+                        //        Label = headerMap.TryGetValue(c.ColumnName, out var label) ? label : c.ColumnName,
+                        //        Type = colType,
+                        //        Sortable = true
+                        //         ,
+                        //        Visible = !(isfirstName_A || isfirstName_E || issecondName_A || issecondName_E || isthirdName_A || isthirdName_E || islastName_A || islastName_E || isrankID_FK || ismilitaryUnitID_FK || ismartialStatusID_FK || isnationalityID_FK || isgenderID_FK),
+
+
+                        //        truncate = isMilitaryUnitName || isNote // truncate يقص النص الطويل 
+
+                        //    });
+                        //}
+
+
+
+
+                        // الأعمدة
                         foreach (DataColumn c in dt1.Columns)
                         {
                             string colType = "text";
@@ -174,36 +227,68 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             bool issecondName_E = c.ColumnName.Equals("secondName_E", StringComparison.OrdinalIgnoreCase);
                             bool isthirdName_E = c.ColumnName.Equals("thirdName_E", StringComparison.OrdinalIgnoreCase);
                             bool islastName_E = c.ColumnName.Equals("lastName_E", StringComparison.OrdinalIgnoreCase);
+
                             bool isrankID_FK = c.ColumnName.Equals("rankID_FK", StringComparison.OrdinalIgnoreCase);
                             bool ismilitaryUnitID_FK = c.ColumnName.Equals("militaryUnitID_FK", StringComparison.OrdinalIgnoreCase);
                             bool ismartialStatusID_FK = c.ColumnName.Equals("martialStatusID_FK", StringComparison.OrdinalIgnoreCase);
                             bool isnationalityID_FK = c.ColumnName.Equals("nationalityID_FK", StringComparison.OrdinalIgnoreCase);
                             bool isgenderID_FK = c.ColumnName.Equals("genderID_FK", StringComparison.OrdinalIgnoreCase);
 
+                            bool isMilitaryUnitName = c.ColumnName.Equals("militaryUnitName_A", StringComparison.OrdinalIgnoreCase);
+                            bool isNote = c.ColumnName.Equals("note", StringComparison.OrdinalIgnoreCase);
 
+                            //  فقط هذي الأعمدة نبي لها فلتر select
+                            bool isRankName = c.ColumnName.Equals("rankNameA", StringComparison.OrdinalIgnoreCase);
+                            bool isUnitName = c.ColumnName.Equals("militaryUnitName_A", StringComparison.OrdinalIgnoreCase);
 
-                            bool isMilitaryUnitName =   //جديد
-                            c.ColumnName.Equals("militaryUnitName_A", StringComparison.OrdinalIgnoreCase);
+                            //  جهّز خيارات الفلتر من نفس بيانات الجدول (عشان التطابق يكون صحيح)
+                            List<OptionItem> filterOpts = new();
+                            if (isRankName || isUnitName)
+                            {
+                                var field = c.ColumnName;
 
-                            bool isNote =
-                            c.ColumnName.Equals("note", StringComparison.OrdinalIgnoreCase);
+                                var distinctVals = dt1.AsEnumerable()
+                                    .Select(r => (r[field] == DBNull.Value ? "" : r[field]?.ToString())?.Trim())
+                                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                                    .Distinct()
+                                    .OrderBy(s => s)
+                                    .ToList();
 
-
+                                filterOpts = distinctVals
+                                    .Select(s => new OptionItem { Value = s!, Text = s! })
+                                    .ToList();
+                            }
 
                             dynamicColumns.Add(new TableColumn
                             {
                                 Field = c.ColumnName,
                                 Label = headerMap.TryGetValue(c.ColumnName, out var label) ? label : c.ColumnName,
                                 Type = colType,
-                                Sortable = true
-                                 ,
-                                Visible = !(isfirstName_A || isfirstName_E || issecondName_A || issecondName_E || isthirdName_A || isthirdName_E || islastName_A || islastName_E || isrankID_FK || ismilitaryUnitID_FK || ismartialStatusID_FK || isnationalityID_FK || isgenderID_FK),
+                                Sortable = true,
 
+                                Visible = !(isfirstName_A || isfirstName_E || issecondName_A || issecondName_E || isthirdName_A || isthirdName_E ||
+                                            islastName_A || islastName_E || isrankID_FK || ismilitaryUnitID_FK || ismartialStatusID_FK ||
+                                            isnationalityID_FK || isgenderID_FK),
 
-                                truncate = isMilitaryUnitName || isNote // truncate يقص النص الطويل 
+                                truncate = isMilitaryUnitName || isNote,
 
+                                //  فلتر للرتبة + الوحدة فقط
+                                Filter = (isRankName || isUnitName)
+                                    ? new TableColumnFilter
+                                    {
+                                        Enabled = true,
+                                        Type = "select",
+                                        Options = filterOpts
+                                    }
+                                    : new TableColumnFilter
+                                    {
+                                        Enabled = false
+                                    }
                             });
                         }
+
+
+
 
                         // الصفوف
                         foreach (DataRow r in dt1.Rows)
@@ -362,6 +447,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 Columns = dynamicColumns,
                 Rows = rowsList,
                 RowIdField = rowIdField,
+
                 PageSize = 10,
                 PageSizes = new List<int> { 10, 25, 50, 200, },
                 QuickSearchFields = dynamicColumns.Select(c => c.Field).Take(4).ToList(),
@@ -372,9 +458,14 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 //TabelLabel = "بيانات المستفيدين",
                 //TabelLabelIcon = "fa-solid fa-user-group",
                 EnableCellCopy = true,
+                ShowFilter = true,
+                FilterRow = true,   
+                FilterDebounce = 250,
+
                 Toolbar = new TableToolbarConfig
                 {
                     ShowRefresh = false,
+
                     ShowColumns = true,
                     ShowExportCsv = false,
                     ShowExportExcel = true,

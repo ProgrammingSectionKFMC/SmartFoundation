@@ -121,6 +121,10 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         public int ToggleCount => Rows?.Count() ?? 0;  // يحسب عدد الصفوف في الجدول ويظهر العداد في التوقل
 
 
+        public bool ShowFilter { get; set; } = false;     // زر "فلترة" + صف الفلاتر
+        public bool FilterRow { get; set; } = true;       // صف الفلاتر تحت الهيدر
+        public int FilterDebounce { get; set; } = 250;    // تأخير الكتابة
+
         public List<ProfileBadge> ProfileBadges { get; set; } = new();
 
         public List<TableStyleRule> StyleRules { get; set; } = new();

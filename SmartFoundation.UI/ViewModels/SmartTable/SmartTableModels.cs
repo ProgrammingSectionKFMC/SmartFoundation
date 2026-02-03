@@ -308,6 +308,10 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         public bool HighContrast { get; set; } = false;
         public string? Autocomplete { get; set; }
 
+        public bool ShowFilter { get; set; } = false;     // زر "فلترة" + صف الفلاتر
+        public bool FilterRow { get; set; } = true;       // صف الفلاتر تحت الهيدر
+        public int FilterDebounce { get; set; } = 250;    // تأخير الكتابة
+
 
         //public bool ShowPageSizeSelector { get; set; } = true;
         public List<TableStyleRule> StyleRules { get; set; } = new();
@@ -348,4 +352,7 @@ public class TableActionGuards
     // تطبيق الشرط على أي صف من المحدد أو على كل الصفوف
     public string AppliesTo { get; set; } = "any"; // any | all
 }
+
+
+
 

@@ -35,6 +35,17 @@
         tabelLabel = Model.TabelLabel ?? "",
         showToolbar = Model.ShowToolbar,
         enableCellCopy = Model.EnableCellCopy,
+
+        // filtersEnabled = true,
+        // filtersRow = true,
+        // filtersDebounce = 250,
+
+        filtersEnabled = Model.ShowFilter,
+        filtersRow = Model.FilterRow,
+        filtersDebounce = Model.FilterDebounce,
+
+
+
         //Profile View config
         viewMode = Model.ViewMode.ToString(), 
         profileTitleField = Model.ProfileTitleField,
@@ -176,6 +187,24 @@
                     <span class="hidden-md">تحديث</span>
                 </button>
             </div>
+
+                    @if (Model.ShowFilter)
+                    {
+                        <button type="button"
+                                class="sf-filter-btn"
+                                x-on:click="toggleFilters()">
+                            <i class="fa fa-filter"></i>
+                            فلترة
+                        </button>
+
+                        <button type="button"
+                                class="sf-filter-clear"
+                                x-show="hasActiveColumnFilters()"
+                                x-on:click="clearFiltersUI()">
+                            <i class="fa fa-eraser"></i>
+                            مسح الفلاتر
+                        </button>
+                    }
 
            
             @* <div class="toolbar-actions">
@@ -374,6 +403,84 @@
                         </th>
                     </template>
                 </tr>
+
+                        <tr x-show="filtersEnabled && filtersRow && showFilters" class="sf-filter-row">
+
+                            <th x-show="selectable" class="th-cell sf-filter-cell"></th>
+
+                            <template x-for="col in visibleColumns()" :key="'f-' + col.field">
+                                <th class="th-cell sf-filter-cell" :style="col.width ? `width:${col.width}` : ''">
+                                    @* <template x-if="(getColFilterDef(col)?.enabled ?? getColFilterDef(col)?.Enabled) !== false"> *@
+                                    <template x-if="isColFilterEnabled(col)">
+
+                                        <div class="sf-filter-wrap">
+
+                                            <!-- Text -->
+                                            <template x-if="getColFilterType(col) === 'text'">
+                                                <input type="text"
+                                                       class="sf-filter-input"
+                                                       :placeholder="getColFilterPlaceholder(col)"
+                                                       x-model="columnFilters[col.field]"
+                                                       x-on:input="onColumnFilterInput()" />
+                                            </template>
+
+                                            <!-- Number -->
+                                            <template x-if="getColFilterType(col) === 'number'">
+                                                <input type="text"
+                                                       class="sf-filter-input"
+                                                       placeholder="مثال: >=10"
+                                                       x-model="columnFilters[col.field]"
+                                                       x-on:input="onColumnFilterInput()" />
+                                            </template>
+
+                                            <!-- Date -->
+                                            <template x-if="getColFilterType(col) === 'date'">
+                                                <input type="text"
+                                                       class="sf-filter-input"
+                                                       placeholder="YYYY-MM-DD أو .."
+                                                       x-model="columnFilters[col.field]"
+                                                       x-on:input="onColumnFilterInput()" />
+                                            </template>
+
+                                            <!-- Bool -->
+                                            <template x-if="getColFilterType(col) === 'bool'">
+                                                <select class="sf-filter-input"
+                                                        x-model="columnFilters[col.field]"
+                                                        x-on:change="onColumnFilterInput()">
+                                                    <option value="">الكل</option>
+                                                    <option value="true">نعم</option>
+                                                    <option value="false">لا</option>
+                                                </select>
+                                            </template>
+
+                                            <!-- Select -->
+                                            <template x-if="getColFilterType(col) === 'select'">
+                                                <select class="sf-filter-input sf-filter-select2"
+                                                        :data-field="col.field"
+                                                        x-model="columnFilters[col.field]"
+                                                        x-on:change="onColumnFilterInput()">
+                                                    <option value="">الكل</option>
+                                                    <template x-for="opt in getColFilterOptions(col)"
+                                                              :key="String(opt.value ?? opt.Value ?? opt.text ?? opt.Text)">
+                                                        <option :value="String(opt.value ?? opt.Value ?? '')"
+                                                                x-text="String(opt.text ?? opt.Text ?? opt.value ?? opt.Value ?? '')">
+                                                        </option>
+                                                    </template>
+                                                </select>
+                                            </template>
+
+
+                                        </div>
+                                    </template>
+                                </th>
+                            </template>
+                        </tr>
+
+
+
+
+
+
             </thead>
 
             <tbody>
