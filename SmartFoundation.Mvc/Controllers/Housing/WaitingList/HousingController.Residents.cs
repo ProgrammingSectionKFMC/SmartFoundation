@@ -240,10 +240,11 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             //  فقط هذي الأعمدة نبي لها فلتر select
                             bool isRankName = c.ColumnName.Equals("rankNameA", StringComparison.OrdinalIgnoreCase);
                             bool isUnitName = c.ColumnName.Equals("militaryUnitName_A", StringComparison.OrdinalIgnoreCase);
+                            bool isNationalityName = c.ColumnName.Equals("nationalityName_A", StringComparison.OrdinalIgnoreCase); 
 
-                            //  جهّز خيارات الفلتر من نفس بيانات الجدول (عشان التطابق يكون صحيح)
+                            //  جهز خيارات الفلتر من نفس بيانات الجدول (عشان التطابق يكون صحيح)
                             List<OptionItem> filterOpts = new();
-                            if (isRankName || isUnitName)
+                            if (isRankName || isUnitName || isNationalityName)
                             {
                                 var field = c.ColumnName;
 
@@ -272,8 +273,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                                 truncate = isMilitaryUnitName || isNote,
 
-                                //  فلتر للرتبة + الوحدة فقط
-                                Filter = (isRankName || isUnitName)
+                                //  فلتر للرتبة + الوحدة + الجنسية
+                                Filter = (isRankName || isUnitName || isNationalityName)
                                     ? new TableColumnFilter
                                     {
                                         Enabled = true,
@@ -286,6 +287,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                     }
                             });
                         }
+
 
 
 

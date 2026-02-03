@@ -15052,6 +15052,9 @@ body.sf-navigating .select2-dropdown, body.sf-navigating .sf-select-panel {
   width: 100%;
   margin-top: .5rem;
 }
+.sf-toggle__label {
+  color: #374151;
+}
 .sf-toggle__btn {
   width: 100%;
   display: flex;
