@@ -2721,11 +2721,7 @@ tr.row-red .pill-red {
 /* =========================================================
    SmartTable Filters + Select2 (Executive / Formal)
    ========================================================= */
-/* =========================================================
-   SmartTable Filters + Select2 (Executive / Formal) — CLEAN
-   - Fix clipped "الكل" in narrow columns
-   - Draw a perfect Select2 arrow (no b hacks)
-   ========================================================= */
+
 :root {
     --sf-surface: #ffffff;
     --sf-surface-2: #f7f8fb;
@@ -2826,9 +2822,9 @@ select.sf-filter-input,
 select.sf-filter-input {
     appearance: none;
     cursor: pointer;
-    height: 36px; /* تأكيد */
-    line-height: 22px; /* ✅ هذا المهم */
-    padding: 7px 26px 7px 10px; /* top/bottom = 7 */
+    height: 36px; 
+    line-height: 22px; 
+    padding: 7px 26px 7px 10px; 
 
     background-color: var(--sf-surface);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667085' d='M2 4l4 5 4-5z'/%3E%3C/svg%3E");
@@ -2864,7 +2860,7 @@ select.sf-filter-input {
     border-radius: 4px;
     background: var(--sf-surface);
     transition: .15s ease;
-    overflow: visible; /* مهم: لا تقص السهم */
+    overflow: visible; 
     white-space: nowrap;
 }
 
@@ -2876,7 +2872,7 @@ select.sf-filter-input {
 /* rendered text */
 .sf-filter-row .select2-container--default .select2-selection__rendered {
     line-height: 34px;
-    padding: 0 10px 0 36px; /* مساحة للسهم يسار */
+    padding: 0 10px 0 36px; 
     font-size: 13px;
     font-weight: 500;
     color: var(--sf-text);
@@ -2900,7 +2896,7 @@ select.sf-filter-input {
     width: 32px;
     left: 6px;
     right: auto;
-    position: absolute; /* تأكيد */
+    position: absolute; 
     top: 1px;
 }
 
