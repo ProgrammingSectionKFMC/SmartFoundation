@@ -187,7 +187,9 @@
                     {
                         <button type="button"
                                 class="sf-filter-btn"
-                                x-on:click="toggleFilters()">
+                                x-on:click="toggleFilters()"
+                                :aria-pressed="String(!!showFilters)"
+                                title="إظهار/إخفاء صف الفلاتر">
                             <i class="fa fa-filter"></i>
                             فلترة
                         </button>
@@ -195,11 +197,14 @@
                         <button type="button"
                                 class="sf-filter-clear"
                                 x-show="hasActiveColumnFilters()"
-                                x-on:click="clearFiltersUI()">
+                                x-on:click="clearFiltersUI()"
+                                title="مسح جميع الفلاتر">
                             <i class="fa fa-eraser"></i>
                             مسح الفلاتر
                         </button>
                     }
+
+
 
            
             @* <div class="toolbar-actions">
@@ -401,75 +406,94 @@
 
                         <tr x-show="filtersEnabled && filtersRow && showFilters" class="sf-filter-row">
 
-                            <th x-show="selectable" class="th-cell sf-filter-cell"></th>
+    <th x-show="selectable" class="th-cell sf-filter-cell"></th>
 
-                            <template x-for="col in visibleColumns()" :key="'f-' + col.field">
-                                <th class="th-cell sf-filter-cell" :style="col.width ? `width:${col.width}` : ''">
-                                    @* <template x-if="(getColFilterDef(col)?.enabled ?? getColFilterDef(col)?.Enabled) !== false"> *@
-                                    <template x-if="isColFilterEnabled(col)">
+    <template x-for="col in visibleColumns()" :key="'f-' + col.field">
+        <th class="th-cell sf-filter-cell" :style="col.width ? `width:${col.width}` : ''">
 
-                                        <div class="sf-filter-wrap">
+            <template x-if="isColFilterEnabled(col)">
+                <div class="sf-filter-wrap">
 
-                                            <!-- Text -->
-                                            <template x-if="getColFilterType(col) === 'text'">
-                                                <input type="text"
-                                                       class="sf-filter-input"
-                                                       :placeholder="getColFilterPlaceholder(col)"
-                                                       x-model="columnFilters[col.field]"
-                                                       x-on:input="onColumnFilterInput()" />
-                                            </template>
+                    <!-- Text -->
+                    <template x-if="getColFilterType(col) === 'text'">
+                        <input type="text"
+                               class="sf-filter-input"
+                               :placeholder="getColFilterPlaceholder(col)"
+                               :aria-label="`فلتر: ${col.title ?? col.header ?? col.field}`"
+                               autocomplete="off"
+                               dir="auto"
+                               inputmode="text"
+                               x-model.trim="columnFilters[col.field]"
+                               x-on:input.debounce.350ms="onColumnFilterInput()"
+                               x-on:keydown.enter.prevent="onColumnFilterInput()" />
+                    </template>
 
-                                            <!-- Number -->
-                                            <template x-if="getColFilterType(col) === 'number'">
-                                                <input type="text"
-                                                       class="sf-filter-input"
-                                                       placeholder="مثال: >=10"
-                                                       x-model="columnFilters[col.field]"
-                                                       x-on:input="onColumnFilterInput()" />
-                                            </template>
+                    <!-- Number -->
+                    <template x-if="getColFilterType(col) === 'number'">
+                        <input type="text"
+                               class="sf-filter-input"
+                               placeholder="مثال: >=10"
+                               :aria-label="`فلتر رقمي: ${col.title ?? col.header ?? col.field}`"
+                               autocomplete="off"
+                               dir="auto"
+                               inputmode="decimal"
+                               x-model.trim="columnFilters[col.field]"
+                               x-on:input.debounce.350ms="onColumnFilterInput()"
+                               x-on:keydown.enter.prevent="onColumnFilterInput()" />
+                    </template>
 
-                                            <!-- Date -->
-                                            <template x-if="getColFilterType(col) === 'date'">
-                                                <input type="text"
-                                                       class="sf-filter-input"
-                                                       placeholder="YYYY-MM-DD أو .."
-                                                       x-model="columnFilters[col.field]"
-                                                       x-on:input="onColumnFilterInput()" />
-                                            </template>
+                    <!-- Date -->
+                    <template x-if="getColFilterType(col) === 'date'">
+                        <input type="text"
+                               class="sf-filter-input"
+                               placeholder="YYYY-MM-DD أو .."
+                               :aria-label="`فلتر تاريخ: ${col.title ?? col.header ?? col.field}`"
+                               autocomplete="off"
+                               dir="auto"
+                               inputmode="numeric"
+                               x-model.trim="columnFilters[col.field]"
+                               x-on:input.debounce.350ms="onColumnFilterInput()"
+                               x-on:keydown.enter.prevent="onColumnFilterInput()" />
+                    </template>
 
-                                            <!-- Bool -->
-                                            <template x-if="getColFilterType(col) === 'bool'">
-                                                <select class="sf-filter-input"
-                                                        x-model="columnFilters[col.field]"
-                                                        x-on:change="onColumnFilterInput()">
-                                                    <option value="">الكل</option>
-                                                    <option value="true">نعم</option>
-                                                    <option value="false">لا</option>
-                                                </select>
-                                            </template>
+                    <!-- Bool -->
+                    <template x-if="getColFilterType(col) === 'bool'">
+                        <select class="sf-filter-input"
+                                :aria-label="`فلتر نعم/لا: ${col.title ?? col.header ?? col.field}`"
+                                x-model="columnFilters[col.field]"
+                                x-on:change="onColumnFilterInput()">
+                            <option value="">الكل</option>
+                            <option value="true">نعم</option>
+                            <option value="false">لا</option>
+                        </select>
+                    </template>
 
-                                            <!-- Select -->
-                                            <template x-if="getColFilterType(col) === 'select'">
-                                                <select class="sf-filter-input sf-filter-select2"
-                                                        :data-field="col.field"
-                                                        x-model="columnFilters[col.field]"
-                                                        x-on:change="onColumnFilterInput()">
-                                                    <option value="">الكل</option>
-                                                    <template x-for="opt in getColFilterOptions(col)"
-                                                              :key="String(opt.value ?? opt.Value ?? opt.text ?? opt.Text)">
-                                                        <option :value="String(opt.value ?? opt.Value ?? '')"
-                                                                x-text="String(opt.text ?? opt.Text ?? opt.value ?? opt.Value ?? '')">
-                                                        </option>
-                                                    </template>
-                                                </select>
-                                            </template>
-
-
-                                        </div>
-                                    </template>
-                                </th>
+                    <!-- Select -->
+                    <template x-if="getColFilterType(col) === 'select'">
+                        <select class="sf-filter-input sf-filter-select2"
+                                :data-field="col.field"
+                                :aria-label="`فلتر قائمة: ${col.title ?? col.header ?? col.field}`"
+                                x-model="columnFilters[col.field]"
+                                x-on:change="onColumnFilterInput()">
+                            <option value="">الكل</option>
+                            <template x-for="opt in getColFilterOptions(col)"
+                                      :key="String(opt.value ?? opt.Value ?? opt.text ?? opt.Text)">
+                                <option :value="String(opt.value ?? opt.Value ?? '')"
+                                        x-text="String(opt.text ?? opt.Text ?? opt.value ?? opt.Value ?? '')">
+                                </option>
                             </template>
-                        </tr>
+                        </select>
+                    </template>
+
+                </div>
+            </template>
+
+        </th>
+    </template>
+</tr>
+
+
+                            
 
 
 

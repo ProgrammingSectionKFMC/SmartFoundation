@@ -2721,7 +2721,11 @@ tr.row-red .pill-red {
 /* =========================================================
    SmartTable Filters + Select2 (Executive / Formal)
    ========================================================= */
-
+/* =========================================================
+   SmartTable Filters + Select2 (Executive / Formal) — CLEAN
+   - Fix clipped "الكل" in narrow columns
+   - Draw a perfect Select2 arrow (no b hacks)
+   ========================================================= */
 :root {
     --sf-surface: #ffffff;
     --sf-surface-2: #f7f8fb;
@@ -2734,77 +2738,134 @@ tr.row-red .pill-red {
     --sf-shadow: 0 10px 22px rgba(16,24,40,.06);
 }
 
-/* =========================================================
-   Sticky Header
-   ========================================================= */
+/* Sticky header */
 .table-box .sf-table thead {
     position: sticky;
     top: 0;
     z-index: 5;
 }
 
-/* =========================================================
-   Filter Row
-   ========================================================= */
+/* Filter row */
 .sf-table thead .sf-filter-row {
-    background: linear-gradient(180deg, var(--sf-surface-2), var(--sf-surface));
+    background: linear-gradient(180deg,var(--sf-surface-2),var(--sf-surface));
     border-bottom: 1px solid var(--sf-border);
+    display: table-row;
 }
 
+/* كل خلية فلتر */
 .sf-table thead .sf-filter-cell {
     padding: 10px;
     border-bottom: 1px solid var(--sf-border);
+    vertical-align: top;
+    word-break: normal;
+    white-space: nowrap;
+    overflow: visible;
+    min-width: 0;
 }
 
     .sf-table thead .sf-filter-cell + .sf-filter-cell {
         box-shadow: inset 1px 0 0 rgba(217,222,231,.65);
     }
 
-/* =========================================================
-   Base Filter Input
-   ========================================================= */
+/* لفّ المحتوى داخل الخلية */
+.sf-filter-wrap {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* الفيلتر الأساسي */
 .sf-filter-input {
     width: 100%;
     height: 36px;
-    padding: 7px 12px;
+    padding: 7px 10px;
     border: 1px solid var(--sf-border);
-    border-radius: 4px; 
-    background: var(--sf-surface);
+    border-radius: 4px;
+    background-color: var(--sf-surface);
     color: var(--sf-text);
     font-size: 13px;
     font-weight: 500;
     outline: 0;
     transition: .15s ease;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-    .sf-filter-input::placeholder {
-        color: var(--sf-muted);
-        font-weight: 400;
-    }
 
-    .sf-filter-input:hover {
+select.sf-filter-input,
+.sf-filter-row .select2-container--default .select2-selection--single {
+    min-width: 74px;
+}
+
+/* Placeholder */
+.sf-filter-input::placeholder {
+    color: var(--sf-muted);
+    font-weight: 400;
+}
+
+/* Hover & Focus */
+.sf-filter-input:hover {
+    border-color: var(--sf-border-2);
+    background-color: #fbfcfe;
+}
+
+.sf-filter-input:focus,
+.sf-filter-input:focus-visible {
+    border-color: var(--sf-focus);
+    box-shadow: 0 0 0 4px var(--sf-focus-soft);
+}
+
+/* =========================================================
+   Native select
+   ========================================================= */
+select.sf-filter-input {
+    appearance: none;
+    cursor: pointer;
+    height: 36px; /* تأكيد */
+    line-height: 22px; /* ✅ هذا المهم */
+    padding: 7px 26px 7px 10px; /* top/bottom = 7 */
+
+    background-color: var(--sf-surface);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667085' d='M2 4l4 5 4-5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: calc(100% - 12px) 50%;
+    background-size: 12px 12px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: visible;
+    direction: rtl;
+    text-align: right;
+}
+
+
+
+    select.sf-filter-input:hover {
         border-color: var(--sf-border-2);
-        background: #fbfcfe;
-    }
-
-    .sf-filter-input:focus {
-        border-color: var(--sf-focus);
-        box-shadow: 0 0 0 4px var(--sf-focus-soft);
+        background-color: #fbfcfe;
     }
 
 /* =========================================================
-   Select2 (Inside Filters)
+   Select2
    ========================================================= */
 .sf-filter-row .select2-container {
     width: 100% !important;
+    min-width: 0;
 }
 
+/* selection */
 .sf-filter-row .select2-container--default .select2-selection--single {
     height: 36px;
     border: 1px solid var(--sf-border);
-    border-radius: 4px; 
+    border-radius: 4px;
     background: var(--sf-surface);
     transition: .15s ease;
+    overflow: visible; /* مهم: لا تقص السهم */
+    white-space: nowrap;
 }
 
     .sf-filter-row .select2-container--default .select2-selection--single:hover {
@@ -2812,45 +2873,84 @@ tr.row-red .pill-red {
         background: #fbfcfe;
     }
 
+/* rendered text */
 .sf-filter-row .select2-container--default .select2-selection__rendered {
     line-height: 34px;
-    padding: 0 34px 0 12px;
+    padding: 0 10px 0 36px; /* مساحة للسهم يسار */
     font-size: 13px;
     font-weight: 500;
     color: var(--sf-text);
+    white-space: nowrap !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    direction: rtl;
+    text-align: right;
 }
 
+/* placeholder */
 .sf-filter-row .select2-container--default .select2-selection__placeholder {
     color: var(--sf-muted);
     font-weight: 400;
+    white-space: nowrap;
 }
 
+/* ===== Arrow (NEW: perfect triangle) ===== */
 .sf-filter-row .select2-container--default .select2-selection__arrow {
     height: 34px;
     width: 32px;
     left: 6px;
     right: auto;
+    position: absolute; /* تأكيد */
+    top: 1px;
 }
 
+    /* اخفِ سهم select2 الافتراضي نهائيًا */
+    .sf-filter-row .select2-container--default .select2-selection__arrow b {
+        display: none !important;
+    }
+
+    /* ارسم مثلث متساوي */
+    .sf-filter-row .select2-container--default .select2-selection__arrow::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-top: 6px solid var(--sf-muted); /* ▼ */
+        transform: translate(-50%,-35%);
+        pointer-events: none;
+    }
+
+/* اختياري: قلبه للأعلى عند فتح القائمة */
+.sf-filter-row .select2-container--open .select2-selection__arrow::before {
+    border-top: 0;
+    border-bottom: 6px solid var(--sf-muted); /* ▲ */
+    transform: translate(-50%,-65%);
+}
+
+/* Focus */
 .sf-filter-row .select2-container--focus .select2-selection--single {
     border-color: var(--sf-focus);
     box-shadow: 0 0 0 4px var(--sf-focus-soft);
 }
 
-/* =========================================================
-   Select2 Dropdown
-   ========================================================= */
+/* Dropdown */
 .select2-container--default .select2-dropdown {
     border: 1px solid var(--sf-border);
-    border-radius: 4px; 
+    border-radius: 4px;
     box-shadow: var(--sf-shadow);
 }
 
+/* Search field */
 .select2-container--default .select2-search__field {
     border: 1px solid var(--sf-border);
-    border-radius: 4px; 
+    border-radius: 4px;
     padding: 8px 10px;
     font-size: 13px;
+    outline: 0;
 }
 
     .select2-container--default .select2-search__field:focus {
@@ -2858,25 +2958,24 @@ tr.row-red .pill-red {
         box-shadow: 0 0 0 4px var(--sf-focus-soft);
     }
 
+/* Options */
 .select2-container--default .select2-results__option {
     padding: 10px 12px;
     font-size: 13px;
     font-weight: 500;
 }
 
-.select2-container--default
-.select2-results__option--highlighted {
+.select2-container--default .select2-results__option--highlighted {
     background: rgba(15,118,110,.10);
 }
 
-.select2-container--default
-.select2-results__option--selected {
+.select2-container--default .select2-results__option--selected {
     background: rgba(15,118,110,.14);
     font-weight: 600;
 }
 
 /* =========================================================
-   Filter Button (Gray 200 ONLY) — radius = 4
+   Filter button
    ========================================================= */
 .sf-filter-btn {
     display: inline-flex;
@@ -2886,7 +2985,7 @@ tr.row-red .pill-red {
     padding: 0 12px;
     background: #e5e7eb;
     border: 1px solid #d1d5db;
-    border-radius: 4px; 
+    border-radius: 4px;
     color: #374151;
     font-size: 13px;
     font-weight: 500;
@@ -2903,9 +3002,7 @@ tr.row-red .pill-red {
         transform: translateY(1px);
     }
 
-/* =========================================================
-   Clear Filters Button (Minimal) — radius = 4
-   ========================================================= */
+/* Clear filters */
 .sf-filter-clear {
     display: inline-flex;
     align-items: center;
@@ -2914,7 +3011,7 @@ tr.row-red .pill-red {
     padding: 0 10px;
     background: transparent;
     border: 1px solid transparent;
-    border-radius: 4px; 
+    border-radius: 4px;
     color: #6b7280;
     font-size: 12.5px;
     cursor: pointer;
@@ -2925,5 +3022,35 @@ tr.row-red .pill-red {
         color: #111827;
         background: rgba(17,24,39,.04);
         border-color: rgba(17,24,39,.08);
-        border-radius: 4px; 
     }
+
+/* =========================================================
+   Responsive tweaks
+   ========================================================= */
+@media (max-width:992px) {
+    .sf-table thead .sf-filter-cell {
+        padding: 6px;
+    }
+
+    .sf-filter-input,
+    .sf-filter-row .select2-container--default .select2-selection--single {
+        height: 34px;
+    }
+
+    .sf-filter-row .select2-container--default .select2-selection__rendered {
+        line-height: 32px;
+        padding: 0 8px 0 36px;
+    }
+
+    .sf-filter-row .select2-container--default .select2-selection__arrow {
+        height: 32px;
+        width: 32px;
+        left: 6px;
+        top: 1px;
+    }
+
+    select.sf-filter-input {
+        background-position: calc(100% - 15px) 14px,calc(100% - 10px) 14px;
+        padding-right: 22px;
+    }
+}
