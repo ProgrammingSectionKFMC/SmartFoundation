@@ -15508,6 +15508,23 @@ select.sf-filter-input:hover {
 .sf-colvis__search .sf-input:focus, .sf-colvis__search .sf-input:focus-visible, .sf-colvis__search input:focus, .sf-colvis__search input:focus-visible {
   border-color: #047857;
 }
+.sf-colvis {
+  position: relative;
+  z-index: 9999;
+}
+.sf-colvis__panel {
+  z-index: 99999;
+}
+.sf-panel, .sf-panel-body, .sf-table, .sf-table-wrap, .sf-table-card, .sf-table-shell {
+  overflow: visible !important;
+}
+.sf-table__scroller, .sf-table__body-scroll {
+  overflow: auto;
+}
+.sf-panel, .sf-table, .sf-table-wrap {
+  transform: none !important;
+  isolation: isolate;
+}
 @property --tw-translate-x {
   syntax: "*";
   inherits: false;
