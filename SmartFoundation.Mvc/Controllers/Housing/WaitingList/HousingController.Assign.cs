@@ -471,7 +471,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     Required = true,
                     MirrorName = "buildingDetailsID"  // إضافة هذا السطر
                 },
-                new FieldConfig { Name = "p12", Label = "ملاحظات", Type = "text", ColCss = "6",Required = true },
+                new FieldConfig { Name = "p12", Label = "ملاحظات", Type = "textarea", ColCss = "6",Required = true },
                 new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
@@ -530,7 +530,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     Required = true,
                     MirrorName = "buildingDetailsID"  // إضافة هذا السطر
                 },
-                new FieldConfig { Name = "p12", Label = "ملاحظات", Type = "text", ColCss = "6",Required = true },
+                new FieldConfig { Name = "p12", Label = "ملاحظات", Type = "textarea", ColCss = "6",Required = true },
                 new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
@@ -589,7 +589,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 //    Required = true,
                 //    MirrorName = "buildingDetailsID"  // إضافة هذا السطر
                 //},
-                new FieldConfig { Name = "p12", Label = "ملاحظات", Type = "text", ColCss = "6",Required = true },
+                new FieldConfig { Name = "p12", Label = "ملاحظات", Type = "textarea", ColCss = "6",Required = true },
                 new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
@@ -624,6 +624,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 PageTitle = "اجراءات التخصيص",
                 PanelTitle = "اجراءات التخصيص",
                 EnableCellCopy = true,
+                ShowColumnVisibility = true,
 
                 Toolbar = new TableToolbarConfig
                 {
@@ -884,7 +885,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ActionUrl = "/crud/delete",
                             Buttons = new List<FormButtonConfig>
                             {
-                                new FormButtonConfig { Text = "حذف", Type = "submit", Color = "danger", },
+                                new FormButtonConfig { Text = "استبعاد", Type = "submit", Color = "danger", },
                                 new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
                             },
                             Fields = CancleASSIGNHOUSEFields

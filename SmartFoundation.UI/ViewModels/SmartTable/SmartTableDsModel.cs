@@ -125,6 +125,9 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         public bool FilterRow { get; set; } = true;       // صف الفلاتر تحت الهيدر
         public int FilterDebounce { get; set; } = 250;    // تأخير الكتابة
 
+        public bool ShowColumnVisibility { get; set; } = false;
+
+
         public List<ProfileBadge> ProfileBadges { get; set; } = new();
 
         public List<TableStyleRule> StyleRules { get; set; } = new();

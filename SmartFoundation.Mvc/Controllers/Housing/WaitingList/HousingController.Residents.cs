@@ -455,14 +455,15 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 QuickSearchFields = dynamicColumns.Select(c => c.Field).Take(4).ToList(),
                 Searchable = true,
                 AllowExport = true,
-                ShowPageSizeSelector=true,
+                ShowPageSizeSelector = true,
                 PanelTitle = "المستفيدين",
                 //TabelLabel = "بيانات المستفيدين",
                 //TabelLabelIcon = "fa-solid fa-user-group",
                 EnableCellCopy = true,
                 ShowFilter = true,
-                FilterRow = true,   
+                FilterRow = true,
                 FilterDebounce = 250,
+                ShowColumnVisibility=true,
 
                 Toolbar = new TableToolbarConfig
                 {
@@ -500,20 +501,20 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         PdfOrientation = "landscape",
                         PdfShowPageNumbers = true,
                         Filename = "Residents",
-                        PdfShowGeneratedAt = true, 
-                        PdfShowSerial = true,  
-                        PdfSerialLabel = "م",  
+                        PdfShowGeneratedAt = true,
+                        PdfShowSerial = true,
+                        PdfSerialLabel = "م",
                         RightHeaderLine1 = "المملكة العربية السعودية",
                         RightHeaderLine2 = "وزارة الدفاع",
                         RightHeaderLine3 = "القوات البرية الملكية السعودية",
                         RightHeaderLine4 = "الإدارة الهندسية للتشغيل والصيانة",
                         RightHeaderLine5 = "مدينة الملك فيصل العسكرية",
-                        PdfLogoUrl="/img/ppng.png",
+                        PdfLogoUrl = "/img/ppng.png",
 
 
                     },
 
-                            CustomActions = new List<TableAction>
+                    CustomActions = new List<TableAction>
                             {
                             //  Excel "
                             new TableAction
@@ -547,22 +548,22 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 RequireSelection = true,
                                 MinSelection = 1,
                                 MaxSelection = 1,
-                                
+
 
                             },
                         },
 
 
-                        Add = new TableAction
-                        {
-                            Label = "إضافة مستفيد",
-                            Icon = "fa fa-plus",
-                            Color = "success",
-                            OpenModal = true,
-                            ModalTitle = "<i class='fa-solid fa-user-plus text-emerald-600 text-xl mr-2'></i> إدخال بيانات مستفيد جديد",
+                    Add = new TableAction
+                    {
+                        Label = "إضافة مستفيد",
+                        Icon = "fa fa-plus",
+                        Color = "success",
+                        OpenModal = true,
+                        ModalTitle = "<i class='fa-solid fa-user-plus text-emerald-600 text-xl mr-2'></i> إدخال بيانات مستفيد جديد",
 
-                            OpenForm = new FormConfig
-                            {
+                        OpenForm = new FormConfig
+                        {
                             FormId = "BuildingTypeInsertForm",
                             Title = "بيانات مستفيد جديد",
                             Method = "post",
@@ -581,7 +582,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         Label = "تعديل بيانات مستفيد",
                         Icon = "fa-solid fa-pen",
                         Color = "info",
-                        Placement = TableActionPlacement.ActionsMenu,  
+                        Placement = TableActionPlacement.ActionsMenu,
                         IsEdit = true,
                         OpenModal = true,
                         ModalTitle = "<i class='fa-solid fa-user-pen text-emerald-600 text-xl mr-2'></i> تعديل بيانات مستفيد",
@@ -600,7 +601,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         MaxSelection = 1
                     },
 
-                  
+
                     Delete = new TableAction
                     {
                         Label = "حذف بيانات مستفيد",

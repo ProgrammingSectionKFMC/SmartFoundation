@@ -103,6 +103,9 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             // ✅ NEW: cache for select options
             filterOptionsCache: {},   // key -> [{value,text}]
             filterOptionsLoading: {}, // key -> true/false (اختياري)
+            showColumnVisibility: (cfg.showColumnVisibility === true),
+
+
 
             // تجهيز القيم الافتراضية للفلاتر لكل عمود
             //initColumnFilters() {
@@ -515,16 +518,39 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             },
 
 
-            toggleFilters() {
+            //toggleFilters() {
+            //    this.showFilters = !this.showFilters;
+
+            //    if (this.showFilters) {
+            //        this.preloadSelectFilters();
+            //        this.initFilterSelect2();     //  تهيئة select2
+            //    } else {
+            //        this.destroyFilterSelect2();  //  اختياري
+            //    }
+            //},
+
+            async toggleFilters() {
                 this.showFilters = !this.showFilters;
 
                 if (this.showFilters) {
-                    this.preloadSelectFilters();
-                    this.initFilterSelect2();     //  تهيئة select2
+
+                    // 1) حمّل الخيارات أولًا (لو Server)
+                    await this.preloadSelectFilters();
+
+                    // 2) انتظر Alpine يرسم الـ DOM (x-for للـ options)
+                    await this.$nextTick();
+
+                    // 3) أعد تهيئة Select2 بعد ما تظهر الفلاتر فعليًا
+                    this.destroyFilterSelect2();
+                    this.initFilterSelect2();
+
                 } else {
-                    this.destroyFilterSelect2();  //  اختياري
+                    this.destroyFilterSelect2();
                 }
             },
+
+
+
 
             clearFiltersUI() {
                 this.clearAllColumnFilters(); 
@@ -553,6 +579,109 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             // Structure
             columns: Array.isArray(cfg.columns) ? cfg.columns : [],
             actions: Array.isArray(cfg.actions) ? cfg.actions : [],
+
+
+
+            // ===========================
+            // Column Visibility (Alpine)
+            // ===========================
+            colVisSearch: "",
+            colVisMap: {},
+            colVisLoaded: true, // ✅ نعتبره "محمل" من البداية عشان لا يحاول يقرأ من التخزين
+
+            colVisStorageKey() {
+                // (لم يعد يُستخدم) لكن نخليه لو عندك مراجع ثانية
+                const base =
+                    (cfg && (cfg.storageKey || cfg.StorageKey)) ||
+                    `sfTable:${cfg?.spName || cfg?.StoredProcedureName || "sp"}:${cfg?.operation || cfg?.Operation || "op"}`;
+                return base + ":colvis";
+            },
+
+            colVisIsLocked(col) {
+                const cp = col?.customProperties || col?.CustomProperties || {};
+                const hideable = (cp.hideable ?? cp.Hideable);
+                if (hideable === false) return true;
+                if (col?.frozen || col?.Frozen) return true;
+                return false;
+            },
+
+            // ✅ لا تحميل من localStorage
+            colVisLoad() {
+                return;
+            },
+
+            // ✅ لا حفظ في localStorage
+            colVisSave() {
+                return;
+            },
+
+            colVisIsShown(col) {
+                // ✅ بدون Load / Storage: يعتمد فقط على colVisMap داخل الجلسة + default visible
+                const def = (col?.visible ?? col?.Visible);
+                const v = this.colVisMap?.[col.field];
+                return (typeof v === "boolean") ? v : !!def;
+            },
+
+            colVisToggle(col) {
+                if (this.colVisIsLocked(col)) return;
+                const now = this.colVisIsShown(col);
+
+                // ✅ reassign object (Alpine reactivity)
+                const next = { ...(this.colVisMap || {}) };
+                next[col.field] = !now;
+                this.colVisMap = next;
+            },
+
+            colVisShowAll() {
+                const cols = this.colVisBaseColumns();
+                const next = { ...(this.colVisMap || {}) };
+                cols.forEach(c => { if (!this.colVisIsLocked(c)) next[c.field] = true; });
+                this.colVisMap = next;
+            },
+
+            colVisReset() {
+                // ✅ يرجع لاختيار الافتراضي (يعتمد على col.visible)
+                this.colVisMap = {};
+            },
+
+            colVisApply() {
+                // ✅ لا شيء (ما فيه تخزين)
+            },
+
+            colVisFilteredColumns() {
+                const q = String(this.colVisSearch || "").toLowerCase().trim();
+                const cols = this.colVisBaseColumns();
+
+                if (!q) return cols;
+
+                return cols.filter(c => {
+                    const lbl = this.colVisLabel(c).toLowerCase();
+                    const fld = String(c.field ?? "").toLowerCase();
+                    return lbl.includes(q) || fld.includes(q);
+                });
+            },
+
+            colVisLabel(col) {
+                return String(col?.label ?? col?.title ?? col?.header ?? col?.field ?? "").trim();
+            },
+
+            colVisBaseColumns() {
+                return (this.columns || []).filter(c => {
+                    const hasHeader = !!(c.label || c.title || c.header);
+                    const visible = (c.visible ?? c.Visible) !== false;
+
+                    const cp = c.customProperties || c.CustomProperties || {};
+                    const hideable = (cp.hideable ?? cp.Hideable);
+                    if (hideable === false) return false;
+
+                    return hasHeader && visible;
+                });
+            },
+
+
+            
+
+
             // ===== Guards (NEW) =====
             getSelectedRows() {
                 const ids = new Set(Array.from(this.selectedKeys || []).map(String));
@@ -913,39 +1042,79 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
 
             // ===== Initialization =====
+            //init() {
+            //    this.colVisLoad();
+            //    this.loadStoredPreferences();
+            //    this.initColumnFilters();
+            //    if (this.showFilters) {
+            //        this.initFilterSelect2();
+            //    }
+
+            //    this.bindPrintListenerOnce();
+
+            //    this.load();
+            //    this.setupEventListeners();
+
+            //    if (this.showFilters) this.preloadSelectFilters();
+
+
+
+
+
+            //    if (!this.enablePagination) {
+            //        this.page = 1;
+            //        this.pages = 1;
+
+
+            //        this.pageSize = (this.rows && this.rows.length)
+            //            ? this.rows.length
+            //            : this.pageSize;
+            //    }
+
+
+            //    this.load();
+            //    this.setupEventListeners();
+
+            //    this.$nextTick(() => {
+            //        if (this.filtersEnabled && this.filtersRow && this.showFilters) {
+            //            this.initFilterSelect2();
+            //        }
+            //    });
+
+            //},
+
             init() {
+                this.colVisLoad();
                 this.loadStoredPreferences();
-                this.initColumnFilters(); // ✅
-                if (this.showFilters) {
-                    this.initFilterSelect2();
-                }
+                this.initColumnFilters();
+
+                //if (this.showFilters) {
+                //    this.initFilterSelect2();
+                //}
 
                 this.bindPrintListenerOnce();
 
-                this.load();
-                this.setupEventListeners();
-
-                if (this.showFilters) this.preloadSelectFilters(); // ✅
                 
-
-
-
-                // ✅ تعطيل الـ Pagination فعليًا
                 if (!this.enablePagination) {
                     this.page = 1;
                     this.pages = 1;
-
-                    // اعرض كل الصفوف في صفحة وحدة
                     this.pageSize = (this.rows && this.rows.length)
                         ? this.rows.length
                         : this.pageSize;
                 }
 
-
+               
                 this.load();
                 this.setupEventListeners();
 
+                
+                this.$nextTick(() => {
+                    if (this.filtersEnabled && this.filtersRow && this.showFilters) {
+                        this.initFilterSelect2();
+                    }
+                });
             },
+
 
             loadStoredPreferences() {
                 if (!this.storageKey) return;
@@ -1253,6 +1422,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 } finally {
                     this.loading = false;
                 }
+
             },
 
             applyFiltersAndSort() {
@@ -1345,9 +1515,14 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             },
 
             // ===== Columns Management =====
+            //visibleColumns() {
+            //    return this.columns.filter(col => col.visible !== false);
+            //},
             visibleColumns() {
-                return this.columns.filter(col => col.visible !== false);
+                const cols = Array.isArray(this.columns) ? this.columns : [];  //اليوم
+                return cols.filter(c => this.colVisIsShown(c));
             },
+
 
             toggleColumnVisibility(col) {
                 col.visible = col.visible === false;
@@ -4137,3 +4312,8 @@ window.sfRouteEditForm = function (table, act, row) {
         of.fields = route.fields;
     }
 };
+
+
+
+
+

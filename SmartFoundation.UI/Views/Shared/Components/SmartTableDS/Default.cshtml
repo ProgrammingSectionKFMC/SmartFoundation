@@ -56,6 +56,7 @@
         showToggleCount = Model.ShowToggleCount,
         toggleCount = Model.ToggleCount,
         profileBadges = Model.ProfileBadges ?? new List<ProfileBadge>(),
+        showColumnVisibility = Model.ShowColumnVisibility,
 
     };
 }
@@ -203,6 +204,77 @@
                             مسح الفلاتر
                         </button>
                     }
+
+
+
+                    <!--  Column Visibility -->
+                    @* <template x-if="toolbar.showColumns"> *@
+                    <template x-if="showColumnVisibility && toolbar && (toolbar.showColumns !== false)">
+                        <div class="sf-colvis" x-data="{ open:false }">
+                            
+                            <button type="button"
+                                    class="sf-filter-btn sf-colvis-btn"
+                                    x-on:click="open = !open"
+                                    :aria-expanded="String(open)"
+                                    title="إظهار/إخفاء الأعمدة">
+                                <i class="fa fa-columns"></i>
+                                الأعمدة
+                            </button>
+
+                            <div x-show="open"
+                                 x-transition
+                                 x-on:click.outside="open=false"
+                                 class="sf-colvis__panel">
+
+                                <div class="sf-colvis__head">
+                                    <div class="sf-colvis__title">
+                                        <i class="fa fa-table-columns"></i>
+                                        تخصيص الأعمدة
+                                    </div>
+
+                                    <button type="button" class="sf-colvis__close" x-on:click="open=false">✕</button>
+                                </div>
+
+                                <div class="sf-colvis__search">
+                                    <input type="text"
+                                           class="sf-input"
+                                           placeholder="بحث في الأعمدة…"
+                                           x-model.trim="colVisSearch" />
+                                </div>
+
+                                <div class="sf-colvis__actions">
+                                    <button type="button" class="btn btn-sm btn-light" x-on:click="colVisShowAll()">
+                                        إظهار الكل
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-light" x-on:click="colVisReset()">
+                                        إعادة ضبط
+                                    </button>
+                                </div>
+
+                                <div class="sf-colvis__list">
+                                    <template x-for="c in colVisFilteredColumns()" :key="c.field">
+                                        <label class="sf-colvis__item" :class="colVisIsLocked(c) ? 'is-locked' : ''">
+                                            <input type="checkbox"
+                                                   class="sf-checkbox"
+                                                   :disabled="colVisIsLocked(c)"
+                                                   :checked="colVisIsShown(c)"
+                                                   x-on:change="colVisToggle(c)" />
+                                            <span class="sf-colvis__label" x-text="colVisLabel(c)"></span>
+
+                                        </label>
+                                    </template>
+                                </div>
+
+                                <div class="sf-colvis__foot">
+                                    <button type="button" class="btn btn-success btn-sm" x-on:click="colVisApply(); open=false">
+                                        تطبيق
+                                    </button>
+                                </div>
+
+                            </div>
+                        </div>
+                    </template>
+
 
 
 
