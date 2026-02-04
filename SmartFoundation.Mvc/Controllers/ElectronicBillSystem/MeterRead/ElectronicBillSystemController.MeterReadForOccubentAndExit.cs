@@ -172,8 +172,8 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     if (dt1 != null && dt1.Columns.Count > 0)
                     {
                         // RowId
-                        rowIdField = "residentInfoID";
-                        var possibleIdNames = new[] { "residentInfoID", "ResidentInfoID", "Id", "ID" };
+                        rowIdField = "meterID";
+                        var possibleIdNames = new[] { "meterID", "MeterID", "Id", "ID" };
                         rowIdField = possibleIdNames.FirstOrDefault(n => dt1.Columns.Contains(n))
                                      ?? dt1.Columns[0].ColumnName;
 
@@ -186,11 +186,12 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             ["WaitingClassName"] = "فئة سجل الانتظار",
                             ["ActionNote"] = "ملاحظات",
                             ["FullName_A"] = "الاسم",
-                            ["buildingActionTypeResidentAlias"] = "الحالة",
+                            ["ReadStatus"] = "الحالة",
                             ["meterReadValue"] = "اخر قراءة للعداد",
                             ["meterServiceTypeName_A"] = "نوع الخدمة",
                             ["meterTypeName_A"] = "نوع العداد",
                             ["meterMaxRead"] = "القراءة القصوى للعداد",
+                            ["meterMaxRead"] = "رقم العداد",
                             ["buildingDetailsNo"] = "رقم المنزل"
                         };
 
@@ -222,6 +223,17 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             bool ismeterID = c.ColumnName.Equals("meterID", StringComparison.OrdinalIgnoreCase);
 
 
+                            bool isNationalID = c.ColumnName.Equals("NationalID", StringComparison.OrdinalIgnoreCase);
+                            bool isGeneralNo = c.ColumnName.Equals("GeneralNo", StringComparison.OrdinalIgnoreCase);
+                            bool isWaitingClassName = c.ColumnName.Equals("WaitingClassName", StringComparison.OrdinalIgnoreCase);
+                            bool isFullName_A = c.ColumnName.Equals("FullName_A", StringComparison.OrdinalIgnoreCase);
+
+                            bool isbuildingActionTypeResidentAlias = c.ColumnName.Equals("buildingActionTypeResidentAlias", StringComparison.OrdinalIgnoreCase);
+                            bool isReadStatusInt = c.ColumnName.Equals("ReadStatusInt", StringComparison.OrdinalIgnoreCase);
+                            bool ismeterReadID = c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase);
+
+
+
 
                             dynamicColumns.Add(new TableColumn
                             {
@@ -232,7 +244,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID || isAssignPeriodID || isbuildingDetailsID || isLastActionID|| isActionDecisionNo || isActionDecisionDate || isWaitingOrderTypeName || ismeterID)
+                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID || isAssignPeriodID || isbuildingDetailsID || isLastActionID|| isActionDecisionNo || isActionDecisionDate || isWaitingOrderTypeName || ismeterID|| isNationalID || isGeneralNo || isWaitingClassName || isFullName_A || isLastActionTypeID || isbuildingActionTypeResidentAlias || isReadStatusInt || ismeterReadID)
                             });
                         }
 
@@ -677,29 +689,29 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                         new TableStyleRule
                         {
                             Target = "row",
-                            Field = "LastActionTypeID",
+                            Field = "ReadStatusInt",
                             Op = "eq",
-                            Value = "46",
+                            Value = "1",
                             Priority = 1,
 
                             PillEnabled = true,
-                            PillField = "buildingActionTypeResidentAlias",
-                            PillTextField = "buildingActionTypeResidentAlias",
-                            PillCssClass = "pill pill-blue",
+                            PillField = "ReadStatus",
+                            PillTextField = "ReadStatus",
+                            PillCssClass = "pill pill-green",
                             PillMode = "replace"
                         },
 
                         new TableStyleRule
                         {
                             Target = "row",
-                            Field = "LastActionTypeID",
+                            Field = "ReadStatusInt",
                             Op = "eq",
-                            Value = "47",
+                            Value = "0",
                             Priority = 1,
 
                             PillEnabled = true,
-                            PillField = "buildingActionTypeResidentAlias",
-                            PillTextField = "buildingActionTypeResidentAlias",
+                            PillField = "ReadStatus",
+                            PillTextField = "ReadStatus",
                             PillCssClass = "pill pill-yellow",
                             PillMode = "replace"
                         },
