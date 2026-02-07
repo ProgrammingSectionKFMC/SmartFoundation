@@ -4,6 +4,14 @@ using SmartFoundation.UI.ViewModels.SmartForm;
 using System.Data;
 using System.Linq;
 
+//  NEW (مطلوب للرفع )
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text.Json;
+
 namespace SmartFoundation.Mvc.Controllers
 {
     [Route("crud")]
@@ -11,9 +19,107 @@ namespace SmartFoundation.Mvc.Controllers
     {
         private readonly MastersServies _mastersServies;
 
+        //  NEW (مطلوب للرفع )
+        private readonly IWebHostEnvironment _env;
+
         public CrudController(MastersServies mastersCrudServies)
         {
             _mastersServies = mastersCrudServies;
+        }
+
+
+        [ActivatorUtilitiesConstructor]
+        public CrudController(MastersServies mastersCrudServies, IWebHostEnvironment env)
+        {
+            _mastersServies = mastersCrudServies;
+            _env = env;
+        }
+
+
+        private async Task ApplyDynamicFileUploadsAsync(Dictionary<string, object?> parameters)
+        {
+            if (_env == null) return;
+
+
+            if (Request?.Form?.Files == null || Request.Form.Files.Count == 0) return;
+
+
+            var groups = Request.Form.Files
+                .GroupBy(f => f.Name, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var g in groups)
+            {
+                var fieldName = g.Key?.Trim();
+                if (string.IsNullOrWhiteSpace(fieldName)) continue;
+
+
+                if (fieldName.Length != 3 || (fieldName[0] != 'p' && fieldName[0] != 'P')) continue;
+                if (!int.TryParse(fieldName.Substring(1, 2), out var idx) || idx < 1 || idx > 50) continue;
+
+                //  مسار  يجي من الفورم  hidden)
+                var folder = (Request.Form[$"{fieldName}__folder"].ToString() ?? "").Trim();
+                var sub = (Request.Form[$"{fieldName}__subfolder"].ToString() ?? "").Trim();
+
+                // fallback لو ما أرسلت مسارات
+                if (string.IsNullOrWhiteSpace(folder)) folder = "uploads";
+                if (string.IsNullOrWhiteSpace(sub)) sub = $"{parameters.GetValueOrDefault("pageName_") ?? "general"}/{fieldName}";
+
+                //  القيود  من الفورم )
+                int maxFiles = int.TryParse(Request.Form[$"{fieldName}__maxFiles"], out var mf) ? mf : 10;
+                long maxFileSizeBytes = long.TryParse(Request.Form[$"{fieldName}__maxFileSizeMb"], out var mfs)
+                    ? (mfs * 1024L * 1024L)
+                    : (25L * 1024L * 1024L);
+                long maxTotalBytes = long.TryParse(Request.Form[$"{fieldName}__maxTotalMb"], out var mt)
+                    ? (mt * 1024L * 1024L)
+                    : (100L * 1024L * 1024L);
+
+                var files = g.ToList();
+                if (files.Count > maxFiles)
+                    throw new InvalidOperationException($"عدد الملفات تجاوز الحد المسموح ({fieldName})");
+
+                long total = 0;
+                foreach (var file in files)
+                {
+                    total += file?.Length ?? 0;
+
+                    if (file == null || file.Length == 0)
+                        throw new InvalidOperationException($"ملف فارغ غير مسموح ({fieldName})");
+
+                    if (file.Length > maxFileSizeBytes)
+                        throw new InvalidOperationException($"حجم الملف أكبر من المسموح ({fieldName})");
+
+
+                    var parts = (file.FileName ?? "").Split('.', StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length >= 3)
+                        throw new InvalidOperationException($"امتداد مزدوج غير مسموح ({fieldName})");
+                }
+
+                if (total > maxTotalBytes)
+                    throw new InvalidOperationException($"إجمالي الملفات أكبر من المسموح ({fieldName})");
+
+                //  حفظ  داخل wwwroot/{folder}/{sub}/
+                var saveDir = Path.Combine(_env.WebRootPath, folder, sub);
+                Directory.CreateDirectory(saveDir);
+
+                var savedPaths = new List<string>();
+
+                foreach (var file in files)
+                {
+                    var ext = Path.GetExtension(file.FileName ?? "").ToLowerInvariant();
+                    var storedName = Guid.NewGuid().ToString("N") + ext;
+
+                    var fullPath = Path.Combine(saveDir, storedName);
+                    await using var fs = System.IO.File.Create(fullPath);
+                    await file.CopyToAsync(fs);
+
+                    savedPaths.Add($"/{folder}/{sub}/{storedName}".Replace("\\", "/"));
+                }
+
+
+                parameters[$"parameter_{idx:00}"] = savedPaths.Count > 0
+                    ? JsonSerializer.Serialize(savedPaths)
+                    : DBNull.Value;
+            }
         }
 
         // REMOVE any TempData like: CrudMessageType, CrudMessage, InsertMessage, UpdateMessage, DeleteMessage, CrudError.
@@ -124,6 +230,9 @@ namespace SmartFoundation.Mvc.Controllers
                         ? val.ToString() : DBNull.Value;
                 }
 
+                //  NEW 
+                await ApplyDynamicFileUploadsAsync(parameters);
+
                 var ds = await _mastersServies.GetCrudDataSetAsync(parameters);
                 var (code, message) = ExtractResult(ds);
                 SetToastTempData(code, message);
@@ -137,46 +246,46 @@ namespace SmartFoundation.Mvc.Controllers
                     return Redirect(redirectUrl);
                 }
                 else
-                { 
-                if (!string.IsNullOrWhiteSpace(redirectAction))
                 {
-                    // 1) Base path using Url.Action (without query)
-                    var baseUrl = Url.Action(redirectAction, redirectController) ?? "/";
-
-                    // 2) Gather Q* keys and order them Q1, Q2, Q3...
-                    var qPairs = new List<(int order, string key, string value)>();
-                    foreach (var key in f.Keys)
+                    if (!string.IsNullOrWhiteSpace(redirectAction))
                     {
-                        if (string.IsNullOrWhiteSpace(key)) continue;
-                        if (!key.StartsWith("Q", StringComparison.OrdinalIgnoreCase)) continue;
+                        // 1) Base path using Url.Action (without query)
+                        var baseUrl = Url.Action(redirectAction, redirectController) ?? "/";
 
-                        // Extract numeric suffix (default 0 if none)
-                        int order = 0;
-                        var suffix = key.Substring(1);
-                        int.TryParse(suffix, out order);
+                        // 2) Gather Q* keys and order them Q1, Q2, Q3...
+                        var qPairs = new List<(int order, string key, string value)>();
+                        foreach (var key in f.Keys)
+                        {
+                            if (string.IsNullOrWhiteSpace(key)) continue;
+                            if (!key.StartsWith("Q", StringComparison.OrdinalIgnoreCase)) continue;
 
-                        var val = f[key].ToString();
-                        if (!string.IsNullOrWhiteSpace(val))
-                            qPairs.Add((order, key, val));
+                            // Extract numeric suffix (default 0 if none)
+                            int order = 0;
+                            var suffix = key.Substring(1);
+                            int.TryParse(suffix, out order);
+
+                            var val = f[key].ToString();
+                            if (!string.IsNullOrWhiteSpace(val))
+                                qPairs.Add((order, key, val));
+                        }
+
+                        qPairs.Sort((a, b) => a.order.CompareTo(b.order)); // ensures Q1, Q2, Q3...
+
+                        // 3) Build query string manually in desired order
+                        var sb = new System.Text.StringBuilder();
+                        for (int i = 0; i < qPairs.Count; i++)
+                        {
+                            var (order, key, value) = qPairs[i];
+                            if (i > 0) sb.Append('&');
+                            sb.Append(Uri.EscapeDataString(key));
+                            sb.Append('=');
+                            sb.Append(Uri.EscapeDataString(value));
+                        }
+
+                        var fullUrl = sb.Length > 0 ? $"{baseUrl}?{sb}" : baseUrl;
+                        return Redirect(fullUrl);
                     }
-
-                    qPairs.Sort((a, b) => a.order.CompareTo(b.order)); // ensures Q1, Q2, Q3...
-
-                    // 3) Build query string manually in desired order
-                    var sb = new System.Text.StringBuilder();
-                    for (int i = 0; i < qPairs.Count; i++)
-                    {
-                        var (order, key, value) = qPairs[i];
-                        if (i > 0) sb.Append('&');
-                        sb.Append(Uri.EscapeDataString(key));
-                        sb.Append('=');
-                        sb.Append(Uri.EscapeDataString(value));
-                    }
-
-                    var fullUrl = sb.Length > 0 ? $"{baseUrl}?{sb}" : baseUrl;
-                    return Redirect(fullUrl);
                 }
-            }
 
                 var referer = Request.Headers["Referer"].ToString();
                 if (!string.IsNullOrWhiteSpace(referer)) return Redirect(referer);
@@ -220,6 +329,9 @@ namespace SmartFoundation.Mvc.Controllers
                         ? val.ToString() : DBNull.Value;
                 }
 
+
+                await ApplyDynamicFileUploadsAsync(parameters);
+
                 var ds = await _mastersServies.GetCrudDataSetAsync(parameters);
                 var (code, message) = ExtractResult(ds);
                 SetToastTempData(code, message);
@@ -234,7 +346,6 @@ namespace SmartFoundation.Mvc.Controllers
                 }
                 else
                 {
-
                     var routeValues = new Dictionary<string, object>();
                     if (f.TryGetValue("Q1", out var q1) && !string.IsNullOrWhiteSpace(q1)) routeValues["Q1"] = q1.ToString();
 
@@ -326,11 +437,9 @@ namespace SmartFoundation.Mvc.Controllers
             }
         }
 
-
-
         [HttpGet("DDLFiltered")]
         public async Task<IActionResult> DDLFiltered(
-        string? DDlValues, string? FK, string? textcol, string? ValueCol, string? TableIndex,string? PageName)
+        string? DDlValues, string? FK, string? textcol, string? ValueCol, string? TableIndex, string? PageName)
         {
 
             int TableIndexInt = 0;
@@ -372,12 +481,11 @@ namespace SmartFoundation.Mvc.Controllers
             return Json(items);
         }
 
-
         [HttpGet("GetDDLValues")]
         public async Task<IActionResult> GetDDLValues(
-            string? textcol, 
-            string? ValueCol, 
-            string? TableIndex, 
+            string? textcol,
+            string? ValueCol,
+            string? TableIndex,
             string? PageName,
             string? usersId,
             string? IdaraId,
@@ -386,9 +494,6 @@ namespace SmartFoundation.Mvc.Controllers
             string? FilterValue = null,
              string? FirstOption = null)
         {
-
-
-
             int TableIndexInt = 0;
             if (!string.IsNullOrWhiteSpace(TableIndex))
                 int.TryParse(TableIndex, out TableIndexInt);
@@ -405,8 +510,8 @@ namespace SmartFoundation.Mvc.Controllers
                 }
 
                 // Check if filtering is needed
-                bool shouldFilter = !string.IsNullOrWhiteSpace(FilterColumn) 
-                                 && !string.IsNullOrWhiteSpace(FilterValue) 
+                bool shouldFilter = !string.IsNullOrWhiteSpace(FilterColumn)
+                                 && !string.IsNullOrWhiteSpace(FilterValue)
                                  && table.Columns.Contains(FilterColumn);
 
                 foreach (DataRow row in table.Rows)
@@ -423,7 +528,7 @@ namespace SmartFoundation.Mvc.Controllers
                     var text = row[textcol]?.ToString()?.Trim() ?? "";
 
                     if (!string.IsNullOrEmpty(value))
-                        // ✅ لاحظ الحروف الكبيرة
+
                         items.Add(new { Value = value, Text = text });
                 }
             }
@@ -433,10 +538,5 @@ namespace SmartFoundation.Mvc.Controllers
 
             return Json(items);
         }
-
-
-
-
-
     }
 }

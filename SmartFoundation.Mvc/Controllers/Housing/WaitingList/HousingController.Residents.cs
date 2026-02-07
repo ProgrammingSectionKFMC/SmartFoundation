@@ -373,7 +373,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p17", Label = "تاريخ الميلاد", Type = "date", ColCss = "3",Icon = "fa fa-calendar" },
                 new FieldConfig { Name = "p18", Label = "رقم الجوال", Type = "tel", ColCss = "3", Required = true, HelpText=" مثال : 05XXXXXXXX",Icon = "fa fa-square-phone" },
                 new FieldConfig { Name = "p19", Label = "ملاحظات", Type = "textarea", ColCss = "6", Required = false },
-                
+
+
+
             };
 
             // hidden fields
@@ -460,10 +462,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 //TabelLabel = "بيانات المستفيدين",
                 //TabelLabelIcon = "fa-solid fa-user-group",
                 EnableCellCopy = true,
-                ShowFilter = true,
+                ShowFilter = false,
                 FilterRow = true,
                 FilterDebounce = 250,
-                ShowColumnVisibility=true,
+                ShowColumnVisibility=false,
 
                 Toolbar = new TableToolbarConfig
                 {

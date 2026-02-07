@@ -2997,6 +2997,187 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
 
 
+                    // =======================
+                    // 1) FORM GENERATOR (case "fileupload") ✅ (100% compatible)
+                    // - keeps your dataset (data-*) for the JS component
+                    // - adds hidden inputs (*__folder/*__subfolder/*__max*) for server-side CRUD (AutoUpload=false)
+                    //  NEW: clicking inside the field opens file picker (via label/for)
+                    // =======================
+                    case "fileupload": {
+                        const val = (a, b, d = undefined) => (a !== undefined && a !== null ? a : (b !== undefined && b !== null ? b : d));
+
+                        const acceptRaw = val(field.accept, field.Accept, "");
+                        const accept = acceptRaw ? `accept="${this.escapeHtml(acceptRaw)}"` : "";
+
+                        const maxFiles = val(field.maxFiles, field.MaxFiles, null);
+                        const multiple = (val(field.multiple, field.Multiple, false) || (typeof maxFiles === "number" && maxFiles > 1)) ? "multiple" : "";
+
+                        const requiredAttr = required;
+                        const disabledAttr = disabled;
+
+                        const maxFileSize = val(field.maxFileSize, field.MaxFileSize, "");
+                        const maxTotalSize = val(field.maxTotalSize, field.MaxTotalSize, "");
+                        const allowEmpty = val(field.allowEmptyFile, field.AllowEmptyFile, false) ? "true" : "false";
+
+                        const uploadFolder = val(field.uploadFolder, field.UploadFolder, "");
+                        const uploadSubFolder = val(field.uploadSubFolder, field.UploadSubFolder, "");
+
+                        const saveMode = val(field.saveMode, field.SaveMode, "physical");          // physical | db
+                        const fileNameMode = val(field.fileNameMode, field.FileNameMode, "uuid"); // uuid | original | timestamp
+                        const overwrite = val(field.overwrite, field.Overwrite, false) ? "true" : "false";
+                        const keepExt = val(field.keepOriginalExtension, field.KeepOriginalExtension, true) ? "true" : "false";
+
+                        const sanitize = val(field.sanitizeFileName, field.SanitizeFileName, true) ? "true" : "false";
+                        const blockDoubleExt = val(field.blockDoubleExtension, field.BlockDoubleExtension, true) ? "true" : "false";
+                        const scanOnUpload = val(field.scanOnUpload, field.ScanOnUpload, false) ? "true" : "false";
+
+                        const mimeTypes = Array.isArray(val(field.allowedMimeTypes, field.AllowedMimeTypes, null))
+                            ? val(field.allowedMimeTypes, field.AllowedMimeTypes).join(",")
+                            : "";
+
+                        const showSize = val(field.showFileSize, field.ShowFileSize, true) ? "true" : "false";
+                        const showRemove = val(field.showRemoveButton, field.ShowRemoveButton, true) ? "true" : "false";
+                        const showDownload = val(field.showDownloadButton, field.ShowDownloadButton, true) ? "true" : "false";
+                        const showPreviewBtn = val(field.showPreviewButton, field.ShowPreviewButton, true) ? "true" : "false";
+                        const showProgress = val(field.showUploadProgress, field.ShowUploadProgress, true) ? "true" : "false";
+
+                        const enablePreview = val(field.enablePreview, field.EnablePreview, false) ? "true" : "false";
+                        const previewMode = val(field.previewMode, field.PreviewMode, "modal"); // modal | newtab
+                        const previewTypes = val(field.previewableTypes, field.PreviewableTypes, ".pdf,.jpg,.png");
+                        const previewTitle = val(field.previewTitle, field.PreviewTitle, "معاينة");
+                        const previewHeight = val(field.previewHeight, field.PreviewHeight, 600);
+
+                        //  IMPORTANT: make A4 OPTIONAL (default empty)
+                        const previewPaper = val(field.previewPaper, field.PreviewPaper, ""); // "a4" or ""
+                        const previewOrientation = val(field.previewOrientation, field.PreviewOrientation, "portrait"); // portrait|landscape
+
+                        const readOnlyFiles = val(field.readOnlyFiles, field.ReadOnlyFiles, false) ? "true" : "false";
+                        const autoUpload = val(field.autoUpload, field.AutoUpload, false) ? "true" : "false";
+
+                        const uploadCategory = val(field.uploadCategory, field.UploadCategory, "");
+                        const bindToEntityId = val(field.bindToEntityId, field.BindToEntityId, "");
+
+                        const errSize = val(field.errorMessageSize, field.ErrorMessageSize, "");
+                        const errType = val(field.errorMessageType, field.ErrorMessageType, "");
+                        const errCount = val(field.errorMessageCount, field.ErrorMessageCount, "");
+                        const errTotal = val(field.errorMessageTotal, field.ErrorMessageTotal, "");
+
+                        const uploadApi = val(field.uploadEndpoint, field.UploadEndpoint, "/api/files/upload");
+                        const previewApi = val(field.previewEndpoint, field.PreviewEndpoint, "/api/files/preview");
+                        const downloadApi = val(field.downloadEndpoint, field.DownloadEndpoint, "/api/files/download");
+                        const deleteApi = val(field.deleteEndpoint, field.DeleteEndpoint, "/api/files/delete");
+
+                        const hintParts = [];
+                        if (acceptRaw) hintParts.push(`الصيغ: ${this.escapeHtml(acceptRaw)}`);
+                        if (maxFileSize) hintParts.push(`الحد الأقصى للملف: ${maxFileSize}MB`);
+                        if (maxTotalSize) hintParts.push(`الإجمالي: ${maxTotalSize}MB`);
+                        const hint = hintParts.join(" - ");
+
+                        const safeName = (field.name || "").trim();
+                        const safeNameAttr = this.escapeHtml(safeName);
+
+                        const inputId = `sf_fu_${safeName}_${Math.random().toString(36).slice(2, 8)}`;
+
+                        fieldHtml = `
+                        <div class="form-group ${colCss}">
+                          <label class="block text-sm font-medium text-gray-700 mb-1">
+                            ${this.escapeHtml(field.label)}
+                            ${val(field.required, field.Required, false) ? '<span class="text-red-500">*</span>' : ''}
+                          </label>
+
+                          <div class="sf-file-upload"
+                            data-name="${safeName}"
+                            data-max-files="${maxFiles ?? ""}"
+                            data-max-file-size="${maxFileSize}"
+                            data-max-total-size="${maxTotalSize}"
+                            data-allow-empty="${allowEmpty}"
+                            data-upload-folder="${this.escapeHtml(uploadFolder)}"
+                            data-upload-subfolder="${this.escapeHtml(uploadSubFolder)}"
+                            data-save-mode="${this.escapeHtml(saveMode)}"
+                            data-file-name-mode="${this.escapeHtml(fileNameMode)}"
+                            data-overwrite="${overwrite}"
+                            data-keep-ext="${keepExt}"
+                            data-sanitize="${sanitize}"
+                            data-block-double="${blockDoubleExt}"
+                            data-scan="${scanOnUpload}"
+                            data-mime-types="${this.escapeHtml(mimeTypes)}"
+                            data-show-size="${showSize}"
+                            data-show-remove="${showRemove}"
+                            data-show-download="${showDownload}"
+                            data-show-preview-btn="${showPreviewBtn}"
+                            data-show-progress="${showProgress}"
+                            data-preview="${enablePreview}"
+                            data-preview-mode="${this.escapeHtml(previewMode)}"
+                            data-preview-types="${this.escapeHtml(previewTypes)}"
+                            data-preview-title="${this.escapeHtml(previewTitle)}"
+                            data-preview-height="${previewHeight}"
+                            data-preview-paper="${this.escapeHtml(previewPaper)}"
+                            data-preview-orientation="${this.escapeHtml(previewOrientation)}"
+                            data-error-size="${this.escapeHtml(errSize)}"
+                            data-error-type="${this.escapeHtml(errType)}"
+                            data-error-count="${this.escapeHtml(errCount)}"
+                            data-error-total="${this.escapeHtml(errTotal)}"
+                            data-readonly="${readOnlyFiles}"
+                            data-auto-upload="${autoUpload}"
+                            data-upload-category="${this.escapeHtml(uploadCategory)}"
+                            data-bind-entity="${this.escapeHtml(bindToEntityId)}"
+                            data-upload-api="${this.escapeHtml(uploadApi)}"
+                            data-preview-api="${this.escapeHtml(previewApi)}"
+                            data-download-api="${this.escapeHtml(downloadApi)}"
+                            data-delete-api="${this.escapeHtml(deleteApi)}"
+                          >
+                            <div class="sf-file-bar">
+                              <label class="sf-file-btn" for="${inputId}">إرفاق ملف</label>
+
+                              <!-- ✅ NEW: make the whole field clickable -->
+                              <label class="sf-file-meta sf-file-field" for="${inputId}">
+                                <span class="sf-file-picked">لم يتم اختيار ملفات</span>
+                              </label>
+                            </div>
+
+                            <input
+                              id="${inputId}"
+                              type="file"
+                              name="${safeName}"
+                              class="sf-file-input"
+                              ${accept}
+                              ${multiple}
+                              ${requiredAttr}
+                              ${disabledAttr}
+                            />
+
+                            <!--  used when AutoUpload=true (stores server file IDs as JSON) -->
+                            <input type="hidden" name="${safeName}__uploaded" class="sf-file-uploaded" value="[]" />
+
+                            <!--  NEW: server-side settings (AutoUpload=false uses these) -->
+                            <input type="hidden" name="${safeName}__folder" value="${this.escapeHtml(uploadFolder)}" />
+                            <input type="hidden" name="${safeName}__subfolder" value="${this.escapeHtml(uploadSubFolder)}" />
+                            <input type="hidden" name="${safeName}__maxFiles" value="${maxFiles ?? ""}" />
+                            <input type="hidden" name="${safeName}__maxFileSizeMb" value="${this.escapeHtml(String(maxFileSize ?? ""))}" />
+                            <input type="hidden" name="${safeName}__maxTotalMb" value="${this.escapeHtml(String(maxTotalSize ?? ""))}" />
+
+                            ${hint ? `<div class="sf-file-hint">${hint}</div>` : ""}
+                            <div class="sf-file-errors hidden"></div>
+                            <div class="sf-file-list"></div>
+                          </div>
+
+                          ${field.helpText ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>` : ""}
+                        </div>`;
+                        break;
+                    }
+
+
+
+
+
+
+
+                        
+
+
+
+
+
                     case "textarea": {
                         const acRaw = field.autocomplete ?? field.Autocomplete;
                         const ac = (acRaw ?? "").toString().trim();
@@ -3126,13 +3307,13 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         const hasIcon = !!field.icon;
                         const isRtl = document?.documentElement?.dir === "rtl";
 
-                        // كلاس اتجاه الأيقونة
+                        
                         const iconSideClass = isRtl ? "sf-icon-right" : "sf-icon-left";
 
-                        // كلاس يضاف للـ input فقط إذا فيه أيقونة
+                        
                         const iconInputClass = hasIcon ? `sf-has-icon ${iconSideClass}` : "";
 
-                        // HTML الأيقونة
+                        
                         const iconHtml = hasIcon
                             ? `<span class="sf-input-icon ${iconSideClass}">
                                     <i class="${this.escapeHtml(field.icon)}"></i>
@@ -4317,3 +4498,876 @@ window.sfRouteEditForm = function (table, act, row) {
 
 
 
+
+
+
+// =======================================
+// 2) SmartFileUpload 
+// =======================================
+(function () {
+    if (window.__sfFileUploadDelegated) return;
+    window.__sfFileUploadDelegated = true;
+
+    // ---------- helpers ----------
+    const MB = 1024 * 1024;
+
+    function formatSize(bytes) {
+        if (!Number.isFinite(bytes)) return "";
+        const kb = 1024, mb = kb * 1024;
+        if (bytes >= mb) return (bytes / mb).toFixed(2) + " MB";
+        if (bytes >= kb) return (bytes / kb).toFixed(1) + " KB";
+        return bytes + " B";
+    }
+
+    function extOf(name) {
+        const i = (name || "").lastIndexOf(".");
+        return i > -1 ? name.slice(i + 1).toLowerCase() : "";
+    }
+
+    function hasDoubleExtension(name) {
+        const n = (name || "").toLowerCase();
+        const parts = n.split(".").filter(Boolean);
+        return parts.length >= 3; // e.g. a.b.c
+    }
+
+    function parseCsv(s) {
+        return (s || "")
+            .split(",")
+            .map(x => x.trim())
+            .filter(Boolean);
+    }
+
+    function getCfg(root) {
+        const ds = root.dataset;
+        const maxFiles = ds.maxFiles ? Number(ds.maxFiles) : null;
+        const maxFileSizeMb = ds.maxFileSize ? Number(ds.maxFileSize) : null;
+        const maxTotalSizeMb = ds.maxTotalSize ? Number(ds.maxTotalSize) : null;
+
+        return {
+            name: ds.name || "",
+            readonly: ds.readonly === "true",
+            allowEmpty: ds.allowEmpty === "true",
+            maxFiles: Number.isFinite(maxFiles) ? maxFiles : null,
+            maxFileSizeBytes: Number.isFinite(maxFileSizeMb) ? (maxFileSizeMb * MB) : null,
+            maxTotalBytes: Number.isFinite(maxTotalSizeMb) ? (maxTotalSizeMb * MB) : null,
+
+            mimeTypes: parseCsv(ds.mimeTypes),
+            blockDouble: ds.blockDouble === "true",
+
+            showSize: ds.showSize === "true",
+            showRemove: ds.showRemove === "true",
+            showDownload: ds.showDownload === "true",
+            showPreviewBtn: ds.showPreviewBtn === "true",
+            showProgress: ds.showProgress === "true",
+
+            enablePreview: ds.preview === "true",
+            previewMode: (ds.previewMode || "modal").toLowerCase(),
+            previewTypes: parseCsv(ds.previewTypes).map(x => x.toLowerCase()),
+            previewTitle: ds.previewTitle || "معاينة",
+            previewHeight: Number(ds.previewHeight) || 600,
+
+            previewPaper: (ds.previewPaper || "").toLowerCase(),
+            previewOrientation: (ds.previewOrientation || "portrait").toLowerCase(),
+
+            autoUpload: ds.autoUpload === "true",
+            uploadCategory: ds.uploadCategory || "",
+            bindEntity: ds.bindEntity || "",
+
+            uploadApi: ds.uploadApi || "",
+            previewApi: ds.previewApi || "",
+            downloadApi: ds.downloadApi || "",
+            deleteApi: ds.deleteApi || "",
+
+            errSize: ds.errorSize || "حجم الملف أكبر من المسموح",
+            errType: ds.errorType || "صيغة الملف غير مدعومة",
+            errCount: ds.errorCount || "عدد الملفات تجاوز الحد المسموح",
+            errTotal: ds.errorTotal || "إجمالي الملفات أكبر من المسموح"
+        };
+    }
+
+    function canPreviewLocal(cfg, fileName) {
+        if (!cfg.enablePreview) return false;
+        if (!cfg.previewTypes.length) return false;
+        const ext = "." + extOf(fileName);
+        return cfg.previewTypes.includes(ext);
+    }
+
+    // ---------- A4 sizing ----------
+    function computePaperSize(paper, orientation) {
+        const p = (paper || "").toLowerCase();
+        const orient = (orientation || "portrait").toLowerCase();
+        if (p !== "a4") return null;
+
+        const ratioPortrait = 210 / 297;
+        const maxH = Math.max(320, Math.floor(window.innerHeight - 36));
+        const maxW = Math.max(320, Math.floor(window.innerWidth - 36));
+
+        let w, h;
+        if (orient === "landscape") {
+            const r = 297 / 210;
+            w = Math.min(maxW, Math.floor(maxH * r));
+            h = Math.floor(w / r);
+            if (h > maxH) { h = maxH; w = Math.floor(h * r); }
+        } else {
+            w = Math.min(maxW, Math.floor(maxH * ratioPortrait));
+            h = Math.floor(w / ratioPortrait);
+            if (h > maxH) { h = maxH; w = Math.floor(h * ratioPortrait); }
+        }
+        return { w, h };
+    }
+
+    (function () {
+        if (window.__sfFileUploadReserveFix) return;
+        window.__sfFileUploadReserveFix = true;
+
+        function updateOne(root) {
+            const bar = root.querySelector(".sf-file-bar");
+            const btn = root.querySelector(".sf-file-btn");
+            if (!bar || !btn) return;
+
+            const w = Math.ceil(btn.getBoundingClientRect().width);
+            root.style.setProperty("--sf-choose-reserve", w + "px");
+        }
+
+        function updateAll() {
+            document.querySelectorAll(".sf-file-upload").forEach(updateOne);
+        }
+
+        document.addEventListener("DOMContentLoaded", updateAll);
+        window.addEventListener("load", updateAll);
+        window.addEventListener("resize", updateAll);
+
+        const mo = new MutationObserver(() => updateAll());
+        mo.observe(document.documentElement, { childList: true, subtree: true });
+    })();
+
+    // ---------- preview modal ----------
+    function ensurePreviewModal() {
+        let m = document.getElementById("sf-preview-modal");
+        if (m) return m;
+
+        m = document.createElement("div");
+        m.id = "sf-preview-modal";
+        m.className = "sf-preview hidden";
+        m.innerHTML = `
+      <div class="sf-preview-backdrop" data-sf-preview-close></div>
+      <div class="sf-preview-dialog" role="dialog" aria-modal="true">
+        <div class="sf-preview-head">
+          <div class="sf-preview-title"></div>
+          <button type="button" class="sf-preview-close" data-sf-preview-close>×</button>
+        </div>
+        <div class="sf-preview-body"></div>
+      </div>`;
+        document.body.appendChild(m);
+
+        m.addEventListener("click", (e) => {
+            if (e.target.closest("[data-sf-preview-close]")) hidePreview();
+        });
+
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") hidePreview();
+        });
+
+        window.addEventListener("resize", () => {
+            const mm = document.getElementById("sf-preview-modal");
+            if (!mm || mm.classList.contains("hidden")) return;
+            const dialog = mm.querySelector(".sf-preview-dialog");
+            if (!dialog) return;
+            const paper = dialog.dataset.paper || "";
+            const orientation = dialog.dataset.orientation || "";
+            if (!paper) return;
+            const size = computePaperSize(paper, orientation);
+            if (!size) return;
+            dialog.style.setProperty("--sfPreviewW", `${size.w}px`);
+            dialog.style.setProperty("--sfPreviewH", `${size.h}px`);
+        });
+
+        return m;
+    }
+
+    function showPreview({ title, url, kind, height, paper, orientation }) {
+        const m = ensurePreviewModal();
+        m.querySelector(".sf-preview-title").textContent = title || "معاينة";
+
+        const body = m.querySelector(".sf-preview-body");
+        body.innerHTML = "";
+
+        const dialog = m.querySelector(".sf-preview-dialog");
+        dialog.dataset.paper = paper || "";
+        dialog.dataset.orientation = orientation || "";
+
+        const size = paper ? computePaperSize(paper, orientation) : null;
+        if (size) {
+            dialog.style.setProperty("--sfPreviewW", `${size.w}px`);
+            dialog.style.setProperty("--sfPreviewH", `${size.h}px`);
+        } else {
+            dialog.style.removeProperty("--sfPreviewW");
+            dialog.style.setProperty("--sfPreviewH", `${Number(height) || 600}px`);
+        }
+
+        if (kind === "img") {
+            const img = document.createElement("img");
+            img.src = url;
+            img.className = "sf-preview-img";
+            body.appendChild(img);
+        } else {
+            const iframe = document.createElement("iframe");
+            iframe.src = url;
+            iframe.className = "sf-preview-frame";
+            iframe.setAttribute("title", title || "Preview");
+            body.appendChild(iframe);
+        }
+
+        m.classList.remove("hidden");
+        document.body.classList.add("sf-preview-open");
+    }
+
+    function hidePreview() {
+        const m = document.getElementById("sf-preview-modal");
+        if (!m) return;
+        m.classList.add("hidden");
+        document.body.classList.remove("sf-preview-open");
+        const body = m.querySelector(".sf-preview-body");
+        if (body) body.innerHTML = "";
+        const dialog = m.querySelector(".sf-preview-dialog");
+        if (dialog) {
+            dialog.style.removeProperty("--sfPreviewW");
+            dialog.style.removeProperty("--sfPreviewH");
+            dialog.dataset.paper = "";
+            dialog.dataset.orientation = "";
+        }
+    }
+
+    // ---------- errors ----------
+    function setErrors(root, msgs) {
+        const box = root.querySelector(".sf-file-errors");
+        if (!box) return;
+        if (!msgs || !msgs.length) {
+            box.classList.add("hidden");
+            box.innerHTML = "";
+            return;
+        }
+        box.classList.remove("hidden");
+        box.innerHTML = msgs.map(m => `<div class="sf-file-error">${m}</div>`).join("");
+    }
+
+    // ---------- validation ----------
+    function validateFiles(cfg, files) {
+        const errs = [];
+
+        if (cfg.maxFiles && files.length > cfg.maxFiles) errs.push(cfg.errCount);
+
+        let total = 0;
+        for (const f of files) {
+            total += (f.size || 0);
+
+            if (!cfg.allowEmpty && (f.size === 0)) errs.push(cfg.errSize);
+            if (cfg.maxFileSizeBytes && f.size > cfg.maxFileSizeBytes) errs.push(cfg.errSize);
+
+            if (cfg.mimeTypes.length) {
+                if (f.type && !cfg.mimeTypes.includes(f.type)) errs.push(cfg.errType);
+            }
+
+            if (cfg.blockDouble && hasDoubleExtension(f.name)) errs.push(cfg.errType);
+        }
+
+        if (cfg.maxTotalBytes && total > cfg.maxTotalBytes) errs.push(cfg.errTotal);
+
+        return [...new Set(errs)];
+    }
+
+    // ---------- rendering (local) ----------
+    function renderLocal(root, input) {
+        const cfg = getCfg(root);
+
+        const picked = root.querySelector(".sf-file-picked");
+        const list = root.querySelector(".sf-file-list");
+        if (!picked || !list) return;
+
+        const files = Array.from(input.files || []);
+        list.innerHTML = "";
+
+        if (!files.length) {
+            picked.textContent = "لم يتم اختيار ملفات";
+            setErrors(root, []);
+            return;
+        }
+
+        const errs = validateFiles(cfg, files);
+        setErrors(root, errs);
+
+        picked.textContent = files.length === 1 ? files[0].name : `${files.length} ملفات`;
+
+        files.forEach((f, idx) => {
+            const row = document.createElement("div");
+            row.className = "sf-file-item";
+
+            const previewable = canPreviewLocal(cfg, f.name);
+
+            row.innerHTML = `
+        <div class="sf-file-left">
+          <button type="button" class="sf-file-namebtn" data-kind="local" data-i="${idx}" title="${f.name}">
+            ${f.name}
+          </button>
+          ${cfg.showSize ? `<div class="sf-file-size">${formatSize(f.size)}</div>` : ``}
+        </div>
+
+        <div class="sf-file-actions">
+          ${cfg.showPreviewBtn && previewable ? `<button type="button" class="sf-file-action sf-file-preview" data-kind="local" data-i="${idx}">معاينة</button>` : ``}
+          ${cfg.showRemove && !cfg.readonly ? `<button type="button" class="sf-file-action sf-file-remove" data-kind="local" data-i="${idx}">حذف</button>` : ``}
+        </div>`;
+            list.appendChild(row);
+        });
+    }
+
+    function rebuildInputFiles(input, files) {
+        const dt = new DataTransfer();
+        files.forEach(f => dt.items.add(f));
+        input.files = dt.files;
+    }
+
+    function getFileByIndex(root, idx) {
+        const input = root.querySelector(".sf-file-input");
+        if (!input) return null;
+        const files = Array.from(input.files || []);
+        return { input, files, file: files[idx] || null };
+    }
+
+    // ---------- AutoUpload ----------
+    function getUploadedHidden(root) {
+        return root.querySelector(".sf-file-uploaded");
+    }
+
+    function getUploadedIds(root) {
+        const h = getUploadedHidden(root);
+        if (!h) return [];
+        try { return JSON.parse(h.value || "[]") || []; } catch { return []; }
+    }
+
+    function setUploadedIds(root, ids) {
+        const h = getUploadedHidden(root);
+        if (!h) return;
+        h.value = JSON.stringify(ids || []);
+    }
+
+    // XHR upload with abort support (prevents multiple parallel uploads)
+    function xhrUpload(url, formData, onProgress) {
+        const xhr = new XMLHttpRequest();
+        const p = new Promise((resolve, reject) => {
+            xhr.open("POST", url, true);
+
+            xhr.upload.onprogress = (e) => {
+                if (!e.lengthComputable) return;
+                const pct = Math.round((e.loaded / e.total) * 100);
+                onProgress && onProgress(pct);
+            };
+
+            xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try { resolve(JSON.parse(xhr.responseText || "{}")); }
+                    catch { resolve({}); }
+                } else {
+                    try {
+                        const j = JSON.parse(xhr.responseText || "{}");
+                        const msg = j.message || j.error || `Upload failed: ${xhr.status}`;
+                        reject(new Error(msg));
+                    } catch {
+                        reject(new Error(`Upload failed: ${xhr.status}`));
+                    }
+                }
+            };
+
+            xhr.onerror = () => reject(new Error("Upload failed: network error"));
+            xhr.onabort = () => reject(new Error("Upload aborted"));
+            xhr.send(formData);
+        });
+
+        return { promise: p, abort: () => { try { xhr.abort(); } catch { } } };
+    }
+
+    function renderUploaded(root, items) {
+        const cfg = getCfg(root);
+        const picked = root.querySelector(".sf-file-picked");
+        const list = root.querySelector(".sf-file-list");
+        if (!picked || !list) return;
+
+        list.innerHTML = "";
+        if (!items || !items.length) {
+            picked.textContent = "لم يتم اختيار ملفات";
+            return;
+        }
+
+        picked.textContent = items.length === 1 ? items[0].fileName : `${items.length} ملفات`;
+
+        items.forEach((it) => {
+            const row = document.createElement("div");
+            row.className = "sf-file-item";
+
+            const previewable = cfg.enablePreview && canPreviewLocal(cfg, it.fileName);
+            row.innerHTML = `
+        <div class="sf-file-left">
+          <button type="button" class="sf-file-namebtn" data-kind="uploaded" data-id="${it.id}" title="${it.fileName}">
+            ${it.fileName}
+          </button>
+          ${cfg.showSize ? `<div class="sf-file-size">${formatSize(it.size)}</div>` : ``}
+        </div>
+        <div class="sf-file-actions">
+          ${cfg.showPreviewBtn && previewable ? `<button type="button" class="sf-file-action sf-file-preview" data-kind="uploaded" data-id="${it.id}">معاينة</button>` : ``}
+          ${cfg.showRemove && !cfg.readonly ? `<button type="button" class="sf-file-action sf-file-remove" data-kind="uploaded" data-id="${it.id}">حذف</button>` : ``}
+        </div>`;
+            list.appendChild(row);
+        });
+    }
+
+    async function doAutoUpload(root, input) {
+        const cfg = getCfg(root);
+
+        // prevent duplicate parallel uploads (and cancel previous if any)
+        if (root.__sfUploadAbort && typeof root.__sfUploadAbort === "function") {
+            root.__sfUploadAbort(); // cancel previous in-flight
+            root.__sfUploadAbort = null;
+        }
+        if (root.__sfUploading) {
+            return;
+        }
+        root.__sfUploading = true;
+
+        const files = Array.from(input.files || []);
+        const errs = validateFiles(cfg, files);
+        setErrors(root, errs);
+        if (errs.length) { root.__sfUploading = false; return; }
+
+        if (!cfg.uploadApi) {
+            setErrors(root, ["UploadEndpoint غير معرف"]);
+            root.__sfUploading = false;
+            return;
+        }
+
+        const meta = root.querySelector(".sf-file-meta");
+        let progEl = meta ? meta.querySelector(".sf-file-progress") : null;
+        if (cfg.showProgress && meta) {
+            if (!progEl) {
+                progEl = document.createElement("div");
+                progEl.className = "sf-file-progress";
+                progEl.textContent = "";
+                meta.appendChild(progEl);
+            }
+            progEl.textContent = "0%";
+        }
+
+        const fd = new FormData();
+        files.forEach(f => fd.append("files", f));
+
+        fd.append("fieldName", cfg.name);
+        fd.append("maxFiles", String(cfg.maxFiles ?? ""));
+        fd.append("maxFileSizeMb", String(cfg.maxFileSizeBytes ? (cfg.maxFileSizeBytes / MB) : ""));
+        fd.append("maxTotalSizeMb", String(cfg.maxTotalBytes ? (cfg.maxTotalBytes / MB) : ""));
+        fd.append("allowEmptyFile", String(cfg.allowEmpty));
+        fd.append("allowedMimeTypes", cfg.mimeTypes.join(","));
+        fd.append("blockDoubleExtension", String(cfg.blockDouble));
+
+        fd.append("uploadCategory", cfg.uploadCategory);
+        fd.append("bindToEntityId", cfg.bindEntity);
+
+        fd.append("uploadFolder", root.dataset.uploadFolder || "");
+        fd.append("uploadSubFolder", root.dataset.uploadSubfolder || "");
+        fd.append("fileNameMode", root.dataset.fileNameMode || "uuid");
+        fd.append("overwrite", root.dataset.overwrite || "false");
+        fd.append("keepOriginalExtension", root.dataset.keepExt || "true");
+        fd.append("sanitizeFileName", root.dataset.sanitize || "true");
+
+        try {
+            const { promise, abort } = xhrUpload(cfg.uploadApi, fd, (pct) => {
+                if (cfg.showProgress && progEl) progEl.textContent = pct + "%";
+            });
+            root.__sfUploadAbort = abort;
+
+            const res = await promise;
+            const uploaded = Array.isArray(res.files) ? res.files : [];
+
+            setUploadedIds(root, uploaded.map(x => x.id));
+            renderUploaded(root, uploaded);
+
+            setErrors(root, []);
+            if (cfg.showProgress && progEl) progEl.textContent = "تم الرفع ✅";
+        } catch (e) {
+            const msg = String(e?.message || e);
+            if (!/aborted/i.test(msg)) setErrors(root, [msg]);
+            if (cfg.showProgress && progEl) progEl.textContent = "";
+        } finally {
+            root.__sfUploading = false;
+            root.__sfUploadAbort = null;
+        }
+    }
+
+    // ---------- change ----------
+    document.addEventListener("change", (e) => {
+        const input = e.target;
+        if (!(input instanceof HTMLInputElement)) return;
+        if (input.type !== "file" || !input.classList.contains("sf-file-input")) return;
+
+        const root = input.closest(".sf-file-upload");
+        if (!root) return;
+
+        const cfg = getCfg(root);
+
+        if (cfg.readonly) {
+            input.value = "";
+            renderLocal(root, input);
+            return;
+        }
+
+        if (cfg.autoUpload) {
+            setUploadedIds(root, []);
+            doAutoUpload(root, input);
+        } else {
+            renderLocal(root, input);
+        }
+    });
+
+    // ---------- click (preview / download / remove) ----------
+    document.addEventListener("click", (e) => {
+        const root = e.target.closest(".sf-file-upload");
+        if (!root) return;
+
+        const cfg = getCfg(root);
+        const input = root.querySelector(".sf-file-input");
+        if (!input) return;
+
+        const btn = e.target.closest(".sf-file-preview, .sf-file-namebtn, .sf-file-download, .sf-file-remove");
+        if (!btn) return;
+
+        const kind = btn.dataset.kind || (btn.classList.contains("sf-file-preview") ? btn.dataset.kind : "local");
+
+        // ---- LOCAL ----
+        if (!cfg.autoUpload || kind === "local") {
+            if (btn.classList.contains("sf-file-preview") || btn.classList.contains("sf-file-namebtn")) {
+                const idx = Number(btn.dataset.i);
+                if (!Number.isFinite(idx)) return;
+
+                const got = getFileByIndex(root, idx);
+                if (!got || !got.file) return;
+
+                const file = got.file;
+                if (!canPreviewLocal(cfg, file.name)) return;
+
+                const url = URL.createObjectURL(file);
+                const isImg = /\.(png|jpe?g|gif|webp|bmp)$/i.test(file.name);
+
+                if (cfg.previewMode === "newtab") {
+                    window.open(url, "_blank");
+                    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+                } else {
+                    showPreview({
+                        title: cfg.previewTitle,
+                        url,
+                        kind: isImg ? "img" : "doc",
+                        height: cfg.previewHeight,
+                        paper: cfg.previewPaper || "",
+                        orientation: cfg.previewOrientation
+                    });
+                    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+                }
+                return;
+            }
+
+            if (btn.classList.contains("sf-file-remove")) {
+                if (cfg.readonly) return;
+
+                const idx = Number(btn.dataset.i);
+                if (!Number.isFinite(idx)) return;
+
+                const files = Array.from(input.files || []);
+                files.splice(idx, 1);
+                rebuildInputFiles(input, files);
+                renderLocal(root, input);
+                return;
+            }
+
+            return;
+        }
+
+        // ---- UPLOADED (API) ----
+        const id = btn.dataset.id;
+        if (!id) return;
+
+        if (btn.classList.contains("sf-file-preview") || btn.classList.contains("sf-file-namebtn")) {
+            if (!cfg.previewApi) return;
+
+            const url = `${cfg.previewApi}?id=${encodeURIComponent(id)}`;
+            if (cfg.previewMode === "newtab") {
+                window.open(url, "_blank");
+            } else {
+                const name = (btn.getAttribute("title") || btn.textContent || "").trim();
+                const isImg = /\.(png|jpe?g|gif|webp|bmp)$/i.test(name);
+
+                showPreview({
+                    title: cfg.previewTitle,
+                    url,
+                    kind: isImg ? "img" : "doc",
+                    height: cfg.previewHeight,
+                    paper: cfg.previewPaper || "",
+                    orientation: cfg.previewOrientation
+                });
+            }
+            return;
+        }
+
+        if (btn.classList.contains("sf-file-remove")) {
+            if (cfg.readonly) return;
+            if (!cfg.deleteApi) return;
+
+            fetch(`${cfg.deleteApi}?id=${encodeURIComponent(id)}`, { method: "DELETE" })
+                .then(r => r.ok ? r.json().catch(() => ({})) : Promise.reject(new Error("Delete failed")))
+                .then(() => {
+                    const ids = getUploadedIds(root).filter(x => x !== id);
+                    setUploadedIds(root, ids);
+                    const row = btn.closest(".sf-file-item");
+                    if (row) row.remove();
+                })
+                .catch(() => setErrors(root, ["فشل حذف الملف"]));
+
+            return;
+        }
+    });
+
+    // expose safe hooks for modal submit to show errors in same component
+    window.SFFileUpload = window.SFFileUpload || {};
+    window.SFFileUpload.setErrors = setErrors;
+    window.SFFileUpload.validateFiles = validateFiles;
+    window.SFFileUpload.getCfg = getCfg;
+})();
+
+
+// =====================================================
+// FIX: Modal form submit MUST send files via FormData
+// Fixes ALL:
+// =====================================================
+(function () {
+    if (window.__sfModalMultipartSubmitFix) return;
+    window.__sfModalMultipartSubmitFix = true;
+
+    const SUCCESS_TOAST_MS = 3000;
+    const MAX_WAIT_CLOSE_MS = 1200;
+
+    function isMultipartForm(form) {
+        const enc = (form.getAttribute("enctype") || "").toLowerCase();
+        if (enc.includes("multipart/form-data")) return true;
+        return !!form.querySelector('input[type="file"]');
+    }
+
+    function showToast(type, msg, timeoutMs) {
+        const text = (msg || "").toString().trim();
+        if (!text) return;
+
+        const t = window.toastr;
+        if (t && typeof t[type] === "function") {
+            const old = t.options ? { ...t.options } : null;
+            t.options = t.options || {};
+            t.options.timeOut = Number(timeoutMs) > 0 ? Number(timeoutMs) : 3000;
+            t.options.extendedTimeOut = 1200;
+            t[type](text);
+            if (old) t.options = old;
+            return;
+        }
+        console.log(type.toUpperCase() + ":", text);
+    }
+
+    function setFileInlineError(form, msg) {
+        const root = form.querySelector(".sf-file-upload");
+        if (!root) return;
+        if (window.SFFileUpload && typeof window.SFFileUpload.setErrors === "function") {
+            window.SFFileUpload.setErrors(root, msg ? [String(msg)] : []);
+        }
+    }
+
+    async function readResponseSmart(res) {
+        const ct = (res.headers.get("content-type") || "").toLowerCase();
+        if (ct.includes("application/json")) {
+            const j = await res.json().catch(() => null);
+            return { kind: "json", json: j };
+        }
+        const t = await res.text().catch(() => "");
+        return { kind: "text", text: t };
+    }
+
+    function tryCloseModal(form) {
+        const modal = form.closest(".sf-modal");
+        if (!modal) return { closed: false, modal: null };
+
+        try {
+            if (modal.__x && modal.__x.$data && typeof modal.__x.$data.closeModal === "function") {
+                modal.__x.$data.closeModal();
+                return { closed: true, modal };
+            }
+        } catch { }
+
+        return { closed: false, modal };
+    }
+
+    function waitForModalGone(modal, timeoutMs) {
+        return new Promise((resolve) => {
+            if (!modal) return resolve(false);
+
+            const isGone = () => {
+                if (!document.body.contains(modal)) return true;
+
+                if (modal.classList.contains("hidden")) return true;
+                if (modal.hasAttribute("hidden")) return true;
+                if (modal.getAttribute("aria-hidden") === "true") return true;
+
+                const cs = getComputedStyle(modal);
+                if (cs.display === "none" || cs.visibility === "hidden" || Number(cs.opacity) === 0) return true;
+
+                return false;
+            };
+
+            if (isGone()) return resolve(true);
+
+            const t0 = Date.now();
+            const mo = new MutationObserver(() => {
+                if (isGone()) {
+                    try { mo.disconnect(); } catch { }
+                    resolve(true);
+                } else if (Date.now() - t0 > timeoutMs) {
+                    try { mo.disconnect(); } catch { }
+                    resolve(false);
+                }
+            });
+
+            try {
+                mo.observe(document.body, {
+                    childList: true,
+                    subtree: true,
+                    attributes: true,
+                    attributeFilter: ["class", "style", "hidden", "aria-hidden"]
+                });
+            } catch { }
+
+            setTimeout(() => {
+                try { mo.disconnect(); } catch { }
+                resolve(isGone());
+            }, Math.max(200, timeoutMs));
+        });
+    }
+
+    function lockForm(form) {
+        if (form.__sfSubmitting) return false;
+        form.__sfSubmitting = true;
+
+        const btns = Array.from(form.querySelectorAll('button[type="submit"], input[type="submit"]'));
+        form.__sfPrevDisabled = btns.map(b => ({ el: b, disabled: b.disabled }));
+        btns.forEach(b => (b.disabled = true));
+
+        return true;
+    }
+
+    function unlockForm(form) {
+        form.__sfSubmitting = false;
+
+        const prev = form.__sfPrevDisabled || [];
+        prev.forEach(x => { try { x.el.disabled = x.disabled; } catch { } });
+        form.__sfPrevDisabled = null;
+
+        if (form.__sfAbort && typeof form.__sfAbort.abort === "function") {
+            form.__sfAbort = null;
+        }
+    }
+
+    //  RETURN true on success (keep locked), false on failure (unlock)
+    async function postFormData(form) {
+        const action = form.getAttribute("action") || window.location.href;
+        const method = (form.getAttribute("method") || "POST").toUpperCase();
+
+        setFileInlineError(form, "");
+
+        if (form.__sfAbort && typeof form.__sfAbort.abort === "function") {
+            try { form.__sfAbort.abort(); } catch { }
+        }
+        const ac = new AbortController();
+        form.__sfAbort = ac;
+
+        const fd = new FormData(form);
+        const token = form.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+        const res = await fetch(action, {
+            method,
+            body: fd,
+            headers: token ? { "RequestVerificationToken": token } : undefined,
+            credentials: "same-origin",
+            signal: ac.signal
+        });
+
+        //  keep redirect behavior
+        if (res.redirected) {
+            window.location.href = res.url;
+            return true; // success path (page navigates)
+        }
+
+        const payload = await readResponseSmart(res);
+
+        if (payload.kind === "json" && payload.json) {
+            const j = payload.json || {};
+            const ok = (res.ok && (j.ok !== false)) || (j.ok === true);
+
+            if (ok) {
+                const msg = j.message || "تم الحفظ بنجاح.";
+
+                const { closed, modal } = tryCloseModal(form);
+                if (closed) await waitForModalGone(modal, MAX_WAIT_CLOSE_MS);
+
+                showToast("success", msg, SUCCESS_TOAST_MS);
+
+                setTimeout(() => window.location.reload(), SUCCESS_TOAST_MS + 250);
+                return true; //  SUCCESS => KEEP LOCKED UNTIL RELOAD
+            } else {
+                const msg = j.message || j.error || "حدث خطأ.";
+                showToast("error", msg, 3500);
+                setFileInlineError(form, msg);
+                return false; //  FAIL => UNLOCK
+            }
+        }
+
+        // Non-JSON response
+        if (res.ok) {
+            const { closed, modal } = tryCloseModal(form);
+            if (closed) await waitForModalGone(modal, MAX_WAIT_CLOSE_MS);
+
+            showToast("success", "تم الحفظ بنجاح.", SUCCESS_TOAST_MS);
+            setTimeout(() => window.location.reload(), SUCCESS_TOAST_MS + 250);
+            return true; //  SUCCESS => KEEP LOCKED
+        }
+
+        const errText = (payload.kind === "text" ? payload.text : "") || "";
+        console.error("Multipart submit failed:", res.status, errText);
+        showToast("error", "تعذر الإرسال. تحقق من الملف وحاول مرة أخرى.", 4000);
+        setFileInlineError(form, "تعذر الإرسال. تحقق من الملف وحاول مرة أخرى.");
+        return false; //  FAIL => UNLOCK
+    }
+
+    document.addEventListener("submit", function (e) {
+        const form = e.target;
+        if (!(form instanceof HTMLFormElement)) return;
+        if (!form.closest(".sf-modal")) return;
+        if (!isMultipartForm(form)) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        // hard lock prevents multi-submit even if user spams click
+        if (!lockForm(form)) return;
+
+        // unlock ONLY on failure
+        postFormData(form)
+            .then((ok) => {
+                if (!ok) unlockForm(form);
+                // if ok => keep locked until reload/redirect
+            })
+            .catch(err => {
+                if (err && /aborted|abort/i.test(String(err))) return;
+                console.error(err);
+                showToast("error", "حدث خطأ غير متوقع أثناء الإرسال.", 4000);
+                unlockForm(form);
+            });
+    }, true);
+})();
