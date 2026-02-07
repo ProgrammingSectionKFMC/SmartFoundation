@@ -124,6 +124,72 @@ namespace SmartFoundation.UI.ViewModels.SmartForm
         public bool SubmitOnEnter { get; set; } = false;
 
 
+        // ===== File Upload (Type = FileUpload) =====
+
+        // ---- قيود الحجم والعدد ----
+        public string? Accept { get; set; }   // الامتدادات المسموحة (HTML accept)
+        public int? MaxFileSize { get; set; }        // أقصى حجم للملف الواحد (MB)
+        public int? MaxFiles { get; set; }           // أقصى عدد ملفات مسموح رفعها
+        public int? MaxTotalSize { get; set; }       // أقصى حجم إجمالي لكل الملفات (MB)
+        public bool AllowEmptyFile { get; set; } = false; // السماح بملفات 0KB أو منعها
+
+        // ---- التخزين ----
+        public string? UploadFolder { get; set; }    // المجلد الرئيسي للحفظ داخل uploads
+        public string? UploadSubFolder { get; set; } // مجلد فرعي (سنة / نوع / حالة)
+        public string? SaveMode { get; set; }         // طريقة الحفظ: physical | db
+        public string? FileNameMode { get; set; }     // تسمية الملف: uuid | original | timestamp
+        public bool Overwrite { get; set; } = false;  // استبدال ملف موجود بنفس الاسم
+        public bool KeepOriginalExtension { get; set; } = true; // الإبقاء على الامتداد الأصلي
+
+        // ---- التحقق الأمني ----
+        public List<string>? AllowedMimeTypes { get; set; } // أنواع MIME المسموحة فعليًا
+
+        // ---- واجهة المستخدم ----
+        public bool ShowFileName { get; set; } = true;        // إظهار اسم الملف للمستخدم
+        public bool ShowFileSize { get; set; } = true;        // إظهار حجم الملف
+        public bool ShowFileTypeIcon { get; set; } = true;    // إظهار أيقونة حسب نوع الملف
+        public bool ShowUploadProgress { get; set; } = true;  // شريط تقدم أثناء الرفع
+        public bool ShowRemoveButton { get; set; } = true;    // زر حذف الملف
+        public bool ShowReplaceButton { get; set; } = false;  // زر استبدال ملف بآخر
+        public bool ShowDownloadButton { get; set; } = true;  // زر تحميل الملف
+        public bool ShowPreviewButton { get; set; } = true;   // زر معاينة الملف
+
+        // ---- المعاينة ----
+        public bool EnablePreview { get; set; } = false;      // تفعيل المعاينة داخل النظام
+        public string? PreviewMode { get; set; }              // طريقة العرض: modal | inline | newtab
+        public string? PreviewableTypes { get; set; }         // الامتدادات القابلة للمعاينة
+        public string? PreviewTitle { get; set; }             // عنوان نافذة المعاينة
+        public int? PreviewHeight { get; set; }               // ارتفاع نافذة المعاينة
+                                                              // ✅ NEW: paper sizing for preview (optional)
+        public string? PreviewPaper { get; set; }             // "a4" or ""
+        public string? PreviewOrientation { get; set; }       // portrait|landscape
+
+
+        // ---- الأمان ----
+        public bool SanitizeFileName { get; set; } = true;    // تنظيف اسم الملف من رموز خطرة
+        public bool BlockDoubleExtension { get; set; } = true;// منع ملفات مثل file.pdf.exe
+        public bool ScanOnUpload { get; set; } = false;       // فحص أمني/فيروسات بعد الرفع
+
+        // ---- رسائل التحقق ----
+        public string? ErrorMessageSize { get; set; }          // رسالة تجاوز الحجم
+        public string? ErrorMessageType { get; set; }          // رسالة نوع غير مدعوم
+        public string? ErrorMessageCount { get; set; }         // رسالة تجاوز عدد الملفات
+
+        public string? ErrorMessageTotal { get; set; }         // رسالة تجاوز إجمالي الحجم
+
+        // ---- تحكم برمجي ----
+        public string? UploadCategory { get; set; }            // تصنيف منطقي للملف (Docs, Images…)
+        public string? BindToEntityId { get; set; }            // ربط الملف بسجل معين (ID)
+        public bool AutoUpload { get; set; } = false;          // رفع فوري أو مع حفظ الفورم
+        public bool ReadOnlyFiles { get; set; } = false;       // عرض فقط بدون حذف/استبدال
+
+        // ---- تكامل API ----
+        public string? UploadEndpoint { get; set; }            // API رفع الملف (AutoUpload)
+        public string? PreviewEndpoint { get; set; }           // API معاينة الملف
+        public string? DownloadEndpoint { get; set; }          // API تحميل الملف
+        public string? DeleteEndpoint { get; set; }            // API حذف الملف
+
+        
 
         public SmartTable.TableConfig? Table { get; set; }
 
@@ -234,6 +300,7 @@ namespace SmartFoundation.UI.ViewModels.SmartForm
         public string? SuccessMessage { get; set; }
         public string? ErrorMessage { get; set; }
         public string? RedirectUrl { get; set; }
+        public string? Enctype { get; set; } //  add this
         public List<FieldConfig> Fields { get; set; } = new();
         public List<FormButtonConfig> Buttons { get; set; } = new();
     }
