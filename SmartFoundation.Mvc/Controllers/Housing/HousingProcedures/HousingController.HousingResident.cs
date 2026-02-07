@@ -425,7 +425,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                     Edit = new TableAction
                     {
-                        Label = "الاجراء التالي",
+                        Label = "اتخاذ اجراء",
                         Icon = "fa-solid fa-pen",
                         Color = "success",
                         IsEdit = true,
@@ -697,7 +697,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 Response.Headers["Content-Disposition"] = "inline; filename=BuildingType.pdf";
                 return File(pdfBytes, "application/pdf");
             }
-            return View("HousingResidents/HousingResident", page);
+            return View("HousingProcedures/HousingResident", page);
         }
     }
 }

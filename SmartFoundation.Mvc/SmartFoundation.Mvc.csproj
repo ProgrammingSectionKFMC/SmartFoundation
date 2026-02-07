@@ -14,7 +14,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Controllers\ElectronicBillSystem\MeterRead\NewFolder\" />
     <Folder Include="wwwroot\lib\fontawesome\" />
   </ItemGroup>
 
@@ -35,6 +34,14 @@
   <Content Include="AiModels\**\*.*">
     <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
   </Content>
+</ItemGroup>
+
+
+<ItemGroup>
+  <Compile Remove="Controllers\ElectronicBillSystem\MeterRead\NewFolder\**" />
+  <Content Remove="Controllers\ElectronicBillSystem\MeterRead\NewFolder\**" />
+  <EmbeddedResource Remove="Controllers\ElectronicBillSystem\MeterRead\NewFolder\**" />
+  <None Remove="Controllers\ElectronicBillSystem\MeterRead\NewFolder\**" />
 </ItemGroup>
 
 </Project>
