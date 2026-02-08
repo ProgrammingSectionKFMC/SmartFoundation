@@ -46,7 +46,9 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             };
 
             var rowsList = new List<Dictionary<string, object?>>();
+            var rowsList_dt3 = new List<Dictionary<string, object?>>();
             var dynamicColumns = new List<TableColumn>();
+            var dynamicColumns_dt3 = new List<TableColumn>();
 
             DataSet ds = await _mastersServies.GetDataLoadDataSetAsync(spParameters);
 
@@ -54,20 +56,35 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             SplitDataSet(ds);
 
 
-            int count = 0;
+            decimal AllAmount = 0m;
+            decimal RentAmount = 0m;
+            decimal ServiceAmount = 0m;
+
+            if (dt4 != null && dt4.Rows.Count > 0)
+            {
+                DataRow row = dt4.Rows[0];
+
+                if (dt4.Columns.Contains("AllAmountresidual") && row["AllAmountresidual"] != DBNull.Value)
+                    AllAmount = Convert.ToDecimal(row["AllAmountresidual"]);
+
+                if (dt4.Columns.Contains("RentBillsAmountresidual") && row["RentBillsAmountresidual"] != DBNull.Value)
+                    RentAmount = Convert.ToDecimal(row["RentBillsAmountresidual"]);
+
+                if (dt4.Columns.Contains("ServiceBillsAmountresidual") && row["ServiceBillsAmountresidual"] != DBNull.Value)
+                    ServiceAmount = Convert.ToDecimal(row["ServiceBillsAmountresidual"]);
 
 
-            
-                count = dt2.Rows.Count;
-                if (count > 0)
-                {
-                    TempData["countBiggerThanzero"] = $"متبقي لديك عدد {count} مستفيد  لم تقم بإنهاء اجراءاتهم لحد الان !! ";
-                }
-                else if (count == 0 )  // ✅ تصحيح: == بدلاً من =
-                {
-                    TempData["countEqualzero"] = "تم انهاء اجراءات جميع المستفيدين بنجاح ";
-                }
-            
+                if (AllAmount > 0)
+                    TempData["Foridara"] = $"متبقي على المستفيد مطالبات بقيمة {AllAmount} ⃁ قم بالتحقق منها الان";
+
+                if (AllAmount < 0)
+                    TempData["ForResident"] = $"متبقي للمستفيد مبالغ زائدة بقيمة {AllAmount} ⃁ قم بالتحقق منها الان";
+
+                if (AllAmount == 0)
+                    TempData["countZero"] = $"لايوجد مطالبات على المستفيد";
+              
+
+            }
 
 
 
@@ -80,6 +97,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             }
 
             string rowIdField = "";
+            string rowIdField_dt3 = "";
             bool canMeterReadForOccubentAndExit = false;
             bool canUpdateMeterReadForOccubentAndExit = false;
            
@@ -301,6 +319,87 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                             dict["p27"] = Get("note");
 
                             rowsList.Add(dict);
+                        }
+                    }
+
+
+                    if (dt3 != null && dt3.Columns.Count > 0)
+                    {
+                        // RowId
+                        rowIdField_dt3 = "Order_";
+                        var possibleIdNames3 = new[] { "Order_", "order_", "Id", "ID" };
+                        rowIdField_dt3 = possibleIdNames3.FirstOrDefault(n => dt3.Columns.Contains(n))
+                                     ?? dt3.Columns[0].ColumnName;
+
+                        // عناوين الأعمدة بالعربي
+                        var headerMap3 = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                        {
+                            
+
+                            ["TotalRentBillsAmount"] = "اجمالي مطالبات الايجار",
+                            ["TotalRentBillsPaid"] = "اجمالي المسدد من الايجار",
+                            ["RentBillsAmountresidual"] = "المتبقي من الايجار",
+                            ["TotalServiceBillsAmount"] = "اجمالي مطالبات فواتير الخدمات",
+                            ["TotalServiceBillsPaid"] = "اجمالي المسدد من فواتير الخدمات",
+                            ["ServiceBillsAmountresidual"] = "المتبقي من فواتير الخدمات",
+                            ["AllAmountresidual"] = "اجمالي المطالبات",
+                            ["RentBillsStatus"] = "حالة مطالبات الايجار",
+                            ["ServiceBillStatus"] = "حالة مطالبات فواتير الخدمات"
+                        };
+
+                        // الأعمدة
+                        foreach (DataColumn c in dt3.Columns)
+                        {
+                            string colType = "text";
+                            var t = c.DataType;
+                            if (t == typeof(bool)) colType = "bool";
+                            else if (t == typeof(DateTime)) colType = "date";
+                            else if (t == typeof(byte) || t == typeof(short) || t == typeof(int) || t == typeof(long)
+                                     || t == typeof(float) || t == typeof(double) || t == typeof(decimal))
+                                colType = "number";
+
+
+                            bool isresidentInfoID = c.ColumnName.Equals("residentInfoID", StringComparison.OrdinalIgnoreCase);
+
+                            bool isOrder_ = c.ColumnName.Equals("Order_", StringComparison.OrdinalIgnoreCase);
+                            bool isRentBillsStatusID = c.ColumnName.Equals("RentBillsStatusID", StringComparison.OrdinalIgnoreCase);
+                            bool isServiceBillStatusID = c.ColumnName.Equals("ServiceBillStatusID", StringComparison.OrdinalIgnoreCase);
+
+
+
+                            dynamicColumns_dt3.Add(new TableColumn
+                            {
+                                Field = c.ColumnName,
+                                Label = headerMap3.TryGetValue(c.ColumnName, out var label) ? label : c.ColumnName,
+                                Type = colType,
+                                Sortable = true
+                                 ,
+                                Visible = !( isresidentInfoID  || isOrder_|| isRentBillsStatusID || isServiceBillStatusID)
+                            });
+                        }
+
+                        // الصفوف
+                        foreach (DataRow r in dt3.Rows)
+                        {
+                            var dict3 = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+                            foreach (DataColumn c in dt3.Columns)
+                            {
+                                var val = r[c];
+                                dict3[c.ColumnName] = val == DBNull.Value ? null : val;
+                            }
+
+                            // p01..p05
+                            object? Get(string key) => dict3.TryGetValue(key, out var v) ? v : null;
+                            dict3["p01"] = Get("Order_") ?? Get("Order_");
+                            dict3["p02"] = Get("residentInfoID");
+                            dict3["p03"] = Get("TotalRentBillsAmount");
+                            dict3["p04"] = Get("RentBillsAmountresidual");
+                            dict3["p05"] = Get("TotalServiceBillsAmount");
+                            dict3["p06"] = Get("TotalServiceBillsPaid");
+                            dict3["p07"] = Get("ServiceBillsAmountresidual");
+                            dict3["p08"] = Get("AllAmountresidual");
+
+                            rowsList_dt3.Add(dict3);
                         }
                     }
                 }
@@ -560,6 +659,108 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 }
             };
 
+
+            var dsModel3 = new SmartTableDsModel
+            {
+                PageTitle = "التدقيق المالي لحالات الامهال والاخلاء",
+                Columns = dynamicColumns_dt3,
+                Rows = rowsList_dt3,
+                RowIdField = rowIdField_dt3,
+                PageSize = 10,
+                PageSizes = new List<int> { 10, 25, 50, 200, },
+                QuickSearchFields = dynamicColumns_dt3.Select(c => c.Field).Take(4).ToList(),
+                Searchable = false,
+                AllowExport = false,
+                ShowRowBorders = false,
+                EnablePagination = false, // جديد
+                ShowPageSizeSelector = false, // جديد
+                PanelTitle = "التدقيق المالي لحالات الامهال والاخلاء",
+                //TabelLabel = "خطابات التسكين",
+                //TabelLabelIcon = "fa-solid fa-list",
+                ShowToolbar = true,
+                EnableCellCopy = false,
+                RenderAsToggle = true,
+                ToggleLabel = "التسوية المالية",
+                ToggleIcon = "fa-solid fa-file-signature",
+                ToggleDefaultOpen = true,
+                ShowToggleCount = false,
+
+
+                Toolbar = new TableToolbarConfig
+                {
+                    ShowRefresh = false,
+                    ShowColumns = true,
+                    ShowExportCsv = false,
+                    ShowExportExcel = false,
+                    ShowEdit2 = true,
+                    ShowDelete2 = true,
+                    ShowBulkDelete = false,
+
+
+
+
+
+                   
+
+                    Edit2 = new TableAction
+                    {
+                        Label = "سداد / اعادة مبالغ الايجار",
+                        Icon = "fa fa-home",
+                        Color = "info",
+                        //Placement = TableActionPlacement.ActionsMenu, 
+                        IsEdit = true,
+                        OpenModal = true,
+                        ModalTitle = "سداد / اعادة مبالغ الايجار",
+                        ModalMessage = "ملاحظة: جميع التعديلات مرصودة",
+                        ModalMessageIcon = "fa-solid fa-circle-info",
+                        ModalMessageClass = "bg-sky-100 text-sky-700",
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "BuildingTypeEditForm",
+                            Title = "سداد / اعادة مبالغ الايجار",
+                            Method = "post",
+                            ActionUrl = "/crud/update",
+                            SubmitText = "حفظ التعديلات",
+                            CancelText = "إلغاء",
+                            Fields = UpdateMeterReadFields
+                        },
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1
+                    },
+
+
+                    Delete2 = new TableAction
+                     {
+                         Label = "سداد / اعادة مبالغ فواتير الخدمات",
+                         Icon = "fa fa-money-bill-alt",
+                         Color = "info",
+                         //Placement = TableActionPlacement.ActionsMenu, 
+                         IsEdit = true,
+                         OpenModal = true,
+                         ModalTitle = "سداد / اعادة مبالغ فواتير الخدمات",
+                         ModalMessage = "ملاحظة: جميع التعديلات مرصودة",
+                         ModalMessageIcon = "fa-solid fa-circle-info",
+                         ModalMessageClass = "bg-sky-100 text-sky-700",
+                         OpenForm = new FormConfig
+                         {
+                             FormId = "BuildingTypeEditForm",
+                             Title = "سداد / اعادة مبالغ فواتير الخدمات",
+                             Method = "post",
+                             ActionUrl = "/crud/update",
+                             SubmitText = "حفظ التعديلات",
+                             CancelText = "إلغاء",
+                             Fields = UpdateMeterReadFields
+                         },
+                         RequireSelection = true,
+                         MinSelection = 1,
+                         MaxSelection = 1
+                     },
+
+                }
+
+            };
+
             //var dsModel = new SmartTableDsModel
             //{
             //    PageTitle = "قراءة عدادات التسكين والاخلاء",
@@ -695,69 +896,236 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             //};
 
 
-               dsModel.StyleRules = new List<TableStyleRule>
+            dsModel3.StyleRules = new List<TableStyleRule>
                     {
-                        new TableStyleRule
+
+                         new TableStyleRule
                         {
                             Target = "row",
-                            Field = "ReadStatusInt",
-                            Op = "eq",
-                            Value = "1",
-                            Priority = 1,
-
-                            PillEnabled = true,
-                            PillField = "ReadStatus",
-                            PillTextField = "ReadStatus",
-                            PillCssClass = "pill pill-green",
-                            PillMode = "replace"
-                        },
-
-                        new TableStyleRule
-                        {
-                            Target = "row",
-                            Field = "ReadStatusInt",
+                            Field = "RentBillsStatusID",
                             Op = "eq",
                             Value = "0",
                             Priority = 1,
 
                             PillEnabled = true,
-                            PillField = "ReadStatus",
-                            PillTextField = "ReadStatus",
+                            PillField = "RentBillsStatus",
+                            PillTextField = "RentBillsStatus",
+                            PillCssClass = "pill pill-red",
+                            PillMode = "replace"
+                        },
+                        new TableStyleRule
+                        {
+                            Target = "row",
+                            Field = "RentBillsStatusID",
+                            Op = "eq",
+                            Value = "1",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "RentBillsStatus",
+                            PillTextField = "RentBillsStatus",
                             PillCssClass = "pill pill-yellow",
                             PillMode = "replace"
                         },
 
-                        
-                        //new TableStyleRule
-                        //{
-                        //    Target = "row",
-                        //    Field = "LastActionTypeID",
-                        //    Op = "eq",
-                        //    Value = "45",
-                        //    Priority = 1,
+                        new TableStyleRule
+                        {
 
-                        //    PillEnabled = true,
-                        //    PillField = "buildingActionTypeResidentAlias",
-                        //    PillTextField = "buildingActionTypeResidentAlias", //  من DB
-                        //    PillCssClass = "pill pill-gray",
-                        //    PillMode = "replace"
-                        //}
+                            Target = "row",
+                            Field = "RentBillsStatusID",
+                            Op = "eq",
+                            Value = "2",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "RentBillsStatus",
+                            PillTextField = "RentBillsStatus",
+                            PillCssClass = "pill pill-green",
+                            PillMode = "replace"
+                        },
+
+
+                          new TableStyleRule
+                        {
+                            Target = "row",
+                            Field = "RentBillsStatusID",
+                            Op = "eq",
+                            Value = "0",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "RentBillsAmountresidual",
+                            PillTextField = "RentBillsAmountresidual",
+                            PillCssClass = "pill pill-red",
+                            PillMode = "replace"
+                        },
+                        new TableStyleRule
+                        {
+                            Target = "row",
+                            Field = "RentBillsStatusID",
+                            Op = "eq",
+                            Value = "1",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "RentBillsAmountresidual",
+                            PillTextField = "RentBillsAmountresidual",
+                            PillCssClass = "pill pill-yellow",
+                            PillMode = "replace"
+                        },
+
+                        new TableStyleRule
+                        {
+
+                            Target = "row",
+                            Field = "RentBillsStatusID",
+                            Op = "eq",
+                            Value = "2",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "RentBillsStatus",
+                            PillTextField = "RentBillsAmountresidual",
+                            PillCssClass = "pill pill-green",
+                            PillMode = "replace"
+                        },
+
+
+
+
+
+
+
+
+                         new TableStyleRule
+                        {
+                            Target = "row",
+                            Field = "ServiceBillStatusID",
+                            Op = "eq",
+                            Value = "0",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "ServiceBillStatus",
+                            PillTextField = "ServiceBillStatus",
+                            PillCssClass = "pill pill-red",
+                            PillMode = "replace"
+                        },
+                        new TableStyleRule
+                        {
+                            Target = "row",
+                            Field = "ServiceBillStatusID",
+                            Op = "eq",
+                            Value = "1",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "ServiceBillStatus",
+                            PillTextField = "ServiceBillStatus",
+                            PillCssClass = "pill pill-yellow",
+                            PillMode = "replace"
+                        },
+
+                        new TableStyleRule
+                        {
+
+                            Target = "row",
+                            Field = "ServiceBillStatusID",
+                            Op = "eq",
+                            Value = "2",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "ServiceBillStatus",
+                            PillTextField = "ServiceBillStatus",
+                            PillCssClass = "pill pill-green",
+                            PillMode = "replace"
+                        },
+
+
+                        new TableStyleRule
+                        {
+                            Target = "row",
+                            Field = "ServiceBillStatusID",
+                            Op = "eq",
+                            Value = "0",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "ServiceBillsAmountresidual",
+                            PillTextField = "ServiceBillsAmountresidual",
+                            PillCssClass = "pill pill-red",
+                            PillMode = "replace"
+                        },
+                        new TableStyleRule
+                        {
+                            Target = "row",
+                            Field = "ServiceBillStatusID",
+                            Op = "eq",
+                            Value = "1",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "ServiceBillsAmountresidual",
+                            PillTextField = "ServiceBillsAmountresidual",
+                            PillCssClass = "pill pill-yellow",
+                            PillMode = "replace"
+                        },
+
+                        new TableStyleRule
+                        {
+
+                            Target = "row",
+                            Field = "ServiceBillStatusID",
+                            Op = "eq",
+                            Value = "2",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "ServiceBillsAmountresidual",
+                            PillTextField = "ServiceBillsAmountresidual",
+                            PillCssClass = "pill pill-green",
+                            PillMode = "replace"
+                        },
+
                     };
 
 
 
+            bool dsModelHasRows = dt1 != null && dt1.Rows.Count > 0;
+
+            bool dsModel3HasRows = dt3 != null && dt3.Rows.Count > 0;
 
 
 
+            ViewBag.dsModelHasRows = dsModelHasRows;
+            ViewBag.dsModel2HasRows = dsModel3HasRows;
+
+
+            //return View("HousingDefinitions/BuildingType", dsModel);
 
             var page = new SmartPageViewModel
             {
-               PageTitle = dsModel.PageTitle,
-               PanelTitle = dsModel.PanelTitle,
-               PanelIcon = "fa-bolt",
-               Form = form,
-               TableDS = ready ? dsModel : null
+                PageTitle = dsModel3.PageTitle,
+                PanelTitle = dsModel3.PanelTitle,
+                PanelIcon = "fa fa-list",
+
+                Form = form,
+                TableDS = dsModelHasRows ? dsModel : null,
+                TableDS1 = dsModel3HasRows ? dsModel3 : null
+
             };
+
+
+
+            //var page = new SmartPageViewModel
+            //{
+            //   PageTitle = dsModel.PageTitle,
+            //   PanelTitle = dsModel.PanelTitle,
+            //   PanelIcon = "fa-bolt",
+            //   Form = form,
+            //   TableDS = ready ? dsModel : null
+            //};
 
 
             if (pdf == 1)

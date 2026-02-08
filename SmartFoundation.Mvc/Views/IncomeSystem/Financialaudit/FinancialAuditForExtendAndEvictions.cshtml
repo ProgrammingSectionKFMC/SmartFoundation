@@ -3,21 +3,30 @@
     ViewData["Title"] = Model.PageTitle;
 }
 
-@if (TempData["countBiggerThanzero"] != null)
+@if (TempData["Foridara"] != null)
 {
     <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
         <i class="fa fa-info-circle me-2"></i>
-        @TempData["countBiggerThanzero"]
+        @TempData["Foridara"]
     </div>
 }
 
-@if (TempData["countEqualzero"] != null)
+@if (TempData["countZero"] != null)
 {
     <div class="mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-green-800">
         <i class="fa fa-check-circle me-2"></i>
-        @TempData["countEqualzero"]
+        @TempData["countZero"]
     </div>
 }
+
+@if (TempData["ForResident"] != null)
+{
+    <div class="mb-4 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-800">
+        <i class="fa fa-check-circle me-2"></i>
+        @TempData["ForResident"]
+    </div>
+}
+
 
 @await Component.InvokeAsync("SmartRenderer", new { model = Model })
 
