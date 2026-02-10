@@ -358,47 +358,50 @@
 
 
                 @* ===== أزرار مباشرة: Placement غير ActionsMenu ===== *@
-                <template x-for="act in [
-          ...(toolbar.showAdd !== false && toolbar.add ? [toolbar.add] : []),
-          ...(toolbar.showAdd1 !== false && toolbar.add1 ? [toolbar.add1] : []),
-          ...(toolbar.showAdd2 !== false && toolbar.add2 ? [toolbar.add2] : []),
-          ...(toolbar.showEdit !== false && toolbar.edit ? [toolbar.edit] : []),
-          ...(toolbar.showEdit1 !== false && toolbar.edit1 ? [toolbar.edit1] : []),
-          ...(toolbar.showEdit2 !== false && toolbar.edit2 ? [toolbar.edit2] : []),
-          ...(toolbar.showDelete !== false && toolbar.delete ? [toolbar.delete] : []),
-          ...(toolbar.showDelete1 !== false && toolbar.delete1 ? [toolbar.delete1] : []),
-          ...(toolbar.showDelete2 !== false && toolbar.delete2 ? [toolbar.delete2] : []),
-          ...(toolbar.showPrint !== false && toolbar.print ? [toolbar.print] : []),
-          ...(toolbar.showPrint1 !== false && toolbar.print1 ? [toolbar.print1] : []),
-          ...(toolbar.customActions || [])
-          ].filter(a => a && a.show !== false && (a.placement ?? 'Button') !== 'ActionsMenu')"
-    :key="act.label">
+                <template x-for="(act, actIdx) in [
+  { action: toolbar.add,    show: toolbar.showAdd,    enable: toolbar.enableAdd ?? true,    type: 'add' },
+  { action: toolbar.add1,   show: toolbar.showAdd1,   enable: toolbar.enableAdd1 ?? true,   type: 'add1' },
+  { action: toolbar.add2,   show: toolbar.showAdd2,   enable: toolbar.enableAdd2 ?? true,   type: 'add2' },
+  { action: toolbar.edit,   show: toolbar.showEdit,   enable: toolbar.enableEdit ?? true,   type: 'edit' },
+  { action: toolbar.edit1,  show: toolbar.showEdit1,  enable: toolbar.enableEdit1 ?? true,  type: 'edit1' },
+  { action: toolbar.edit2,  show: toolbar.showEdit2,  enable: toolbar.enableEdit2 ?? true,  type: 'edit2' },
+  { action: toolbar.delete, show: toolbar.showDelete, enable: toolbar.enableDelete ?? true, type: 'delete' },
+  { action: toolbar.delete1, show: toolbar.showDelete1, enable: toolbar.enableDelete1 ?? true, type: 'delete1' },
+  { action: toolbar.delete2, show: toolbar.showDelete2, enable: toolbar.enableDelete2 ?? true, type: 'delete2' },
+  { action: toolbar.print,  show: toolbar.showPrint,  enable: true, type: 'print' },
+  { action: toolbar.print1, show: toolbar.showPrint1,  enable: true, type: 'print1' },
+  ...(toolbar.customActions || []).map(a => ({ action: a, show: true, enable: true, type: 'custom' }))
+].filter(x => x.action && x.show !== false && (x.action.placement ?? 'Button') !== 'ActionsMenu')"
+          :key="actIdx">
 
     <button type="button"
             class="btn"
-            :class="'btn-' + (act.color ?? 'secondary')"
-            x-on:click="doAction(act, act.requireSelection ? getSingleSelection() : null)"
-            :disabled="act.requireSelection && selectedKeys.size !== 1">
-        <i :class="act.icon"></i>
-        <span x-text="act.label"></span>
+            :class="[
+              'btn-' + (act.action.color ?? 'secondary'),
+              !act.enable || (act.action.requireSelection && selectedKeys.size !== 1) ? 'opacity-50 cursor-not-allowed' : ''
+            ]"
+            x-on:click="act.enable ? doAction(act.action, act.action.requireSelection ? getSingleSelection() : null) : toastr.warning('هذا الإجراء غير متاح حالياً')"
+            :disabled="!act.enable || (act.action.requireSelection && selectedKeys.size !== 1)">
+        <i :class="act.action.icon"></i>
+        <span x-text="act.action.label"></span>
     </button>
 </template>
 
-                @* ===== زر الإجراءات: يظهر إذا فيه أي Action Placement=ActionsMenu ===== *@
-                <template x-if="[
-          ...(toolbar.showAdd !== false && toolbar.add ? [toolbar.add] : []),
-          ...(toolbar.showAdd1 !== false && toolbar.add1 ? [toolbar.add1] : []),
-          ...(toolbar.showAdd2 !== false && toolbar.add2 ? [toolbar.add2] : []),
-          ...(toolbar.showEdit !== false && toolbar.edit ? [toolbar.edit] : []),
-          ...(toolbar.showEdit1 !== false && toolbar.edit1 ? [toolbar.edit1] : []),
-          ...(toolbar.showEdit2 !== false && toolbar.edit2 ? [toolbar.edit2] : []),
-          ...(toolbar.showDelete !== false && toolbar.delete ? [toolbar.delete] : []),
-          ...(toolbar.showDelete1 !== false && toolbar.delete1 ? [toolbar.delete1] : []),
-          ...(toolbar.showDelete2 !== false && toolbar.delete2 ? [toolbar.delete2] : []),
-          ...(toolbar.showPrint !== false && toolbar.print ? [toolbar.print] : []),
-          ...(toolbar.showPrint1 !== false && toolbar.print1 ? [toolbar.print1] : []),
-          ...(toolbar.customActions || [])
-          ].some(a => a && a.show !== false && a.placement === 'ActionsMenu')">
+@* ===== زر الإجراءات: يظهر إذا فيه أي Action Placement=ActionsMenu ===== *@
+<template x-if="[
+  { action: toolbar.add,    show: toolbar.showAdd,    enable: toolbar.enableAdd ?? true },
+  { action: toolbar.add1,   show: toolbar.showAdd1,   enable: toolbar.enableAdd1 ?? true },
+  { action: toolbar.add2,   show: toolbar.showAdd2,   enable: toolbar.enableAdd2 ?? true },
+  { action: toolbar.edit,   show: toolbar.showEdit,   enable: toolbar.enableEdit ?? true },
+  { action: toolbar.edit1,  show: toolbar.showEdit1,  enable: toolbar.enableEdit1 ?? true },
+  { action: toolbar.edit2,  show: toolbar.showEdit2,  enable: toolbar.enableEdit2 ?? true },
+  { action: toolbar.delete, show: toolbar.showDelete, enable: toolbar.enableDelete ?? true },
+  { action: toolbar.delete1, show: toolbar.showDelete1, enable: toolbar.enableDelete1 ?? true },
+  { action: toolbar.delete2, show: toolbar.showDelete2, enable: toolbar.enableDelete2 ?? true },
+  { action: toolbar.print,  show: toolbar.showPrint,  enable: true },
+  { action: toolbar.print1, show: toolbar.showPrint1, enable: true },
+  ...(toolbar.customActions || []).map(a => ({ action: a, show: true, enable: true }))
+].some(x => x.action && x.show !== false && x.action.placement === 'ActionsMenu')">
 
     <div class="relative" x-data="{ open:false }">
         <button type="button"
@@ -413,31 +416,32 @@
              x-on:click.outside="open=false"
              class="absolute right-0 z-50 mt-2 w-56 rounded border bg-white shadow">
 
-            <template x-for="act in [
-                      ...(toolbar.showAdd !== false && toolbar.add ? [toolbar.add] : []),
-                      ...(toolbar.showAdd1 !== false && toolbar.add1 ? [toolbar.add1] : []),
-                      ...(toolbar.showAdd2 !== false && toolbar.add2 ? [toolbar.add2] : []),
-                      ...(toolbar.showEdit !== false && toolbar.edit ? [toolbar.edit] : []),
-                      ...(toolbar.showEdit1 !== false && toolbar.edit1 ? [toolbar.edit1] : []),
-                      ...(toolbar.showEdit2 !== false && toolbar.edit2 ? [toolbar.edit2] : []),
-                      ...(toolbar.showDelete !== false && toolbar.delete ? [toolbar.delete] : []),
-                      ...(toolbar.showDelete1 !== false && toolbar.delete1 ? [toolbar.delete1] : []),
-                      ...(toolbar.showDelete2 !== false && toolbar.delete2 ? [toolbar.delete2] : []),
-                      ...(toolbar.showPrint !== false && toolbar.print ? [toolbar.print] : []),
-                      ...(toolbar.showPrint1 !== false && toolbar.print1 ? [toolbar.print1] : []),
-                      ...(toolbar.customActions || [])
-                      ].filter(a => a && a.show !== false && a.placement === 'ActionsMenu')"
-                :key="act.label">
+            <template x-for="(act, actIdx) in [
+              { action: toolbar.add,    show: toolbar.showAdd,    enable: toolbar.enableAdd ?? true },
+              { action: toolbar.add1,   show: toolbar.showAdd1,   enable: toolbar.enableAdd1 ?? true },
+              { action: toolbar.add2,   show: toolbar.showAdd2,   enable: toolbar.enableAdd2 ?? true },
+              { action: toolbar.edit,   show: toolbar.showEdit,   enable: toolbar.enableEdit ?? true },
+              { action: toolbar.edit1,  show: toolbar.showEdit1,  enable: toolbar.enableEdit1 ?? true },
+              { action: toolbar.edit2,  show: toolbar.showEdit2,  enable: toolbar.enableEdit2 ?? true },
+              { action: toolbar.delete, show: toolbar.showDelete, enable: toolbar.enableDelete ?? true },
+              { action: toolbar.delete1, show: toolbar.showDelete1, enable: toolbar.enableDelete1 ?? true },
+              { action: toolbar.delete2, show: toolbar.showDelete2, enable: toolbar.enableDelete2 ?? true },
+              { action: toolbar.print,  show: toolbar.showPrint,  enable: true },
+              { action: toolbar.print1, show: toolbar.showPrint1, enable: true },
+              ...(toolbar.customActions || []).map(a => ({ action: a, show: true, enable: true }))
+            ].filter(x => x.action && x.show !== false && x.action.placement === 'ActionsMenu')"
+                      :key="actIdx">
 
                 <span class="sf-tipwrap"
-                      :data-tip="(act.requireSelection && selectedKeys.size !== 1) ? 'يتطلب اختيار صف' : null">
+                      :data-tip="!act.enable ? 'هذا الإجراء غير متاح حالياً' : (act.action.requireSelection && selectedKeys.size !== 1) ? 'يتطلب اختيار صف' : null">
 
                     <button type="button"
                             class="w-full px-3 py-2 text-right hover:bg-gray-100"
-                            x-on:click="doAction(act, act.requireSelection ? getSingleSelection() : null); open=false"
-                            :disabled="act.requireSelection && selectedKeys.size !== 1">
-                        <i :class="act.icon"></i>
-                        <span x-text="act.label"></span>
+                            :class="!act.enable ? 'opacity-50 cursor-not-allowed' : ''"
+                            x-on:click="act.enable ? (doAction(act.action, act.action.requireSelection ? getSingleSelection() : null), open=false) : toastr.warning('هذا الإجراء غير متاح حالياً')"
+                            :disabled="!act.enable || (act.action.requireSelection && selectedKeys.size !== 1)">
+                        <i :class="act.action.icon"></i>
+                        <span x-text="act.action.label"></span>
                     </button>
 
                 </span>

@@ -13,18 +13,18 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 {
     public partial class HousingController : Controller
     {
-        public async Task<IActionResult> HousingExtend(int pdf = 0)
+        public async Task<IActionResult> HousingExit(int pdf = 0)
         {
             //  قراءة السيشن والكونتكست
             if (!InitPageContext(out var redirect))
                 return redirect!;
 
             ControllerName = nameof(Housing);
-            PageName = string.IsNullOrWhiteSpace(PageName) ? "HousingExtend" : PageName;
+            PageName = string.IsNullOrWhiteSpace(PageName) ? "HousingExit" : PageName;
 
             var spParameters = new object?[]
             {
-             PageName ?? "HousingExtend",
+             PageName ?? "HousingExit",
              IdaraId,
              usersId,
              HostName
@@ -46,11 +46,11 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             //}
 
             string rowIdField = "";
-            bool canHOUSINGEXTEND = false;
-            bool canEDITHOUSINGEXTEND = false;
-            bool canCANCELHOUSINGEXTEND = false;
-            bool canSENDHOUSINGEXTENDTOFINANCE = false;
-            bool canAPPROVEEXTEND = false;
+            bool canHOUSINGHousingExit = false;
+            bool canEDITHOUSINGHousingExit = false;
+            bool canCANCELHOUSINGHousingExit = false;
+            bool canSENDHOUSINGHousingExitTOFINANCE = false;
+            bool canAPPROVEHousingExit = false;
            
 
 
@@ -122,12 +122,11 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     {
                         var permissionName = row["permissionTypeName_E"]?.ToString()?.Trim().ToUpper();
 
-                        if (permissionName == "HOUSINGEXTEND") canHOUSINGEXTEND = true;
-                        if (permissionName == "EDITHOUSINGEXTEND") canEDITHOUSINGEXTEND = true;
-                        if (permissionName == "CANCELHOUSINGEXTEND") canCANCELHOUSINGEXTEND = true;
-                        if (permissionName == "SENDHOUSINGEXTENDTOFINANCE") canSENDHOUSINGEXTENDTOFINANCE = true;
-                        if (permissionName == "APPROVEEXTEND") canAPPROVEEXTEND = true;
-
+                        if (permissionName == "HOUSINGEXIT") canHOUSINGHousingExit = true;
+                        if (permissionName == "EDITHOUSINGEXIT") canEDITHOUSINGHousingExit = true;
+                        if (permissionName == "CANCELHOUSINGEXIT") canCANCELHOUSINGHousingExit = true;
+                        if (permissionName == "SENDHOUSINGEXITTOFINANCE") canSENDHOUSINGHousingExitTOFINANCE = true;
+                        if (permissionName == "APPROVEHOUSINGEXIT") canAPPROVEHousingExit = true;
 
                     }
 
@@ -147,8 +146,6 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ["GeneralNo"] = "الرقم العام",
                             ["LastActionDecisionNo"] = "رقم خطاب الموافقة",
                             ["LastActionDecisionDate"] = "تاريخ خطاب الموافقة",
-                            ["ExtendFromDate"] = "بداية الامهال",
-                            ["ExtendToDate"] = "نهاية الامهال",
                             ["WaitingClassName"] = "فئة سجل الانتظار",
                             ["WaitingOrderTypeName"] = "نوع سجل الانتظار",
                             ["ActionNote"] = "ملاحظات",
@@ -229,8 +226,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             dict["p21"] = Get("LastActionID");
                             dict["p22"] = Get("LastActionDecisionDate");
                             dict["p23"] = Get("LastActionDecisionNo");
-                            dict["p24"] = Get("ExtendFromDate");
-                            dict["p25"] = Get("ExtendToDate");
+
 
 
                             rowsList.Add(dict);
@@ -277,10 +273,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
                 
-                new FieldConfig { Name = "p22", Label = "تاريخ خطاب موافقة الامهال", Type = "date", ColCss = "3",Required = true },
-                new FieldConfig { Name = "p23", Label = "رقم خطاب موافقة الامهال", Type = "text", ColCss = "3",Required = true },
-                new FieldConfig { Name = "p24", Label = "تاريخ بداية الامهال", Type = "date", ColCss = "3",Required = true },
-                new FieldConfig { Name = "p25", Label = "تاريخ نهاية الامهال", Type = "date", ColCss = "3",Required = true },
+                new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "date", ColCss = "3",Required = true },
+
 
                 new FieldConfig { Name = "p12", Label = "ملاحظات", Type = "textarea", ColCss = "12",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
 
@@ -323,10 +317,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
 
-                new FieldConfig { Name = "p22", Label = "تاريخ خطاب موافقة الامهال", Type = "date", ColCss = "3",Required = true },
-                new FieldConfig { Name = "p23", Label = "رقم خطاب موافقة الامهال", Type = "text", ColCss = "3",Required = true },
-                new FieldConfig { Name = "p24", Label = "تاريخ بداية الامهال", Type = "date", ColCss = "3",Required = true },
-                new FieldConfig { Name = "p25", Label = "تاريخ نهاية الامهال", Type = "date", ColCss = "3",Required = true },
+                new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "date", ColCss = "3",Required = true },
+
 
                 new FieldConfig { Name = "p12", Label = "ملاحظات", Type = "textarea", ColCss = "12",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
 
@@ -370,10 +362,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
 
-                new FieldConfig { Name = "p22", Label = "تاريخ خطاب موافقة الامهال", Type = "date", ColCss = "3",Required = true, Readonly = true },
-                new FieldConfig { Name = "p23", Label = "رقم خطاب موافقة الامهال", Type = "text", ColCss = "3",Required = true, Readonly = true },
-                new FieldConfig { Name = "p24", Label = "تاريخ بداية الامهال", Type = "date", ColCss = "3",Required = true, Readonly = true },
-                new FieldConfig { Name = "p25", Label = "تاريخ نهاية الامهال", Type = "date", ColCss = "3",Required = true, Readonly = true },
+                new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "date", ColCss = "3",Required = true },
+
 
                 new FieldConfig { Name = "p26", Label = "ملاحظات", Type = "textarea", ColCss = "12",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
 
@@ -417,10 +407,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
 
-                new FieldConfig { Name = "p22", Label = "تاريخ خطاب موافقة الامهال", Type = "date", ColCss = "3",Required = true , Readonly = true },
-                new FieldConfig { Name = "p23", Label = "رقم خطاب موافقة الامهال", Type = "text", ColCss = "3",Required = true , Readonly = true },
-                new FieldConfig { Name = "p24", Label = "تاريخ بداية الامهال", Type = "date", ColCss = "3",Required = true , Readonly = true },
-                new FieldConfig { Name = "p25", Label = "تاريخ نهاية الامهال", Type = "date", ColCss = "3",Required = true , Readonly = true },
+                new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "date", ColCss = "3",Required = true },
+
 
                 new FieldConfig { Name = "p26", Label = "ملاحظات", Type = "textarea", ColCss = "12",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
 
@@ -465,10 +453,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
 
-                new FieldConfig { Name = "p22", Label = "تاريخ خطاب موافقة الامهال", Type = "date", ColCss = "3",Required = true, Readonly = true },
-                new FieldConfig { Name = "p23", Label = "رقم خطاب موافقة الامهال", Type = "text", ColCss = "3",Required = true, Readonly = true },
-                new FieldConfig { Name = "p24", Label = "تاريخ بداية الامهال", Type = "date", ColCss = "3",Required = true, Readonly = true },
-                new FieldConfig { Name = "p25", Label = "تاريخ نهاية الامهال", Type = "date", ColCss = "3",Required = true, Readonly = true },
+                new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "date", ColCss = "3",Required = true },
+
 
                 new FieldConfig { Name = "p26", Label = "ملاحظات", Type = "textarea", ColCss = "12",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
 
@@ -488,7 +474,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             var dsModel = new SmartTableDsModel
             {
-                PageTitle = "إمهال المستفيدين",
+                PageTitle = "اخلاء المستفيدين",
                 Columns = dynamicColumns,
                 Rows = rowsList,
                 RowIdField = rowIdField,
@@ -498,7 +484,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 Searchable = true,
                 AllowExport = true,
                 ShowPageSizeSelector=true,
-                PanelTitle = "إمهال المستفيدين",
+                PanelTitle = "اخلاء المستفيدين",
                 //TabelLabel = "بيانات المستفيدين",
                 //TabelLabelIcon = "fa-solid fa-user-group",
                 EnableCellCopy = true,
@@ -509,12 +495,13 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowExportCsv = false,
                     ShowExportExcel = false,
 
-                    ShowEdit = canHOUSINGEXTEND,
-                    ShowEdit1 = canEDITHOUSINGEXTEND,
-                    ShowDelete = canCANCELHOUSINGEXTEND,
-                    ShowDelete1 = canSENDHOUSINGEXTENDTOFINANCE,
-                    ShowDelete2 = canAPPROVEEXTEND,
-                    
+                    ShowEdit = canHOUSINGHousingExit,
+                    ShowEdit1 = canEDITHOUSINGHousingExit,
+                    ShowEdit2 = canEDITHOUSINGHousingExit,
+                    ShowDelete = canCANCELHOUSINGHousingExit,
+                    ShowDelete1 = canSENDHOUSINGHousingExitTOFINANCE,
+                    ShowDelete2 = canAPPROVEHousingExit,
+
                     ShowBulkDelete = false,
                     
                    
@@ -584,8 +571,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                     Edit = new TableAction
                     {
-                        Label = "امهال مستفيد",
-                        Icon = "fa-solid fa-pen",
+                        Label = "اخلاء مستفيد واستلام المفاتيح",
+                        Icon = "fa-solid fa-key",
                         Color = "success",
                         Show = true,  // ✅ أضف
                         IsEdit = true,
@@ -626,7 +613,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 Field = "LastActionTypeID",
                                 Op = "eq",
                                 Value = "48",
-                                Message = "تم انشاء الطلب مسبقا",
+                                Message = "لايمكن اخلاء مستفيد وهو تحت اجراءات الامهال",
                                 Priority = 3
                             },
                                  new TableActionRule
@@ -634,7 +621,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 Field = "LastActionTypeID",
                                 Op = "eq",
                                 Value = "51",
-                                Message = "تم انشاء الطلب مسبقا",
+                                Message = "لايمكن اخلاء مستفيد وهو تحت اجراءات الامهال",
                                 Priority = 3
                             },
                                       new TableActionRule
@@ -642,7 +629,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 Field = "LastActionTypeID",
                                 Op = "eq",
                                 Value = "52",
-                                Message = "تم انشاء الطلب مسبقا",
+                                Message = "لايمكن اخلاء مستفيد وهو تحت اجراءات الامهال",
                                 Priority = 3
                             },
 
@@ -650,9 +637,77 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                        }
                     },
 
-                    Edit1 = new TableAction  // ✅ لازم تحدد Edit1 بدل Delete1!
+                    Edit1 = new TableAction
                     {
-                        Label = "تعديل امهال",
+                        Label = "جرد العهد",
+                        Icon = "fa-solid fa-chair",
+                        Color = "info",
+                        Show = true,  // ✅ أضف
+                        IsEdit = true,
+                        OpenModal = true,
+
+                        ModalTitle = "",
+                        ModalMessage = "",
+                        ModalMessageClass = "bg-red-50 text-red-700",
+                        ModalMessageIcon = "fa-solid fa-triangle-exclamation",
+
+                        OnBeforeOpenJs = "sfRouteEditForm(table, act);",
+
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "BuildingTypeEditForm",
+                            Title = "",
+                            Method = "post",
+                            ActionUrl = "/crud/update",
+                            SubmitText = "حفظ التعديلات",
+                            CancelText = "إلغاء",
+                            Fields = ExtendFields
+                        },
+
+
+
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1,
+
+                        Guards = new TableActionGuards
+                        {
+                            AppliesTo = "any",
+                            DisableWhenAny = new List<TableActionRule>
+                        {
+
+                              new TableActionRule
+                            {
+                                Field = "LastActionTypeID",
+                                Op = "eq",
+                                Value = "48",
+                                Message = "لايمكن اخلاء مستفيد وهو تحت اجراءات الامهال",
+                                Priority = 3
+                            },
+                                 new TableActionRule
+                            {
+                                Field = "LastActionTypeID",
+                                Op = "eq",
+                                Value = "51",
+                                Message = "لايمكن اخلاء مستفيد وهو تحت اجراءات الامهال",
+                                Priority = 3
+                            },
+                                      new TableActionRule
+                            {
+                                Field = "LastActionTypeID",
+                                Op = "eq",
+                                Value = "52",
+                                Message = "لايمكن اخلاء مستفيد وهو تحت اجراءات الامهال",
+                                Priority = 3
+                            },
+
+                          }
+                        }
+                    },
+
+                    Edit2 = new TableAction  // ✅ لازم تحدد Edit1 بدل Delete1!
+                    {
+                        Label = "تعديل اخلاء",
                         Icon = "fa-solid fa-edit",
                         Color = "warning",
                         //Show = true,  // ✅ أضف
@@ -690,9 +745,25 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                               new TableActionRule
                             {
                                 Field = "LastActionTypeID",
-                                Op = "neq",
+                                Op = "eq",
                                 Value = "48",
-                                Message = "لايمكن تعديل الطلب",
+                                Message = "لايمكن تعديل اخلاء مستفيد وهو تحت اجراءات الامهال",
+                                Priority = 3
+                            },
+                                 new TableActionRule
+                            {
+                                Field = "LastActionTypeID",
+                                Op = "eq",
+                                Value = "51",
+                                Message = "لايمكن تعديل اخلاء مستفيد وهو تحت اجراءات الامهال",
+                                Priority = 3
+                            },
+                                      new TableActionRule
+                            {
+                                Field = "LastActionTypeID",
+                                Op = "eq",
+                                Value = "52",
+                                Message = "لايمكن تعديل اخلاء مستفيد وهو تحت اجراءات الامهال",
                                 Priority = 3
                             },
                           }
@@ -702,7 +773,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                     Delete = new TableAction
                     {
-                        Label = "الغاء امهال مستفيد",
+                        Label = "الغاء اخلاء مستفيد",
                         Icon = "fa-solid fa-close",
                         Color = "danger",
                         //Show = true,  // ✅ أضف
@@ -737,12 +808,28 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             DisableWhenAny = new List<TableActionRule>
                         {
 
-                              new TableActionRule
+                               new TableActionRule
                             {
                                 Field = "LastActionTypeID",
-                                Op = "neq",
+                                Op = "eq",
                                 Value = "48",
-                                Message = "لايمكن الغاء الطلب",
+                                Message = "لايمكن الغاء اخلاء مستفيد وهو تحت اجراءات الامهال",
+                                Priority = 3
+                            },
+                                 new TableActionRule
+                            {
+                                Field = "LastActionTypeID",
+                                Op = "eq",
+                                Value = "51",
+                                Message = "لايمكن الغاء اخلاء مستفيد وهو تحت اجراءات الامهال",
+                                Priority = 3
+                            },
+                                      new TableActionRule
+                            {
+                                Field = "LastActionTypeID",
+                                Op = "eq",
+                                Value = "52",
+                                Message = "لايمكن الغاء اخلاء مستفيد وهو تحت اجراءات الامهال",
                                 Priority = 3
                             },
                           }
@@ -785,36 +872,29 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             AppliesTo = "any",
                             DisableWhenAny = new List<TableActionRule>
                         {
-                                  new TableActionRule
+
+                               new TableActionRule
                             {
                                 Field = "LastActionTypeID",
                                 Op = "eq",
-                                Value = "2",
-                                Message = "لم يتم انشاء الطلب",
+                                Value = "48",
+                                Message = "لايمكن ارسال اخلاء مستفيد للتدقيق المالي وهو تحت اجراءات الامهال",
                                 Priority = 3
                             },
                                  new TableActionRule
-                            {
-                                Field = "LastActionTypeID",
-                                Op = "eq",
-                                Value = "24",
-                                Message = "لم يتم انشاء الطلب",
-                                Priority = 3
-                            },
-                              new TableActionRule
                             {
                                 Field = "LastActionTypeID",
                                 Op = "eq",
                                 Value = "51",
-                                Message = "لايمكن الغاء الطلب",
+                                Message = "لايمكن ارسال اخلاء مستفيد للتدقيق المالي وهو تحت اجراءات الامهال",
                                 Priority = 3
                             },
-                                 new TableActionRule
+                                      new TableActionRule
                             {
                                 Field = "LastActionTypeID",
                                 Op = "eq",
                                 Value = "52",
-                                Message = "لايمكن الغاء الطلب",
+                                Message = "لايمكن ارسال اخلاء مستفيد للتدقيق المالي وهو تحت اجراءات الامهال",
                                 Priority = 3
                             },
                           }
@@ -823,7 +903,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                     Delete2 = new TableAction  // ✅ لازم تحدد Edit1 بدل Delete1!
                     {
-                        Label = "اعتماد الامهال",
+                        Label = "اعتماد الاخلاء",
                         Icon = "fa-solid fa-check",
                         Color = "success",
                         //Show = true,  // ✅ أضف
@@ -856,17 +936,33 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         {
                             AppliesTo = "any",
                             DisableWhenAny = new List<TableActionRule>
-                        {
-
-                              new TableActionRule
                             {
-                                Field = "LastActionTypeID",
-                                Op = "neq",
-                                Value = "52",
-                                Message = "لايمكن اعتماد الامهال لعدم انتهاء التدقيق المالي ",
-                                Priority = 3
-                            },
-                          }
+                            
+                                   new TableActionRule
+                                {
+                                    Field = "LastActionTypeID",
+                                    Op = "eq",
+                                    Value = "48",
+                                    Message = "لايمكن اعتماد اخلاء مستفيد وهو تحت اجراءات الامهال",
+                                    Priority = 3
+                                },
+                                     new TableActionRule
+                                {
+                                    Field = "LastActionTypeID",
+                                    Op = "eq",
+                                    Value = "51",
+                                    Message = "لايمكن اعتماد اخلاء مستفيد وهو تحت اجراءات الامهال",
+                                    Priority = 3
+                                },
+                                          new TableActionRule
+                                {
+                                    Field = "LastActionTypeID",
+                                    Op = "eq",
+                                    Value = "52",
+                                    Message = "لايمكن اعتماد اخلاء مستفيد وهو تحت اجراءات الامهال",
+                                    Priority = 3
+                                },
+                              }
                         }
                     },
 
@@ -948,7 +1044,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 PillEnabled=true,
                                 PillField="buildingActionTypeResidentAlias",
                                 PillTextField="buildingActionTypeResidentAlias",
-                                PillCssClass="pill pill-yellow",
+                                PillCssClass="pill pill-red",
                                 PillMode="replace"
                             },
                              new TableStyleRule
@@ -966,7 +1062,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 PillEnabled=true,
                                 PillField="buildingActionTypeResidentAlias",
                                 PillTextField="buildingActionTypeResidentAlias",
-                                PillCssClass="pill pill-blue",
+                                PillCssClass="pill pill-red",
                                 PillMode="replace"
                             }
                         };

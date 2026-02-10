@@ -1,4 +1,5 @@
-﻿using SmartFoundation.UI.ViewModels.SmartForm;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using SmartFoundation.UI.ViewModels.SmartForm;
 using System.Linq;
 namespace SmartFoundation.UI.ViewModels.SmartTable
 {
@@ -219,6 +220,12 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         public bool ShowAdd { get; set; } = false;
         public bool ShowAdd1 { get; set; } = false;
         public bool ShowAdd2 { get; set; } = false;
+        
+        // ✅ CHANGE: Default to true (enabled unless explicitly disabled)
+        public bool EnableAdd { get; set; } = true;
+        public bool EnableAdd1 { get; set; } = true;
+        public bool EnableAdd2 { get; set; } = true;
+        
         public bool ShowRefresh { get; set; } = true;
         public bool ShowColumns { get; set; } = true;
         public bool ShowExportCsv { get; set; } = true;
@@ -237,12 +244,22 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         public TableAction? Add { get; set; }
         public TableAction? Add1 { get; set; }
         public TableAction? Add2 { get; set; }
+        
         public bool ShowEdit { get; set; } = false;
         public bool ShowEdit1 { get; set; } = false;
         public bool ShowEdit2 { get; set; } = false;
         public bool ShowDelete { get; set; } = false;
         public bool ShowDelete1 { get; set; } = false;
         public bool ShowDelete2 { get; set; } = false;
+        
+        // ✅ CHANGE: Default to true
+        public bool EnableEdit { get; set; } = true;
+        public bool EnableEdit1 { get; set; } = true;
+        public bool EnableEdit2 { get; set; } = true;
+        public bool EnableDelete { get; set; } = true;
+        public bool EnableDelete1 { get; set; } = true;
+        public bool EnableDelete2 { get; set; } = true;
+        
         public TableAction? Edit { get; set; }
         public TableAction? Edit1 { get; set; }
         public TableAction? Edit2 { get; set; }
@@ -257,7 +274,6 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         public TableAction? Print1 { get; set; }
         public TableAction? Print2 { get; set; }
         public TableAction? Print3 { get; set; }
-
     }
 
     public class TableConfig
@@ -324,7 +340,21 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
 public class TableActionRule
 {
     public string Field { get; set; } = "";
-    public string Op { get; set; } = "eq";  // eq, neq, in, notin, contains, startswith, endswith
+    public string Op { get; set; } = "eq";  
+    
+    // eq, neq, in, notin, contains, startswith, endswith
+
+//•	"eq" - يساوي(equals)
+//•	"neq" - لا يساوي(not equals)
+//•	"gt" - أكبر من(greater than) ✅
+//•	"gte" - أكبر أو يساوي(greater than or equal)
+//•	"lt" - أصغر من(less than)
+//•	"lte" - أصغر أو يساوي(less than or equal)
+//•	"contains" - يحتوي نص
+//•	"startswith" - يبدأ بـ
+//•	"endswith" - ينتهي بـ
+//•	"in" - موجود في قائمة
+
     public object? Value { get; set; }
     public string? Message { get; set; }
     public int Priority { get; set; } = 1;
@@ -352,6 +382,8 @@ public class TableActionGuards
     // تطبيق الشرط على أي صف من المحدد أو على كل الصفوف
     public string AppliesTo { get; set; } = "any"; // any | all
 }
+
+
 
 
 

@@ -917,7 +917,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 ToggleDefaultOpen = true,
                 ShowToggleCount = false,
                 ViewMode = TableViewMode.Table,
-
+                Selectable = false,
 
 
 
