@@ -765,6 +765,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 EnablePagination = false,
                 ShowToolbar = true,
                 Selectable = false,
+                ShowColumnVisibility = true,
 
                 Toolbar = new TableToolbarConfig
                 {

@@ -2736,6 +2736,7 @@ body.sf-navigating .sf-select-panel {
 
 
 /* ===== Pill  ===== */
+
 .pill {
     display: inline-flex;
     align-items: center;
@@ -2743,18 +2744,20 @@ body.sf-navigating .sf-select-panel {
     padding: .22rem .65rem;
     border-radius: 999px;
     font-size: .82rem;
-    font-weight: 500; 
+    font-weight: 500;
     line-height: 1.15;
     white-space: nowrap;
     vertical-align: middle;
     font-family: "Inter", "Tajawal", sans-serif;
     letter-spacing: -0.12px;
-    border: 1px solid transparent; 
+    border: 1px solid transparent;
     background-clip: padding-box;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: geometricPrecision;
     transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+    font-variant-numeric: tabular-nums;
+    --pill-dot-opacity: .65;
 }
 
     .pill::before {
@@ -2763,8 +2766,12 @@ body.sf-navigating .sf-select-panel {
         height: .42rem;
         border-radius: 999px;
         background: currentColor;
-        opacity: .6;
+        opacity: var(--pill-dot-opacity);
         flex: 0 0 .42rem;
+    }
+
+    .pill.no-dot::before {
+        display: none;
     }
 
 /* Table spacing */
@@ -2773,55 +2780,77 @@ body.sf-navigating .sf-select-panel {
 }
 
 /* =========================
-   Color Variants (Refined)
+   Color Variants (Higher Clarity)
    ========================= */
 
 .pill-green {
-    background: rgba(34,197,94,.12);
-    color: #166534;
-    border-color: rgba(34,197,94,.30);
+    background: rgba(22,163,74,.14);
+    color: #14532d;
+    border-color: rgba(22,163,74,.34);
 }
 
 .pill-yellow {
-    background: rgba(234,179,8,.14);
-    color: #7a4a00;
-    border-color: rgba(234,179,8,.32);
+    background: rgba(202,138,4,.16);
+    color: #713f12;
+    border-color: rgba(202,138,4,.38);
+    --pill-dot-opacity: .75; 
 }
 
 .pill-red {
-    background: rgba(239,68,68,.12);
-    color: #991b1b;
-    border-color: rgba(239,68,68,.30);
+    background: rgba(220,38,38,.14);
+    color: #7f1d1d;
+    border-color: rgba(220,38,38,.34);
 }
 
 .pill-blue {
-    background: rgba(59,130,246,.12);
-    color: #1e40af;
-    border-color: rgba(59,130,246,.30);
+    background: rgba(37,99,235,.14);
+    color: #1e3a8a;
+    border-color: rgba(37,99,235,.34);
 }
 
 .pill-gray {
-    background: rgba(107,114,128,.10);
+    background: rgba(75,85,99,.12);
     color: #111827;
-    border-color: rgba(107,114,128,.26);
+    border-color: rgba(75,85,99,.30);
 }
 
 /* =========================
-   Truncate Safe
+   Truncate Safe (real ellipsis, no layout break)
    ========================= */
 .sf-truncate .pill {
     max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* =========================
-   Row color harmony (no shadow)
+   Interaction polish (very subtle)
+   ========================= */
+/*.pill:hover {
+    background: color-mix(in srgb, currentColor 8%, white);
+}
+
+.pill:active {
+    background: color-mix(in srgb, currentColor 12%, white);
+}
+
+.pill:focus-visible {
+    outline: 2px solid color-mix(in srgb, currentColor 35%, white);
+    outline-offset: 2px;
+}*/
+
+/* =========================
+   Row color harmony
    ========================= */
 tr.row-green .pill-green,
 tr.row-yellow .pill-yellow,
 tr.row-red .pill-red {
     border-color: currentColor;
-    background: color-mix(in srgb, currentColor 12%, white);
+    background: color-mix(in srgb, currentColor 11%, white);
 }
+
+
 
 
 

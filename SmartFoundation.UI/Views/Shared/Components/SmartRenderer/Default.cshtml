@@ -33,7 +33,7 @@
                 @(Model.PanelTitle ?? Model.PageTitle)
             </h3>
 
-            <div class="sf-panel-actions">
+            @* <div class="sf-panel-actions">
                 <button type="button" x-on:click="open = !open" class="sf-panel-btn" title="تصغير/توسيع">
                     <i class="fa-solid" x-bind:class="open ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
                 </button>
@@ -46,7 +46,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
-            </div>
+            </div> *@
         </div>
 
         <div class="sf-panel-body" x-show="open">

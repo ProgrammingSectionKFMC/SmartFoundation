@@ -183,6 +183,28 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
 
+                            bool isbuildingActionTypeResidentAlias = c.ColumnName.Equals("buildingActionTypeResidentAlias", StringComparison.OrdinalIgnoreCase);
+                            bool isWaitingClassName = c.ColumnName.Equals("WaitingClassName", StringComparison.OrdinalIgnoreCase);
+                            
+                            //  جهز خيارات الفلتر من نفس بيانات الجدول (عشان التطابق يكون صحيح)
+                            List<OptionItem> filterOpts = new();
+                            if (isbuildingActionTypeResidentAlias || isWaitingClassName )
+                            {
+                                var field = c.ColumnName;
+
+                                var distinctVals = dt1.AsEnumerable()
+                                    .Select(r => (r[field] == DBNull.Value ? "" : r[field]?.ToString())?.Trim())
+                                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                                    .Distinct()
+                                    .OrderBy(s => s)
+                                    .ToList();
+
+                                filterOpts = distinctVals
+                                    .Select(s => new OptionItem { Value = s!, Text = s! })
+                                    .ToList();
+                            }
+
+
                             dynamicColumns.Add(new TableColumn
                             {
                                 Field = c.ColumnName,
@@ -192,8 +214,23 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                || isresidentInfoID || isIdaraId   || isAssignPeriodID || isbuildingDetailsID || isLastActionID  || isWaitingOrderTypeName || isWaitingListOrder || isLastActionTypeID)
+                                || isresidentInfoID || isIdaraId   || isAssignPeriodID || isbuildingDetailsID || isLastActionID  || isWaitingOrderTypeName || isWaitingListOrder || isLastActionTypeID),
+
+                            //  فلتر للرتبة + الوحدة + الجنسية
+                                Filter = (isbuildingActionTypeResidentAlias || isWaitingClassName )
+                                    ? new TableColumnFilter
+                                    {
+                                        Enabled = true,
+                                        Type = "select",
+                                        Options = filterOpts
+                                    }
+                                    : new TableColumnFilter
+                                    {
+                                        Enabled = false
+                                    }
                             });
+
+                        
                         }
 
                         // الصفوف
@@ -502,6 +539,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 //TabelLabel = "بيانات المستفيدين",
                 //TabelLabelIcon = "fa-solid fa-user-group",
                 EnableCellCopy = true,
+                ShowColumnVisibility = true,
+                ShowFilter = true,
+                FilterRow = true,
+                FilterDebounce = 250,
                 Toolbar = new TableToolbarConfig
                 {
                     ShowRefresh = false,

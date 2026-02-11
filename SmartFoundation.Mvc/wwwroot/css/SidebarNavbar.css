@@ -103,9 +103,9 @@ html, body {
     direction: rtl;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 18px;
     margin: 0;
-    padding: 6px 10px;
+    padding: 6px 6px;
     border: 0;
     border-radius: 0.5rem;
     line-height: 1;
@@ -122,15 +122,15 @@ html, body {
 
     .sf-bc::before {
         content: "";
-        width: 2px;
-        height: 14px;
+        width: 1px;
+        height: 18px;
         border-radius: 999px;
         background: rgba(55, 65, 81, 0.35);
         flex: 0 0 auto;
     }
 
     .sf-bc .sf-bc-icon {
-        color: #374151;
+        color: #6b7280;
         opacity: .85;
         font-size: 12px;
         line-height: 1;
@@ -143,11 +143,11 @@ html, body {
     padding: 0;
     display: flex;
     align-items: center;
-    gap: .5rem;
+    gap: .1rem;
     flex-wrap: nowrap;
     overflow: hidden;
     white-space: nowrap;
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.1;
     font-family: "Inter", "Tajawal", sans-serif;
     letter-spacing: -0.12px;
@@ -170,8 +170,8 @@ html, body {
         display: inline-flex;
         align-items: center;
         padding: 5px 6px;
-        font-size: 13px;
-        font-weight: 600;
+        font-size: 14px;
+        font-weight: 500;
         max-width: 240px;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -185,7 +185,7 @@ html, body {
         }
 
     .sf-bc-text .sep {
-        width: 14px;
+        width: 18px;
         height: 12px;
         display: inline-flex;
         align-items: center;
@@ -197,7 +197,7 @@ html, body {
     .sf-bc-text .current,
     .sf-bc-text a[aria-current="page"] {
         color: #374151;
-        font-weight: 700;
+        font-weight: 500;
     }
 
 @media (prefers-reduced-motion: reduce) {

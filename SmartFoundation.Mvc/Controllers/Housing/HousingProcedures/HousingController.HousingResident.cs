@@ -336,6 +336,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 //TabelLabel = "بيانات المستفيدين",
                 //TabelLabelIcon = "fa-solid fa-user-group",
                 EnableCellCopy = true,
+                ShowColumnVisibility=true,
                 Toolbar = new TableToolbarConfig
                 {
                     ShowRefresh = false,
@@ -550,7 +551,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 PillEnabled=true,
                                 PillField="buildingActionTypeResidentAlias",
                                 PillTextField="buildingActionTypeResidentAlias",
-                                PillCssClass="pill pill-blue",
+                                PillCssClass="pill pill-gray",
                                 PillMode="replace"
                             },
                             new TableStyleRule
@@ -577,7 +578,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 PillEnabled=true,
                                 PillField="buildingActionTypeResidentAlias",
                                 PillTextField="buildingActionTypeResidentAlias",
-                                PillCssClass="pill pill-gray",
+                                PillCssClass="pill pill-blue",
                                 PillMode="replace"
                             }
                         };

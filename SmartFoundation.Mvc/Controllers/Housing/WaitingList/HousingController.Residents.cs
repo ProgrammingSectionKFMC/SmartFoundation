@@ -462,10 +462,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 //TabelLabel = "بيانات المستفيدين",
                 //TabelLabelIcon = "fa-solid fa-user-group",
                 EnableCellCopy = true,
-                ShowFilter = false,
+                ShowFilter = true,
                 FilterRow = true,
                 FilterDebounce = 250,
-                ShowColumnVisibility=false,
+                ShowColumnVisibility=true,
 
                 Toolbar = new TableToolbarConfig
                 {
