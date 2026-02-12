@@ -774,7 +774,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                     ShowExportCsv = false,
                     ShowExportExcel = false,
                     ShowAdd = true,
-                    EnableAdd = true ,//AllAmount == 0,
+                    EnableAdd = true,//AllAmount == 0,
                     ShowBulkDelete = false,
                     ShowExportPdf = false,
 

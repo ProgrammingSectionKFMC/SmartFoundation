@@ -2,6 +2,14 @@
 @{
     ViewData["Title"] = Model.PageTitle;
 }
+
+@if (TempData["DataSetError"] != null)
+{
+    <div class="mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-green-800">
+        <i class="fa fa-check-circle me-2"></i>
+        @TempData["DataSetError"]
+    </div>
+}
 @await Component.InvokeAsync("SmartRenderer", new { model = Model })
 
 <script>

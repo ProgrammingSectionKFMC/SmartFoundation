@@ -14,6 +14,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
         public async Task<IActionResult> WaitingList()
         {
 
+
             if (!InitPageContext(out IActionResult? redirectResult))
                 return redirectResult!;
 
@@ -35,12 +36,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             // Sessions 
 
-            ControllerName = nameof(ControlPanel);
+            ControllerName = nameof(Housing);
             PageName = nameof(WaitingList);
 
             var spParameters = new object?[] { "WaitingList", IdaraId, usersId, HostName, waitingClassID_ };
-
-
 
             DataSet ds;
 
@@ -53,7 +52,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
 
-            SplitDataSet(ds);
+           
+                SplitDataSet(ds);
+            
 
 
 
@@ -175,12 +176,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     }
 
 
-                    if (ds != null && ds.Tables.Count > 0)
+                    if (dt1 != null && dt1.Columns.Count > 0)
                     {
 
                         // Resolve a correct row id field (case sensitive match to actual DataTable column)
-                        rowIdField = "permissionID";
-                        var possibleIdNames = new[] { "permissionID", "PermissionID", "Id", "ID" };
+                        rowIdField = "ActionID";
+                        var possibleIdNames = new[] { "ActionID", "actionID", "Id", "ID" };
 
                         rowIdField = possibleIdNames.FirstOrDefault(n => dt1.Columns.Contains(n))
                                      ?? dt1.Columns[0].ColumnName;
@@ -216,7 +217,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             bool isWaitingClassID = c.ColumnName.Equals("WaitingClassID", StringComparison.OrdinalIgnoreCase);
                             bool isWaitingOrderTypeID = c.ColumnName.Equals("WaitingOrderTypeID", StringComparison.OrdinalIgnoreCase);
                             bool iswaitingClassSequence = c.ColumnName.Equals("waitingClassSequence", StringComparison.OrdinalIgnoreCase);
-                            bool isresidentInfoID_FK = c.ColumnName.Equals("residentInfoID_FK", StringComparison.OrdinalIgnoreCase);
+
                             bool isIdaraId = c.ColumnName.Equals("IdaraId", StringComparison.OrdinalIgnoreCase);
                             bool isresidentInfoID = c.ColumnName.Equals("residentInfoID", StringComparison.OrdinalIgnoreCase);
                             
@@ -231,7 +232,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID)
+                                 || isIdaraId || isresidentInfoID)
                             });
                         }
 
@@ -247,17 +248,17 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 dict[c.ColumnName] = val == DBNull.Value ? null : val;
                             }
 
-                            // Ensure the row id key actually exists with correct casing
-                            if (!dict.ContainsKey(rowIdField))
-                            {
+                            //Ensure the row id key actually exists with correct casing
+                            //if (!dict.ContainsKey(rowIdField))
+                           // {
                                 // Try to copy from a differently cased variant
-                                if (rowIdField.Equals("ActionID", StringComparison.OrdinalIgnoreCase) &&
-                                    dict.TryGetValue("ActionID", out var alt))
-                                    dict["ActionID"] = alt;
-                                else if (rowIdField.Equals("ActionID", StringComparison.OrdinalIgnoreCase) &&
-                                         dict.TryGetValue("ActionID", out var alt2))
-                                    dict["ActionID"] = alt2;
-                            }
+                            //    if (rowIdField.Equals("ActionID", StringComparison.OrdinalIgnoreCase) &&
+                             //       dict.TryGetValue("ActionID", out var alt))
+                             //       dict["ActionID"] = alt;
+                             //   else if (rowIdField.Equals("ActionID", StringComparison.OrdinalIgnoreCase) &&
+                             //            dict.TryGetValue("ActionID", out var alt2))
+                             //       dict["ActionID"] = alt2;
+                            //}
 
                             // Prefill pXX fields on the row so Edit form (which uses pXX names) loads the selected row values
                             object? Get(string key) => dict.TryGetValue(key, out var v) ? v : null;
@@ -421,38 +422,6 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             };
 
 
-            dsModel.StyleRules = new List<TableStyleRule>
-                    {
-                        new TableStyleRule
-                        {
-                            Target = "cell",
-                            Field = "WaitingOrderTypeName",
-                            Op = "eq",
-                            Value = "جديد",
-                            Priority = 1,
-
-                            PillEnabled = true,
-                            PillField = "WaitingOrderTypeName",
-                            PillTextField = "WaitingOrderTypeName",
-                            PillCssClass = "pill pill-green",
-                            PillMode = "replace"
-                        },
-
-                        new TableStyleRule
-                        {
-                            Target = "cell",
-                            Field = "WaitingOrderTypeName",
-                            Op = "eq",
-                            Value = "منقول ",
-                            Priority = 1,
-
-                            PillEnabled = true,
-                            PillField = "WaitingOrderTypeName",
-                            PillTextField = "WaitingOrderTypeName",
-                            PillCssClass = "pill pill-red",
-                            PillMode = "replace"
-                        }
-                    };
 
 
 

@@ -139,10 +139,10 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 {
 
                     new OptionItem { Value = "1", Text = "مستخدم" },
-                    new OptionItem { Value = "2", Text = "موزع" },
-                    new OptionItem { Value = "3", Text = "دور" },
-                    new OptionItem { Value = "4", Text = "ادارة" },
-                    new OptionItem { Value = "5", Text = "قسم" },
+                  //  new OptionItem { Value = "2", Text = "موزع" },
+                   // new OptionItem { Value = "3", Text = "دور" },
+                  //  new OptionItem { Value = "4", Text = "ادارة" },
+                  //  new OptionItem { Value = "5", Text = "قسم" },
 
                 };
 

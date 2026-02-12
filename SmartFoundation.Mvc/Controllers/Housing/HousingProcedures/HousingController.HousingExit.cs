@@ -1182,7 +1182,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 Response.Headers["Content-Disposition"] = "inline; filename=BuildingType.pdf";
                 return File(pdfBytes, "application/pdf");
             }
-            return View("HousingProcedures/HousingResident", page);
+            return View("HousingProcedures/HousingExit", page);
         }
     }
 }
