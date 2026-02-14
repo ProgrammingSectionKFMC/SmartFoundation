@@ -1,0 +1,47 @@
+﻿@* @model SmartFoundation.UI.ViewModels.SmartPage.FormTableViewModel
+
+@{
+    ViewData["Title"] = Model.PageTitle ?? "النموذج";
+}
+
+<div class="container mx-auto py-4">
+    <h1 class="mb-4 text-2xl font-bold">@ViewData["Title"]</h1>
+</div>
+
+@if (Model.Form is not null)
+{
+    @await Component.InvokeAsync("SmartForm", new { model = Model.Form })
+}
+
+@if (Model.Table is not null)
+{
+
+    
+
+    @if (!(ViewBag.HideTable as bool? ?? false))
+    {
+        @await Component.InvokeAsync("SmartTableDS", Model.Table)
+    }
+    else
+    {
+        <div class="mt-4 text-sm text-gray-600"></div>
+    }
+
+}
+
+ *@
+
+@model SmartFoundation.UI.ViewModels.SmartPage.SmartPageViewModel
+@{
+    ViewData["Title"] = Model.PageTitle;
+}
+@await Component.InvokeAsync("SmartRenderer", new { model = Model })
+
+<script>
+    (function () {
+      
+      if (location.search && location.search.length > 1) {
+        history.replaceState(null, "", location.pathname + location.hash);
+      }
+    })();
+</script>

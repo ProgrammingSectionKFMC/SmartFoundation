@@ -385,7 +385,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
     new FieldConfig { Name = "p13", Label = "تاريخ بداية المبنى", Type = "date", ColCss = "3", Required = true },
     new FieldConfig { Name = "p18", Label = "تاريخ نهاية المبنى", Type = "date", ColCss = "3" },
-    new FieldConfig { Name = "p14", Label = "ملاحظات", Type = "text", ColCss = "3", Required = true },
+    new FieldConfig { Name = "p14", Label = "ملاحظات", Type = "text", ColCss = "6", Required = false },
     new FieldConfig { Name = "p15", Label = "UtilityTypeID_", Type = "hidden", ColCss = "3", Required = false,Value =UtilityTypeID_ },
 };
 
@@ -429,7 +429,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
                 new FieldConfig { Name = rowIdField,            Type = "hidden" },
 
-                new FieldConfig { Name = "p01", Label = "المعرف",   Type = "text", Readonly = true, ColCss = "3" },
+                new FieldConfig { Name = "p01", Label = "المعرف",   Type = "hidden", Readonly = true, ColCss = "3" },
                 new FieldConfig { Name = "p02", Label = "اسم المبنى", Type = "text",   ColCss = "3", Required = true ,Value =buildingUtilityIsRent.ToString()},
                 new FieldConfig { Name = "p03", Label = "عدد الغرف", Type = "number", ColCss = "3", Required = true },
                 new FieldConfig { Name = "p04", Label = "عدد الطوابق", Type = "number", ColCss = "3", Required = true },
@@ -445,7 +445,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p15", Label = "تاريخ بداية المبنى", Type = "date", ColCss = "3", Required = true },
                 new FieldConfig { Name = "p18", Label = "تاريخ نهاية المبنى", Type = "date", ColCss = "3" },
 
-                new FieldConfig { Name = "p16", Label = "ملاحظات", Type = "text", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p16", Label = "ملاحظات", Type = "text", ColCss = "3", Required = false },
                 new FieldConfig { Name = "p17", Label = "UtilityTypeID_", Type = "hidden", ColCss = "3", Required = false,Value =UtilityTypeID_ },
             };
 
@@ -564,7 +564,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         Label = "تعديل مبنى",
                         Icon = "fa fa-pen-to-square",
                         Color = "info",
-                        Placement = TableActionPlacement.ActionsMenu, //   أي زر بعد ما نسويه ونبيه يظهر في الاجراءات نحط هذا السطر فقط عشان ما يصير زحمة في التيبل اكشن
+                       // Placement = TableActionPlacement.ActionsMenu, //   أي زر بعد ما نسويه ونبيه يظهر في الاجراءات نحط هذا السطر فقط عشان ما يصير زحمة في التيبل اكشن
                         IsEdit = true,
                         OpenModal = true,
                         ModalTitle = "تعديل بيانات المبنى",
@@ -591,7 +591,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         Label = "حذف مبنى",
                         Icon = "fa fa-trash",
                         Color = "danger",
-                        Placement = TableActionPlacement.ActionsMenu, //   أي زر بعد ما نسويه ونبيه يظهر في الاجراءات نحط هذا السطر فقط عشان ما يصير زحمة في التيبل اكشن
+                       // Placement = TableActionPlacement.ActionsMenu, //   أي زر بعد ما نسويه ونبيه يظهر في الاجراءات نحط هذا السطر فقط عشان ما يصير زحمة في التيبل اكشن
                         IsEdit = true,
                         OpenModal = true,
                         //ModalTitle = "رسالة تحذيرية",

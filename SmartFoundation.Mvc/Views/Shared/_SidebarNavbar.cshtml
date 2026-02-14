@@ -16,6 +16,8 @@
     var sessionUserPhoto = Context.Session.GetString("photoBase64");
     var sessionGeneralNo = Context.Session.GetString("GeneralNo");
     var sessionnationalID = Context.Session.GetString("nationalID");
+    var sessionAdminTypeID = Context.Session.GetString("AdminTypeID");
+    var sessionAdminTypeName = Context.Session.GetString("AdminTypeName");
 }
 
 <nav id="top-header" class="fixed z-50 w-full">
@@ -225,6 +227,15 @@
                     <div class="mt-0.5 text-base font-semibold text-emerald-300">
                         @(sessionGeneralNo?.ToString() ?? "غير معروف")
                     </div>
+
+                    @if (!string.IsNullOrWhiteSpace(sessionAdminTypeID) &&
+                                        (sessionAdminTypeID == "1" || sessionAdminTypeID == "2"))
+                    {
+                        
+                        <div class="mt-2 rounded-md border border-white-300 bg-red-700 px-3 py-1.5 text-center text-sm font-medium text-white shadow-sm">
+                            @(" أنت " + sessionAdminTypeName ?? "غير معروف")
+                        </div>
+                    }
                 </div>
 
                 <!-- قائمة المنيو -->

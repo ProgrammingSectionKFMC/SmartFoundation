@@ -27,6 +27,8 @@ public sealed record AuthInfo(
     string? ThameName,
     string? DeptCode,
     string? nationalID,
-    string? GeneralNo
+    string? GeneralNo,
+    string? AdminTypeID,
+    string? AdminTypeName
 
     );

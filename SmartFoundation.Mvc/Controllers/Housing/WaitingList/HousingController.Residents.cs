@@ -53,6 +53,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             bool canInsert = false;
             bool canUpdate = false;
             bool canDelete = false;
+            bool canUPDATENATIONALIDFORRESIDENT = false;
 
 
             List<OptionItem> rankOptions = new();
@@ -126,6 +127,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         if (permissionName == "INSERT") canInsert = true;
                         if (permissionName == "UPDATE") canUpdate = true;
                         if (permissionName == "DELETE") canDelete = true;
+                        if (permissionName == "UPDATENATIONALIDFORRESIDENT") canUPDATENATIONALIDFORRESIDENT = true;
                     }
 
                     if (dt1 != null && dt1.Columns.Count > 0)
@@ -155,56 +157,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ["note"] = "ملاحظات"
                         };
 
-                        // الأعمدة
-                        //foreach (DataColumn c in dt1.Columns)
-                        //{
-                        //    string colType = "text";
-                        //    var t = c.DataType;
-                        //    if (t == typeof(bool)) colType = "bool";
-                        //    else if (t == typeof(DateTime)) colType = "date";
-                        //    else if (t == typeof(byte) || t == typeof(short) || t == typeof(int) || t == typeof(long)
-                        //             || t == typeof(float) || t == typeof(double) || t == typeof(decimal))
-                        //        colType = "number";
-
-                        //    bool isfirstName_A = c.ColumnName.Equals("firstName_A", StringComparison.OrdinalIgnoreCase);
-                        //    bool issecondName_A = c.ColumnName.Equals("secondName_A", StringComparison.OrdinalIgnoreCase);
-                        //    bool isthirdName_A = c.ColumnName.Equals("thirdName_A", StringComparison.OrdinalIgnoreCase);
-                        //    bool islastName_A = c.ColumnName.Equals("lastName_A", StringComparison.OrdinalIgnoreCase);
-                        //    bool isfirstName_E = c.ColumnName.Equals("firstName_E", StringComparison.OrdinalIgnoreCase);
-                        //    bool issecondName_E = c.ColumnName.Equals("secondName_E", StringComparison.OrdinalIgnoreCase);
-                        //    bool isthirdName_E = c.ColumnName.Equals("thirdName_E", StringComparison.OrdinalIgnoreCase);
-                        //    bool islastName_E = c.ColumnName.Equals("lastName_E", StringComparison.OrdinalIgnoreCase);
-                        //    bool isrankID_FK = c.ColumnName.Equals("rankID_FK", StringComparison.OrdinalIgnoreCase);
-                        //    bool ismilitaryUnitID_FK = c.ColumnName.Equals("militaryUnitID_FK", StringComparison.OrdinalIgnoreCase);
-                        //    bool ismartialStatusID_FK = c.ColumnName.Equals("martialStatusID_FK", StringComparison.OrdinalIgnoreCase);
-                        //    bool isnationalityID_FK = c.ColumnName.Equals("nationalityID_FK", StringComparison.OrdinalIgnoreCase);
-                        //    bool isgenderID_FK = c.ColumnName.Equals("genderID_FK", StringComparison.OrdinalIgnoreCase);
-
-
-
-                        //    bool isMilitaryUnitName =   //جديد
-                        //    c.ColumnName.Equals("militaryUnitName_A", StringComparison.OrdinalIgnoreCase);
-
-                        //    bool isNote =
-                        //    c.ColumnName.Equals("note", StringComparison.OrdinalIgnoreCase);
-
-
-
-                        //    dynamicColumns.Add(new TableColumn
-                        //    {
-                        //        Field = c.ColumnName,
-                        //        Label = headerMap.TryGetValue(c.ColumnName, out var label) ? label : c.ColumnName,
-                        //        Type = colType,
-                        //        Sortable = true
-                        //         ,
-                        //        Visible = !(isfirstName_A || isfirstName_E || issecondName_A || issecondName_E || isthirdName_A || isthirdName_E || islastName_A || islastName_E || isrankID_FK || ismilitaryUnitID_FK || ismartialStatusID_FK || isnationalityID_FK || isgenderID_FK),
-
-
-                        //        truncate = isMilitaryUnitName || isNote // truncate يقص النص الطويل 
-
-                        //    });
-                        //}
-
+                    
 
 
 
@@ -347,7 +300,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             {
                 new FieldConfig { Name = rowIdField, Type = "hidden" },
 
-                new FieldConfig { Name = "p01", Label = "رقم الهوية", Type = "nationalid", ColCss = "6",Icon = "fa-solid fa-address-card"  },
+                new FieldConfig { Name = "p01", Label = "رقم الهوية", Type = "nationalid", ColCss = "6",Icon = "fa-solid fa-address-card", Required = true  },
                 new FieldConfig { Name = "p02", Label = "الرقم العام", Type = "number", ColCss = "6", Required = true , Icon = "fa-solid fa-user-tag",Autocomplete="off" },
                 
 
@@ -404,7 +357,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
                 new FieldConfig { Name = "p01", Label = "الرقم المرجعي",Type ="hidden", ColCss = "3" },
-                new FieldConfig { Name = "p02", Label = "رقم الهوية",Type ="nationalid", ColCss = "6" , Readonly=true,Icon = "fa-solid fa-address-card"},
+                new FieldConfig { Name = "p02", Label = "رقم الهوية",Type ="nationalid", ColCss = "6" , Readonly=!canUPDATENATIONALIDFORRESIDENT,Icon = "fa-solid fa-address-card"},
                 new FieldConfig { Name = "p03", Label = "الرقم العام",Type = "number", ColCss = "6", Required = true, Icon = "fa-solid fa-user-tag" },
 
                 new FieldConfig { Name = "p04", Label = "الاسم الاول بالعربي",Type= "text", Required = true, Placeholder = "حقل عربي فقط",  Icon = "fa-solid fa-user", ColCss = "3", MaxLength = 50, TextMode = "arabic",},
@@ -440,9 +393,18 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "ActionType",Type="hidden",Value="DELETE" },
                 new FieldConfig { Name = "idaraID",Type="hidden",Value= IdaraId.ToString() },
                 new FieldConfig { Name = "hostname",Type ="hidden",Value = Request.Host.Value },
+                new FieldConfig { Name = "entrydata",Type="hidden", Value = usersId.ToString() },
                 new FieldConfig { Name = "__RequestVerificationToken",Type="hidden",Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
                 new FieldConfig { Name = rowIdField,Type = "hidden" },
-                new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "residentInfoID" }
+                new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "residentInfoID" },
+                new FieldConfig { Name = "p02", Label = "رقم الهوية",Type ="nationalid", ColCss = "6" , Readonly=true,Icon = "fa-solid fa-address-card"},
+                new FieldConfig { Name = "p03", Label = "الرقم العام",Type = "number", ColCss = "6",  Readonly=true, Icon = "fa-solid fa-user-tag" },
+
+                new FieldConfig { Name = "p04", Label = "الاسم الاول بالعربي",Type= "text",  Readonly=true, Placeholder = "حقل عربي فقط",  Icon = "fa-solid fa-user", ColCss = "3", MaxLength = 50, TextMode = "arabic",},
+                new FieldConfig { Name = "p05", Label = "اسم الاب بالعربي", Type="text",  Readonly=true, Placeholder = "حقل عربي فقط",  Icon = "fa-solid fa-user", ColCss = "3", MaxLength = 50, TextMode = "arabic",},
+                new FieldConfig { Name = "p06", Label = "اسم الجد بالعربي", Type="text",  Readonly=true, Placeholder = "حقل عربي فقط",  Icon = "fa-solid fa-user", ColCss = "3", MaxLength = 50, TextMode = "arabic",},
+                new FieldConfig { Name = "p07", Label = "الاسم الاخير بالعربي",Type ="text",  Readonly=true, Placeholder = "حقل عربي فقط",  Icon = "fa-solid fa-user", ColCss = "3", MaxLength = 50, TextMode = "arabic",},
+
             };
 
             var dsModel = new SmartTableDsModel
@@ -473,12 +435,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                     ShowColumns = true,
                     ShowExportCsv = false,
-                    ShowExportExcel = true,
-                    ShowExportPdf = true,
+                    ShowExportExcel = false,
+                    ShowExportPdf = false,
                     ShowAdd = canInsert,
                     ShowEdit = canUpdate,
                     ShowDelete = canDelete,
-                    ShowPrint1 = true,
+                    ShowPrint1 = false,
                     ShowBulkDelete = false,
                     Print1 = new TableAction
                     {
@@ -494,51 +456,51 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                               "
                     },
 
-                    ExportConfig = new TableExportConfig
-                    {
-                        EnablePdf = true,
-                        PdfEndpoint = "/exports/pdf/table",
-                        PdfTitle = "المستفيدين",
-                        PdfPaper = "A4",
-                        PdfOrientation = "landscape",
-                        PdfShowPageNumbers = true,
-                        Filename = "Residents",
-                        PdfShowGeneratedAt = true,
-                        PdfShowSerial = true,
-                        PdfSerialLabel = "م",
-                        RightHeaderLine1 = "المملكة العربية السعودية",
-                        RightHeaderLine2 = "وزارة الدفاع",
-                        RightHeaderLine3 = "القوات البرية الملكية السعودية",
-                        RightHeaderLine4 = "الإدارة الهندسية للتشغيل والصيانة",
-                        RightHeaderLine5 = "مدينة الملك فيصل العسكرية",
-                        PdfLogoUrl = "/img/ppng.png",
+                    //ExportConfig = new TableExportConfig
+                    //{
+                    //    EnablePdf = true,
+                    //    PdfEndpoint = "/exports/pdf/table",
+                    //    PdfTitle = "المستفيدين",
+                    //    PdfPaper = "A4",
+                    //    PdfOrientation = "landscape",
+                    //    PdfShowPageNumbers = true,
+                    //    Filename = "Residents",
+                    //    PdfShowGeneratedAt = true,
+                    //    PdfShowSerial = true,
+                    //    PdfSerialLabel = "م",
+                    //    RightHeaderLine1 = "المملكة العربية السعودية",
+                    //    RightHeaderLine2 = "وزارة الدفاع",
+                    //    RightHeaderLine3 = "القوات البرية الملكية السعودية",
+                    //    RightHeaderLine4 = "الإدارة الهندسية للتشغيل والصيانة",
+                    //    RightHeaderLine5 = "مدينة الملك فيصل العسكرية",
+                    //    PdfLogoUrl = "/img/ppng.png",
 
 
-                    },
+                    //},
 
                     CustomActions = new List<TableAction>
                             {
-                            //  Excel "
-                            new TableAction
-                            {
-                                Label = "تصدير Excel",
-                                Icon = "fa-regular fa-file-excel",
-                                Color = "info",
-                                Placement = TableActionPlacement.ActionsMenu,
-                                RequireSelection = false,
-                                OnClickJs = "table.exportData('excel');"
-                            },
+                            ////  Excel "
+                            //new TableAction
+                            //{
+                            //    Label = "تصدير Excel",
+                            //    Icon = "fa-regular fa-file-excel",
+                            //    Color = "info",
+                            //    Placement = TableActionPlacement.ActionsMenu,
+                            //    RequireSelection = false,
+                            //    OnClickJs = "table.exportData('excel');"
+                            //},
 
-                            //  PDF "
-                            new TableAction
-                            {
-                                Label = "تصدير PDF",
-                                Icon = "fa-regular fa-file-pdf",
-                                Color = "danger",
-                                Placement = TableActionPlacement.ActionsMenu,
-                                RequireSelection = false,
-                                OnClickJs = "table.exportData('pdf');"
-                            },
+                            ////  PDF "
+                            //new TableAction
+                            //{
+                            //    Label = "تصدير PDF",
+                            //    Icon = "fa-regular fa-file-pdf",
+                            //    Color = "danger",
+                            //    Placement = TableActionPlacement.ActionsMenu,
+                            //    RequireSelection = false,
+                            //    OnClickJs = "table.exportData('pdf');"
+                            //},
 
                              //  details "       
                             new TableAction
@@ -584,7 +546,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         Label = "تعديل بيانات مستفيد",
                         Icon = "fa-solid fa-pen",
                         Color = "info",
-                        Placement = TableActionPlacement.ActionsMenu,
+                        //Placement = TableActionPlacement.ActionsMenu,
                         IsEdit = true,
                         OpenModal = true,
                         ModalTitle = "<i class='fa-solid fa-user-pen text-emerald-600 text-xl mr-2'></i> تعديل بيانات مستفيد",
@@ -609,7 +571,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         Label = "حذف بيانات مستفيد",
                         Icon = "fa-regular fa-trash-can",
                         Color = "danger",
-                        Placement = TableActionPlacement.ActionsMenu,
+                        //Placement = TableActionPlacement.ActionsMenu,
                         IsEdit = true,
                         OpenModal = true,
                         ModalTitle = "<i class='fa fa-exclamation-triangle text-red-600 text-xl mr-2'></i> تحذير",

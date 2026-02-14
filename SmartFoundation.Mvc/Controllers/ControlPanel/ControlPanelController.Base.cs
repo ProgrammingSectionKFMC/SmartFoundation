@@ -70,6 +70,10 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
         protected DataTable? dt7;
         protected DataTable? dt8;
         protected DataTable? dt9;
+        protected DataTable? dt10;
+        protected DataTable? dt11;
+        protected DataTable? dt12;
+        protected DataTable? dt13;
 
 
 
@@ -119,6 +123,10 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
             dt7 = (ds?.Tables?.Count ?? 0) > 7 ? ds.Tables[7] : null;
             dt8 = (ds?.Tables?.Count ?? 0) > 8 ? ds.Tables[8] : null;
             dt9 = (ds?.Tables?.Count ?? 0) > 9 ? ds.Tables[9] : null;
+            dt10 = (ds?.Tables?.Count ?? 0) > 10 ? ds.Tables[10] : null;
+            dt11 = (ds?.Tables?.Count ?? 0) > 11 ? ds.Tables[11] : null;
+            dt12 = (ds?.Tables?.Count ?? 0) > 12 ? ds.Tables[12] : null;
+            dt13 = (ds?.Tables?.Count ?? 0) > 13 ? ds.Tables[13] : null;
         }
 
         public IActionResult Index()

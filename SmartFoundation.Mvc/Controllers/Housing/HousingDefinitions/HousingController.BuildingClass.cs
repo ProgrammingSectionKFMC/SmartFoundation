@@ -189,7 +189,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p01", Label = "الرقم المرجعي",        Type = "hidden", Readonly = true, ColCss = "3" },
                 new FieldConfig { Name = "p02", Label = "اسم الفئة بالعربي",    Type = "text",   Required = true,  ColCss = "6", TextMode = "arabic"  },
                 new FieldConfig { Name = "p03", Label = "اسم الفئة بالانجليزي", Type = "text",   Required = false, ColCss = "6", TextMode="english" },
-                new FieldConfig { Name = "p04", Label = "ملاحظات",              Type = "textarea",   Required = false, ColCss = "6" }
+                new FieldConfig { Name = "p10", Label = "ملاحظات",              Type = "textarea",   Required = false, ColCss = "6" }
             };
 
             // 🗑️ DELETE fields
@@ -231,7 +231,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowEdit = canUpdate,
                     ShowDelete = canDelete,
                     ShowBulkDelete = false,
-                    ShowExportPdf=true,
+                    ShowExportPdf=false,
                     ExportConfig = new TableExportConfig
                     {
                         EnablePdf = true,
@@ -271,7 +271,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         Label = "تعديل فئة",
                         Icon = "fa fa-pen-to-square",
                         Color = "info",
-                        Placement = TableActionPlacement.ActionsMenu, //   أي زر بعد ما نسويه ونبيه يظهر في الاجراءات نحط هذا السطر فقط عشان ما يصير زحمة في التيبل اكشن
+                        //Placement = TableActionPlacement.ActionsMenu, //   أي زر بعد ما نسويه ونبيه يظهر في الاجراءات نحط هذا السطر فقط عشان ما يصير زحمة في التيبل اكشن
                         IsEdit = true,
                         OpenModal = true,
                         ModalTitle = "تعديل بيانات فئة",
@@ -295,7 +295,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         Label = "حذف فئة",
                         Icon = "fa fa-trash",
                         Color = "danger",
-                        Placement = TableActionPlacement.ActionsMenu, 
+                       // Placement = TableActionPlacement.ActionsMenu, 
                         IsEdit = true,
                         OpenModal = true,
                         ModalTitle = "<i class='fa fa-exclamation-triangle text-red-600 text-xl mr-2'></i> تحذير",
