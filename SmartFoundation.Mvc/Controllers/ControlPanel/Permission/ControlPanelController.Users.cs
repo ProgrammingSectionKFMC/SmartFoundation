@@ -73,6 +73,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
             List<OptionItem> religionOptions = new();
             List<OptionItem> maritalStatusOptions = new();
             List<OptionItem> EducationOptions = new();
+            List<OptionItem> DeptOptions = new();
 
             string MsgUpdateNationalID = "";
 
@@ -152,6 +153,16 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
             json = JsonSerializer.Serialize(result!.Value);
 
             EducationOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+
+
+            // ---------------------- EducationOptions ----------------------
+            result = await _CrudController.GetDDLValues(
+                "distributorName_A", "distributorID", "11", nameof(Users), usersId, IdaraId, HostName
+            ) as JsonResult;
+
+            json = JsonSerializer.Serialize(result!.Value);
+
+            DeptOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
 
 
@@ -290,6 +301,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                             dict["p26"] = Get("religionID_FK");
                             dict["p27"] = Get("maritalStatusID_FK");
                             dict["p28"] = Get("educationID_FK");
+                            dict["p36"] = Get("distributorID");
 
                             rowsList.Add(dict);
                         }
@@ -321,9 +333,21 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 new FieldConfig { Name = "p01", Label = "الرقم المرجعي",Type = "hidden", Readonly = true, ColCss = "3" },
                 new FieldConfig { Name = "p02", Label = "رقم الهوية الوطنية",Type = "text",   Required = true,  ColCss = "3", TextMode = "number",MaxLength=10   },
                  new FieldConfig { Name = "p03", Label = "الرقم العام",Type = "text",   Required = true, ColCss = "3", TextMode="number",MaxLength=10 },
-
+                                 new FieldConfig { Name = "p23", Label = "تاريخ الميلاد",Type = "date",   Required = true, ColCss = "3" },
                 new FieldConfig { Name = "p22", Label = "تاريخ اصدار الهوية",Type = "date",   Required = true, ColCss = "3" },
-                new FieldConfig { Name = "p17", Label = "الادارة",Type = "select",   Required = true, ColCss = "3", Options= IdaraOptions,Select2 = true, Value=IdaraId, Disabled = !isAdmin },
+               new FieldConfig { Name = "p17", Label = "الادارة",Type = "select",   Required = true, ColCss = "6", Options= IdaraOptions,Select2 = true, Value=IdaraId},
+                new FieldConfig
+                {
+                    Name = "p36",
+                    Label = "القسم",
+                    Type = "select",
+                    Select2 = true,
+                    Options = DeptOptions, // Use the DeptOptions you already loaded
+                    ColCss = "6",
+                    Required = true,
+                    DependsOn = "p17",
+                    DependsUrl = "/crud/DDLFiltered?FK=IdaraID&textcol=distributorName_A&ValueCol=distributorID&PageName=Users&TableIndex=11"
+                },
 
                 new FieldConfig { Name = "p04", Label = "الاسم الاول بالعربي",Type = "text",   Required = true, ColCss = "3", TextMode = "arabic" },
                 new FieldConfig { Name = "p05", Label = "الاسم الثاني بالعربي",Type = "text",   Required = true, ColCss = "3", TextMode = "arabic" },
@@ -347,7 +371,6 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
 
 
                 
-                new FieldConfig { Name = "p23", Label = "تاريخ الميلاد",Type = "date",   Required = true, ColCss = "3" },
                 new FieldConfig { Name = "p24", Label = "الجنس",Type = "select",   Required = true, ColCss = "3", Options= genderOptions,Select2 = true },
                 new FieldConfig { Name = "p25", Label = "الجنسية",Type = "select",   Required = true, ColCss = "3", Options= nationalityOptions,Select2 = true },
                 new FieldConfig { Name = "p26", Label = "الديانة",Type = "select",   Required = true, ColCss = "3", Options= religionOptions,Select2 = true },
@@ -355,7 +378,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 new FieldConfig {Name = "p28", Label = "الدرجة العلمية", Type = "select", Required = true, ColCss = "3", Options = EducationOptions, Select2 = true},
 
 
-                 new FieldConfig { Name = "p20", Label = "ملاحظات",Type = "textarea",   Required = true, ColCss = "6" },
+                 new FieldConfig { Name = "p20", Label = "ملاحظات",Type = "textarea",   Required = true, ColCss = "3" },
 
             };
 
@@ -376,9 +399,21 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 new FieldConfig { Name = "p01", Label = "الرقم المرجعي",Type = "hidden", Readonly = true, ColCss = "3" },
                 new FieldConfig { Name = "p02", Label = "رقم الهوية الوطنية",Type = "text",   Required = true,  ColCss = "3", TextMode = "number",MaxLength=10 ,Readonly = !canUPDATENATIONALID  },
                  new FieldConfig { Name = "p03", Label = "الرقم العام",Type = "text",   Required = true, ColCss = "3", TextMode="number",MaxLength=10 },
-
+                new FieldConfig { Name = "p23", Label = "تاريخ الميلاد",Type = "date",   Required = true, ColCss = "3" },
                 new FieldConfig { Name = "p22", Label = "تاريخ اصدار الهوية",Type = "date",   Required = true, ColCss = "3" },
-                new FieldConfig { Name = "p17", Label = "الادارة",Type = "select",   Required = true, ColCss = "3", Options= IdaraOptions,Select2 = true, Value=IdaraId, Disabled = !isAdmin },
+                 new FieldConfig { Name = "p17", Label = "الادارة",Type = "select",   Required = true, ColCss = "6", Options= IdaraOptions,Select2 = true, Value=IdaraId},
+                new FieldConfig
+                {
+                    Name = "p36",
+                    Label = "القسم",
+                    Type = "select",
+                    Select2 = true,
+                    Options = DeptOptions, // Use the DeptOptions you already loaded
+                    ColCss = "6",
+                    Required = true,
+                    DependsOn = "p17",
+                    DependsUrl = "/crud/DDLFiltered?FK=IdaraID&textcol=distributorName_A&ValueCol=distributorID&PageName=Users&TableIndex=11"
+                },
 
                 new FieldConfig { Name = "p04", Label = "الاسم الاول بالعربي",Type = "text",   Required = true, ColCss = "3", TextMode = "arabic" },
                 new FieldConfig { Name = "p05", Label = "الاسم الثاني بالعربي",Type = "text",   Required = true, ColCss = "3", TextMode = "arabic" },
@@ -402,7 +437,6 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
 
 
 
-                new FieldConfig { Name = "p23", Label = "تاريخ الميلاد",Type = "date",   Required = true, ColCss = "3" },
                 new FieldConfig { Name = "p24", Label = "الجنس",Type = "select",   Required = true, ColCss = "3", Options= genderOptions,Select2 = true },
                 new FieldConfig { Name = "p25", Label = "الجنسية",Type = "select",   Required = true, ColCss = "3", Options= nationalityOptions,Select2 = true },
                 new FieldConfig { Name = "p26", Label = "الديانة",Type = "select",   Required = true, ColCss = "3", Options= religionOptions,Select2 = true },
@@ -410,7 +444,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 new FieldConfig {Name = "p28", Label = "الدرجة العلمية", Type = "select", Required = true, ColCss = "3", Options = EducationOptions, Select2 = true},
 
 
-                 new FieldConfig { Name = "p35", Label = "ملاحظات",Type = "textarea",   Required = true, ColCss = "6" },
+                 new FieldConfig { Name = "p35", Label = "ملاحظات",Type = "textarea",   Required = true, ColCss = "3" },
 
             };
 

@@ -380,8 +380,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
     new FieldConfig { Name = "p16", Label = "نوع المبنى", Type = "select", ColCss = "3", Required = true, Options = BuildingTypeOptions, Select2=true  },
     new FieldConfig { Name = "p07", Label = "فئة المبنى", Type = "select", ColCss = "6", Required = true, Options = BuildingClassOptions, Select2=true  },
     new FieldConfig { Name = "p08", Label = "موقع المبنى", Type = "select", ColCss = "6", Required = true, Options = MilitaryLocationOptions, Select2=true },
-    new FieldConfig { Name = "p09", Label = "تيلفون المبنى 1", Type = "tel", ColCss = "3", Required = false },
-    new FieldConfig { Name = "p10", Label = "تيلفون المبنى 2", Type = "tel", ColCss = "3", Required = false },
+    new FieldConfig { Name = "p09", Label = "تيلفون المبنى 1", Type = "tel", ColCss = "3", Required = false,MaxLength = 10 },
+    new FieldConfig { Name = "p10", Label = "تيلفون المبنى 2", Type = "tel", ColCss = "3", Required = false,MaxLength = 10 },
 
     new FieldConfig { Name = "p13", Label = "تاريخ بداية المبنى", Type = "date", ColCss = "3", Required = true },
     new FieldConfig { Name = "p18", Label = "تاريخ نهاية المبنى", Type = "date", ColCss = "3" },
