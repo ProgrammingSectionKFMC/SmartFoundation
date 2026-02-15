@@ -27,7 +27,7 @@
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
                 
-                <!-- زر Pin (ديسكتوب فقط) -->
+               
                 <button id="pin-sidebar"
                         type="button"
                         class="hidden h-9 w-9 items-center justify-center rounded-md text-slate-200 hover:bg-slate-700 focus:ring-2 focus:ring-slate-300/30 focus:outline-none lg:inline-flex"
@@ -175,7 +175,7 @@
 
     <div class="relative flex h-full min-h-0 flex-1 flex-col bg-transparent pt-0">
 
-        <!-- Sidebar Brand (ثابت أعلى السايدبار) -->
+        <!-- Sidebar Brand  -->
         
         <div class="sidebar-logo px-4 pt-3 pb-3">
             <a href="/Dashboard" class="flex items-center justify-center gap-3 rounded-md py-2 transition hover:bg-white/10">
@@ -225,9 +225,10 @@
                         @(sessionnationalID?.ToString() ?? "غير معروف")
                     </div>
 
-                    <div class="mt-2 rounded-md border border-white-300 bg-green-700 px-3 py-1.5 text-center text-xs font-medium text-white shadow-sm">
+                    <div class="sf-idara-badge mt-2">
                         @(sessionIdaraName?.ToString() ?? "غير معروف")
                     </div>
+
 
                    @*  <div class="mt-0.5 text-base font-semibold text-emerald-300">
                         @(sessionGeneralNo?.ToString() ?? "غير معروف")
@@ -237,7 +238,7 @@
                                         (sessionAdminTypeID == "1" || sessionAdminTypeID == "2"))
                     {
                         
-                        <div class="mt-2 rounded-md border border-white-300 bg-red-700 px-3 py-1.5 text-center text-sm font-medium text-white shadow-sm">
+                        <div class="border-white-300 mt-2 rounded-md border bg-red-700 px-3 py-1.5 text-center text-sm font-medium text-white shadow-sm">
                             @(" أنت " + sessionAdminTypeName ?? "غير معروف")
                         </div>
                     }

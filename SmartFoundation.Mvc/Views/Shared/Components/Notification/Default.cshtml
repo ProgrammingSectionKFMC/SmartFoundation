@@ -1,142 +1,81 @@
 ﻿@model SmartFoundation.Mvc.Models.NotificationViewModel
 
-<style>
-    /* Custom scrollbar for notification dropdown */
-    #notification-dropdown::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    #notification-dropdown::-webkit-scrollbar-track {
-        background: #1e293b;
-    }
-
-    #notification-dropdown::-webkit-scrollbar-thumb {
-        background: #475569;
-        border-radius: 3px;
-    }
-    
-    #notification-dropdown::-webkit-scrollbar-thumb:hover {
-        background: #64748b;
-    }
-
-    /* Ensure the dropdown content scrolls */
-    #notification-dropdown .notification-list {
-        max-height: calc(384px - 90px);
-        overflow-y: auto;
-    }
-
-    
-</style>
 
 <div class="relative">
-    @* <button type="button"
-            id="notification-bell-btn"
-            data-dropdown-toggle="notification-dropdown"
-            
-            class="relative p-3 rounded-lg text-slate-300 hover:text-slate-50 hover:bg-slate-700 hover:shadow-md transition
-       focus:ring-1 focus:ring-slate-400"
-            aria-haspopup="true" aria-expanded="false">
-        <span class="sr-only">عرض الإشعارات</span>
-        
-        <svg class="w-6 h-7" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"></path>
-        </svg>
-
-        @if (Model.Count > 0)
-        {
-            <span id="notification-badge" class="absolute -top-0.5 -right-0.5
-                         min-w-[15px] h-[17px]
-                         px-1.5 rounded-full
-                         bg-red-600 text-white text-[10px]
-                         flex items-center justify-center
-                         font-bold ring-1 ring-slate-800"
-                  data-initial-count="@Model.Count">
-                @(Model.Count > 99 ? "99+" : Model.Count.ToString())
-            </span>
-        }
-    </button> *@
-
     <button type="button"
             id="notification-bell-btn"
             data-dropdown-toggle="notification-dropdown"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-slate-200 rounded-md
-               hover:text-slate-50 hover:bg-slate-700 hover:shadow-md transition
-               focus:ring-1 focus:ring-slate-400"
+            class="notif-btn inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-slate-100
+                   transition focus:ring-1 focus:ring-white/30"
             aria-haspopup="true" aria-expanded="false">
         <span class="sr-only">عرض الإشعارات</span>
 
         <span class="relative inline-flex">
-            <svg class="w-6 h-7" fill="currentColor" viewBox="0 0 20 20">
+            <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                 <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"></path>
             </svg>
 
             @if (Model.Count > 0)
             {
                 <span id="notification-badge"
-                      class="absolute -top-1 -right-1
-                             min-w-[15px] h-[17px]
-                             px-1.5 rounded-full
-                             bg-red-600 text-white text-[10px]
-                             flex items-center justify-center
-                             font-bold ring-1 ring-slate-800"
+                      class="absolute -top-1 -right-1 flex h-[17px] min-w-[15px] items-center justify-center
+                                 rounded-full bg-red-600 px-1.5 font-bold text-white text-[10px]
+                                 ring-1 ring-black/30"
                       data-initial-count="@Model.Count">
                     @(Model.Count > 99 ? "99+" : Model.Count.ToString())
                 </span>
             }
         </span>
 
-        <span>الإشعارات</span>
+        <span class="hidden sm:inline">الإشعارات</span>
     </button>
 
-
     <div id="notification-dropdown"
-         class="absolute right-0 top-full z-50 hidden mt-2 overflow-hidden rounded-lg shadow-lg w-80 bg-slate-800 ring-1 ring-slate-700">
-        
-        <div class="px-4 py-2 text-base font-medium text-center text-slate-200 border-b border-slate-700 bg-slate-800">
-        @* <div class="px-4 py-2 text-base font-medium text-center text-slate-200 border-b border-emerald-500 bg-slate-800"> *@
-
-            الإشعارات
+         class="notif-dd absolute top-full right-0 z-50 mt-2 hidden w-[22rem] overflow-hidden rounded-xl">
+        <div class="notif-dd__header px-4 py-2.5 text-center">
+            <div class="notif-dd__header-title text-base font-extrabold">الإشعارات</div>
+            <div class="mt-0.5 text-[12px] opacity-90">آخر التحديثات والتنبيهات</div>
         </div>
 
         @if (Model.Items.Any())
         {
-            @* <div id="notification-scroll-container" class="notification-list divide-y divide-white/20"> *@
             <div id="notification-scroll-container" class="notification-list">
-
-            
-
                 @foreach (var notification in Model.Items)
                 {
-                    <a href="@(string.IsNullOrEmpty(notification.Url_) ? "#" : notification.Url_)" 
-                       class="notification-item flex px-4 py-3 hover:bg-slate-700/60 transition-colors"
+                    <a href="@(string.IsNullOrEmpty(notification.Url_) ? "#" : notification.Url_)"
+                       class="notification-item notif-item flex gap-3 px-4 py-3 transition-colors"
                        data-notification-id="@notification.UserNotificationId"
                        data-url="@notification.Url_"
                        data-is-clicked="@notification.IsClicked.ToString().ToLower()"
                        data-is-read="@notification.IsRead.ToString().ToLower()">
+
+                        <div class="pt-1">
+                            <span class="notif-dot" aria-hidden="true"></span>
+                        </div>
+
                         <div class="w-full">
-                            <div class="flex items-start justify-between mb-1">
-                                <h4 class="text-sm font-semibold text-slate-200  line-clamp-3">
+                            <div class="flex items-start justify-between gap-3">
+                                <h4 class="notif-item__title line-clamp-2 text-sm">
                                     @notification.Title
                                 </h4>
-                                <div class="flex flex-col items-end ml-2">
-                                    <span class="text-xs text-slate-400 whitespace-nowrap">
+
+                                <div class="notif-item__right flex flex-col items-end">
+                                    <span class="notif-item__meta">
                                         @notification.TimeAgo
                                     </span>
+
                                     @if (notification.IsRead)
                                     {
-                                        <span class="text-[10px] font-semibold text-green-500 mt-0.5">
-                                            مقروء
-                                        </span>
+                                        <span class="notif-status notif-status--read">مقروء</span>
                                     }
                                     else
                                     {
-                                        <span class="text-[10px] font-semibold text-red-500 mt-0.5">
-                                            غير مقروء
-                                        </span>
+                                        <span class="notif-status notif-status--unread">غير مقروء</span>
                                     }
                                 </div>
                             </div>
-                            <p class="text-xs text-slate-300 line-clamp-4" style="width:70%">
+
+                            <p class="notif-item__body line-clamp-3">
                                 @notification.Body
                             </p>
                         </div>
@@ -146,396 +85,408 @@
         }
         else
         {
-            <div id="no-notifications-message" class="px-4 py-8 text-center text-slate-400">
-                <svg class="w-12 h-12 mx-auto mb-2 text-slate-600" fill="currentColor" viewBox="0 0 20 20">
+            <div id="no-notifications-message" class="notif-empty px-4 py-10 text-center">
+                <svg class="mx-auto mb-2 h-12 w-12" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                     <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"></path>
                 </svg>
-                <p class="text-sm">لا توجد إشعارات جديدة</p>
+                <p class="text-sm font-semibold">لا توجد إشعارات جديدة</p>
+                <p class="mt-1 text-xs">سيتم عرض الإشعارات هنا فور وصولها</p>
             </div>
         }
 
-        <a href="/Notifications/All" 
+        <a href="/Notifications/All"
            id="show-all-notifications-btn"
-           class="block py-2 text-base text-center bg-slate-700 text-slate-100 hover:bg-slate-600 transition-colors border-t border-slate-700">
-           
-           عرض الكل
+           class="notif-dd__footer block py-2.5 text-center text-sm font-bold text-slate-700 transition-colors">
+            عرض الكل
         </a>
     </div>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const markedAsReadIds = new Set();
-    const dropdown = document.getElementById('notification-dropdown');
-    const bellBtn = document.getElementById('notification-bell-btn');
-    const scrollContainer = document.getElementById('notification-scroll-container');
-    let pollingInterval = null;
-    let isTabActive = true;
-    let lastFetchedIds = new Set(); // ✅ Track which notifications we've already loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        const markedAsReadIds = new Set();
+        const dropdown = document.getElementById('notification-dropdown');
+        const bellBtn = document.getElementById('notification-bell-btn');
+        const scrollContainer = document.getElementById('notification-scroll-container');
+        let pollingInterval = null;
+        let isTabActive = true;
+        let lastFetchedIds = new Set(); //  Track which notifications we've already loaded
 
-    document.addEventListener('visibilitychange', function() {
-        isTabActive = !document.hidden;
-        if (isTabActive) {
-            startPolling();
-            fetchNewNotifications();
-        } else {
-            stopPolling();
-        }
-    });
-
-    function getOptimalPollInterval() {
-        return 15000;
-    }
-
-    function shouldStartPolling() {
-        const lastPoll = localStorage.getItem('notificationLastPoll');
-        const now = Date.now();
-        if (!lastPoll) return true;
-        return (now - parseInt(lastPoll)) > 35000;
-    }
-
-    function updatePollTimestamp() {
-        localStorage.setItem('notificationLastPoll', Date.now().toString());
-    }
-
-    function updateBadgeCount() {
-        const badge = document.getElementById('notification-badge');
-        if (!badge) return;
-        
-        const unreadCount = document.querySelectorAll('.notification-item[data-is-read="false"]').length;
-        
-        if (unreadCount > 0) {
-            badge.textContent = unreadCount > 99 ? '99+' : unreadCount.toString();
-            badge.classList.remove('hidden');
-        } else {
-            badge.classList.add('hidden');
-        }
-    }
-
-    async function markNotificationAsRead(notificationId, element) {
-        if (markedAsReadIds.has(notificationId)) return;
-        const isRead = element.getAttribute('data-is-read') === 'true';
-        if (isRead) return;
-
-        markedAsReadIds.add(notificationId);
-        
-        try {
-            const response = await fetch('/api/notifications/mark-read', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userNotificationId: notificationId })
-            });
-            
-            if (response.ok) {
-                element.setAttribute('data-is-read', 'true');
-                const statusBadge = element.querySelector('.text-red-500');
-                if (statusBadge) {
-                    statusBadge.textContent = 'مقروء';
-                    statusBadge.classList.remove('text-red-500');
-                    statusBadge.classList.add('text-green-500');
-                }
-                updateBadgeCount();
+        document.addEventListener('visibilitychange', function() {
+            isTabActive = !document.hidden;
+            if (isTabActive) {
+                startPolling();
+                fetchNewNotifications();
             } else {
-                markedAsReadIds.delete(notificationId);
+                stopPolling();
             }
-        } catch (error) {
-            markedAsReadIds.delete(notificationId);
+        });
+
+        function getOptimalPollInterval() {
+            return 15000;
         }
-    }
 
-    // ✅ NEW: Create notification HTML element
-    function createNotificationElement(notification, isNew = false) {
-        const statusBadge = notification.isRead 
-            ? '<span class="text-[10px] font-semibold text-green-500 mt-0.5">مقروء</span>'
-            : '<span class="text-[10px] font-semibold text-red-500 mt-0.5">غير مقروء</span>';
+        function shouldStartPolling() {
+            const lastPoll = localStorage.getItem('notificationLastPoll');
+            const now = Date.now();
+            if (!lastPoll) return true;
+            return (now - parseInt(lastPoll)) > 35000;
+        }
 
-        const newClass = isNew ? ' new' : '';
-        
-        return `
-            <a href="${notification.url_ || '#'}" 
-               class="notification-item flex px-4 py-3 hover:bg-slate-700/60 transition-colors${newClass}"
-               data-notification-id="${notification.userNotificationId}"
-               data-url="${notification.url_ || ''}"
-               data-is-clicked="${notification.isClicked ? 'true' : 'false'}"
-               data-is-read="${notification.isRead ? 'true' : 'false'}">
-                <div class="w-full">
-                    <div class="flex items-start justify-between mb-1">
-                        <h4 class="text-sm font-semibold text-slate-200">
-                            ${notification.title || 'إشعار جديد'}
-                        </h4>
-                        <div class="flex flex-col items-end ml-2">
-                            <span class="text-xs text-slate-400 whitespace-nowrap">
-                                ${notification.timeAgo || 'الآن'}
-                            </span>
-                            ${statusBadge}
-                        </div>
-                    </div>
-                    <p class="text-xs text-slate-300 line-clamp-2">
-                        ${notification.body || ''}
-                    </p>
-                </div>
-            </a>
-        `;
-    }
+        function updatePollTimestamp() {
+            localStorage.setItem('notificationLastPoll', Date.now().toString());
+        }
 
-    // ✅ NEW: Add click handler to notification element
-    function addNotificationClickHandler(element) {
-        element.addEventListener('click', async function(e) {
-            e.preventDefault();
-            const notificationId = this.getAttribute('data-notification-id');
-            const url = this.getAttribute('data-url');
-            const isClicked = this.getAttribute('data-is-clicked') === 'true';
-            
-            if (!url || url === '#' || url === '') return;
-            if (isClicked) {
-                window.location.href = url;
-                return;
+        function updateBadgeCount() {
+            const badge = document.getElementById('notification-badge');
+            if (!badge) return;
+
+            const unreadCount = document.querySelectorAll('.notification-item[data-is-read="false"]').length;
+
+            if (unreadCount > 0) {
+                badge.textContent = unreadCount > 99 ? '99+' : unreadCount.toString();
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
             }
-            
+        }
+
+        async function markNotificationAsRead(notificationId, element) {
+            if (markedAsReadIds.has(notificationId)) return;
+            const isRead = element.getAttribute('data-is-read') === 'true';
+            if (isRead) return;
+
+            markedAsReadIds.add(notificationId);
+
             try {
-                const response = await fetch('/api/notifications/mark-clicked', {
+                const response = await fetch('/api/notifications/mark-read', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ userNotificationId: notificationId })
                 });
-                
+
+                if (response.ok) {
+                    element.setAttribute('data-is-read', 'true');
+
+                    //  update status badge (now it might be our new design)
+                    const oldStatusBadge = element.querySelector('.text-red-500');
+                    if (oldStatusBadge) {
+                        oldStatusBadge.textContent = 'مقروء';
+                        oldStatusBadge.classList.remove('text-red-500');
+                        oldStatusBadge.classList.add('text-green-500');
+                    }
+
+                    // ✅ if new design badge exists, swap classes
+                    const newStatus = element.querySelector('.notif-status');
+                    if (newStatus) {
+                        newStatus.textContent = 'مقروء';
+                        newStatus.classList.remove('notif-status--unread');
+                        newStatus.classList.add('notif-status--read');
+                    }
+
+                    updateBadgeCount();
+                } else {
+                    markedAsReadIds.delete(notificationId);
+                }
+            } catch (error) {
+                markedAsReadIds.delete(notificationId);
+            }
+        }
+
+        //  NEW: Create notification HTML element
+        function createNotificationElement(notification, isNew = false) {
+            const statusBadge = notification.isRead
+                ? '<span class="notif-status notif-status--read">مقروء</span>'
+                : '<span class="notif-status notif-status--unread">غير مقروء</span>';
+
+            const newClass = isNew ? ' new' : '';
+
+            return `
+                <a href="${notification.url_ || '#'}"
+                   class="notification-item notif-item transition-colors${newClass} flex gap-3 px-4 py-3"
+                   data-notification-id="${notification.userNotificationId}"
+                   data-url="${notification.url_ || ''}"
+                   data-is-clicked="${notification.isClicked ? 'true' : 'false'}"
+                   data-is-read="${notification.isRead ? 'true' : 'false'}">
+                    <div class="pt-1">
+                        <span class="notif-dot" aria-hidden="true"></span>
+                    </div>
+
+                    <div class="w-full">
+                        <div class="flex items-start justify-between gap-3">
+                            <h4 class="notif-item__title line-clamp-2 text-sm">
+                                ${notification.title || 'إشعار جديد'}
+                            </h4>
+                            <div class="notif-item__right flex flex-col items-end">
+                                <span class="notif-item__meta">
+                                    ${notification.timeAgo || 'الآن'}
+                                </span>
+                                ${statusBadge}
+                            </div>
+                        </div>
+                        <p class="notif-item__body line-clamp-3">
+                            ${notification.body || ''}
+                        </p>
+                    </div>
+                </a>
+            `;
+        }
+
+        //  NEW: Add click handler to notification element
+        function addNotificationClickHandler(element) {
+            element.addEventListener('click', async function(e) {
+                e.preventDefault();
+                const notificationId = this.getAttribute('data-notification-id');
+                const url = this.getAttribute('data-url');
+                const isClicked = this.getAttribute('data-is-clicked') === 'true';
+
+                if (!url || url === '#' || url === '') return;
+                if (isClicked) {
+                    window.location.href = url;
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/notifications/mark-clicked', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userNotificationId: notificationId })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success) {
+                            this.setAttribute('data-is-clicked', 'true');
+                            this.setAttribute('data-is-read', 'true');
+                            updateBadgeCount();
+                        }
+                    }
+                    window.location.href = url;
+                } catch (error) {
+                    window.location.href = url;
+                }
+            });
+        }
+
+        //  UPDATED: Fetch new notifications and update UI
+        async function fetchNewNotifications() {
+            if (!isTabActive) return;
+            updatePollTimestamp();
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+                const response = await fetch('/api/notifications/get-latest', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
                 if (response.ok) {
                     const data = await response.json();
-                    if (data.success) {
-                        this.setAttribute('data-is-clicked', 'true');
-                        this.setAttribute('data-is-read', 'true');
-                        updateBadgeCount();
-                    }
-                }
-                window.location.href = url;
-            } catch (error) {
-                window.location.href = url;
-            }
-        });
-    }
 
-    // ✅ UPDATED: Fetch new notifications and update UI
-    async function fetchNewNotifications() {
-        if (!isTabActive) return;
-        updatePollTimestamp();
+                    if (data.success && data.notifications && data.notifications.length > 0) {
+                        //  Check for NEW notifications
+                        const newNotifications = data.notifications.filter(n =>
+                            !lastFetchedIds.has(n.userNotificationId)
+                        );
 
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
-            
-            const response = await fetch('/api/notifications/get-latest', {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' },
-                signal: controller.signal
-            });
-            
-            clearTimeout(timeoutId);
-            
-            if (response.ok) {
-                const data = await response.json();
-                
-                if (data.success && data.notifications && data.notifications.length > 0) {
-                    // ✅ Check for NEW notifications
-                    const newNotifications = data.notifications.filter(n => 
-                        !lastFetchedIds.has(n.userNotificationId)
-                    );
+                        if (newNotifications.length > 0) {
+                            console.log('Found new notifications:', newNotifications.length);
 
-                    if (newNotifications.length > 0) {
-                        console.log('Found new notifications:', newNotifications.length);
-                        
-                        // ✅ Update lastFetchedIds
-                        data.notifications.forEach(n => lastFetchedIds.add(n.userNotificationId));
-                        
-                        // ✅ Add new notifications to the list
-                        const container = document.getElementById('notification-scroll-container');
-                        const noMsgDiv = document.getElementById('no-notifications-message');
-                        
-                        if (noMsgDiv) {
-                            // Remove "no notifications" message
-                            noMsgDiv.remove();
-                        }
-                        
-                        if (!container) {
-                            // Create container if it doesn't exist
-                            const dropdownContent = dropdown.querySelector('.border-b');
-                            const newContainer = document.createElement('div');
-                            newContainer.id = 'notification-scroll-container';
-                            newContainer.className = 'notification-list divide-y divide-slate-700';
-                            dropdownContent.insertAdjacentElement('afterend', newContainer);
-                        }
-                        
-                        // ✅ Add new notifications at the top
-                        newNotifications.reverse().forEach(notification => {
-                            const notifHtml = createNotificationElement(notification, true);
-                            const targetContainer = document.getElementById('notification-scroll-container');
-                            if (targetContainer) {
-                                targetContainer.insertAdjacentHTML('afterbegin', notifHtml);
-                                
-                                // Add click handler
-                                const newElement = targetContainer.firstElementChild;
-                                if (newElement) {
-                                    addNotificationClickHandler(newElement);
-                                    
-                                    // Add to observer if dropdown is open
-                                    if (observer) {
-                                        observer.observe(newElement);
+                            //  Update lastFetchedIds
+                            data.notifications.forEach(n => lastFetchedIds.add(n.userNotificationId));
+
+                            //  Add new notifications to the list
+                            const container = document.getElementById('notification-scroll-container');
+                            const noMsgDiv = document.getElementById('no-notifications-message');
+
+                            if (noMsgDiv) {
+                                // Remove "no notifications" message
+                                noMsgDiv.remove();
+                            }
+
+                            if (!container) {
+                                // Create container if it doesn't exist
+                                const dropdownContent = dropdown.querySelector('.border-b');
+                                const newContainer = document.createElement('div');
+                                newContainer.id = 'notification-scroll-container';
+                                newContainer.className = 'notification-list';
+                                dropdownContent.insertAdjacentElement('afterend', newContainer);
+                            }
+
+                            //  Add new notifications at the top
+                            newNotifications.reverse().forEach(notification => {
+                                const notifHtml = createNotificationElement(notification, true);
+                                const targetContainer = document.getElementById('notification-scroll-container');
+                                if (targetContainer) {
+                                    targetContainer.insertAdjacentHTML('afterbegin', notifHtml);
+
+                                    // Add click handler
+                                    const newElement = targetContainer.firstElementChild;
+                                    if (newElement) {
+                                        addNotificationClickHandler(newElement);
+
+                                        // Add to observer if dropdown is open
+                                        if (observer) {
+                                            observer.observe(newElement);
+                                        }
                                     }
                                 }
-                            }
-                        });
-                        
-                        // ✅ Update badge count
-                        updateBadgeCount();
-                    }
-                    
-                    // ✅ Always update badge
-                    const badge = document.getElementById('notification-badge');
-                    if (data.count > 0) {
-                        if (!badge) {
-                            const newBadge = document.createElement('span');
-                            newBadge.id = 'notification-badge';
-                            // newBadge.className = 'absolute -top-0.5 -right-0.5 min-w-[15px] h-[17px] px-1.5 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center font-bold ring-1 ring-slate-800';
-                                newBadge.className = 'absolute -top-1 -right-1 min-w-[15px] h-[17px] px-1.5 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center font-bold ring-1 ring-slate-800';
+                            });
 
-                            newBadge.textContent = data.count > 99 ? '99+' : data.count.toString();
-                            // bellBtn.appendChild(newBadge);
+                            //  Update badge count
+                            updateBadgeCount();
+                        }
+
+                        //  Always update badge
+                        const badge = document.getElementById('notification-badge');
+                        if (data.count > 0) {
+                            if (!badge) {
+                                const newBadge = document.createElement('span');
+                                newBadge.id = 'notification-badge';
+                                newBadge.className = 'absolute -top-1 -right-1 min-w-[15px] h-[17px] px-1.5 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center font-bold ring-1 ring-black/30';
+                                newBadge.textContent = data.count > 99 ? '99+' : data.count.toString();
                                 const iconWrap = bellBtn.querySelector('.relative.inline-flex');
                                 (iconWrap || bellBtn).appendChild(newBadge);
 
-                        } else {
-                            badge.textContent = data.count > 99 ? '99+' : data.count.toString();
-                            badge.classList.remove('hidden');
+                            } else {
+                                badge.textContent = data.count > 99 ? '99+' : data.count.toString();
+                                badge.classList.remove('hidden');
+                            }
+                        } else if (badge) {
+                            badge.classList.add('hidden');
                         }
-                    } else if (badge) {
-                        badge.classList.add('hidden');
                     }
                 }
-            }
-        } catch (error) {
-            if (error.name !== 'AbortError') {
-                console.error('Error fetching notifications:', error);
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error('Error fetching notifications:', error);
+                }
             }
         }
-    }
 
-    // ✅ Initialize lastFetchedIds with current notifications
-    document.querySelectorAll('.notification-item').forEach(item => {
-        const id = parseInt(item.getAttribute('data-notification-id'));
-        if (id) lastFetchedIds.add(id);
-    });
+        //  Initialize lastFetchedIds with current notifications
+        document.querySelectorAll('.notification-item').forEach(item => {
+            const id = parseInt(item.getAttribute('data-notification-id'));
+            if (id) lastFetchedIds.add(id);
+        });
 
-    function startPolling() {
-        if (pollingInterval || !isTabActive) return;
-        if (!shouldStartPolling()) return;
-        
-        const pollInterval = getOptimalPollInterval();
-        pollingInterval = setInterval(() => {
+        function startPolling() {
+            if (pollingInterval || !isTabActive) return;
+            if (!shouldStartPolling()) return;
+
+            const pollInterval = getOptimalPollInterval();
+            pollingInterval = setInterval(() => {
+                fetchNewNotifications();
+            }, pollInterval);
             fetchNewNotifications();
-        }, pollInterval);
-        fetchNewNotifications();
-    }
-
-    function stopPolling() {
-        if (pollingInterval) {
-            clearInterval(pollingInterval);
-            pollingInterval = null;
         }
-    }
 
-    let observer = null;
-    
-    function setupScrollObserver() {
-        if (!scrollContainer) return;
-        if (observer) observer.disconnect();
+        function stopPolling() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+        }
 
-        observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach((entry) => {
-                    if (entry.isIntersecting) {
-                        const element = entry.target;
-                        const notificationId = element.getAttribute('data-notification-id');
-                        const isRead = element.getAttribute('data-is-read') === 'true';
-                        
-                        if (!isRead && !markedAsReadIds.has(notificationId)) {
-                            setTimeout(() => {
-                                if (entry.isIntersecting) {
-                                    markNotificationAsRead(notificationId, element);
-                                }
-                            }, 500);
+        let observer = null;
+
+        function setupScrollObserver() {
+            if (!scrollContainer) return;
+            if (observer) observer.disconnect();
+
+            observer = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach((entry) => {
+                        if (entry.isIntersecting) {
+                            const element = entry.target;
+                            const notificationId = element.getAttribute('data-notification-id');
+                            const isRead = element.getAttribute('data-is-read') === 'true';
+
+                            if (!isRead && !markedAsReadIds.has(notificationId)) {
+                                setTimeout(() => {
+                                    if (entry.isIntersecting) {
+                                        markNotificationAsRead(notificationId, element);
+                                    }
+                                }, 500);
+                            }
                         }
-                    }
-                });
-            },
-            { root: scrollContainer, rootMargin: '0px', threshold: 0.5 }
-        );
+                    });
+                },
+                { root: scrollContainer, rootMargin: '0px', threshold: 0.5 }
+            );
 
-        document.querySelectorAll('.notification-item').forEach((item) => {
-            observer.observe(item);
-        });
-    }
-
-    function onDropdownOpen() {
-        setupScrollObserver();
-    }
-
-    function onDropdownClose() {
-        if (observer) observer.disconnect();
-    }
-
-    // ✅ Add click handlers to existing notifications
-    document.querySelectorAll('.notification-item').forEach(function(item) {
-        addNotificationClickHandler(item);
-    });
-
-    const showAllBtn = document.getElementById('show-all-notifications-btn');
-    if (showAllBtn) {
-        showAllBtn.addEventListener('click', async function(e) {
-            e.preventDefault();
-            try {
-                await fetch('/api/notifications/mark-all-clicked', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-            } catch (error) {}
-            window.location.href = '/Notifications/All';
-        });
-    }
-
-    if (bellBtn) {
-        bellBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const wasHidden = dropdown.classList.contains('hidden');
-            dropdown.classList.toggle('hidden');
-            
-            if (wasHidden) {
-                onDropdownOpen();
-            } else {
-                onDropdownClose();
-            }
-        });
-    }
-
-    document.addEventListener('click', function(event) {
-        const isDropdownButton = event.target.closest('#notification-bell-btn');
-        const isInsideDropdown = event.target.closest('#notification-dropdown');
-
-        if (!isDropdownButton && !isInsideDropdown) {
-            if (!dropdown.classList.contains('hidden')) {
-                dropdown.classList.add('hidden');
-                onDropdownClose();
-            }
+            document.querySelectorAll('.notification-item').forEach((item) => {
+                observer.observe(item);
+            });
         }
+
+        function onDropdownOpen() {
+            setupScrollObserver();
+        }
+
+        function onDropdownClose() {
+            if (observer) observer.disconnect();
+        }
+
+        //  Add click handlers to existing notifications
+        document.querySelectorAll('.notification-item').forEach(function(item) {
+            addNotificationClickHandler(item);
+        });
+
+        const showAllBtn = document.getElementById('show-all-notifications-btn');
+        if (showAllBtn) {
+            showAllBtn.addEventListener('click', async function(e) {
+                e.preventDefault();
+                try {
+                    await fetch('/api/notifications/mark-all-clicked', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                } catch (error) {}
+                window.location.href = '/Notifications/All';
+            });
+        }
+
+        if (bellBtn) {
+            bellBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const wasHidden = dropdown.classList.contains('hidden');
+                dropdown.classList.toggle('hidden');
+
+                if (wasHidden) {
+                    onDropdownOpen();
+                } else {
+                    onDropdownClose();
+                }
+            });
+        }
+
+        document.addEventListener('click', function(event) {
+            const isDropdownButton = event.target.closest('#notification-bell-btn');
+            const isInsideDropdown = event.target.closest('#notification-dropdown');
+
+            if (!isDropdownButton && !isInsideDropdown) {
+                if (!dropdown.classList.contains('hidden')) {
+                    dropdown.classList.add('hidden');
+                    onDropdownClose();
+                }
+            }
+        });
+
+        if (isTabActive) {
+            startPolling();
+        }
+
+        window.addEventListener('beforeunload', () => {
+            stopPolling();
+            localStorage.removeItem('notificationLastPoll');
+        });
+
+        updateBadgeCount();
     });
-
-    if (isTabActive) {
-        startPolling();
-    }
-
-    window.addEventListener('beforeunload', () => {
-        stopPolling();
-        localStorage.removeItem('notificationLastPoll');
-    });
-
-    updateBadgeCount();
-});
 </script>

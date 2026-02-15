@@ -823,3 +823,302 @@ button[data-dropdown-toggle="notification-dropdown"] svg {
 #user-menu-button:hover i {
     color: #fff !important;
 }
+
+
+
+
+/* =============
+   Idara Badge 
+   ============= */
+.sf-idara-badge {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 0.375rem;
+    border: 0px solid rgba(255,255,255,.35);
+    background: transparent;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+    text-align: center;
+    box-shadow: none;
+    letter-spacing: 0;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+#logo-sidebar .sf-idara-badge {
+    border-color: rgba(255,255,255,.40);
+    background: rgba(255,255,255,.06);
+    border-radius: 0.375rem; 
+}
+
+
+
+/*==============
+ notifications 
+ ============== */
+:root {
+    --nd-shell: #053b2d;
+    --nd-shell-2: #042f26;
+    --nd-border: rgba(255,255,255,.18);
+    /* Header / Footer */
+    --nd-header: #0b6b52;
+    --nd-footer: #0b6b52;
+    --nd-list: rgba(255,255,255,.09);
+    --nd-card: rgba(255,255,255,.14);
+    --nd-card-hover: rgba(255,255,255,.16);
+    --nd-card-border: rgba(255,255,255,.22);
+    --nd-unread-bg: rgba(16,185,129,.24);
+    --nd-unread-border: rgba(16,185,129,.55);
+    --nd-unread-rail: rgba(16,185,129,.92);
+    --nd-text: rgba(255,255,255,.97);
+    --nd-muted: rgba(255,255,255,.82);
+    --nd-dim: rgba(255,255,255,.70);
+    --nd-ok: #22c55e;
+    --nd-danger: #ef4444;
+    --nd-warn: #f59e0b;
+    --nd-focus: rgba(255,255,255,.22);
+}
+
+.line-clamp-1, .line-clamp-2, .line-clamp-3, .line-clamp-4 {
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+}
+
+.line-clamp-1 {
+    -webkit-line-clamp: 1 !important;
+}
+
+.line-clamp-2 {
+    -webkit-line-clamp: 2 !important;
+}
+
+.line-clamp-3 {
+    -webkit-line-clamp: 3 !important;
+}
+
+.line-clamp-4 {
+    -webkit-line-clamp: 4 !important;
+}
+
+/* Button */
+.notif-btn {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.18);
+    backdrop-filter: blur(6px);
+}
+
+    .notif-btn:hover {
+        background: rgba(255,255,255,.11);
+        border-color: rgba(255,255,255,.26);
+    }
+
+/* Dropdown shell */
+#notification-dropdown.notif-dd {
+    direction: rtl;
+    background: linear-gradient(180deg, var(--nd-shell), var(--nd-shell-2));
+    border: 1px solid var(--nd-border);
+    border-radius: 8px;
+    overflow: hidden;
+    isolation: isolate;
+    width: 22rem;
+    max-width: calc(100vw - 20px);
+}
+
+    /* Header */
+    #notification-dropdown.notif-dd .notif-dd__header {
+        background: radial-gradient(120% 140% at 50% 0%, rgba(255,255,255,.14) 0%, rgba(255,255,255,0) 60%), linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,.22)), var(--nd-header);
+        border-bottom: 1px solid rgba(255,255,255,.20);
+        padding: 12px 14px;
+        text-align: center;
+    }
+
+.notif-dd__header-title {
+    color: var(--nd-text);
+    font-weight: 900;
+    letter-spacing: .2px;
+    font-size: 16px;
+    line-height: 1.2;
+}
+
+.notif-dd__header-sub {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--nd-dim);
+    font-weight: 800;
+}
+
+/* List */
+#notification-dropdown .notification-list {
+    background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.09));
+    max-height: 360px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 12px;
+}
+
+    #notification-dropdown .notification-list::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    #notification-dropdown .notification-list::-webkit-scrollbar-track {
+        background: rgba(255,255,255,.08);
+    }
+
+    #notification-dropdown .notification-list::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,.30);
+        border-radius: 999px;
+        border: 2px solid rgba(0,0,0,0);
+        background-clip: padding-box;
+    }
+
+        #notification-dropdown .notification-list::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,.40);
+            background-clip: padding-box;
+        }
+
+/* Item (Card) */
+.notif-item {
+    display: flex;
+    gap: 10px;
+    position: relative;
+    background: var(--nd-card);
+    border: 1px solid var(--nd-card-border);
+    border-radius: 8px;
+    padding: 12px 12px;
+    margin-bottom: 12px;
+    transition: background .14s ease, transform .14s ease, border-color .14s ease;
+}
+
+    .notif-item:hover {
+        background: var(--nd-card-hover);
+        border-color: rgba(255,255,255,.26);
+        transform: translateY(-1px);
+    }
+
+    .notif-item[data-is-read="false"] {
+        background: var(--nd-unread-bg);
+        border-color: var(--nd-unread-border);
+        box-shadow: inset 5px 0 0 0 var(--nd-unread-rail);
+    }
+
+    .notif-item.new {
+        box-shadow: inset 5px 0 0 0 rgba(245,158,11,.95);
+    }
+
+    .notif-item .w-full {
+        min-width: 0;
+    }
+
+/* Dot */
+.notif-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    display: inline-block;
+    margin-top: 4px;
+    background: rgba(255,255,255,.55);
+}
+
+.notif-item[data-is-read="false"] .notif-dot {
+    background: var(--nd-danger);
+}
+
+.notif-item[data-is-read="true"] .notif-dot {
+    background: var(--nd-ok);
+}
+
+/* Title / Meta / Body */
+.notif-item__title {
+    color: var(--nd-text);
+    font-weight: 950;
+    line-height: 1.35;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+}
+
+.notif-item__meta {
+    color: var(--nd-muted);
+    font-size: 12px;
+    white-space: nowrap;
+    font-weight: 800;
+}
+
+.notif-item__body {
+    color: rgba(255,255,255,.90);
+    font-size: 12px;
+    line-height: 1.7;
+    margin-top: 6px;
+    overflow-wrap: anywhere;
+}
+
+.notif-item__right {
+    min-width: 98px;
+    text-align: left;
+    flex-shrink: 0;
+}
+
+/* Status badges */
+.notif-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    margin-top: 6px;
+    line-height: 1.4;
+    border: 1px solid;
+    white-space: nowrap;
+}
+
+.notif-status--read {
+    color: rgba(255,255,255,.98);
+    background: rgba(34,197,94,.22);
+    border-color: rgba(34,197,94,.48);
+}
+
+.notif-status--unread {
+    color: rgba(255,255,255,.98);
+    background: rgba(239,68,68,.22);
+    border-color: rgba(239,68,68,.48);
+}
+
+/* Empty */
+.notif-empty {
+    background: rgba(255,255,255,.08);
+    color: rgba(255,255,255,.90);
+    padding: 26px 16px;
+    text-align: center;
+    border-top: 1px solid rgba(255,255,255,.12);
+}
+
+    .notif-empty svg {
+        color: rgba(255,255,255,.70);
+    }
+
+/*  Footer  */
+#notification-dropdown.notif-dd .notif-dd__footer,
+#notification-dropdown.notif-dd a#show-all-notifications-btn.notif-dd__footer {
+    background-color: transparent !important;
+    background-image: radial-gradient(120% 140% at 50% 0%, rgba(255,255,255,.14) 0%, rgba(255,255,255,0) 60%), linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,.22)), linear-gradient(180deg, var(--nd-footer), var(--nd-footer)) !important;
+    border-top: 1px solid rgba(255,255,255,.20) !important;
+    color: rgba(255,255,255,.98) !important;
+    font-weight: 950;
+    padding: 12px 12px;
+    transition: filter .14s ease;
+    display: block;
+    text-align: center;
+}
+
+    #notification-dropdown.notif-dd .notif-dd__footer:hover,
+    #notification-dropdown.notif-dd a#show-all-notifications-btn.notif-dd__footer:hover {
+        filter: brightness(1.06);
+    }
+/*==============
+  End Notifications 
+ ============== */
