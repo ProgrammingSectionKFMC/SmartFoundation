@@ -1,0 +1,17 @@
+﻿@model SmartFoundation.UI.ViewModels.SmartPage.SmartPageViewModel
+@{
+    ViewData["Title"] = Model.PageTitle;
+}
+
+
+@await Component.InvokeAsync("SmartRenderer", new { model = Model })
+
+
+<script>
+    (function () {
+
+      if (location.search && location.search.length > 1) {
+        history.replaceState(null, "", location.pathname + location.hash);
+      }
+    })();
+</script>

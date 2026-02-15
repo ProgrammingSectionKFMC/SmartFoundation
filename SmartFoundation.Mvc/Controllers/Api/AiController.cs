@@ -61,14 +61,36 @@ namespace SmartFoundation.Mvc.Controllers.Api
             if (request.ChatId <= 0 || (request.Feedback != 1 && request.Feedback != -1))
                 return BadRequest("Invalid feedback data");
 
+
+
+
             try
             {
-                var parameters = new Dictionary<string, object>
-                {
-                    { "ChatId", request.ChatId },
-                    { "UserFeedback", request.Feedback },
-                    { "FeedbackComment", request.Comment ?? (object)DBNull.Value }
-                };
+
+
+                var usersId =
+            HttpContext.Session.GetString("usersID") ??
+            HttpContext.Session.GetString("UsersID") ??
+            HttpContext.Session.GetString("UserId");
+
+                int? usersIdInt = int.TryParse(usersId, out var x) ? x : (int?)null;
+
+
+                string? comment = string.IsNullOrWhiteSpace(request.Comment)
+                    ? null
+                    : request.Comment.Trim();
+
+                var parameters = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "ChatId", request.ChatId },
+            { "UserFeedback", request.Feedback },
+            { "FeedbackComment", comment } ,           // null ok
+            { "UsersId", usersIdInt }
+        };
+
+                // اختياري: احذف الباراميتر لو null (أنظف مع بعض الـ SPs)
+                if (comment is null)
+                    parameters.Remove("FeedbackComment");
 
                 var spRequest = new SmartRequest
                 {
@@ -78,8 +100,12 @@ namespace SmartFoundation.Mvc.Controllers.Api
                 };
 
                 var response = await _dataEngine.ExecuteAsync(spRequest);
-                
-                return Ok(new { success = response.Success, message = "شكراً على تقييمك!" });
+
+                return Ok(new
+                {
+                    success = response.Success,
+                    message = response.Success ? "شكراً على تقييمك!" : (response.Message ?? "لم يتم حفظ التقييم")
+                });
             }
             catch (Exception ex)
             {
@@ -87,6 +113,8 @@ namespace SmartFoundation.Mvc.Controllers.Api
                 return StatusCode(500, "فشل حفظ التقييم");
             }
         }
+
+
     }
 
     public sealed record AiFeedbackRequest(

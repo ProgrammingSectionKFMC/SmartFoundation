@@ -180,8 +180,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             {
                 new FieldConfig { Name = rowIdField, Type = "hidden" },
                 new FieldConfig { Name = "p01", Label = "رمز الموقع", Type = "text", ColCss = "6", Required = false},
-                new FieldConfig { Name = "p02", Label = "المدينة", Type = "select",Options =CityOptions, ColCss = "6", Required = true},
-                new FieldConfig {  Name = "p04", Label = "اسم الموقع بالعربي", Autocomplete = "off", Type = "text",  ColCss = "6",  Required = true, TextMode = "arabic", HelpText = "اكتب أحرف عربية فقط", },
+                new FieldConfig { Name = "p02", Label = "المدينة", Type = "select",Options =CityOptions, ColCss = "6", Required = true,Select2 = true},
+                new FieldConfig {  Name = "p04", Label = "اسم الموقع بالعربي", Autocomplete = "off", Type = "text",  ColCss = "6",  Required = true, TextMode = "arabic", HelpText = "اكتب أحرف عربية فقط" },
                 new FieldConfig { Name = "p05", Label = "اسم الموقع بالانجليزي", Type = "text", ColCss = "6", Required = false,TextMode="english"},
                 new FieldConfig { Name = "p06", Label = "احداثيات الموقع", Type = "text", ColCss = "6", Required = false},
                 new FieldConfig { Name = "p07", Label = "وصف الموقع ", Type = "textarea", ColCss = "6", Required = false},
@@ -212,7 +212,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                 new FieldConfig { Name = "p01", Label = "الرقم المرجعي",        Type = "hidden", Readonly = true, ColCss = "3" },
                 new FieldConfig { Name = "p02", Label = "رمز الموقع",    Type = "text",  ColCss = "6" },
-                new FieldConfig { Name = "p03", Label = "المدينة", Type = "select",Options =CityOptions, ColCss = "6", Required = true},
+                new FieldConfig { Name = "p03", Label = "المدينة", Type = "select",Options =CityOptions, ColCss = "6", Required = true,Select2 = true},
                 new FieldConfig { Name = "p05", Label = "اسم الموقع بالعربي", Type = "text",   Required = true, ColCss = "6", TextMode="arabic",HelpText = "اكتب أحرف عربية فقط",},
                 new FieldConfig { Name = "p06", Label = "اسم الموقع بالانجليزي", Type = "text",   Required = false, ColCss = "6", TextMode="english",HelpText = "اكتب أحرف انجليزية فقط",},
                 new FieldConfig { Name = "p07", Label = "احداثيات الموقع", Type = "text",   Required = false, ColCss = "6" },

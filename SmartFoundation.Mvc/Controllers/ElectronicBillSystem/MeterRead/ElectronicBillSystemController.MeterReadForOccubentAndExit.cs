@@ -33,7 +33,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
             ready = !string.IsNullOrWhiteSpace(residentInfoID_);
 
 
-            ControllerName = nameof(Housing);
+            ControllerName = nameof(ElectronicBillSystem);
             PageName = string.IsNullOrWhiteSpace(PageName) ? "MeterReadForOccubentAndExit" : PageName;
 
             var spParameters = new object?[]

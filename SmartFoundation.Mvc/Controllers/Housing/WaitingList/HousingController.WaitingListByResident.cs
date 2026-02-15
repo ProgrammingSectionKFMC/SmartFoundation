@@ -55,6 +55,25 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             //  تقسيم الداتا سيت للجدول الأول + جداول أخرى
             SplitDataSet(ds);
 
+
+            
+
+            string residentInfoIdaraID = "";
+            
+
+
+           
+
+
+            if (dt1 != null && dt1.Rows.Count > 0)
+            {
+                DataRow rows = dt1.Rows[0];
+                if (dt1.Columns.Contains("IdaraID") && rows["IdaraID"] != DBNull.Value)
+                    residentInfoIdaraID = rows["IdaraID"].ToString();
+            }
+
+
+
             //  التحقق من الصلاحيات
             if (permissionTable is null || permissionTable.Rows.Count == 0)
             {
@@ -809,8 +828,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p06", Label = "تاريخ القرار", Type = "date", ColCss = "3", MaxLength = 50, TextMode = "number",Required=true,Placeholder="YYYY-MM-DD"},
 
                 new FieldConfig { Name = "p07", Label = "فئة سجل الانتظار", Type = "hidden", ColCss = "3", Required = true, Options= waitingClassOptions },
-                new FieldConfig { Name = "p08", Label = "نوع سجل الانتظار", Type = "select", ColCss = "3", Required = true, Options= waitingOrderTypeOptions,Select2=true },
-                new FieldConfig { Name = "p09", Label = "ملاحظات", Type = "textarea", ColCss = "6", Required = false },
+                new FieldConfig { Name = "p08", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Required = true, Options= waitingOrderTypeOptions,Select2=true },
+                new FieldConfig { Name = "p09", Label = "ملاحظات", Type = "textarea", ColCss = "3", Required = false },
             };
 
               var updateFieldsOccubentLetter = new List<FieldConfig>
@@ -960,7 +979,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 PanelTitle = "بيانات المستفيد",
                 EnablePagination = false, // جديد
                 ShowPageSizeSelector = false, // جديد
-                ShowToolbar = true,
+                ShowToolbar = residentInfoIdaraID == IdaraId,
                 EnableCellCopy = false,
                 RenderAsToggle = true,
                 ToggleLabel = "بيانات المستفيد",
@@ -979,10 +998,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowColumns = true,
                     ShowExportCsv = false,
                     ShowExportExcel = false,
-                    ShowAdd = canInsertWaitingList,
-                    ShowEdit = canDELETERESIDENTALLWAITINGLIST,
-                    ShowEdit1 = canMoveWaitingList,
-                    ShowDelete = canDeleteWaitingList,
+                    ShowAdd = canInsertWaitingList && residentInfoIdaraID == IdaraId,
+                    ShowEdit = canDELETERESIDENTALLWAITINGLIST && residentInfoIdaraID == IdaraId,
+                    ShowEdit1 = canMoveWaitingList && residentInfoIdaraID == IdaraId,
+                    ShowDelete = canDeleteWaitingList && residentInfoIdaraID == IdaraId,
                     ShowBulkDelete = false,
 
                     Edit = new TableAction
@@ -1055,12 +1074,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 ShowPageSizeSelector=false, // جديد
                 //TabelLabel= "قوائم الانتظار",
                 //TabelLabelIcon = "fa-solid fa-list",
-                ShowToolbar =true,
+                ShowToolbar = residentInfoIdaraID == IdaraId,
                 EnableCellCopy = false,
                 RenderAsToggle = true,
                 ToggleLabel = "عرض قوائم الانتظار للمستفيد بإدارتك",
                 ToggleIcon = "fa-solid fa-list",
-                ToggleDefaultOpen = true,
+                ToggleDefaultOpen = residentInfoIdaraID == IdaraId,
                 ShowToggleCount = true,
 
 
@@ -1073,10 +1092,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowColumns = true,
                     ShowExportCsv = false,
                     ShowExportExcel = false,
-                    ShowAdd = canInsertWaitingList,
-                    ShowEdit = canUpdateWaitingList,
-                    ShowEdit1 = canMoveWaitingList,
-                    ShowDelete = canDeleteWaitingList,
+                    ShowAdd = canInsertWaitingList && residentInfoIdaraID == IdaraId,
+                    ShowEdit = canUpdateWaitingList && residentInfoIdaraID == IdaraId,
+                    ShowEdit1 = canMoveWaitingList && residentInfoIdaraID == IdaraId,
+                    ShowDelete = canDeleteWaitingList && residentInfoIdaraID == IdaraId,
                     ShowBulkDelete = false,
                     
 
@@ -1192,12 +1211,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 PanelTitle = "خطابات التسكين",
                 //TabelLabel = "خطابات التسكين",
                 //TabelLabelIcon = "fa-solid fa-list",
-                ShowToolbar = true,
+                ShowToolbar = residentInfoIdaraID == IdaraId,
                 EnableCellCopy = false,
                 RenderAsToggle = true,
                 ToggleLabel = "عرض خطابات التسكين بإدارتك",
                 ToggleIcon = "fa-solid fa-file-signature",
-                ToggleDefaultOpen = true,
+                ToggleDefaultOpen = residentInfoIdaraID == IdaraId,
                 ShowToggleCount = true,
 
 
@@ -1207,9 +1226,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowColumns = true,
                     ShowExportCsv = false,
                     ShowExportExcel = false,
-                    ShowAdd2 = canInsertOCCUBENTLETTER,
-                    ShowEdit2 = canUpdateOCCUBENTLETTER,
-                    ShowDelete2 = canDeleteOCCUBENTLETTER,
+                    ShowAdd2 = canInsertOCCUBENTLETTER && residentInfoIdaraID == IdaraId,
+                    ShowEdit2 = canUpdateOCCUBENTLETTER && residentInfoIdaraID == IdaraId,
+                    ShowDelete2 = canDeleteOCCUBENTLETTER && residentInfoIdaraID == IdaraId,
                     ShowBulkDelete = false,
 
 
@@ -1321,12 +1340,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 PanelTitle = "طلبات نقل سجلات الانتظار من ادارتك",
                 //TabelLabel = "طلبات نقل سجلات الانتظار من ادارتك",
                 //TabelLabelIcon = "fa-solid fa-list",
-                ShowToolbar = true,
+                ShowToolbar = residentInfoIdaraID == IdaraId,
                 EnableCellCopy = false,
                 RenderAsToggle = true,
                 ToggleLabel = "طلبات نقل سجلات الانتظار من ادارتك",
                 ToggleIcon = "fa-solid fa-file-signature",
-                ToggleDefaultOpen = true,
+                ToggleDefaultOpen = residentInfoIdaraID == IdaraId,
                 ShowToggleCount = true,
                 Toolbar = new TableToolbarConfig
                 {
@@ -1334,7 +1353,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowColumns = true,
                     ShowExportCsv = false,
                     ShowExportExcel = false,
-                    ShowDelete = candeleteMoveWaitingList,
+                    ShowDelete = candeleteMoveWaitingList && residentInfoIdaraID == IdaraId,
                     ShowBulkDelete = false,
 
 

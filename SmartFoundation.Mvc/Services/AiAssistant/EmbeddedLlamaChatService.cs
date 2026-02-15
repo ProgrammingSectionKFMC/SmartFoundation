@@ -1,11 +1,12 @@
 ﻿using LLama;
 using LLama.Common;
 using Microsoft.Extensions.Options;
-using System.Collections.Concurrent;
-using System.Text;
+using SmartFoundation.Application.Mapping;
 using SmartFoundation.DataEngine.Core.Interfaces;
 using SmartFoundation.DataEngine.Core.Models;
-using SmartFoundation.Application.Mapping;
+using System.Collections.Concurrent;
+using System.Text;
+using System.Text.Json;
 
 namespace SmartFoundation.Mvc.Services.AiAssistant;
 
@@ -389,18 +390,25 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
     }
 
     private async Task<AiChatResult> SaveAndReturn(
-        AiChatRequest request,
-        DateTimeOffset startTime,
-        string answer,
-        IReadOnlyList<KnowledgeChunk> citations,
-        string? entityKey,
-        string? intent)
+      AiChatRequest request,
+      DateTimeOffset startTime,
+      string answer,
+      IReadOnlyList<KnowledgeChunk> citations,
+      string? entityKey,
+      string? intent)
     {
         var responseTime = (int)(DateTimeOffset.UtcNow - startTime).TotalMilliseconds;
 
         var chatId = await SaveChatHistoryAsync(
             request, answer, entityKey, intent, responseTime, citations?.Count ?? 0
         );
+
+        _log.LogInformation("AI_DEBUG_SAVE: chatId={ChatId}, citations={Count}",
+      chatId, citations?.Count ?? 0);
+
+        // ✅ جديد: احفظ الاقتباسات
+        if (chatId > 0 && citations is { Count: > 0 })
+            await SaveChatCitationsAsync(chatId, citations);
 
         return new AiChatResult(answer, citations)
         {
@@ -409,6 +417,64 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
             Intent = intent
         };
     }
+
+
+    private async Task SaveChatCitationsAsync(long chatId, IReadOnlyList<KnowledgeChunk> citations)
+    {
+        if (_dataEngine is null) return;
+
+        try
+        {
+            var take = Math.Min(citations.Count, 10);
+
+            for (int i = 0; i < take; i++)
+            {
+                var c = citations[i];
+                if (string.IsNullOrWhiteSpace(c.Source)) continue;
+
+                // لو عمود TextSnippet محدود، قصّه (عدّل 2000 حسب عمودك)
+                var snippet = string.IsNullOrWhiteSpace(c.Text) ? null : c.Text;
+                if (snippet is not null && snippet.Length > 2000)
+                    snippet = snippet.Substring(0, 2000);
+
+                var parameters = new Dictionary<string, object?>
+            {
+                { "ChatId", chatId },                 // long
+                { "Source", c.Source },               // string
+                { "TextSnippet", snippet },           // string? or null
+                { "UsedInAnswer", 1 }                 // BIT => 1/0 (أضمن من true/false)
+            };
+
+                parameters = CleanParams(parameters);
+
+                _log.LogInformation("AI_CITATION_PARAMS: {p}", JsonSerializer.Serialize(parameters));
+
+                var spRequest = new SmartRequest
+                {
+                    Operation = "sp",
+                    SpName = "dbo.sp_AiChat_SaveCitation",
+                    Params = parameters
+                };
+
+                var resp = await _dataEngine.ExecuteAsync(spRequest);
+
+                if (resp.Success)
+                    _log.LogInformation("AI_CITATION_SAVED: ChatId={ChatId}, Source={Source}", chatId, c.Source);
+                else
+                    _log.LogWarning("AI_CITATION_SAVE_FAILED: ChatId={ChatId}, Source={Source}, msg={Msg}", chatId, c.Source, resp.Message);
+            }
+
+            _log.LogInformation("AI_CITATIONS_DONE: ChatId={ChatId}, Count={Count}", chatId, take);
+        }
+        catch (Exception ex)
+        {
+            _log.LogError(ex, "Failed to save citations for ChatId={ChatId}", chatId);
+        }
+    }
+
+
+
+
 
     private bool TryAnswerFromGeneralChat(
         string userMsg,
@@ -940,6 +1006,9 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
 
             var spName = ProcedureMapper.GetProcedureName("aichat", "saveHistory");
 
+            parameters = CleanParams(parameters);
+            _log.LogInformation("AI_HISTORY_PARAMS: {p}", JsonSerializer.Serialize(parameters));
+
             var spRequest = new SmartRequest
             {
                 Operation = "sp",
@@ -948,6 +1017,7 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
             };
 
             var response = await _dataEngine.ExecuteAsync(spRequest);
+            _log.LogInformation("AI_HISTORY_SAVE_RESP: success={s}, msg={m}", response.Success, response.Message);
 
             if (response.Success && response.Data?.Count > 0)
             {
@@ -955,12 +1025,9 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
                     .FirstOrDefault(k => k.Equals("ChatId", StringComparison.OrdinalIgnoreCase));
 
                 if (chatIdKey != null)
-                {
-                    var chatId = Convert.ToInt64(response.Data[0][chatIdKey]);
-                    _log.LogInformation("AI_HISTORY_SAVED: ChatId={ChatId}", chatId);
-                    return chatId;
-                }
+                    return Convert.ToInt64(response.Data[0][chatIdKey]);
             }
+
         }
         catch (Exception ex)
         {
@@ -975,4 +1042,23 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
         try { _context?.Dispose(); } catch { }
         try { _gate?.Dispose(); } catch { }
     }
+
+    private static Dictionary<string, object?> CleanParams(Dictionary<string, object?> p)
+    {
+        var cleaned = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var kv in p)
+        {
+            var v = kv.Value;
+
+            if (v is DBNull) v = null;
+
+            // اختياري: لو تحب تحذف nulls بالكامل (حسب تصميم SP عندك)
+            cleaned[kv.Key] = v;
+        }
+
+        return cleaned;
+    }
+
+
 }

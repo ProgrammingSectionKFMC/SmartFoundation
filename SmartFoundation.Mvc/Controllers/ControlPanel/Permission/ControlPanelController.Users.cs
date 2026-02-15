@@ -214,6 +214,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                             ["userTypeName_A"] = "الفئة",
                             ["idaraLongName_A"] = "الادارة",
                             ["EntryFullName"] = "منفذ الاجراء",
+                            ["distributorName_A"] = "القسم",
                             ["entryDate"] = "تاريخ التنفيذ"
                         };
 
@@ -249,6 +250,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                             bool isreligionID_FK = c.ColumnName.Equals("religionID_FK", StringComparison.OrdinalIgnoreCase);
                             bool ismaritalStatusID_FK = c.ColumnName.Equals("maritalStatusID_FK", StringComparison.OrdinalIgnoreCase);
                             bool iseducationID_FK = c.ColumnName.Equals("educationID_FK", StringComparison.OrdinalIgnoreCase);
+                            bool isdistributorID = c.ColumnName.Equals("distributorID", StringComparison.OrdinalIgnoreCase);
 
                             dynamicColumns.Add(new TableColumn
                             {
@@ -256,7 +258,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                                 Label = headerMap.TryGetValue(c.ColumnName, out var label) ? label : c.ColumnName,
                                 Type = colType,
                                 Sortable = true,
-                                Visible = !(isUsersAuthTypeID || isuserActive || isIdaraID|| isfirstName_A || issecondName_A || isthirdName_A || islastName_A || isfirstName_E || issecondName_E || isthirdName_E || islastName_E || isuserTypeID_FK || isnationalIDIssueDate || isdateOfBirth || isgenderID_FK || isnationalityID_FK || isreligionID_FK || ismaritalStatusID_FK || iseducationID_FK)
+                                Visible = !(isUsersAuthTypeID || isuserActive || isIdaraID|| isfirstName_A || issecondName_A || isthirdName_A || islastName_A || isfirstName_E || issecondName_E || isthirdName_E || islastName_E || isuserTypeID_FK || isnationalIDIssueDate || isdateOfBirth || isgenderID_FK || isnationalityID_FK || isreligionID_FK || ismaritalStatusID_FK || iseducationID_FK || isdistributorID)
                             });
                         }
 
@@ -335,7 +337,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                  new FieldConfig { Name = "p03", Label = "الرقم العام",Type = "text",   Required = true, ColCss = "3", TextMode="number",MaxLength=10 },
                                  new FieldConfig { Name = "p23", Label = "تاريخ الميلاد",Type = "date",   Required = true, ColCss = "3" },
                 new FieldConfig { Name = "p22", Label = "تاريخ اصدار الهوية",Type = "date",   Required = true, ColCss = "3" },
-               new FieldConfig { Name = "p17", Label = "الادارة",Type = "select",   Required = true, ColCss = "6", Options= IdaraOptions,Select2 = true, Value=IdaraId},
+               new FieldConfig { Name = "p17", Label = "الادارة",Type = "select",   Required = true, ColCss = "6", Options= IdaraOptions},
                 new FieldConfig
                 {
                     Name = "p36",
@@ -378,7 +380,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 new FieldConfig {Name = "p28", Label = "الدرجة العلمية", Type = "select", Required = true, ColCss = "3", Options = EducationOptions, Select2 = true},
 
 
-                 new FieldConfig { Name = "p20", Label = "ملاحظات",Type = "textarea",   Required = true, ColCss = "3" },
+                 new FieldConfig { Name = "p20", Label = "ملاحظات",Type = "textarea",   Required = false, ColCss = "3" },
 
             };
 
@@ -401,7 +403,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                  new FieldConfig { Name = "p03", Label = "الرقم العام",Type = "text",   Required = true, ColCss = "3", TextMode="number",MaxLength=10 },
                 new FieldConfig { Name = "p23", Label = "تاريخ الميلاد",Type = "date",   Required = true, ColCss = "3" },
                 new FieldConfig { Name = "p22", Label = "تاريخ اصدار الهوية",Type = "date",   Required = true, ColCss = "3" },
-                 new FieldConfig { Name = "p17", Label = "الادارة",Type = "select",   Required = true, ColCss = "6", Options= IdaraOptions,Select2 = true, Value=IdaraId},
+                 new FieldConfig { Name = "p17", Label = "الادارة",Type = "select",   Required = true, ColCss = "6", Options= IdaraOptions, Value=IdaraId},
                 new FieldConfig
                 {
                     Name = "p36",

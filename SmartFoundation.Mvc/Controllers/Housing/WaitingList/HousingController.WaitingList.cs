@@ -220,6 +220,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                             bool isIdaraId = c.ColumnName.Equals("IdaraId", StringComparison.OrdinalIgnoreCase);
                             bool isresidentInfoID = c.ColumnName.Equals("residentInfoID", StringComparison.OrdinalIgnoreCase);
+                            bool isLastActionTypeID = c.ColumnName.Equals("LastActionTypeID", StringComparison.OrdinalIgnoreCase);
+                            bool isLastActionID = c.ColumnName.Equals("LastActionID", StringComparison.OrdinalIgnoreCase);
                             
                             
 
@@ -232,7 +234,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                 || isIdaraId || isresidentInfoID)
+                                 || isIdaraId || isresidentInfoID || isLastActionTypeID || isLastActionID)
                             });
                         }
 
