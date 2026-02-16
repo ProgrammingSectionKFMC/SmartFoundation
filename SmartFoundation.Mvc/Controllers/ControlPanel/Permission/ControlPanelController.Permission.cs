@@ -139,10 +139,10 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 {
 
                     new OptionItem { Value = "1", Text = "مستخدم" },
-                  //  new OptionItem { Value = "2", Text = "موزع" },
-                   // new OptionItem { Value = "3", Text = "دور" },
-                  //  new OptionItem { Value = "4", Text = "ادارة" },
-                  //  new OptionItem { Value = "5", Text = "قسم" },
+                    //new OptionItem { Value = "2", Text = "موزع" },
+                    //new OptionItem { Value = "3", Text = "دور" },
+                    //new OptionItem { Value = "4", Text = "ادارة" },
+                    //new OptionItem { Value = "5", Text = "قسم" },
 
                 };
 
@@ -268,7 +268,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                                 Name = "Users",
                                 Type = "select",
                                 Options = UsersOptions,
-                                ColCss = "3",
+                                ColCss = "6",
                                 Placeholder = "اختر المستخدم",
                                 Icon = "fa fa-user",
                                 Value = UserID_,
@@ -560,12 +560,11 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 new FieldConfig { Name = rowIdField, Type = "hidden" },
 
                 // your custom textboxes
-                new FieldConfig
+               new FieldConfig
                 {
                     Name = "p01",
                     Label = "الموزع",
                     Type = "select",
-                    //Select2=true,
                     Options = distributorOptions,
                     ColCss = "3",
                     Required = true
@@ -576,10 +575,8 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                     Name = "p02",
                     Label = "الصلاحية",
                     Type = "select",
-                    //Select2=true,
                     Options = new List<OptionItem> { new OptionItem { Value = "-1", Text = "اختر الموزع أولاً"     } }, //       Initial empty state
                     ColCss = "3",
-
                     Required = true,
                     DependsOn = "p01",
                     DependsUrl = "/crud/DDLFiltered?FK=distributorID_FK&textcol=permissionTypeName_A&ValueCol=distributorPermissionTypeID&PageName=Permission&TableIndex=4"

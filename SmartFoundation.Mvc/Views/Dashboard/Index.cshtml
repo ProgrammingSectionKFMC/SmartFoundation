@@ -1,5 +1,117 @@
 ﻿@model SmartFoundation.UI.ViewModels.SmartPage.SmartPageViewModel
 @{
     ViewData["Title"] = Model.PageTitle;
+    var mustChangePassword = Context.Session.GetString("ChangedPassword") == "0";
+
 }
+
+
+
+@if (mustChangePassword)
+{
+    <!-- ✅ Security Warning Banner -->
+    <div class="mb-6 bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-red-500 rounded-lg shadow-lg overflow-hidden animate-pulse-slow">
+        <div class="p-6">
+            <div class="flex items-start gap-4">
+                <!-- Icon -->
+                <div class="flex-shrink-0">
+                    <div class="relative">
+                        <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                            <i class="fa-solid fa-shield-halved text-red-600 text-3xl"></i>
+                        </div>
+                        <span class="absolute -top-1 -right-1 flex h-4 w-4">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Content -->
+                <div class="flex-1" dir="rtl">
+                    <h2 class="text-2xl font-bold text-red-800 mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-triangle-exclamation animate-bounce-slow"></i>
+                        تنبيه أمني مهم - يجب تغيير كلمة المرور فوراً
+                    </h2>
+
+                    <p class="text-red-700 text-base leading-relaxed mb-4">
+                        لأسباب أمنية، <strong>لن تتمكن من استخدام أي وظيفة في النظام</strong> حتى تقوم بتغيير كلمة المرور الافتراضية.
+                    </p>
+
+                    <div class="bg-white rounded-lg p-4 mb-4 shadow-sm">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-2">🔒 القيود الحالية:</h3>
+                        <ul class="space-y-2 text-sm text-gray-600">
+                            <li class="flex items-center gap-2">
+                                <i class="fa-solid fa-ban text-red-500"></i>
+                                جميع القوائم والصفحات محظورة
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <i class="fa-solid fa-lock text-red-500"></i>
+                                لا يمكن الوصول إلى أي بيانات
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <i class="fa-solid fa-key text-green-500"></i>
+                                قم بتغيير كلمة المرور الآن للمتابعة
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex items-center gap-3">
+                        <button type="button"
+                                onclick="document.getElementById('force-current-password')?.focus(); document.getElementById('force-change-password-modal')?.scrollIntoView({ behavior: 'smooth', block: 'center' });"
+                                class="inline-flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg shadow-lg hover:shadow-xl transition-all duration-200">
+                            <i class="fa-solid fa-shield-halved"></i>
+                            <span>تغيير كلمة المرور الآن</span>
+                        </button>
+
+                        <a href="/Login/Logout"
+                           class="inline-flex items-center gap-2 px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg shadow hover:shadow-lg transition-all duration-200">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                            <span>تسجيل الخروج</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ✅ Animated bottom border -->
+        <div class="h-2 bg-gradient-to-r from-red-500 via-orange-500 to-red-500 bg-[length:200%_100%] animate-pulse"></div>
+    </div>
+}
+
+<!-- Rest of your Home page content -->
+<div class="grid grid-cols-1 gap-6">
+    <!-- Your normal home content -->
+</div>
+
+<style>
+    @@keyframes pulse-slow {
+        0%, 100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.9;
+        }
+    }
+
+    .animate-pulse-slow {
+        animation: pulse-slow 2s ease-in-out infinite;
+    }
+
+    @@keyframes bounce-slow {
+        0%, 100% {
+            transform: translateY(0);
+        }
+
+        50% {
+            transform: translateY(-5px);
+        }
+    }
+
+    .animate-bounce-slow {
+        animation: bounce-slow 2s ease-in-out infinite;
+    }
+</style>
+
 @await Component.InvokeAsync("SmartRenderer", new { model = Model })

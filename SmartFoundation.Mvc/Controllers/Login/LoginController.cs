@@ -8,17 +8,20 @@ using System.Threading;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Logging;
 
 namespace SmartFoundation.Mvc.Controllers.Login
 {
     public class LoginController : Controller
     {
         private readonly MastersServies _mastersServies;
+        private readonly ILogger<LoginController> _logger;
 
 
-        public LoginController(MastersServies mastersServies)
+        public LoginController(MastersServies mastersServies, ILogger<LoginController> logger)
         {
             _mastersServies = mastersServies;
+            _logger = logger;
         }
 
         private static readonly Dictionary<string, string> _dnsCache = new(StringComparer.OrdinalIgnoreCase);
@@ -129,6 +132,8 @@ namespace SmartFoundation.Mvc.Controllers.Login
             try
             {
                 auth = _mastersServies.ExtractAuth(ds);
+               
+
             }
             catch (Exception ex)
             {
@@ -142,7 +147,10 @@ namespace SmartFoundation.Mvc.Controllers.Login
             // ✅ Check 1: usersId validation
             if (string.IsNullOrWhiteSpace(auth.usersId))
             {
-                TempData["Error"] = "لايوجد ملف نشط لهذا المستخدم";
+                // Use SQL message if available, otherwise fallback
+                TempData["Error"] = !string.IsNullOrWhiteSpace(auth.Message_)
+                    ? auth.Message_
+                    : "لايوجد ملف نشط لهذا المستخدم";
                 TempData["LastUser"] = NationalID;
                 return RedirectToAction(nameof(Index));
             }
@@ -151,7 +159,10 @@ namespace SmartFoundation.Mvc.Controllers.Login
             // ✅ Check 2: usersActive validation
             if (auth.usersActive == 0)
             {
-                TempData["Error"] = "لايوجد حساب نشط لهذا المستخدم";
+                // ✅ FIXED: Use message from SQL instead of hard-coded
+                TempData["Error"] = !string.IsNullOrWhiteSpace(auth.Message_)
+                    ? auth.Message_  // "عذرا اسم المستخدم او كلمة المرور غير صحيحة"
+                    : "لايوجد حساب نشط لهذا المستخدم";
                 TempData["LastUser"] = NationalID;
                 return RedirectToAction(nameof(Index));
             }
@@ -184,7 +195,38 @@ namespace SmartFoundation.Mvc.Controllers.Login
             HttpContext.Session.SetString("LastActivityUtc", DateTime.UtcNow.ToString("O"));
             HttpContext.Session.SetString("AdminTypeID", auth.AdminTypeID ?? "");
             HttpContext.Session.SetString("AdminTypeName", auth.AdminTypeName ?? "");
+            HttpContext.Session.SetString("ChangedPassword", auth.ChangedPassword?.ToString() ?? "0");
 
+
+            // ✅ Add warning message if password needs to be changed
+            if (auth.ChangedPassword == 0)
+            {
+                TempData["Warning"] = "⚠️ لأسباب أمنية تم حجب جميع الانظمة، يجب عليك تغيير كلمة المرور الان.";
+            }
+
+            if (!string.IsNullOrWhiteSpace(auth.Message_))
+            {
+                switch (auth.usersActive)
+                {
+                    case 1:
+                        TempData["Success"] = auth.Message_;
+                        break;
+                    case 2:
+                        TempData["Warning"] = auth.Message_;
+                        break;
+                    case 3:
+                        TempData["Info"] = auth.Message_;
+                        break;
+                    default:
+                        TempData["Success"] = auth.Message_;
+                        break;
+                }
+            }
+            else
+            {
+                // Fallback if SQL didn't provide a message
+                TempData["Success"] = "تم تسجيل الدخول بنجاح";
+            }
 
             //}
             //catch (Exception ex)
@@ -219,5 +261,87 @@ namespace SmartFoundation.Mvc.Controllers.Login
             return RedirectToAction("Index", "Login", new { logout = 2 });
         }
 
+        [HttpPost]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+        {
+            try
+            {
+                var userId = HttpContext.Session.GetString("usersID");
+                
+                if (string.IsNullOrWhiteSpace(userId))
+                {
+                    return Json(new { success = false, message = "جلسة العمل منتهية. الرجاء تسجيل الدخول مرة أخرى" });
+                }
+                
+                if (string.IsNullOrWhiteSpace(request.OldPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
+                {
+                    return Json(new { success = false, message = "الرجاء إدخال كلمة المرور الحالية والجديدة" });
+                }
+                
+                if (request.NewPassword.Length < 8)
+                {
+                    return Json(new { success = false, message = "كلمة المرور يجب أن لا تقل عن 8 خانات" });
+                }
+                
+                var spParameters = new object?[] 
+                { 
+                    userId,
+                    request.OldPassword.Trim(),
+                    request.NewPassword.Trim()
+                };
+                
+                DataSet ds;
+                try
+                {
+                    ds = await _mastersServies.GetChangePasswordDataSetAsync(spParameters);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error calling GetChangePasswordDataSetAsync");
+                    return Json(new { success = false, message = "خطأ في الاتصال بالخادم" });
+                }
+                
+                if (ds?.Tables?.Count > 0 && ds.Tables[0].Rows.Count > 0)
+                {
+                    var row = ds.Tables[0].Rows[0];
+                    
+                    var success = false;
+                    var message = "فشل تغيير كلمة المرور";
+                    
+                    if (ds.Tables[0].Columns.Contains("IsSuccessful") && row["IsSuccessful"] != DBNull.Value)
+                    {
+                        success = Convert.ToBoolean(row["IsSuccessful"]);
+                    }
+                    
+                    if (ds.Tables[0].Columns.Contains("Message_") && row["Message_"] != DBNull.Value)
+                    {
+                        message = row["Message_"].ToString() ?? message;
+                    }
+                    
+                    if (success)
+                    {
+                        // ✅ CRITICAL: Update session to mark password as changed
+                        HttpContext.Session.SetString("ChangedPassword", "1");
+                        _logger.LogInformation("Password changed successfully for user {UserId}, session updated", userId);
+                    }
+                    
+                    return Json(new { success = success, message = message });
+                }
+                
+                return Json(new { success = false, message = "لم يتم إرجاع نتيجة من قاعدة البيانات" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error in ChangePassword");
+                return Json(new { success = false, message = "حدث خطأ غير متوقع" });
+            }
+        }
+
+        // Request model - Keep this at the bottom of the file
+        public class ChangePasswordRequest
+        {
+            public string OldPassword { get; set; } = "";
+            public string NewPassword { get; set; } = "";
+        }
     }
 }

@@ -335,7 +335,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 new FieldConfig { Name = "p01", Label = "الرقم المرجعي",Type = "hidden", Readonly = true, ColCss = "3" },
                 new FieldConfig { Name = "p02", Label = "رقم الهوية الوطنية",Type = "text",   Required = true,  ColCss = "3", TextMode = "number",MaxLength=10   },
                  new FieldConfig { Name = "p03", Label = "الرقم العام",Type = "text",   Required = true, ColCss = "3", TextMode="number",MaxLength=10 },
-                                 new FieldConfig { Name = "p23", Label = "تاريخ الميلاد",Type = "date",   Required = true, ColCss = "3" },
+                  new FieldConfig { Name = "p23", Label = "تاريخ الميلاد",Type = "date",   Required = true, ColCss = "3" },
                 new FieldConfig { Name = "p22", Label = "تاريخ اصدار الهوية",Type = "date",   Required = true, ColCss = "3" },
                new FieldConfig { Name = "p17", Label = "الادارة",Type = "select",   Required = true, ColCss = "6", Options= IdaraOptions},
                 new FieldConfig
@@ -505,6 +505,62 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
 
             };
 
+
+
+            var UPDATEUSERPASSWORDFields = new List<FieldConfig>
+            {
+                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectAction",      Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController",  Type = "hidden", Value = ControllerName},
+                new FieldConfig { Name = "pageName_",           Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",          Type = "hidden", Value = "RESETUSERPASSWORD" },
+                new FieldConfig { Name = "idaraID",             Type = "hidden", Value = IdaraId.ToString() },
+                new FieldConfig { Name = "entrydata",           Type = "hidden", Value = usersId.ToString() },
+                new FieldConfig { Name = "hostname",            Type = "hidden", Value = Request.Host.Value },
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+                new FieldConfig { Name = rowIdField,   Type = "hidden" },
+
+                new FieldConfig { Name = "p01", Label = "الرقم المرجعي",Type = "hidden", Readonly = true, ColCss = "3" },
+                new FieldConfig { Name = "p02", Label = "رقم الهوية الوطنية",Type = "text",   Required = true,  ColCss = "6", TextMode = "number",MaxLength=10 ,Readonly=true  },
+                 new FieldConfig { Name = "p03", Label = "الرقم العام",Type = "text",   Required = true, ColCss = "6", TextMode="number",MaxLength=10,Readonly=true },
+
+                new FieldConfig { Name = "p22", Label = "تاريخ اصدار الهوية",Type = "hidden",   Required = true, ColCss = "3" },
+                new FieldConfig { Name = "p17", Label = "الادارة",Type = "hidden",   Required = true, ColCss = "3", Options= IdaraOptions,Select2 = true, Value=IdaraId, Disabled = true },
+
+                new FieldConfig { Name = "p04", Label = "الاسم الاول بالعربي",Type = "text",   Required = true, ColCss = "3", TextMode = "arabic",Readonly=true },
+                new FieldConfig { Name = "p05", Label = "الاسم الثاني بالعربي",Type = "text",   Required = true, ColCss = "3", TextMode = "arabic",Readonly=true },
+                new FieldConfig { Name = "p06", Label = "الاسم الثالث بالعربي",Type = "text",   Required = true, ColCss = "3", TextMode = "arabic",Readonly=true },
+
+                new FieldConfig { Name = "p08", Label = "الاسم الاخير بالعربي",Type = "text",   Required = true, ColCss = "3", TextMode = "arabic",Readonly=true },
+
+                new FieldConfig { Name = "p09", Label = "الاسم الاول بالانجليزي",Type = "hidden",   Required = false, ColCss = "3", TextMode="english" },
+                new FieldConfig { Name = "p10", Label = "الاسم الثاني بالانجليزي",Type = "hidden",   Required = false, ColCss = "3", TextMode="english" },
+
+                new FieldConfig { Name = "p11", Label = "الاسم الثالث بالانجليزي",Type = "hidden",   Required = false, ColCss = "3", TextMode="english" },
+
+                new FieldConfig { Name = "p13", Label = "الاسم الاخير بالانجليزي",Type = "hidden",   Required = false, ColCss = "3", TextMode="english" },
+
+
+                new FieldConfig { Name = "p14", Label = "صلاحية النظام",Type = "hidden",   Required = true, ColCss = "3", Options= UsersAuthTypeOptions,Select2 = true,Readonly=true },
+
+                new FieldConfig { Name = "p16", Label = "نوع المستخدم",Type = "hidden",   Required = true, ColCss = "3", Options= userTypeOptions,Select2 = true,Readonly=true },
+
+
+
+
+
+                new FieldConfig { Name = "p23", Label = "تاريخ الميلاد",Type = "hidden",   Required = true, ColCss = "3" },
+                new FieldConfig { Name = "p24", Label = "الجنس",Type = "hidden",   Required = true, ColCss = "3", Options= genderOptions,Select2 = true },
+                new FieldConfig { Name = "p25", Label = "الجنسية",Type = "hidden",   Required = true, ColCss = "3", Options= nationalityOptions,Select2 = true },
+                new FieldConfig { Name = "p26", Label = "الديانة",Type = "hidden",   Required = true, ColCss = "3", Options= religionOptions,Select2 = true },
+                new FieldConfig {Name = "p27", Label = "الحالة الاجتماعية", Type = "hidden", Required = true, ColCss = "3", Options = maritalStatusOptions, Select2 = true},
+                new FieldConfig {Name = "p28", Label = "الدرجة العلمية", Type = "hidden", Required = true, ColCss = "3", Options = EducationOptions, Select2 = true},
+
+
+                 new FieldConfig { Name = "p35", Label = "ملاحظات",Type = "hidden",   Required = true, ColCss = "6" },
+
+            };
+
             // 🗑️ DELETE fields
 
             //  SmartTable model
@@ -530,6 +586,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                     ShowAdd = canInsert,
                     ShowEdit = canUpdate,
                     ShowDelete = canDelete,
+                    ShowDelete1 = canDelete,
                     ShowBulkDelete = false,
                     ShowExportPdf=true,
                     ExportConfig = new TableExportConfig
@@ -615,6 +672,35 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                                 new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
                             },
                             Fields = DeleteUserFields
+                        },
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1
+                    },
+
+                    Delete1 = new TableAction
+                    {
+                        Label = "اعادة ضبط كلمة المرور",
+                        Icon = "fa fa-key",
+                        Color = "warning",
+                        //Placement = TableActionPlacement.ActionsMenu, 
+                        IsEdit = true,
+                        OpenModal = true,
+                        ModalTitle = "<i class='fa fa-exclamation-triangle text-red-600 text-xl mr-2'></i> تحذير",
+                        ModalMessage = "هل أنت متأكد من اعادة ضبط كلمة المرور؟",
+                        ModalMessageClass = "bg-red-50 border border-red-200 text-red-700",
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "buildingClassDeleteForm",
+                            Title = "تأكيد اعادة ضبط كلمة المرور لمستخدم",
+                            Method = "post",
+                            ActionUrl = "/crud/delete",
+                            Buttons = new List<FormButtonConfig>
+                            {
+                                new FormButtonConfig { Text = "تنفيذ",   Type = "submit", Color = "danger",  },
+                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
+                            },
+                            Fields = UPDATEUSERPASSWORDFields
                         },
                         RequireSelection = true,
                         MinSelection = 1,

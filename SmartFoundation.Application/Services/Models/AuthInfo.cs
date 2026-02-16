@@ -29,6 +29,7 @@ public sealed record AuthInfo(
     string? nationalID,
     string? GeneralNo,
     string? AdminTypeID,
-    string? AdminTypeName
+    string? AdminTypeName,
+    int? ChangedPassword
 
     );

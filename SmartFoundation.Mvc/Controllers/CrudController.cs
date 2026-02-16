@@ -439,33 +439,59 @@ namespace SmartFoundation.Mvc.Controllers
 
         [HttpGet("DDLFiltered")]
         public async Task<IActionResult> DDLFiltered(
-        string? DDlValues, string? FK, string? textcol, string? ValueCol, string? TableIndex, string? PageName)
+            string? DDlValues, string? FK, string? textcol, string? ValueCol, string? TableIndex, string? PageName)
         {
-
-            int TableIndexInt = 0;
+            int tableIndexInt = 0;
             if (!string.IsNullOrWhiteSpace(TableIndex))
-                int.TryParse(TableIndex, out TableIndexInt);
+                int.TryParse(TableIndex, out tableIndexInt);
 
-            if (string.IsNullOrWhiteSpace(HttpContext.Session.GetString("usersID")))
+            var usersIdStr = HttpContext.Session.GetString("usersID");
+            var idaraIdStr = HttpContext.Session.GetString("IdaraID");
+            var hostName = HttpContext.Session.GetString("HostName") ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(usersIdStr) || string.IsNullOrWhiteSpace(idaraIdStr))
                 return Unauthorized();
 
-            if (!int.TryParse(DDlValues, out int DDlValueID) || DDlValueID == -1)
+            int userID = Convert.ToInt32(usersIdStr);
+            int IdaraID = Convert.ToInt32(idaraIdStr);
+
+
+            if (!int.TryParse(DDlValues, out int ddlValueId) || ddlValueId == -1)
                 return Json(new List<object> { new { value = "-1", text = "الرجاء الاختيار" } });
 
-            int userID = Convert.ToInt32(HttpContext.Session.GetString("usersId"));
-            int IdaraID = Convert.ToInt32(HttpContext.Session.GetString("IdaraId"));
-            string HostName = HttpContext.Session.GetString("HostName") ?? string.Empty;
+            
 
-            var ds = await _mastersServies.GetDataLoadDataSetAsync(PageName, IdaraID, userID, HostName);
-            var table = (ds?.Tables?.Count ?? 0) > TableIndexInt ? ds.Tables[TableIndexInt] : null;
+            var ds = await _mastersServies.GetDataLoadDataSetAsync(PageName, IdaraID, userID, hostName);
+            var table = (ds?.Tables?.Count ?? 0) > tableIndexInt ? ds.Tables[tableIndexInt] : null;
+
+            if (ds == null)
+                return Json(new { error = "ds is null" });
+
+            if ((ds.Tables?.Count ?? 0) <= tableIndexInt)
+                return Json(new { error = "TableIndex خارج النطاق", tableIndexInt, TablesCount = ds.Tables.Count });
+
+            if (table == null)
+                return Json(new { error = "table is null", tableIndexInt, TablesCount = ds.Tables.Count });
+
+            if (string.IsNullOrWhiteSpace(FK) || !table.Columns.Contains(FK))
+                return Json(new { error = "FK غير موجود", FK, cols = table.Columns.Cast<DataColumn>().Select(c => c.ColumnName).ToList() });
+
+            if (string.IsNullOrWhiteSpace(ValueCol) || !table.Columns.Contains(ValueCol))
+                return Json(new { error = "ValueCol غير موجود", ValueCol, cols = table.Columns.Cast<DataColumn>().Select(c => c.ColumnName).ToList() });
+
+            if (string.IsNullOrWhiteSpace(textcol) || !table.Columns.Contains(textcol))
+                return Json(new { error = "textcol غير موجود", textcol, cols = table.Columns.Cast<DataColumn>().Select(c => c.ColumnName).ToList() });
 
             var items = new List<object>();
+
             if (table is not null && table.Rows.Count > 0 && table.Columns.Contains(FK))
             {
+
+
                 foreach (DataRow row in table.Rows)
                 {
                     var fk = row[FK]?.ToString()?.Trim();
-                    if (fk == DDlValueID.ToString())
+                    if (fk == ddlValueId.ToString())
                     {
                         var value = row[ValueCol]?.ToString()?.Trim() ?? "";
                         var text = row[textcol]?.ToString()?.Trim() ?? "";
@@ -480,6 +506,8 @@ namespace SmartFoundation.Mvc.Controllers
 
             return Json(items);
         }
+
+
 
         [HttpGet("GetDDLValues")]
         public async Task<IActionResult> GetDDLValues(

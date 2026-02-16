@@ -470,7 +470,6 @@ namespace SmartFoundation.Application.Services
         /// </summary>
         public AuthInfo ExtractAuth(DataSet ds)
         {
-            // ✅ FIX 1: 21 parameters (already correct)
             if (ds == null)
             {
                 _logger.LogWarning("ExtractAuth called with null DataSet.");
@@ -495,11 +494,11 @@ namespace SmartFoundation.Application.Services
                     null,                        // nationalID
                     null,                        // GeneralNo
                     null,                        // AdminTypeID
-                    null                         // AdminTypeName
+                    null,                        // AdminTypeName
+                    0                            // ✅ ChangedPassword
                 );
             }
 
-            // ✅ FIX 2: Add missing 2 parameters
             if (ds.Tables.Count == 0)
             {
                 _logger.LogWarning("ExtractAuth received DataSet with no tables.");
@@ -509,14 +508,14 @@ namespace SmartFoundation.Application.Services
                     null, null, null, null, null, null, null, null, 
                     null, null, null, null, null, null, null, null, 
                     null,
-                    null,   // ✅ AdminTypeID (missing)
-                    null    // ✅ AdminTypeName (missing)
+                    null,   // AdminTypeID
+                    null,   // AdminTypeName
+                    0       // ✅ ChangedPassword
                 );
             }
 
             var t = ds.Tables[0];
             
-            // ✅ FIX 3: Add missing 2 parameters
             if (t.Rows.Count == 0)
             {
                 _logger.LogInformation("ExtractAuth: first table has zero rows (likely invalid credentials).");
@@ -526,8 +525,9 @@ namespace SmartFoundation.Application.Services
                     null, null, null, null, null, null, null, null, 
                     null, null, null, null, null, null, null, null, 
                     null,
-                    null,   // ✅ AdminTypeID (missing)
-                    null    // ✅ AdminTypeName (missing)
+                    null,   // AdminTypeID
+                    null,   // AdminTypeName
+                    0       // ✅ ChangedPassword
                 );
             }
 
@@ -568,30 +568,33 @@ namespace SmartFoundation.Application.Services
             else if (photoObj is string s && !string.IsNullOrWhiteSpace(s))
                 photoBase64 = s;
 
-            return new AuthInfo(
-         usersActive,          // 1
-         Message_,             // 2
-         usersId,             // 3
-         fullName,            // 4
-         organizationID,      // 5
-         organizationName,    // 6
-         idaraID,             // 7
-         idaraName,           // 8
-         departmentID,        // 9
-         departmentName,      // 10
-         sectionID,           // 11
-         sectionName,         // 12
-         divisonID,           // 13
-         divisonName,         // 14
-         photoBase64,         // 15 (Photo)
-         ThameName,           // 16
-         deptCode,            // 17
-         nationalID,          // 18
-         GeneralNo,           // 19
-         AdminTypeID,           // 19
-         AdminTypeName           // 19
+            // ✅ Read ChangedPassword from database
+            int? ChangedPassword = ReadNullableInt(r, new[] { "ChangedPassword", "changedPassword", "PasswordChanged" });
 
-     );
+            return new AuthInfo(
+                usersActive,          // 1
+                Message_,             // 2
+                usersId,              // 3
+                fullName,             // 4
+                organizationID,       // 5
+                organizationName,     // 6
+                idaraID,              // 7
+                idaraName,            // 8
+                departmentID,         // 9
+                departmentName,       // 10
+                sectionID,            // 11
+                sectionName,          // 12
+                divisonID,            // 13
+                divisonName,          // 14
+                photoBase64,          // 15
+                ThameName,            // 16
+                deptCode,             // 17
+                nationalID,           // 18
+                GeneralNo,            // 19
+                AdminTypeID,          // 20
+                AdminTypeName,        // 21
+                ChangedPassword ?? 0  // 22 ✅ ChangedPassword (default to 0 if not found)
+            );
         }
 
         private static DataSet ConvertResponseToDataSet(SmartResponse response)
@@ -635,8 +638,10 @@ namespace SmartFoundation.Application.Services
             {
                 if (!HasColumn(r.Table, n) || r[n] == DBNull.Value) continue;
                 var v = r[n];
+
                 if (v is int i) return i;
-                if (v is bool b) return b ? 1 : 0;
+                if (v is bool b) return b ? 1 : 0;   // ✅ Add this
+                if (v is byte by) return (int)by;     // ✅ Add this
                 if (int.TryParse(v.ToString(), out var parsed)) return parsed;
             }
             return def;
@@ -648,7 +653,10 @@ namespace SmartFoundation.Application.Services
             {
                 if (!HasColumn(r.Table, n) || r[n] == DBNull.Value) continue;
                 var v = r[n];
+
                 if (v is int i) return i;
+                if (v is bool b) return b ? 1 : 0;  // ✅ Add this line to handle bit columns
+                if (v is byte by) return (int)by;    // ✅ Sometimes bit comes as byte
                 if (int.TryParse(v.ToString(), out var parsed)) return parsed;
             }
             return null;
@@ -848,5 +856,53 @@ namespace SmartFoundation.Application.Services
             }
         }
 
+        /// <summary>
+        /// ChangePasswordService
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        /// 
+
+        /// <summary>
+/// Change user password
+/// </summary>
+public async Task<DataSet> GetChangePasswordDataSetAsync(params object?[] args)
+{
+    string userId = args.Length > 0 ? args[0]?.ToString() ?? "" : "";
+    string oldPassword = args.Length > 1 ? args[1]?.ToString() ?? "" : "";
+    string newPassword = args.Length > 2 ? args[2]?.ToString() ?? "" : "";
+
+    var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Action"] = "CHANGEUSERPASSWORD",
+        ["usersID"] = userId,
+        ["OldPassword"] = oldPassword,
+        ["PlainPassword"] = newPassword
+    };
+
+    _logger.LogInformation("GetChangePasswordDataSetAsync called for user: {UserId}", userId);
+
+    var spName = ProcedureMapper.GetProcedureName("auth", "changePassword");
+
+    var request = new SmartRequest
+    {
+        Operation = "sp",
+        SpName = spName,
+        Params = dict
+    };
+
+    SmartResponse response;
+    try
+    {
+        response = await _dataEngine.ExecuteAsync(request);
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error executing change password stored procedure {SpName}", spName);
+        throw new InvalidOperationException($"Failed to execute stored procedure '{spName}': {ex.Message}", ex);
+    }
+
+    return ConvertResponseToDataSet(response);
+}
     }
 }

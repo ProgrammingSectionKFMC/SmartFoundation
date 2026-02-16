@@ -10,7 +10,6 @@
 @model List<MenuItem>
 
 @{
-    // غيّر "userID" إذا اسم السيشن عندك مختلف
     var sessionUserId = Context.Session.GetString("usersID");
     var sessionfullname = Context.Session.GetString("fullName");
     var sessionUserPhoto = Context.Session.GetString("photoBase64");
@@ -19,7 +18,17 @@
     var sessionAdminTypeID = Context.Session.GetString("AdminTypeID");
     var sessionAdminTypeName = Context.Session.GetString("AdminTypeName");
     var sessionIdaraName = Context.Session.GetString("IdaraName");
+    // ✅ FIXED: Read changedPassword from session with proper default
+    var sessionChangedPassword = Context.Session.GetString("ChangedPassword");
+
+    // ✅ Debug: Log the value
+    
+    // ✅ Decision logic
+    var mustChangePassword = sessionChangedPassword == "0";
+
+  
 }
+
 
 <nav id="top-header" class="fixed z-50 w-full">
 
@@ -59,6 +68,17 @@
                         <span>الصفحة الرئيسية</span>
                     </a>
                 
+                </nav>
+
+                <!-- روابط سريعة -->
+                <nav class="me-4 flex flex-none items-center gap-0.5" dir="rtl" aria-label="روابط سريعة">
+                    <button type="button"
+                            data-modal-target="change-password-modal"
+                            data-modal-toggle="change-password-modal"
+                            class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-700 transition-colors">
+                        <i class="fa-solid fa-key text-[16px]"></i>
+                        <span>تغيير كلمة المرور</span>
+                    </button>
                 </nav>
 
 
@@ -600,7 +620,6 @@
             loadPageIntoMainContent(url);
         });
 
-
         window.addEventListener("popstate", function () {
             loadPageIntoMainContent(window.location.pathname + window.location.search);
         });
@@ -783,3 +802,803 @@
         });
     });
 </script>
+
+<!-- Change Password Modal -->
+<div id="change-password-modal" tabindex="-1" aria-hidden="true" 
+     class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full">
+    <div class="relative p-4 w-full max-w-md max-h-full">
+        <div class="relative bg-slate-800 rounded-lg shadow border border-slate-700">
+            <!-- Modal header -->
+            <div class="flex items-center justify-between p-4 border-b border-slate-700">
+                <h3 class="text-xl font-semibold text-white">
+                    <i class="fa-solid fa-key text-emerald-400 me-2"></i>
+                    تغيير كلمة المرور
+                </h3>
+                <button type="button" 
+                        class="text-slate-400 bg-transparent hover:bg-slate-700 hover:text-white rounded-lg text-sm w-8 h-8 inline-flex justify-center items-center"
+                        data-modal-hide="change-password-modal">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            
+            <!-- Modal body -->
+            <form id="change-password-form" class="p-4">
+                <div class="space-y-4">
+                    <!-- Current Password -->
+                    <div>
+                        <label for="current-password" class="block mb-2 text-sm font-medium text-white">
+                            كلمة المرور الحالية
+                        </label>
+                        <div class="relative">
+                            <input type="password" 
+                                   id="current-password" 
+                                   name="currentPassword"
+                                   class="bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5 pe-10"
+                                   placeholder="أدخل كلمة المرور الحالية"
+                                   required>
+                            <button type="button" 
+                                    class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 hover:text-white"
+                                    onclick="togglePasswordVisibility('current-password')">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- New Password -->
+                    <div>
+                        <label for="new-password" class="block mb-2 text-sm font-medium text-white">
+                            كلمة المرور الجديدة
+                        </label>
+                        <div class="relative">
+                            <input type="password" 
+                                   id="new-password" 
+                                   name="newPassword"
+                                   class="bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5 pe-10"
+                                   placeholder="أدخل كلمة المرور الجديدة"
+                                   minlength="6"
+                                   required>
+                            <button type="button" 
+                                    class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 hover:text-white"
+                                    onclick="togglePasswordVisibility('new-password')">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                        <p class="mt-1 text-xs text-slate-400">الحد الأدنى 8 خانات حروف انجليزية وارقام</p>
+                    </div>
+
+                    <!-- Confirm Password -->
+                    <div>
+                        <label for="confirm-password" class="block mb-2 text-sm font-medium text-white">
+                            تأكيد كلمة المرور
+                        </label>
+                        <div class="relative">
+                            <input type="password" 
+                                   id="confirm-password" 
+                                   name="confirmPassword"
+                                   class="bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5 pe-10"
+                                   placeholder="أعادة إدخال كلمة المرور الجديدة"
+                                   required>
+                            <button type="button" 
+                                    class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 hover:text-white"
+                                    onclick="togglePasswordVisibility('confirm-password')">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Error Message Area -->
+                    <div id="password-error" class="hidden p-3 text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-lg"></div>
+
+                    <!-- Password Strength Indicator -->
+<div id="password-strength" class="mt-2 hidden">
+    <div class="flex items-center gap-2">
+        <div class="flex-1 h-2 bg-slate-600 rounded-full overflow-hidden">
+            <div id="strength-bar" class="h-full transition-all duration-300"></div>
+        </div>
+        <span id="strength-text" class="text-xs font-medium"></span>
+    </div>
+    <ul class="mt-2 text-xs text-slate-400 space-y-1">
+        <li id="check-length" class="flex items-center gap-2">
+            <i class="fa-solid fa-circle-xmark text-red-400"></i>
+            <span>8 خانات على الأقل</span>
+        </li>
+        <li id="check-uppercase" class="flex items-center gap-2">
+            <i class="fa-solid fa-circle-xmark text-red-400"></i>
+            <span>حرف كبير (A-Z)</span>
+        </li>
+        <li id="check-lowercase" class="flex items-center gap-2">
+            <i class="fa-solid fa-circle-xmark text-red-400"></i>
+            <span>حرف صغير (a-z)</span>
+        </li>
+        <li id="check-number" class="flex items-center gap-2">
+            <i class="fa-solid fa-circle-xmark text-red-400"></i>
+            <span>رقم واحد (0-9)</span>
+        </li>
+    </ul>
+</div>
+                </div>
+
+                <!-- Modal footer -->
+                <div class="flex items-center gap-3 pt-4 mt-4 border-t border-slate-700">
+                    <button type="submit" 
+                            class="w-full text-white bg-emerald-600 hover:bg-emerald-700 focus:ring-4 focus:outline-none focus:ring-emerald-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">
+                        <i class="fa-solid fa-check me-2"></i>
+                        حفظ كلمة المرور
+                    </button>
+                    <button type="button" 
+                            data-modal-hide="change-password-modal"
+                            class="w-full text-slate-300 bg-slate-700 hover:bg-slate-600 rounded-lg border border-slate-600 text-sm font-medium px-5 py-2.5 hover:text-white">
+                        إلغاء
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function togglePasswordVisibility(inputId) {
+        const input = document.getElementById(inputId);
+        const icon = input.nextElementSibling.querySelector('i');
+        
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
+
+    document.getElementById('change-password-form')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const errorDiv = document.getElementById('password-error');
+        const submitBtn = this.querySelector('button[type="submit"]');
+        
+        // ✅ FIXED: Add .trim() to remove any hidden spaces
+        const currentPassword = this.currentPassword.value.trim();
+        const newPassword = this.newPassword.value.trim();
+        const confirmPassword = this.confirmPassword.value.trim();
+        
+        // ✅ Debug logging - will help identify the issue
+        console.log('=== Password Validation Debug ===');
+        console.log('Current Password:', JSON.stringify(currentPassword));
+        console.log('New Password:', JSON.stringify(newPassword));
+        console.log('Confirm Password:', JSON.stringify(confirmPassword));
+        console.log('Lengths:', {
+            current: currentPassword.length,
+            new: newPassword.length,
+            confirm: confirmPassword.length
+        });
+        console.log('Are they equal?', newPassword === confirmPassword);
+        console.log('Character codes (new):', Array.from(newPassword).map((c, i) => `${i}: "${c}" (${c.charCodeAt(0)})`));
+        console.log('Character codes (confirm):', Array.from(confirmPassword).map((c, i) => `${i}: "${c}" (${c.charCodeAt(0)})`));
+        
+        errorDiv.classList.add('hidden');
+        
+        // ✅ Check empty fields first
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            errorDiv.textContent = 'جميع الحقول مطلوبة';
+            errorDiv.classList.remove('hidden');
+            return;
+        }
+        
+        // ✅ Check password match
+        if (newPassword !== confirmPassword) {
+            console.error('❌ Passwords do not match!');
+            console.error('New:', newPassword, '(length:', newPassword.length, ')');
+            console.error('Confirm:', confirmPassword, '(length:', confirmPassword.length, ')');
+            
+            errorDiv.innerHTML = `
+                كلمة المرور الجديدة وتأكيد كلمة المرور غير متطابقتين<br>
+                <small class="text-xs opacity-75">
+                    الطول: ${newPassword.length} ≠ ${confirmPassword.length}
+                </small>
+            `;
+            errorDiv.classList.remove('hidden');
+            return;
+        }
+        
+        // ✅ Check minimum length (8 characters)
+        if (newPassword.length < 8) {
+            errorDiv.textContent = 'كلمة المرور يجب أن لا تقل عن 8 خانات';
+            errorDiv.classList.remove('hidden');
+            return;
+        }
+        
+        // ✅ Check contains at least one UPPERCASE letter
+        if (!/[A-Z]/.test(newPassword)) {
+            errorDiv.textContent = 'كلمة المرور يجب أن تحتوي على حرف إنجليزي كبير واحد على الأقل (A-Z)';
+            errorDiv.classList.remove('hidden');
+            return;
+        }
+        
+        // ✅ Check contains at least one lowercase letter
+        if (!/[a-z]/.test(newPassword)) {
+            errorDiv.textContent = 'كلمة المرور يجب أن تحتوي على حرف إنجليزي صغير واحد على الأقل (a-z)';
+            errorDiv.classList.remove('hidden');
+            return;
+        }
+        
+        // ✅ Check contains at least one number
+        if (!/[0-9]/.test(newPassword)) {
+            errorDiv.textContent = 'كلمة المرور يجب أن تحتوي على رقم واحد على الأقل (0-9)';
+            errorDiv.classList.remove('hidden');
+            return;
+        }
+        
+        // ✅ Check not same as current
+        if (currentPassword === newPassword) {
+            errorDiv.textContent = 'كلمة المرور الجديدة يجب أن تختلف عن الحالية';
+            errorDiv.classList.remove('hidden');
+            return;
+        }
+        
+        console.log('✅ All validations passed!');
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>جاري الحفظ...';
+        
+        try {
+            console.log('📤 Sending request to server...');
+            
+            const response = await fetch('/Login/ChangePassword', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    oldPassword: currentPassword,
+                    newPassword: newPassword
+                })
+            });
+            
+            console.log('📥 Response status:', response.status);
+            
+            const result = await response.json();
+            console.log('📥 Response data:', result);
+            
+            if (result.success) {
+                console.log('✅ Password changed successfully!');
+                
+                if (typeof toastr !== 'undefined') {
+                    toastr.success(result.message || 'تم تغيير كلمة المرور بنجاح');
+                } else {
+                    alert(result.message || 'تم تغيير كلمة المرور بنجاح');
+                }
+                
+                const modalInstance = FlowbiteInstances?.getInstance('Modal', 'change-password-modal');
+                if (modalInstance) modalInstance.hide();
+                
+                this.reset();
+                
+                setTimeout(() => {
+                    window.location.href = '/Login?logout=2';
+                }, 2000);
+                
+            } else {
+                console.error('❌ Server returned error:', result.message);
+                errorDiv.textContent = result.message || 'فشل تغيير كلمة المرور';
+                errorDiv.classList.remove('hidden');
+            }
+            
+        } catch (error) {
+            console.error('❌ Request failed:', error);
+            errorDiv.textContent = 'حدث خطأ أثناء تغيير كلمة المرور';
+            errorDiv.classList.remove('hidden');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fa-solid fa-check me-2"></i>حفظ كلمة المرور';
+        }
+    });
+    
+    // ✅ Auto-trim on blur to prevent user confusion
+    document.querySelectorAll('#change-password-form input[type="password"]').forEach(input => {
+        input.addEventListener('blur', function() {
+            this.value = this.value.trim();
+        });
+    });
+</script>
+
+<script>
+    document.getElementById('new-password')?.addEventListener('input', function(e) {
+        const password = e.target.value;
+        const strengthDiv = document.getElementById('password-strength');
+        const strengthBar = document.getElementById('strength-bar');
+        const strengthText = document.getElementById('strength-text');
+        
+        if (password.length === 0) {
+            strengthDiv.classList.add('hidden');
+            return;
+        }
+        
+        strengthDiv.classList.remove('hidden');
+        
+        let strength = 0;
+        const checks = {
+            length: password.length >= 8,
+            uppercase: /[A-Z]/.test(password),
+            lowercase: /[a-z]/.test(password),
+            number: /[0-9]/.test(password)
+        };
+        
+        // Update checkmarks
+        updateCheck('check-length', checks.length);
+        updateCheck('check-uppercase', checks.uppercase);
+        updateCheck('check-lowercase', checks.lowercase);
+        updateCheck('check-number', checks.number);
+        
+        // Calculate strength
+        if (checks.length) strength += 25;
+        if (checks.uppercase) strength += 25;
+        if (checks.lowercase) strength += 25;
+        if (checks.number) strength += 25;
+        
+        let color = '';
+        let text = '';
+        
+        if (strength < 50) {
+            color = 'bg-red-500';
+            text = 'ضعيفة';
+        } else if (strength < 100) {
+            color = 'bg-yellow-500';
+            text = 'متوسطة';
+        } else {
+            color = 'bg-green-500';
+            text = 'قوية';
+        }
+        
+        strengthBar.style.width = strength + '%';
+        strengthBar.className = `h-full transition-all duration-300 ${color}`;
+        strengthText.textContent = text;
+        strengthText.className = `text-xs font-medium ${color.replace('bg-', 'text-')}`;
+    });
+    
+    function updateCheck(id, isValid) {
+        const element = document.getElementById(id);
+        if (!element) return;
+        
+        const icon = element.querySelector('i');
+        if (isValid) {
+            icon.className = 'fa-solid fa-circle-check text-green-400';
+        } else {
+            icon.className = 'fa-solid fa-circle-xmark text-red-400';
+        }
+    }
+</script>
+
+<!-- Force Change Password Modal (Cannot be closed) -->
+@if (mustChangePassword)
+{
+    <div id="force-change-password-modal" 
+         class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md">
+        <div class="relative p-4 w-full max-w-2xl"> <!-- ✅ Changed to max-w-2xl for wider modal -->
+            <div class="relative bg-slate-800 rounded-lg shadow-2xl border-2 border-red-500 animate-pulse-border">
+                <!-- Modal header -->
+                <div class="flex items-center justify-between p-5 border-b border-slate-700 bg-gradient-to-r from-red-900/30 to-orange-900/30">
+                    <div class="flex items-center gap-3">
+                        <div class="relative">
+                            <i class="fa-solid fa-shield-halved text-red-400 text-4xl animate-pulse"></i>
+                            <span class="absolute -top-1 -right-1 flex h-4 w-4">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span>
+                            </span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-white">
+                            ⚠️ تنبيه أمني مهم
+                        </h3>
+                    </div>
+                </div>
+                
+                <!-- Modal body -->
+                <div class="p-6" dir="rtl">
+                    <!-- ✅ Enhanced warning message -->
+                    <div class="mb-6 p-5 bg-gradient-to-r from-yellow-900/30 to-red-900/30 border-2 border-yellow-500 rounded-lg animate-pulse-slow">
+                        <div class="flex items-start gap-4">
+                            <i class="fa-solid fa-triangle-exclamation text-yellow-400 text-3xl mt-1 animate-bounce-slow"></i>
+                            <div>
+                                <h4 class="text-xl font-bold text-yellow-200 mb-3">
+                                    يجب تغيير كلمة المرور فوراً
+                                </h4>
+                                <p class="text-base text-yellow-100 leading-relaxed mb-4">
+                                    لأسباب أمنية، <strong>لن تتمكن من استخدام أي وظيفة في النظام</strong> حتى تقوم بتغيير كلمة المرور الافتراضية.
+                                </p>
+                                <div class="bg-black/20 rounded-lg p-3">
+                                    <h5 class="text-sm font-semibold text-yellow-300 mb-2">🔒 القيود الحالية:</h5>
+                                    <ul class="space-y-2 text-sm text-yellow-200">
+                                        <li class="flex items-center gap-2">
+                                            <i class="fa-solid fa-ban text-red-400"></i>
+                                            جميع القوائم والصفحات محظورة
+                                        </li>
+                                        <li class="flex items-center gap-2">
+                                            <i class="fa-solid fa-lock text-red-400"></i>
+                                            لا يمكن الوصول إلى أي بيانات
+                                        </li>
+                                        <li class="flex items-center gap-2">
+                                            <i class="fa-solid fa-key text-green-400"></i>
+                                            قم بتغيير كلمة المرور أدناه للمتابعة
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form id="force-change-password-form">
+                        <div class="space-y-4">
+                            <!-- Current Password -->
+                            <div>
+                                <label for="force-current-password" class="block mb-2 text-sm font-medium text-white">
+                                    كلمة المرور الحالية <span class="text-red-400">*</span>
+                                </label>
+                                <div class="relative">
+                                    <input type="password" 
+                                           id="force-current-password" 
+                                           name="currentPassword"
+                                           class="bg-slate-700 border border-slate-600 text-white text-base rounded-lg focus:ring-red-500 focus:border-red-500 block w-full p-3 pe-12"
+                                           placeholder="أدخل كلمة المرور الحالية"
+                                           required>
+                                    <button type="button" 
+                                            class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 hover:text-white"
+                                            onclick="togglePasswordVisibility('force-current-password')">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- New Password -->
+                            <div>
+                                <label for="force-new-password" class="block mb-2 text-sm font-medium text-white">
+                                    كلمة المرور الجديدة <span class="text-red-400">*</span>
+                                </label>
+                                <div class="relative">
+                                    <input type="password" 
+                                           id="force-new-password" 
+                                           name="newPassword"
+                                           class="bg-slate-700 border border-slate-600 text-white text-base rounded-lg focus:ring-red-500 focus:border-red-500 block w-full p-3 pe-12"
+                                           placeholder="أدخل كلمة المرور الجديدة"
+                                           minlength="8"
+                                           required>
+                                    <button type="button" 
+                                            class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 hover:text-white"
+                                            onclick="togglePasswordVisibility('force-new-password')">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </button>
+                                </div>
+                                <p class="mt-1 text-xs text-slate-400">الحد الأدنى 8 خانات (حرف كبير، حرف صغير، رقم)</p>
+                            </div>
+
+                            <!-- Confirm Password -->
+                            <div>
+                                <label for="force-confirm-password" class="block mb-2 text-sm font-medium text-white">
+                                    تأكيد كلمة المرور <span class="text-red-400">*</span>
+                                </label>
+                                <div class="relative">
+                                    <input type="password" 
+                                           id="force-confirm-password" 
+                                           name="confirmPassword"
+                                           class="bg-slate-700 border border-slate-600 text-white text-base rounded-lg focus:ring-red-500 focus:border-red-500 block w-full p-3 pe-12"
+                                           placeholder="أعادة إدخال كلمة المرور الجديدة"
+                                           required>
+                                    <button type="button" 
+                                            class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 hover:text-white"
+                                            onclick="togglePasswordVisibility('force-confirm-password')">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Password Strength Indicator -->
+                            <div id="force-password-strength" class="hidden">
+                                <div class="flex items-center gap-2">
+                                    <div class="flex-1 h-2 bg-slate-600 rounded-full overflow-hidden">
+                                        <div id="force-strength-bar" class="h-full transition-all duration-300"></div>
+                                    </div>
+                                    <span id="force-strength-text" class="text-xs font-medium"></span>
+                                </div>
+                                <ul class="mt-2 text-xs text-slate-400 space-y-1">
+                                    <li id="force-check-length" class="flex items-center gap-2">
+                                        <i class="fa-solid fa-circle-xmark text-red-400"></i>
+                                        <span>8 خانات على الأقل</span>
+                                    </li>
+                                    <li id="force-check-uppercase" class="flex items-center gap-2">
+                                        <i class="fa-solid fa-circle-xmark text-red-400"></i>
+                                        <span>حرف كبير (A-Z)</span>
+                                    </li>
+                                    <li id="force-check-lowercase" class="flex items-center gap-2">
+                                        <i class="fa-solid fa-circle-xmark text-red-400"></i>
+                                        <span>حرف صغير (a-z)</span>
+                                    </li>
+                                    <li id="force-check-number" class="flex items-center gap-2">
+                                        <i class="fa-solid fa-circle-xmark text-red-400"></i>
+                                        <span>رقم واحد (0-9)</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <!-- Error Message Area -->
+                            <div id="force-password-error" class="hidden p-3 text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-lg"></div>
+                        </div>
+
+                        <!-- Modal footer -->
+                        <div class="flex items-center gap-3 pt-5 mt-5 border-t border-slate-700">
+                            <button type="submit" 
+                                    class="flex-1 text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-base px-6 py-3 text-center">
+                                <i class="fa-solid fa-shield-halved me-2"></i>
+                                تغيير كلمة المرور الآن
+                            </button>
+                            <a href="/Login/Logout" 
+                               class="flex-1 text-center text-slate-300 bg-slate-700 hover:bg-slate-600 rounded-lg border border-slate-600 text-base font-medium px-6 py-3 hover:text-white">
+                                <i class="fa-solid fa-right-from-bracket me-2"></i>
+                                تسجيل الخروج
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✅ CSS for animations and custom toast position -->
+    <style>
+        @@keyframes pulse-border {
+            0%, 100% { border-color: rgb(239 68 68); }
+            50% { border-color: rgb(251 146 60); }
+        }
+        .animate-pulse-border {
+            animation: pulse-border 2s ease-in-out infinite;
+        }
+
+        @@keyframes bounce-slow {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        .animate-bounce-slow {
+            animation: bounce-slow 2s ease-in-out infinite;
+        }
+
+        @@keyframes pulse-slow {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.85; }
+        }
+        .animate-pulse-slow {
+            animation: pulse-slow 3s ease-in-out infinite;
+        }
+
+        @@keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        .animate-shake {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        body.modal-open {
+            overflow: hidden !important;
+        }
+
+        /* ✅ Add visual indicator for disabled elements */
+        .force-disabled {
+            pointer-events: none !important;
+            opacity: 0.4 !important;
+            cursor: not-allowed !important;
+            filter: grayscale(50%) !important;
+        }
+    </style>
+
+    <script>
+        (function() {
+            console.log('🔒 FORCE PASSWORD CHANGE - Simple Mode');
+            
+            // ✅ Simple disable function
+            const disableNavigation = () => {
+                // Disable sidebar menu links
+                document.querySelectorAll('aside#logo-sidebar .sidebar-link').forEach(link => {
+                    link.classList.add('force-disabled');
+                });
+                
+                // Disable header Home link
+                document.querySelectorAll('nav#top-header a[href="/Home"]').forEach(link => {
+                    link.classList.add('force-disabled');
+                });
+                
+                // Disable dropdown items (except logout)
+                document.querySelectorAll('#user-dropdown a:not([href="/Login/Logout"])').forEach(link => {
+                    link.classList.add('force-disabled');
+                });
+                
+                // Disable sidebar controls
+                document.querySelectorAll('aside#logo-sidebar button[data-collapse-toggle]').forEach(btn => {
+                    btn.classList.add('force-disabled');
+                });
+                
+                const pinBtn = document.getElementById('pin-sidebar');
+                const toggleBtn = document.getElementById('toggle-sidebar');
+                if (pinBtn) pinBtn.classList.add('force-disabled');
+                if (toggleBtn) toggleBtn.classList.add('force-disabled');
+            };
+            
+            // Execute
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', disableNavigation);
+            } else {
+                disableNavigation();
+            }
+            
+            // DOMContentLoaded
+            document.addEventListener('DOMContentLoaded', () => {
+                disableNavigation();
+                document.body.classList.add('modal-open');
+                
+                setTimeout(() => {
+                    document.getElementById('force-current-password')?.focus();
+                }, 500);
+                
+                // Prevent ESC
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        e.preventDefault();
+                        return false;
+                    }
+                }, true);
+            });
+            
+            // Password strength
+            document.getElementById('force-new-password')?.addEventListener('input', function(e) {
+                const password = e.target.value;
+                const strengthDiv = document.getElementById('force-password-strength');
+                const strengthBar = document.getElementById('force-strength-bar');
+                const strengthText = document.getElementById('force-strength-text');
+                
+                if (password.length === 0) {
+                    strengthDiv?.classList.add('hidden');
+                    return;
+                }
+                
+                strengthDiv?.classList.remove('hidden');
+                
+                const checks = {
+                    length: password.length >= 8,
+                    uppercase: /[A-Z]/.test(password),
+                    lowercase: /[a-z]/.test(password),
+                    number: /[0-9]/.test(password)
+                };
+                
+                updateForceCheck('force-check-length', checks.length);
+                updateForceCheck('force-check-uppercase', checks.uppercase);
+                updateForceCheck('force-check-lowercase', checks.lowercase);
+                updateForceCheck('force-check-number', checks.number);
+                
+                let strength = 0;
+                if (checks.length) strength += 25;
+                if (checks.uppercase) strength += 25;
+                if (checks.lowercase) strength += 25;
+                if (checks.number) strength += 25;
+                
+                let color = '', text = '';
+                if (strength < 50) { color = 'bg-red-500'; text = 'ضعيفة'; }
+                else if (strength < 100) { color = 'bg-yellow-500'; text = 'متوسطة'; }
+                else { color = 'bg-green-500'; text = 'قوية'; }
+                
+                if (strengthBar) {
+                    strengthBar.style.width = strength + '%';
+                    strengthBar.className = `h-full transition-all duration-300 ${color}`;
+                }
+                if (strengthText) {
+                    strengthText.textContent = text;
+                    strengthText.className = `text-xs font-medium ${color.replace('bg-', 'text-')}`;
+                }
+            });
+            
+            function updateForceCheck(id, isValid) {
+                const element = document.getElementById(id);
+                if (!element) return;
+                const icon = element.querySelector('i');
+                if (icon) {
+                    icon.className = isValid 
+                        ? 'fa-solid fa-circle-check text-green-400'
+                        : 'fa-solid fa-circle-xmark text-red-400';
+                }
+            }
+            
+            // Form submission
+            document.getElementById('force-change-password-form')?.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const errorDiv = document.getElementById('force-password-error');
+                const submitBtn = this.querySelector('button[type="submit"]');
+                
+                const currentPassword = this.currentPassword.value.trim();
+                const newPassword = this.newPassword.value.trim();
+                const confirmPassword = this.confirmPassword.value.trim();
+                
+                errorDiv?.classList.add('hidden');
+                
+                const showError = (msg) => {
+                    if (errorDiv) {
+                        errorDiv.textContent = msg;
+                        errorDiv.classList.remove('hidden');
+                        errorDiv.classList.add('animate-shake');
+                        setTimeout(() => errorDiv.classList.remove('animate-shake'), 500);
+                    }
+                };
+                
+                if (!currentPassword || !newPassword || !confirmPassword) {
+                    showError('❌ جميع الحقول مطلوبة');
+                    return;
+                }
+                if (newPassword !== confirmPassword) {
+                    showError('❌ كلمة المرور الجديدة وتأكيد كلمة المرور غير متطابقتين');
+                    return;
+                }
+                if (newPassword.length < 8) {
+                    showError('❌ كلمة المرور يجب أن لا تقل عن 8 خانات');
+                    return;
+                }
+                if (!/[A-Z]/.test(newPassword)) {
+                    showError('❌ يجب أن تحتوي على حرف كبير (A-Z)');
+                    return;
+                }
+                if (!/[a-z]/.test(newPassword)) {
+                    showError('❌ يجب أن تحتوي على حرف صغير (a-z)');
+                    return;
+                }
+                if (!/[0-9]/.test(newPassword)) {
+                    showError('❌ يجب أن تحتوي على رقم (0-9)');
+                    return;
+                }
+                if (currentPassword === newPassword) {
+                    showError('❌ كلمة المرور الجديدة يجب أن تختلف عن الحالية');
+                    return;
+                }
+                
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>جاري تغيير كلمة المرور...';
+                }
+                
+                try {
+                    const response = await fetch('/Login/ChangePassword', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({
+                            oldPassword: currentPassword,
+                            newPassword: newPassword
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        alert('✅ تم تغيير كلمة المرور بنجاح! سيتم تسجيل خروجك الآن...');
+                        setTimeout(() => {
+                            window.location.href = '/Login?logout=2';
+                        }, 1000);
+                    } else {
+                        showError(result.message || '❌ فشل تغيير كلمة المرور');
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = '<i class="fa-solid fa-shield-halved me-2"></i>تغيير كلمة المرور الآن';
+                        }
+                    }
+                } catch (error) {
+                    console.error('❌ Error:', error);
+                    showError('❌ حدث خطأ أثناء تغيير كلمة المرور');
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i class="fa-solid fa-shield-halved me-2"></i>تغيير كلمة المرور الآن';
+                    }
+                }
+            });
+            
+        })();
+    </script>
+}
