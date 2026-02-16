@@ -612,12 +612,6 @@ body {
   .ml-2 {
     margin-left: calc(var(--spacing) * 2);
   }
-  .line-clamp-1 {
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-  }
   .line-clamp-2 {
     overflow: hidden;
     display: -webkit-box;
@@ -629,12 +623,6 @@ body {
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
-  }
-  .line-clamp-4 {
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 4;
   }
   .block {
     display: block;
@@ -934,15 +922,6 @@ body {
       --tw-space-x-reverse: 0;
       margin-inline-start: calc(calc(var(--spacing) * 2) * var(--tw-space-x-reverse));
       margin-inline-end: calc(calc(var(--spacing) * 2) * calc(1 - var(--tw-space-x-reverse)));
-    }
-  }
-  .divide-y {
-    :where(& > :not(:last-child)) {
-      --tw-divide-y-reverse: 0;
-      border-bottom-style: var(--tw-border-style);
-      border-top-style: var(--tw-border-style);
-      border-top-width: calc(1px * var(--tw-divide-y-reverse));
-      border-bottom-width: calc(1px * calc(1 - var(--tw-divide-y-reverse)));
     }
   }
   .self-end {
@@ -10441,6 +10420,11 @@ body {
   inherits: false;
   initial-value: 0;
 }
+@property --tw-divide-y-reverse {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
 @property --tw-content {
   syntax: "*";
   inherits: false;
@@ -10466,6 +10450,12 @@ body {
   html:not(.dark) body, html:not(.dark) nav, html:not(.dark) aside, html:not(.dark) main, html:not(.dark) footer {
     color: var(--color-gray-900);
   }
+}
+.sf-svg-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  filter: grayscale(100%) brightness(0) saturate(100%) invert(63%) sepia(4%) saturate(180%) hue-rotate(180deg) brightness(92%);
 }
 @layer components {
   .form-container {
@@ -14016,11 +14006,6 @@ html, body {
   inherits: false;
   initial-value: 0;
 }
-@property --tw-divide-y-reverse {
-  syntax: "*";
-  inherits: false;
-  initial-value: 0;
-}
 @property --tw-border-style {
   syntax: "*";
   inherits: false;
@@ -14306,7 +14291,6 @@ html, body {
       --tw-skew-y: initial;
       --tw-space-y-reverse: 0;
       --tw-space-x-reverse: 0;
-      --tw-divide-y-reverse: 0;
       --tw-border-style: solid;
       --tw-gradient-position: initial;
       --tw-gradient-from: #0000;
@@ -14372,6 +14356,7 @@ html, body {
       --tw-scale-y: 1;
       --tw-scale-z: 1;
       --tw-divide-x-reverse: 0;
+      --tw-divide-y-reverse: 0;
       --tw-content: "";
     }
   }

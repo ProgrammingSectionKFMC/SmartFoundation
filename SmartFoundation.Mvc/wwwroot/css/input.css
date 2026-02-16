@@ -85,6 +85,14 @@ body {
     }
 }
 
+.sf-svg-icon {
+    width: 18px;
+    height: 18px;
+    display: block;
+    filter: grayscale(100%) brightness(0) saturate(100%) invert(63%) sepia(4%) saturate(180%) hue-rotate(180deg) brightness(92%);
+}
+
+
 /* =========================
    Components
    ========================= */
