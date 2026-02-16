@@ -61,6 +61,7 @@ namespace SmartFoundation.UI.ViewModels.SmartForm
            - email         => بريد إلكتروني
            - url           => روابط
            - custom        => Regex مخصّص في Pattern
+           -money_sar      => ريال سعودي
         */
 
         // خصائص المتصفح
