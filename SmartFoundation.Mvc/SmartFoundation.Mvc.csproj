@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
-	  <LangVersion>12.0</LangVersion>
+    <LangVersion>12.0</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
@@ -29,19 +29,38 @@
     </Content>
   </ItemGroup>
 
+  <!-- ✅ Settings files -->
+  <ItemGroup>
+    <Content Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="appsettings.Development.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="appsettings.Production.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
-<ItemGroup>
-  <Content Include="AiModels\**\*.*">
-    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-  </Content>
-</ItemGroup>
+  <!-- ✅ AI Models -->
+  <ItemGroup>
+    <Content Include="AiModels\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
+  <!-- ✅ AI Docs (Markdown only) -->
+  <ItemGroup>
+    <Content Include="AiDocs\**\*.md">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
-<ItemGroup>
-  <Compile Remove="Controllers\ElectronicBillSystem\MeterRead\NewFolder\**" />
-  <Content Remove="Controllers\ElectronicBillSystem\MeterRead\NewFolder\**" />
-  <EmbeddedResource Remove="Controllers\ElectronicBillSystem\MeterRead\NewFolder\**" />
-  <None Remove="Controllers\ElectronicBillSystem\MeterRead\NewFolder\**" />
-</ItemGroup>
+  <ItemGroup>
+    <Compile Remove="Controllers\ElectronicBillSystem\MeterRead\NewFolder\**" />
+    <Content Remove="Controllers\ElectronicBillSystem\MeterRead\NewFolder\**" />
+    <EmbeddedResource Remove="Controllers\ElectronicBillSystem\MeterRead\NewFolder\**" />
+    <None Remove="Controllers\ElectronicBillSystem\MeterRead\NewFolder\**" />
+  </ItemGroup>
 
 </Project>
