@@ -2803,7 +2803,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     document.addEventListener('mouseup', onUp);
                 });
 
-                // لمس (اختياري)
+               
                 modalEl.addEventListener('touchstart', (e) => {
                     const h = e.target.closest('.sf-resize-handle');
                     if (!h) return;
@@ -2833,7 +2833,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         flatpickr(el, {
                             locale: flatpickr.l10ns.ar,
                             dateFormat: "Y-m-d",
-                            altInput: false,       //  هذا يمنع الصيغة الطويلة
+                            altInput: false,      
                             defaultDate: null,
                             allowInput: true,
                             disableMobile: true
@@ -2918,16 +2918,22 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         pattern = 'pattern="[A-Za-z0-9/:.?&=#_-]+"';
                         break;
 
+                    case "money_sar":
+                        oninput = `oninput="sfMoneySarOnInput(this)"`;
+                        pattern = 'pattern="^\\d{1,3}(,\\d{3})*(\\.\\d{0,2})?$"';
+                        break;
+
                     case "custom":
                         pattern = field.pattern ? `pattern="${field.pattern}"` : "";
                         oninput = "";
                         break;
-
                 }
 
                 let inputType = (field.type || "text").toLowerCase();
                 if (textMode === "email") inputType = "email";
                 if (textMode === "url") inputType = "url";
+                if (textMode === "money_sar") inputType = "text";
+
                 let fieldHtml = "";
                 const hasIcon = field.icon && field.icon.trim() !== "";
                 const iconHtml = hasIcon
@@ -2956,45 +2962,58 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             document?.documentElement?.dir === "rtl";
                         const iconSideClass = isRtl ? "sf-icon-right" : "sf-icon-left";
                         const iconInputClass = hasIcon ? `sf-has-icon ${iconSideClass}` : "";
+                        const iconVal = (field.icon || "").toString().trim();
+                        const isImgIcon = /\.(svg|png|jpg|jpeg|webp)$/i.test(iconVal);
                         const iconHtml = hasIcon
-                            ? `<span class="sf-input-icon ${iconSideClass}">
-                            <i class="${this.escapeHtml(field.icon)}"></i>
-                            </span>`
+                            ? (isImgIcon
+                                ? `<span class="sf-input-icon ${iconSideClass}">
+                        <img src="${this.escapeHtml(iconVal)}" class="sf-svg-icon" alt="" />
+                   </span>`
+                                : `<span class="sf-input-icon ${iconSideClass}">
+                        <i class="${this.escapeHtml(iconVal)}"></i>
+                   </span>`)
                             : "";
 
-                        fieldHtml = `
-                            <div class="form-group ${colCss}">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
-                                ${this.escapeHtml(field.label)}
-                                ${field.required ? '<span class="text-red-500">*</span>' : ''}
-                            </label>
-                            <div class="sf-field-wrap">
-                                ${iconHtml}
-                                <input
-                                type="${inputType}"
-                                name="${this.escapeHtml(field.name)}"
-                                value="${this.escapeHtml(value)}"
-                                class="sf-modal-input ${iconInputClass}"
-                                ${placeholder}
-                                ${required}
-                                ${disabled}
-                                ${readonly}
-                                ${maxLength}
-                                ${autocompleteAttr}
-                                ${spellcheck}
-                                ${autocapitalize}
-                                ${autocorrect}
-                                ${pattern}
-                                ${oninput}
-                            />
-                        </div>
-                        ${field.helpText
-                                ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
-                                : ''}
-                    </div>`;
-                        break;
-                    }
+                        const inputmodeAttr =
+                            (textMode === "numeric") ? `inputmode="numeric"` :
+                                (textMode === "money_sar") ? `inputmode="decimal"` :
+                                    "";
 
+                        fieldHtml = `
+                        <div class="form-group ${colCss}">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            ${this.escapeHtml(field.label)}
+                            ${field.required ? '<span class="text-red-500">*</span>' : ''}
+                        </label>
+                        <div class="sf-field-wrap">
+                            ${iconHtml}
+                            <input
+                            type="${inputType}"
+                            name="${this.escapeHtml(field.name)}"
+                            value="${this.escapeHtml(value)}"
+                            class="sf-modal-input ${iconInputClass}"
+                            ${placeholder}
+                            ${required}
+                            ${disabled}
+                            ${readonly}
+                            ${maxLength}
+                            ${autocompleteAttr}
+                            ${spellcheck}
+                            ${autocapitalize}
+                            ${autocorrect}
+                            ${inputmodeAttr}
+                            ${pattern}
+                            ${oninput}
+                            />
+                            </div>
+                            ${field.helpText
+                            ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
+                            : ''}
+                            </div>`;
+            break;
+      }
+
+                
 
 
                     // =======================
@@ -5371,3 +5390,22 @@ window.sfRouteEditForm = function (table, act, row) {
             });
     }, true);
 })();
+
+
+
+
+// money_sar 
+window.sfMoneySarOnInput = function (el) {
+    let v = (el.value || "");
+    v = v.replace(/[^\d.,]/g, "");
+    v = v.replace(/,/g, "");
+    const firstDot = v.indexOf(".");
+    if (firstDot !== -1) {
+        v = v.slice(0, firstDot + 1) + v.slice(firstDot + 1).replace(/\./g, "");
+    }
+    let [intPart, decPart] = v.split(".");
+    intPart = (intPart || "").replace(/^0+(?=\d)/, ""); 
+    if (decPart != null) decPart = decPart.slice(0, 2);
+    intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    el.value = decPart != null ? `${intPart}.${decPart}` : intPart;
+};
