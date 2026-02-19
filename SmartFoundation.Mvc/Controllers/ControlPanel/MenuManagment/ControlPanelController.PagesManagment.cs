@@ -45,6 +45,9 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 return RedirectToAction("Index", "Home");
             }
 
+            string? rowProgramsIdField = "";
+            string? rowmenuDistributorIDField = "";
+            string? rowdistributorPermissionTypeIDField = "";
             bool canInsert = false;
             bool canInsertFullAccess = false;
             bool canUpdate = false;
@@ -102,6 +105,13 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                     // ========== dt1: Programs ==========
                     if (dt1 != null && dt1.Columns.Count > 0)
                     {
+
+                        // RowId
+                        rowProgramsIdField = "programID";
+                        var possibleIdNames = new[] { "programID", "ProgramID", "Id", "ID" };
+                        rowProgramsIdField = possibleIdNames.FirstOrDefault(n => dt1.Columns.Contains(n))
+                                     ?? dt1.Columns[0].ColumnName;
+
                         var headerMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                         {
                             ["programID"] = "رقم البرنامج",
@@ -160,6 +170,11 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                     // ========== dt2: Menu ==========
                     if (dt2 != null && dt2.Columns.Count > 0)
                     {
+                        rowmenuDistributorIDField = "menuDistributorID";
+                        var possibleIdNames = new[] { "menuDistributorID", "menuDistributorID", "Id", "ID" };
+                        rowmenuDistributorIDField = possibleIdNames.FirstOrDefault(n => dt2.Columns.Contains(n))
+                                     ?? dt2.Columns[0].ColumnName;
+
                         var headerMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                         {
                             ["menuDistributorID"] = "المعرف",
@@ -226,6 +241,12 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                     // ========== dt3: Permissions ==========
                     if (dt3 != null && dt3.Columns.Count > 0)
                     {
+
+                        rowdistributorPermissionTypeIDField = "distributorPermissionTypeID";
+                        var possibleIdNames = new[] { "distributorPermissionTypeID", "distributorPermissionTypeID", "Id", "ID" };
+                        rowdistributorPermissionTypeIDField = possibleIdNames.FirstOrDefault(n => dt3.Columns.Contains(n))
+                                     ?? dt3.Columns[0].ColumnName;
+
                         var headerMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                         {
                             ["distributorPermissionTypeID"] = "المعرف",
@@ -294,6 +315,114 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
 
             var currentUrl = Request.Path + Request.QueryString;
 
+
+
+             var AddPorgramFieldFields = new List<FieldConfig>
+            {
+
+                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "AddPorgram" },
+                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
+                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
+                new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
+                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+
+
+                new FieldConfig { Name = rowProgramsIdField, Type = "hidden" },
+
+
+                new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "ActionID" },
+                new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p14", Label = "الترتيب", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p15", Label = "الاسم", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p07", Label = "WaitingClassID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "date", ColCss = "3",Required = true },
+                new FieldConfig { Name = "p12", Label = "ملاحظات", Type = "textarea", ColCss = "12",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
+
+
+            };
+
+
+            var EditPorgramFieldFields = new List<FieldConfig>
+            {
+
+                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "EditPorgram" },
+                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
+                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
+                new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
+                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+
+
+                new FieldConfig { Name = rowProgramsIdField, Type = "hidden" },
+
+
+                new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "ActionID" },
+                new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p14", Label = "الترتيب", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p15", Label = "الاسم", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p07", Label = "WaitingClassID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "date", ColCss = "3",Required = true },
+                new FieldConfig { Name = "p12", Label = "ملاحظات", Type = "textarea", ColCss = "12",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
+
+
+            };
+
+
+            var DeletePorgramFieldFields = new List<FieldConfig>
+            {
+
+                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "DeletePorgram" },
+                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
+                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
+                new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
+                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+
+
+                new FieldConfig { Name = rowProgramsIdField, Type = "hidden" },
+
+
+                new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "ActionID" },
+                new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p14", Label = "الترتيب", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p15", Label = "الاسم", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p07", Label = "WaitingClassID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "date", ColCss = "3",Required = true },
+                new FieldConfig { Name = "p12", Label = "ملاحظات", Type = "textarea", ColCss = "12",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
+
+
+            };
+
+
+
             // ✅ إنشاء الـ Models بالبيانات الصحيحة
             var dsModelPrograms = new SmartTableDsModel
             {
@@ -330,13 +459,98 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 AllowExport = true,
                 PageTitle = "إدارة القوائم",
                 PanelTitle = "إدارة القوائم",
+
                 Toolbar = new TableToolbarConfig
                 {
-                    ShowRefresh = true,
+                    ShowRefresh = false,
                     ShowColumns = true,
+                    ShowExportCsv = false,
+                    ShowExportExcel = false,
                     ShowAdd = canInsert,
+                    ShowAdd1 = canInsertFullAccess,
                     ShowEdit = canUpdate,
                     ShowDelete = canDelete,
+                    ShowBulkDelete = false,
+
+                    Add = new TableAction
+                    {
+                        Label = "إضافة صلاحية",
+                        Icon = "fa fa-plus",
+                        Color = "success",
+                        OpenModal = true,
+                        ModalTitle = "إضافة صلاحية جديدة",
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "InsertForm",
+                            Title = "بيانات الموظف الجديد",
+                            Method = "post",
+                            ActionUrl = "/crud/insert",
+                            Fields = AddPorgramFieldFields,
+                            Buttons = new List<FormButtonConfig>
+                            {
+                                new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "success" /*Icon = "fa fa-save"*/ },
+                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", /*Icon = "fa fa-times",*/ OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" },
+
+                            }
+                        }
+                    },
+
+                  
+
+                    // Edit: opens populated form for single selection and saves via SP
+                    Edit = new TableAction
+                    {
+                        Label = "تعديل صلاحية",
+                        Icon = "fa fa-pen-to-square",
+                        Color = "info",
+                        IsEdit = true,
+                        OpenModal = true,
+                        ModalTitle = "تعديل بيانات الموظف",
+                        //ModalMessage = "بسم الله الرحمن الرحيم",
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "employeeEditForm",
+                            Title = "تعديل بيانات الموظف",
+                            Method = "post",
+                            ActionUrl = "/crud/update",
+                            SubmitText = "حفظ التعديلات",
+                            CancelText = "إلغاء",
+                            Fields = EditPorgramFieldFields
+                        },
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1
+
+
+                    },
+
+                    Delete = new TableAction
+                    {
+                        Label = "ايقاف صلاحية",
+                        Icon = "fa fa-trash",
+                        Color = "danger",
+                        IsEdit = true,
+                        OpenModal = true,
+                        //ModalTitle = "رسالة تحذيرية",
+                        ModalTitle = "<i class='fa fa-exclamation-triangle text-red-600 text-xl mr-2'></i> تحذير",
+                        ModalMessage = "هل أنت متأكد من حذف هذا السجل؟",
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "employeeDeleteForm",
+                            Title = "تأكيد حذف السجل",
+                            Method = "post",
+                            ActionUrl = "/crud/delete",
+                            Buttons = new List<FormButtonConfig>
+                            {
+                                new FormButtonConfig { Text = "حذف", Type = "submit", Color = "danger", Icon = "fa fa-save" },
+                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", Icon = "fa fa-times", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
+                            },
+                            Fields = DeletePorgramFieldFields
+                        },
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1
+                    },
                 }
             };
 
