@@ -2883,6 +2883,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         pattern = 'pattern="[A-Za-z\\s]+"';
                         break;
 
+                 
+
                     case "numeric":
                         oninput = `oninput="this.value=this.value.replace(/[^0-9]/g,'')"`;
                         pattern = 'pattern="[0-9]+"';

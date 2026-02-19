@@ -63,43 +63,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
 
             ds = await _mastersServies.GetDataLoadDataSetAsync(spParameters);
 
-            DataTable? permissionTable = (ds?.Tables?.Count ?? 0) > 0 ? ds.Tables[0] : null;
-
-            //DataTable? rawDt1 = (ds?.Tables?.Count ?? 0) > 1 ? ds.Tables[1] : null;
-            //if (rawDt1 != null)
-            //{
-            //    if (!string.IsNullOrWhiteSpace(Q1))
-            //    {
-            //        // Escape single quotes for DataView filter
-            //        var escaped = Q1.Replace("'", "''");
-
-            //        // Exact match (use LIKE '%value%' for contains)
-            //        var view = new DataView(rawDt1)
-            //        {
-            //            RowFilter = $"userID = '{escaped}'"
-            //            // RowFilter = $"buildingTypeName_A LIKE '%{escaped}%'" // contains alternative
-            //        };
-            //        dt1 = view.ToTable();
-            //    }
-            //    else
-            //    {
-            //        dt1 = rawDt1.Clone();
-            //    }
-            //}
-            //else
-            //{
-            //    dt1 = null;
-            //}
-
-            dt1 = (ds?.Tables?.Count ?? 0) > 1 ? ds.Tables[1] : null;
-            dt2 = (ds?.Tables?.Count ?? 0) > 2 ? ds.Tables[2] : null;
-            dt3 = (ds?.Tables?.Count ?? 0) > 3 ? ds.Tables[3] : null;
-            dt4 = (ds?.Tables?.Count ?? 0) > 4 ? ds.Tables[4] : null;
-            dt5 = (ds?.Tables?.Count ?? 0) > 5 ? ds.Tables[5] : null;
-            dt6 = (ds?.Tables?.Count ?? 0) > 6 ? ds.Tables[6] : null;
-            dt7 = (ds?.Tables?.Count ?? 0) > 7 ? ds.Tables[7] : null;
-            dt8 = (ds?.Tables?.Count ?? 0) > 8 ? ds.Tables[8] : null;
-            dt9 = (ds?.Tables?.Count ?? 0) > 9 ? ds.Tables[9] : null;
+            SplitDataSet(ds);
 
             if (permissionTable is null || permissionTable.Rows.Count == 0)
             {
@@ -412,25 +376,19 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 {
                     // اقرأ الجدول الأول
 
-
-                    // نبحث عن صلاحيات محددة داخل الجدول
                     foreach (DataRow row in permissionTable.Rows)
                     {
                         var permissionName = row["permissionTypeName_E"]?.ToString()?.Trim().ToUpper();
 
-                        if (permissionName == "INSERT")
-                            canInsert = true;
-
-                        if (permissionName == "INSERTFULLACCESS")
-                            canInsertFullAccess = true;
-
-                        if (permissionName == "UPDATE")
-                            canUpdate = true;
-
-
-                        if (permissionName == "DELETE")
-                            canDelete = true;
+                        if (permissionName == "INSERT") canInsert = true;
+                        if (permissionName == "UPDATE") canUpdate = true;
+                        if (permissionName == "DELETE") canDelete = true;
+                        if (permissionName == "INSERTFULLACCESS") canInsertFullAccess = true;
                     }
+
+
+                    // نبحث عن صلاحيات محددة داخل الجدول
+                  
 
 
                     if (ds != null && ds.Tables.Count > 0)
@@ -565,6 +523,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                     Name = "p01",
                     Label = "الموزع",
                     Type = "select",
+                    
                     Options = distributorOptions,
                     ColCss = "3",
                     Required = true
@@ -575,6 +534,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                     Name = "p02",
                     Label = "الصلاحية",
                     Type = "select",
+                    Select2 = true,
                     Options = new List<OptionItem> { new OptionItem { Value = "-1", Text = "اختر الموزع أولاً"     } }, //       Initial empty state
                     ColCss = "3",
                     Required = true,

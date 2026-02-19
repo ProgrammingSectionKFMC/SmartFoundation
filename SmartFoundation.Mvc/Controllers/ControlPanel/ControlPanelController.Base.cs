@@ -13,6 +13,8 @@ using System.Net.Sockets;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using static System.Net.Mime.MediaTypeNames;
+using Microsoft.Extensions.DependencyInjection;  // ✅ إضافة هذا
+
 
 
 
@@ -24,15 +26,17 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
        // private readonly MastersDataLoadService _mastersDataLoadService;
         private readonly MastersServies _mastersServies;
         private readonly CrudController _CrudController;
+        private readonly ILogger<ControlPanelController> _logger;  // ✅ إضافة Logger
 
 
 
-        public ControlPanelController(MastersServies mastersServies, CrudController crudController)
+        [ActivatorUtilitiesConstructor]
+        public ControlPanelController(MastersServies mastersServies, CrudController crudController, ILogger<ControlPanelController> logger)
         {
-           // _mastersDataLoadService = mastersDataLoadService;
+            // _mastersDataLoadService = mastersDataLoadService;
             _mastersServies = mastersServies;
             _CrudController = crudController;
-
+            _logger = logger;
         }
 
         protected string? ControllerName;

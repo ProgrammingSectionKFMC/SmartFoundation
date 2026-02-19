@@ -326,7 +326,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p17", Label = "تاريخ الميلاد", Type = "date", ColCss = "3",Icon = "fa fa-calendar" },
                 new FieldConfig { Name = "p18", Label = "رقم الجوال", Type = "tel", ColCss = "3", Required = true, HelpText=" مثال : 05XXXXXXXX",Icon = "fa fa-square-phone" },
                 new FieldConfig { Name = "p19", Label = "ملاحظات", Type = "textarea", ColCss = "6", Required = false },
-                new FieldConfig { Name = "p03", Label = "المبلغ المطلوب", Type = "text", Required = true, Placeholder = "مثال: 1,234.56", Icon = "/img/Saudi_Riyal_Symbol.svg", ColCss = "3", MaxLength = 20, TextMode = "money_sar" },
+                //new FieldConfig { Name = "p03", Label = "المبلغ المطلوب", Type = "text", Required = true, Placeholder = "مثال: 1,234.56", Icon = "/img/Saudi_Riyal_Symbol.svg", ColCss = "3", MaxLength = 20, TextMode = "money_sar" },
 
             };
 
