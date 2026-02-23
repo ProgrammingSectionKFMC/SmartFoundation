@@ -239,5 +239,16 @@
             resetLoginButton();
         });
     </script>
+
+    <!-- Footer: Powered by line at the bottom of the page -->
+
+    <div class="powered-center" style="position:fixed; top:93%; left:50%; transform:translate(-50%,-50%); color:#ffffff; font-size:14px; text-align:center; pointer-events:none; z-index:9999; font-family: 'Sakkal Majalla'">
+        جميع الحقوق محفوظة © مدينة الملك فيصل العسكرية   2025 -     <span id="currentYear"></span>
+
+    </div>
+
+    <script>
+        document.getElementById("currentYear").textContent = new Date().getFullYear();
+    </script>
 </body>
 </html>

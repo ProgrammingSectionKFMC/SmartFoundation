@@ -289,7 +289,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "NewExtend" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "HOUSINGEXTEND" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -335,7 +335,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "EditExtend" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "EDITHOUSINGEXTEND" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -382,7 +382,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "CancelExtend" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "CANCELHOUSINGEXTEND" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -429,7 +429,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "SendExtendToFinance" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "SENDHOUSINGEXTENDTOFINANCE" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },

@@ -191,7 +191,8 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             ["meterServiceTypeName_A"] = "نوع الخدمة",
                             ["meterTypeName_A"] = "نوع العداد",
                             ["meterMaxRead"] = "القراءة القصوى للعداد",
-                            ["meterMaxRead"] = "رقم العداد",
+                            ["meterNo"] = "رقم العداد",
+                            ["ReadType"] = "نوع الطلب",
                             ["buildingDetailsNo"] = "رقم المنزل"
                         };
 
@@ -244,7 +245,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID || isAssignPeriodID || isbuildingDetailsID || isLastActionID|| isActionDecisionNo || isActionDecisionDate || isWaitingOrderTypeName || ismeterID|| isNationalID || isGeneralNo || isWaitingClassName || isFullName_A || isLastActionTypeID || isbuildingActionTypeResidentAlias || isReadStatusInt || ismeterReadID)
+                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID || isAssignPeriodID || isbuildingDetailsID || isLastActionID|| isActionDecisionNo || isActionDecisionDate || isWaitingOrderTypeName || ismeterID|| isNationalID || isGeneralNo || isWaitingClassName || isFullName_A ||  isbuildingActionTypeResidentAlias || isReadStatusInt || ismeterReadID)
                             });
                         }
 
@@ -287,6 +288,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             dict["p25"] = Get("meterTypeName_A");
                             dict["p26"] = Get("meterMaxRead");
                             dict["p28"] = Get("meterReadID");
+                            dict["p29"] = Get("LastActionDate");
 
 
                             rowsList.Add(dict);
@@ -309,7 +311,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "MeterRead" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "METERREADFOROCCUBENTANDEXIT" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -342,8 +344,9 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 new FieldConfig { Name = "p22", Label = "اخر قراءة للعداد", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p26", Label = "القراءة القصوى للعداد", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p28", Label = "meterReadID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p29", Label = "LastActionDate", Type = "hidden", ColCss = "3", Readonly = true },
 
-                 new FieldConfig { Name = "p27", Label = "تسجيل القراءة", Type = "numeric", ColCss = "12",Required = true,HelpText="يجب ان تكون القراءة ارقام فقط*",MaxLength=3900 },
+                 new FieldConfig { Name = "p27", Label = "تسجيل القراءة", Type = "number", ColCss = "12",Required = true,HelpText="يجب ان تكون القراءة ارقام فقط*",MaxLength=3900 },
 
                 new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
@@ -361,7 +364,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "UpdateMeterRead" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "UPDATEMETERREADFOROCCUBENTANDEXIT" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -394,6 +397,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 new FieldConfig { Name = "p22", Label = "اخر قراءة للعداد", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p26", Label = "القراءة القصوى للعداد", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p28", Label = "meterReadID", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p29", Label = "LastActionDate", Type = "hidden", ColCss = "3", Readonly = true },
 
                  new FieldConfig { Name = "p27", Label = "تسجيل القراءة", Type = "number", ColCss = "12",Required = true,HelpText="يجب ان تكون القراءة ارقام فقط*",MaxLength=3900 },
 
@@ -479,8 +483,8 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                   new TableActionRule
                                 {
                                     Field = "LastActionTypeID",
-                                    Op = "neq",
-                                    Value = "46",
+                                    Op = "notin",
+                                    Value = "46,59",
                                     Message = "تم ارسال طلب قراءة العدادات مسبقا",
                                     Priority = 3
                                 }
@@ -530,8 +534,8 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                           new TableActionRule
                                         {
                                             Field = "LastActionTypeID",
-                                            Op = "neq",
-                                            Value = "47",
+                                            Op = "notin",
+                                            Value = "47,60",
                                             Message = "لايمكن تعديل قراءة العداد ",
                                             Priority = 3
                                         }

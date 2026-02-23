@@ -19,6 +19,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             if (!InitPageContext(out var redirect))
                 return redirect!;
 
+
+            string? NationalID_ = Request.Query["NID"].FirstOrDefault();
+
+
             ControllerName = nameof(Housing);
             PageName = string.IsNullOrWhiteSpace(PageName) ? "HousingExit" : PageName;
 
@@ -27,7 +31,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
              PageName ?? "HousingExit",
              IdaraId,
              usersId,
-             HostName
+             HostName,
+             NationalID_
             };
 
             var rowsList = new List<Dictionary<string, object?>>();
@@ -39,11 +44,18 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             SplitDataSet(ds);
 
             //  التحقق من الصلاحيات
-            //if (permissionTable is null || permissionTable.Rows.Count == 0)
-            //{
-            //    TempData["Error"] = "تم رصد دخول غير مصرح به انت لاتملك صلاحية للوصول الى هذه الصفحة";
-            //    return RedirectToAction("Index", "Home");
-            //}
+            if (permissionTable is null || permissionTable.Rows.Count == 0)
+            {
+                TempData["Error"] = "تم رصد دخول غير مصرح به انت لاتملك صلاحية للوصول الى هذه الصفحة";
+                return RedirectToAction("Index", "Home");
+            }
+
+            if (!string.IsNullOrWhiteSpace(NationalID_) && (dt1 == null || dt1.Rows.Count == 0))
+            {
+                TempData["Error"] = "لم يتم العثور على نتائج لرقم الهوية: " + NationalID_;
+
+            }
+
 
             string rowIdField = "";
             bool canHOUSINGHousingExit = false;
@@ -51,6 +63,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             bool canCANCELHOUSINGHousingExit = false;
             bool canSENDHOUSINGHousingExitTOFINANCE = false;
             bool canAPPROVEHousingExit = false;
+            bool canHOUSINGEXITPENALTYRECORD = false;
            
 
 
@@ -112,9 +125,56 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             GenderOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
             //// ---------------------- END DDL ----------------------
+            ///
+
+
+            FormConfig form = new();
+
+
+
 
             try
             {
+
+                form = new FormConfig
+                {
+                    Fields = new List<FieldConfig>
+                    {
+                                new FieldConfig
+                                {
+                                    SectionTitle= "نوع البحث",
+                                    Label="البحث برقم الهوية الوطنية",
+                                    Name="NationalID",
+                                    Type="text",
+                                    ColCss="3",
+                                    Icon="fa-solid fa-address-card",
+                                    Placeholder="1xxxxxxxxx",
+                                    //HelpText="عشرةأرقام فقط*",
+                                    Value= NationalID_,                 // القيمة الافتراضية (من السيرفر)
+                                    MaxLength=10,
+                                    Required=true,
+                                    InputLang= "number",
+                                    InputPattern= @"^[0-9]{10}$",
+                                    PatternMsg= "رقم الهوية يجب أن يكون 10 أرقام",
+                                    RequiredMsg= "الرجاء كتابة رقم الهوية الوطنية",
+                                    IsNumericOnly=true,
+                                    SubmitOnEnter =true,  // يفعل زر  Enter جديد
+                                    // ===== زر داخل نفس الحقل =====
+                                    InlineButton=true,               // تفعيل زر داخل الحقل
+                                    InlineButtonText="بحـث",              // نص الزر
+                                    InlineButtonIcon= "fa-solid fa-magnifying-glass",
+                                    InlineButtonCss="btn btn-success",
+                                    InlineButtonPosition="end",              // مكان الزر (end / start)
+                                    InlineButtonOnClickJs="sfNav(this)",      // استدعاء الدالة العامة )
+                                    // ===== بيانات التنقل (sfNav) =====
+                                    NavUrl="/Housing/HousingExit", // الصفحة الهدف
+                                    NavKey="NID",                            // اسم باراميتر الـ QueryString
+
+                                    }
+                              }
+                };
+
+
                 if (ds != null && ds.Tables.Count > 0 && permissionTable!.Rows.Count > 0)
                 {
                     // صلاحيات
@@ -127,14 +187,15 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         if (permissionName == "CANCELHOUSINGEXIT") canCANCELHOUSINGHousingExit = true;
                         if (permissionName == "SENDHOUSINGEXITTOFINANCE") canSENDHOUSINGHousingExitTOFINANCE = true;
                         if (permissionName == "APPROVEHOUSINGEXIT") canAPPROVEHousingExit = true;
+                        if (permissionName == "HOUSINGEXITPENALTYRECORD") canHOUSINGEXITPENALTYRECORD = true;
 
                     }
 
                     if (dt1 != null && dt1.Columns.Count > 0)
                     {
                         // RowId
-                        rowIdField = "residentInfoID";
-                        var possibleIdNames = new[] { "residentInfoID", "ResidentInfoID", "Id", "ID" };
+                        rowIdField = "ActionID";
+                        var possibleIdNames = new[] { "ActionID", "ActionID", "Id", "ID" };
                         rowIdField = possibleIdNames.FirstOrDefault(n => dt1.Columns.Contains(n))
                                      ?? dt1.Columns[0].ColumnName;
 
@@ -144,14 +205,16 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ["ActionID"] = "رقم الاكشن",
                             ["NationalID"] = "رقم الهوية",
                             ["GeneralNo"] = "الرقم العام",
-                            ["LastActionDecisionNo"] = "رقم خطاب الموافقة",
-                            ["LastActionDecisionDate"] = "تاريخ خطاب الموافقة",
+
+                            ["LastActionDate"] = "تاريخ الاخلاء",
                             ["WaitingClassName"] = "فئة سجل الانتظار",
                             ["WaitingOrderTypeName"] = "نوع سجل الانتظار",
                             ["ActionNote"] = "ملاحظات",
                             ["FullName_A"] = "الاسم",
                             ["buildingActionTypeResidentAlias"] = "الحالة",
                             ["buildingDetailsNo"] = "رقم المنزل",
+                            ["penaltyPrice"] = "مبلغ الغرامة",
+                            ["PenaltyReason"] = "سبب الغرامة",
                             ["WaitingListOrder"] = "الترتيب"
                         };
 
@@ -177,6 +240,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             bool isLastActionID = c.ColumnName.Equals("LastActionID", StringComparison.OrdinalIgnoreCase);
                             bool isWaitingOrderTypeName = c.ColumnName.Equals("WaitingOrderTypeName", StringComparison.OrdinalIgnoreCase);
                             bool isWaitingListOrder = c.ColumnName.Equals("WaitingListOrder", StringComparison.OrdinalIgnoreCase);
+                            bool isLastActionDecisionNo = c.ColumnName.Equals("LastActionDecisionNo", StringComparison.OrdinalIgnoreCase);
+                            bool isLastActionDecisionDate = c.ColumnName.Equals("LastActionDecisionDate", StringComparison.OrdinalIgnoreCase);
+                            bool isCanExit = c.ColumnName.Equals("CanExit", StringComparison.OrdinalIgnoreCase);
+                            bool isBillsID = c.ColumnName.Equals("BillsID", StringComparison.OrdinalIgnoreCase);
 
 
 
@@ -189,7 +256,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                || isresidentInfoID || isIdaraId   || isAssignPeriodID || isbuildingDetailsID || isLastActionID  || isWaitingOrderTypeName || isWaitingListOrder || isLastActionTypeID)
+                                || isresidentInfoID || isIdaraId   || isAssignPeriodID || isbuildingDetailsID || isLastActionID  || isWaitingOrderTypeName || isWaitingListOrder || isLastActionTypeID || isLastActionDecisionNo || isLastActionDecisionDate || isCanExit|| isBillsID)
                             });
                         }
 
@@ -224,8 +291,11 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             dict["p19"] = Get("buildingDetailsNo");
                             dict["p20"] = Get("AssignPeriodID");
                             dict["p21"] = Get("LastActionID");
-                            dict["p22"] = Get("LastActionDecisionDate");
-                            dict["p23"] = Get("LastActionDecisionNo");
+                            dict["p22"] = Get("LastActionDate");
+                            dict["p31"] = Get("PenaltyReason");
+                            dict["p40"] = Get("penaltyPrice");
+                            dict["p41"] = Get("BillsID");
+
 
 
 
@@ -240,15 +310,15 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             }
 
 
-            var currentUrl = Request.Path;
+            var currentUrl = Request.Path + Request.QueryString;
 
 
             // UPDATE fields
-            var ExtendFields = new List<FieldConfig>
+            var ExitFields = new List<FieldConfig>
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "NewExtend" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "HOUSINGEXIT" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -288,11 +358,59 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             };
 
-            var EditExtendFields = new List<FieldConfig>
+            var penaltyFields = new List<FieldConfig>
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "EditExtend" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "HOUSINGEXITPENALTYRECORD" },
+                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
+                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
+                new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
+                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+                // selection context
+                new FieldConfig { Name = rowIdField, Type = "hidden" },
+                // hidden p01 actually posted to SP
+                new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "ActionID" },
+                new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p14", Label = "الترتيب", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p15", Label = "الاسم", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p07", Label = "WaitingClassID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
+
+
+
+                new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "hidden", ColCss = "3",Required = true,Readonly = true },
+
+
+                new FieldConfig { Name = "p40", Label = "اجمالي مبلغ الغرامة", Type = "text",TextMode="money_sar", ColCss = "6",Required = true,HelpText="يجب كتابة مجموع اجمالي الغرامات على الساكن وفي حال عدم وجود غرامات كتابة المبلغ صفر*",Icon = "/img/Saudi_Riyal_Symbol.svg",MaxLength=18 },
+
+                new FieldConfig { Name = "p41", Label = "BillsID", Type = "hidden", ColCss = "6",Required = true },
+
+                new FieldConfig { Name = "p31", Label = "تفاصيل الغرامة", Type = "textarea", ColCss = "6",Required = true,HelpText="يجب كتابة اسباب الغرامة لاظهارها للمستفيد وقت التحصيل*",MaxLength=4000,Icon="fa fa-pen" },
+
+                new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p19", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true },
+
+
+            };
+
+            var EditExitFields = new List<FieldConfig>
+            {
+
+                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "EDITHOUSINGEXIT" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -333,11 +451,11 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             };
 
 
-            var CancelExtendFields = new List<FieldConfig>
+            var CancelExitFields = new List<FieldConfig>
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "CancelExtend" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "CANCELHOUSINGEXIT" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -378,11 +496,11 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             };
 
 
-            var SENDHOUSINGEXTENDTOFINANCEFields = new List<FieldConfig>
+            var SENDHOUSINGEXITTOFINANCEFields = new List<FieldConfig>
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "SendExtendToFinance" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "SENDHOUSINGEXITTOFINANCE" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -407,10 +525,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
 
-                new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "date", ColCss = "3",Required = true },
+                new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "text", ColCss = "3",Required = true, Readonly = true},
 
 
-                new FieldConfig { Name = "p26", Label = "ملاحظات", Type = "textarea", ColCss = "12",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
+                new FieldConfig { Name = "p26", Label = "ملاحظات", Type = "textarea", ColCss = "6",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
 
                 new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
@@ -424,7 +542,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
 
-            var ApproveExtendFields = new List<FieldConfig>
+            var ApproveExitFields = new List<FieldConfig>
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
@@ -496,7 +614,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowExportExcel = false,
 
                     ShowEdit = canHOUSINGHousingExit,
-                    ShowEdit1 = canEDITHOUSINGHousingExit,
+                    ShowEdit1 = canHOUSINGEXITPENALTYRECORD,
                     ShowEdit2 = canEDITHOUSINGHousingExit,
                     ShowDelete = canCANCELHOUSINGHousingExit,
                     ShowDelete1 = canSENDHOUSINGHousingExitTOFINANCE,
@@ -593,7 +711,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ActionUrl = "/crud/update",
                             SubmitText = "حفظ التعديلات",
                             CancelText = "إلغاء",
-                           Fields = ExtendFields
+                           Fields = ExitFields
                         },
 
                        
@@ -610,28 +728,13 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                               new TableActionRule
                             {
-                                Field = "LastActionTypeID",
+                                Field = "CanExit",
                                 Op = "eq",
-                                Value = "48",
-                                Message = "لايمكن اخلاء مستفيد وهو تحت اجراءات الامهال",
+                                Value = "0",
+                                Message = "لايمكن اخلاء المستفيد ",
                                 Priority = 3
                             },
-                                 new TableActionRule
-                            {
-                                Field = "LastActionTypeID",
-                                Op = "eq",
-                                Value = "51",
-                                Message = "لايمكن اخلاء مستفيد وهو تحت اجراءات الامهال",
-                                Priority = 3
-                            },
-                                      new TableActionRule
-                            {
-                                Field = "LastActionTypeID",
-                                Op = "eq",
-                                Value = "52",
-                                Message = "لايمكن اخلاء مستفيد وهو تحت اجراءات الامهال",
-                                Priority = 3
-                            },
+                               
 
                           }
                        }
@@ -639,7 +742,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                     Edit1 = new TableAction
                     {
-                        Label = "جرد العهد",
+                        Label = "تسجيل / تعديل الغرامات",
                         Icon = "fa-solid fa-chair",
                         Color = "info",
                         Show = true,  // ✅ أضف
@@ -661,7 +764,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ActionUrl = "/crud/update",
                             SubmitText = "حفظ التعديلات",
                             CancelText = "إلغاء",
-                            Fields = ExtendFields
+                            Fields = penaltyFields
                         },
 
 
@@ -679,27 +782,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                               new TableActionRule
                             {
                                 Field = "LastActionTypeID",
-                                Op = "eq",
-                                Value = "48",
-                                Message = "لايمكن اخلاء مستفيد وهو تحت اجراءات الامهال",
+                                Op = "notin",
+                                Value = "54,59,60",
+                                Message = "لايمكن تسجيل او تعديل غرامات الاخلاء",
                                 Priority = 3
                             },
-                                 new TableActionRule
-                            {
-                                Field = "LastActionTypeID",
-                                Op = "eq",
-                                Value = "51",
-                                Message = "لايمكن اخلاء مستفيد وهو تحت اجراءات الامهال",
-                                Priority = 3
-                            },
-                                      new TableActionRule
-                            {
-                                Field = "LastActionTypeID",
-                                Op = "eq",
-                                Value = "52",
-                                Message = "لايمكن اخلاء مستفيد وهو تحت اجراءات الامهال",
-                                Priority = 3
-                            },
+                             
 
                           }
                         }
@@ -729,7 +817,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ActionUrl = "/crud/update",
                             SubmitText = "حفظ التعديلات",
                             CancelText = "إلغاء",
-                            Fields = EditExtendFields
+                            Fields = EditExitFields
                         },
 
                         RequireSelection = true,
@@ -744,28 +832,13 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                               new TableActionRule
                             {
-                                Field = "LastActionTypeID",
-                                Op = "eq",
-                                Value = "48",
-                                Message = "لايمكن تعديل اخلاء مستفيد وهو تحت اجراءات الامهال",
+                                 Field = "LastActionTypeID",
+                                Op = "notin",
+                                Value = "54,59,60",
+                                Message = "لايمكن تعديل اخلاء مستفيد",
                                 Priority = 3
                             },
-                                 new TableActionRule
-                            {
-                                Field = "LastActionTypeID",
-                                Op = "eq",
-                                Value = "51",
-                                Message = "لايمكن تعديل اخلاء مستفيد وهو تحت اجراءات الامهال",
-                                Priority = 3
-                            },
-                                      new TableActionRule
-                            {
-                                Field = "LastActionTypeID",
-                                Op = "eq",
-                                Value = "52",
-                                Message = "لايمكن تعديل اخلاء مستفيد وهو تحت اجراءات الامهال",
-                                Priority = 3
-                            },
+                               
                           }
                         }
                     },
@@ -795,7 +868,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ActionUrl = "/crud/update",
                             SubmitText = "حفظ التعديلات",
                             CancelText = "إلغاء",
-                           Fields = CancelExtendFields
+                           Fields = CancelExitFields
                         },
 
                         RequireSelection = true,
@@ -808,28 +881,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             DisableWhenAny = new List<TableActionRule>
                         {
 
-                               new TableActionRule
+                              new TableActionRule
                             {
                                 Field = "LastActionTypeID",
-                                Op = "eq",
-                                Value = "48",
-                                Message = "لايمكن الغاء اخلاء مستفيد وهو تحت اجراءات الامهال",
-                                Priority = 3
-                            },
-                                 new TableActionRule
-                            {
-                                Field = "LastActionTypeID",
-                                Op = "eq",
-                                Value = "51",
-                                Message = "لايمكن الغاء اخلاء مستفيد وهو تحت اجراءات الامهال",
-                                Priority = 3
-                            },
-                                      new TableActionRule
-                            {
-                                Field = "LastActionTypeID",
-                                Op = "eq",
-                                Value = "52",
-                                Message = "لايمكن الغاء اخلاء مستفيد وهو تحت اجراءات الامهال",
+                                Op = "notin",
+                                Value = "54,59,60",
+                                Message = "لايمكن الغاء اخلاء مستفيد",
                                 Priority = 3
                             },
                           }
@@ -860,7 +917,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ActionUrl = "/crud/update",
                             SubmitText = "حفظ التعديلات",
                             CancelText = "إلغاء",
-                            Fields = SENDHOUSINGEXTENDTOFINANCEFields
+                            Fields = SENDHOUSINGEXITTOFINANCEFields
                         },
 
                         RequireSelection = true,
@@ -925,7 +982,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ActionUrl = "/crud/update",
                             SubmitText = "حفظ التعديلات",
                             CancelText = "إلغاء",
-                            Fields = ApproveExtendFields
+                            Fields = ApproveExitFields
                         },
 
                         RequireSelection = true,
@@ -1056,6 +1113,15 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 PillCssClass="pill pill-red",
                                 PillMode="replace"
                             },
+                             new TableStyleRule
+                            {
+                                Target="row", Field="CanExit", Op="eq", Value="0", Priority=1,
+                                PillEnabled=true,
+                                PillField="buildingActionTypeResidentAlias",
+                                PillTextField="buildingActionTypeResidentAlias",
+                                PillCssClass="pill pill-red",
+                                PillMode="replace"
+                            },
                                new TableStyleRule
                             {
                                 Target="row", Field="LastActionTypeID", Op="eq", Value="52", Priority=1,
@@ -1068,13 +1134,15 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         };
 
 
+            bool dsModelHasRows = dt1 != null && dt1.Rows.Count > 0;
 
             var page = new SmartPageViewModel
             {
+                Form = form,
                 PageTitle = dsModel.PageTitle,
                 PanelTitle = dsModel.PanelTitle,
                 PanelIcon = "fa-solid fa-user-group",
-                TableDS = dsModel
+                TableDS = dsModelHasRows ? dsModel : null
             };
 
 

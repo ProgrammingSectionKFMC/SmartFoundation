@@ -1,0 +1,710 @@
+﻿using ExcelDataReader;
+using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
+using SmartFoundation.UI.ViewModels.SmartForm;
+using SmartFoundation.UI.ViewModels.SmartPage;
+using SmartFoundation.UI.ViewModels.SmartTable;
+using System.Data;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+
+namespace SmartFoundation.Mvc.Controllers.IncomeSystem
+{
+    // ✅ مهم: Partial + بدون : Controller + بدون Constructor (DI موجود في Base)
+    public partial class IncomeSystemController
+    {
+        // ✅ مسار الفيو الصحيح (حسب الصورة عندك)
+        private const string UploadExcelViewPath = "~/Views/IncomeSystem/FinancialAudit/UploadExcel.cshtml";
+
+        // ===============================
+        // Session Keys
+        // ===============================
+        private const string SessionKeyExcelPreview = "UploadExcel.Preview";
+        private const string SessionKeyExcelColumns = "UploadExcel.Columns";
+        private const string SessionKeyExcelFilePath = "UploadExcel.FilePath";
+        private const string SessionKeyExcelRelative = "UploadExcel.Relative";
+        private const string SessionKeyExcelFileName = "UploadExcel.OriginalFileName";
+        private const string SessionKeyExcelUploadedAt = "UploadExcel.UploadedAt";
+
+        // ===============================
+        // Session helpers
+        // ===============================
+        private List<Dictionary<string, object?>> GetPreviewRows()
+        {
+            var json = HttpContext.Session.GetString(SessionKeyExcelPreview);
+            if (string.IsNullOrWhiteSpace(json)) return new List<Dictionary<string, object?>>();
+            return JsonSerializer.Deserialize<List<Dictionary<string, object?>>>(json)
+                   ?? new List<Dictionary<string, object?>>();
+        }
+
+        private void SavePreviewRows(List<Dictionary<string, object?>> rows)
+            => HttpContext.Session.SetString(SessionKeyExcelPreview, JsonSerializer.Serialize(rows));
+
+        private List<string> GetPreviewColumns()
+        {
+            var json = HttpContext.Session.GetString(SessionKeyExcelColumns);
+            if (string.IsNullOrWhiteSpace(json)) return new List<string>();
+            return JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
+        }
+
+        private void SavePreviewColumns(List<string> cols)
+            => HttpContext.Session.SetString(SessionKeyExcelColumns, JsonSerializer.Serialize(cols));
+
+        private void SaveExcelFileInfo(string fullPath, string relative, string originalFileName)
+        {
+            HttpContext.Session.SetString(SessionKeyExcelFilePath, fullPath);
+            HttpContext.Session.SetString(SessionKeyExcelRelative, relative);
+            HttpContext.Session.SetString(SessionKeyExcelFileName, originalFileName ?? "");
+            HttpContext.Session.SetString(SessionKeyExcelUploadedAt, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+        }
+
+        private string? GetExcelFilePath() => HttpContext.Session.GetString(SessionKeyExcelFilePath);
+        private string? GetExcelOriginalFileName() => HttpContext.Session.GetString(SessionKeyExcelFileName);
+        private string? GetExcelUploadedAt() => HttpContext.Session.GetString(SessionKeyExcelUploadedAt);
+
+        // ===============================
+        // Request type
+        // ===============================
+        private bool IsAjaxRequest()
+        {
+            var xrw = Request.Headers["X-Requested-With"].ToString();
+            if (!string.IsNullOrWhiteSpace(xrw) && xrw.Equals("XMLHttpRequest", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            var accept = Request.Headers["Accept"].ToString();
+            if (!string.IsNullOrWhiteSpace(accept) && accept.Contains("application/json", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            return false;
+        }
+
+        // ===============================
+        // Unified Toastr responder
+        // ===============================
+        private IActionResult RespondSuccess(string msg, object? data = null)
+        {
+            TempData["Success"] = msg;
+
+            if (IsAjaxRequest())
+                return Ok(new { ok = true, message = msg, data });
+
+            return RedirectToAction(nameof(UploadExcel));
+        }
+
+        private IActionResult RespondWarning(string msg, object? data = null)
+        {
+            TempData["Warning"] = msg;
+
+            if (IsAjaxRequest())
+                return Ok(new { ok = false, message = msg, data });
+
+            return RedirectToAction(nameof(UploadExcel));
+        }
+
+        private IActionResult RespondError(string msg, object? data = null)
+        {
+            TempData["Error"] = msg;
+
+            if (IsAjaxRequest())
+                return Ok(new { ok = false, message = msg, data });
+
+            return RedirectToAction(nameof(UploadExcel));
+        }
+
+        // ===============================
+        // GET: صفحة رفع الاكسل
+        // ===============================
+        [HttpGet]
+        public IActionResult UploadExcel()
+        {
+
+
+            if (!InitPageContext(out var redirect))
+                return redirect!;
+
+            if (string.IsNullOrWhiteSpace(usersId))
+            {
+                return RedirectToAction("Index", "Login", new { logout = 4 });
+            }
+
+            ControllerName = "IncomeSystem";
+            PageName = nameof(UploadExcel);
+
+            var previewCols = GetPreviewColumns();
+            var previewRows = GetPreviewRows();
+
+            var options = previewCols
+                .Select(c => new OptionItem { Value = c, Text = c })
+                .ToList();
+
+            if (!previewCols.Any())
+            {
+                options = new List<OptionItem>
+                {
+                    new OptionItem { Value = "", Text = "لا يوجد أعمدة — ارفع ملف أولاً" }
+                };
+            }
+
+            var columns = new List<TableColumn>();
+            if (previewCols.Count > 0)
+            {
+                foreach (var c in previewCols)
+                {
+                    columns.Add(new TableColumn
+                    {
+                        Field = c,
+                        Label = c,
+                        Type = "text",
+                        Sortable = true,
+                        Visible = true,
+                        truncate = true
+                    });
+                }
+            }
+            else
+            {
+                columns.Add(new TableColumn
+                {
+                    Field = "Info",
+                    Label = "المعاينة",
+                    Type = "text",
+                    Sortable = false,
+                    Visible = true,
+                    truncate = true
+                });
+
+                previewRows = new List<Dictionary<string, object?>>
+                {
+                    new Dictionary<string, object?> { ["Info"] = "ارفع ملف Excel لعرض البيانات هنا." }
+                };
+            }
+
+            var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
+
+            var currentUrl = Request.Path;
+
+            var uploadFields = new List<FieldConfig>
+            {
+                new FieldConfig { Name="__RequestVerificationToken", Type="hidden", Value=tokens.RequestToken ?? "" },
+                new FieldConfig
+                {
+                    Name = "attachments",
+                    Label = "ارفع ملف Excel",
+                    Type = "fileupload",
+                    ColCss = "6",
+                    Accept = ".xls,.xlsx",
+                    AllowedMimeTypes = new List<string>
+                    {
+                        "application/vnd.ms-excel",
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    },
+                    ErrorMessageType = "يجب رفع ملف Excel فقط (.xls أو .xlsx).",
+                    ErrorMessageSize = "حجم الملف أكبر من 10MB.",
+                    ErrorMessageCount = "يسمح برفع ملف واحد فقط.",
+                    ErrorMessageTotal = "إجمالي الحجم أكبر من 10MB.",
+                    Multiple = false,
+                    MaxFiles = 1,
+                    MaxFileSize = 10,
+                    MaxTotalSize = 10,
+                    AllowEmptyFile = false,
+                    Required = true,
+                    EnablePreview = false,
+                    SaveMode = "physical",
+                    UploadFolder = "uploads",
+                    UploadSubFolder = "excel",
+                    FileNameMode = "uuid",
+                    KeepOriginalExtension = true,
+                    SanitizeFileName = true,
+                    BlockDoubleExtension = true,
+                    AutoUpload = false
+                }
+            };
+
+            var processFields = new List<FieldConfig>
+            {
+
+                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "FINANCIALAUDITFOREXTENDANDEVICTIONS" },
+                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
+                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
+                new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
+                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+                new FieldConfig { Name="__RequestVerificationToken", Type="hidden", Value=tokens.RequestToken ?? "" },
+                new FieldConfig { Name="p01", Label="العمود المخصص للهوية الوطنية",  Type="select", ColCss="3", Options=options,Required = true },
+                new FieldConfig { Name="p02", Label="العمود المخصص للوحدة", Type="select", ColCss="3", Options=options,Required = true },
+                new FieldConfig { Name="p03", Label="العمود المخصص للرقم العام", Type="select", ColCss="3", Options=options,Required = true },
+                new FieldConfig { Name="p04", Label="العمود المخصص لمبلغ الحسم", Type="select", ColCss="3", Options=options,Required = true },
+
+
+
+
+            };
+
+            var dsModel = new SmartTableDsModel
+            {
+                PageTitle = "رفع ملف Excel",
+                PanelTitle = "رفع ملف Excel",
+                Columns = columns,
+                Rows = previewRows,
+                RowIdField = null,
+                PageSize = 10,
+                PageSizes = new List<int> { 10, 25, 50 },
+                Searchable = true,
+                ShowFilter = false,
+                FilterRow = true,
+                ShowColumnVisibility = true,
+                Toolbar = new TableToolbarConfig
+                {
+                    ShowAdd = true,
+                    ShowAdd1 = true,
+                    ShowEdit = false,
+                    ShowDelete = false,
+                    ShowExportExcel = true,
+                    ShowExportPdf = false,
+                    ShowColumns = true,
+                    ShowRefresh = true,
+
+                    Add = new TableAction
+                    {
+                        Label = "رفع Excel",
+                        Icon = "fa-solid fa-file-excel",
+                        Color = "success",
+                        OpenModal = true,
+                        ModalTitle = "رفع ملف Excel",
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "UploadExcelForm",
+                            Method = "post",
+                            Enctype = "multipart/form-data",
+                            ActionUrl = Url.Action(nameof(UploadExcelUpload), "IncomeSystem")!,
+                            Fields = uploadFields
+                        }
+                    },
+
+                    Add1 = new TableAction
+                    {
+                        Label = "معالجة الملف واعتماده",
+                        Icon = "fa-solid fa-check",
+                        Color = "primary",
+                        OpenModal = true,
+                        ModalTitle = "معالجة الملف واعتماده",
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "ProcessExcelForm",
+                            Method = "post",
+                            Enctype = "application/x-www-form-urlencoded",
+                            ActionUrl = Url.Action(nameof(UploadExcelProcess), "IncomeSystem")!,
+                            Fields = processFields
+                        }
+                    },
+                }
+            };
+
+            // ✅ هنا التعديل المهم: نرجّع UploadExcel.cshtml مو Index
+            return View(UploadExcelViewPath, new SmartPageViewModel
+            {
+                PageTitle = dsModel.PageTitle,
+                PanelTitle = dsModel.PanelTitle,
+                PanelIcon = "fa-solid fa-file-excel",
+                TableDS = dsModel
+            });
+        }
+
+        // ===============================
+        // POST: Upload Excel + Preview
+        // ===============================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [RequestSizeLimit(20 * 1024 * 1024)]
+        [RequestFormLimits(MultipartBodyLengthLimit = 20 * 1024 * 1024)]
+        public async Task<IActionResult> UploadExcelUpload()
+        {
+            try
+            {
+                var file =
+                    Request.Form.Files.GetFile("attachments")
+                    ?? Request.Form.Files.GetFile("attachments[]")
+                    ?? Request.Form.Files.FirstOrDefault();
+
+                if (file == null || file.Length == 0)
+                    return RespondError("لم يتم اختيار ملف.");
+
+                var ext = (Path.GetExtension(file.FileName ?? "") ?? "").ToLowerInvariant();
+                var allowedExt = new HashSet<string> { ".xls", ".xlsx" };
+                if (!allowedExt.Contains(ext))
+                    return RespondError("يجب رفع ملف Excel فقط (.xls أو .xlsx).");
+
+                var allowedMime = new HashSet<string>
+                {
+                    "application/vnd.ms-excel",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                };
+                if (!allowedMime.Contains(file.ContentType ?? ""))
+                    return RespondError("نوع الملف غير صحيح.");
+
+                const long maxBytes = 10L * 1024L * 1024L;
+                if (file.Length > maxBytes)
+                    return RespondError("حجم الملف أكبر من 10MB.");
+
+                var saveDir = Path.Combine(_env.WebRootPath, "uploads", "excel");
+                Directory.CreateDirectory(saveDir);
+
+                var storedName = Guid.NewGuid().ToString("N") + ext;
+                var fullPath = Path.Combine(saveDir, storedName);
+
+                await using (var fs = System.IO.File.Create(fullPath))
+                    await file.CopyToAsync(fs);
+
+                var relative = $"/uploads/excel/{storedName}";
+                SaveExcelFileInfo(fullPath, relative, file.FileName ?? storedName);
+
+                // ✅ تحقق التوقيع قبل القراءة
+                var sigErr = ValidateExcelSignature(fullPath, ext);
+                if (sigErr != null)
+                {
+                    ClearExcelSession(deletePhysicalFile: true); // ينظف ويحذف الملف
+                    return RespondError(sigErr + " إذا كان الملف محمي بكلمة مرور قم بفتحه في Excel ثم Save As بدون حماية.");
+                }
+
+                DataTable dt;
+                try
+                {
+                    dt = ReadExcelToDataTable(fullPath, useHeaderRow: true, sheetIndex: 0);
+                }
+                catch (Exception ex)
+                {
+                    // ✅ رسالة أوضح
+                    ClearExcelSession(deletePhysicalFile: true);
+                    return RespondError("فشل قراءة الإكسل. تأكد أن الملف Excel صحيح وغير مشفر بكلمة مرور. التفاصيل: " + ex.Message);
+                }
+                var cols = dt.Columns.Cast<DataColumn>()
+                    .Select(c => string.IsNullOrWhiteSpace(c.ColumnName) ? $"Column{c.Ordinal + 1}" : c.ColumnName.Trim())
+                    .ToList();
+
+                for (int i = 0; i < dt.Columns.Count; i++)
+                {
+                    if (string.IsNullOrWhiteSpace(dt.Columns[i].ColumnName))
+                        dt.Columns[i].ColumnName = cols[i];
+                }
+
+                var preview = DataTableToPreview(dt, maxRows: 20000);
+
+                SavePreviewColumns(cols);
+                SavePreviewRows(preview);
+
+                return RespondSuccess($"تم رفع ملف الإكسل وقراءة البيانات بنجاح. عدد الصفوف: {dt.Rows.Count}", new
+                {
+                    relative,
+                    rowsCount = dt.Rows.Count,
+                    colsCount = dt.Columns.Count,
+                    previewCount = preview.Count,
+                    refresh = true
+                });
+            }
+            catch (Exception ex)
+            {
+                return RespondError("فشل رفع/قراءة ملف الإكسل: " + ex.Message);
+            }
+        }
+
+        // ===============================
+        // POST: Process -> DB
+        // ===============================
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UploadExcelProcess(string? p01, string? p02, string? p03, string? p04)
+        {
+            try
+            {
+                var path = GetExcelFilePath();
+                if (string.IsNullOrWhiteSpace(path) || !System.IO.File.Exists(path))
+                {
+                    var at = GetExcelUploadedAt();
+                    var extra = string.IsNullOrWhiteSpace(at) ? "" : $" (آخر رفع: {at})";
+                    return RespondError("لا يوجد ملف Excel محفوظ للمعالجة. ارفع الملف أولاً." + extra);
+                }
+
+                p01 = (p01 ?? "").Trim();
+                p02 = (p02 ?? "").Trim();
+                p03 = (p03 ?? "").Trim();
+                p04 = (p04 ?? "").Trim();
+
+                if (string.IsNullOrWhiteSpace(p01) || string.IsNullOrWhiteSpace(p02) || string.IsNullOrWhiteSpace(p03)|| string.IsNullOrWhiteSpace(p04))
+                    return RespondError("الرجاء اختيار جميع الأعمدة المطلوبة.");
+
+                var selected = new[] { p01, p02, p03, p04 }
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                    .Select(x => x!.Trim())
+                    .ToList();
+
+                var duplicates = selected
+                    .GroupBy(x => x, StringComparer.OrdinalIgnoreCase)
+                    .Where(g => g.Count() > 1)
+                    .Select(g => g.Key)
+                    .ToList();
+
+                if (duplicates.Any())
+                {
+                    return RespondError($"تم تكرار العمود: {string.Join("، ", duplicates)}. الرجاء اختيار أعمدة مختلفة.");
+                }
+
+
+                DataTable dt = ReadExcelToDataTable(path, useHeaderRow: true, sheetIndex: 0);
+
+                var colSet = new HashSet<string>(
+                    dt.Columns.Cast<DataColumn>().Select(c => c.ColumnName),
+                    StringComparer.OrdinalIgnoreCase);
+
+                if (!colSet.Contains(p01) || !colSet.Contains(p02) || !colSet.Contains(p03)|| !colSet.Contains(p04))
+                    return RespondError("أحد الأعمدة المختارة غير موجود في ملف الإكسل.");
+
+                var emptyReport = FindEmptyCells(dt, new[] { p01, p02, p03, p04 }, maxShowRows: 15);
+                if (emptyReport.Count > 0)
+                {
+                    var sb = new StringBuilder();
+                    foreach (var kv in emptyReport)
+                        sb.Append($"العمود ({kv.Key}) يحتوي على قيم فارغة في الصفوف: {string.Join(", ", kv.Value)}. ");
+                    return RespondError(sb.ToString().Trim());
+                }
+
+                var tvp = new DataTable();
+                tvp.Columns.Add("RowNo", typeof(int));
+                tvp.Columns.Add("UploadExcel1", typeof(string));
+                tvp.Columns.Add("UploadExcel2", typeof(string));
+                tvp.Columns.Add("UploadExcel3", typeof(string));
+                tvp.Columns.Add("UploadExcel4", typeof(string));
+
+                int rowNo = 0;
+                int sentRows = 0;
+
+                foreach (DataRow r in dt.Rows)
+                {
+                    rowNo++;
+
+                    var v1 = r[p01]?.ToString();
+                    var v2 = r[p02]?.ToString();
+                    var v3 = r[p03]?.ToString();
+                    var v4 = r[p04]?.ToString();
+
+                    if (string.IsNullOrWhiteSpace(v1) && string.IsNullOrWhiteSpace(v2) && string.IsNullOrWhiteSpace(v3) && string.IsNullOrWhiteSpace(v4))
+                        continue;
+
+                    tvp.Rows.Add(rowNo, v1, v2, v3, v4);
+                    sentRows++;
+                }
+
+                if (tvp.Rows.Count == 0)
+                    return RespondError("لا توجد بيانات صالحة للإدخال.");
+
+                var cs = _cfg.GetConnectionString("Default");
+                if (string.IsNullOrWhiteSpace(cs))
+                    return RespondError("ConnectionString (Default) غير موجود. تأكد من appsettings.json.");
+
+                string fileHash = ComputeSha256Hex(path);
+                var originalName = GetExcelOriginalFileName() ?? Path.GetFileName(path);
+
+                await using var con = new SqlConnection(cs);
+                await con.OpenAsync();
+
+                await using var cmd = new SqlCommand("[Housing].[UploadExcel_ImportSelected3Cols]", con);
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                cmd.Parameters.AddWithValue("@Column1Name", p01);
+                cmd.Parameters.AddWithValue("@Column2Name", p02);
+                cmd.Parameters.AddWithValue("@Column3Name", p03);
+                cmd.Parameters.AddWithValue("@Column4Name", p04);
+                cmd.Parameters.AddWithValue("@FileHash", fileHash);
+                cmd.Parameters.AddWithValue("@OriginalFileName", originalName);
+
+                var pRows = cmd.Parameters.AddWithValue("@Rows", tvp);
+                pRows.SqlDbType = SqlDbType.Structured;
+                pRows.TypeName = "Housing.UploadExcelRowType";
+
+                bool ok;
+                string msg;
+                int insertedRows = 0;
+
+                await using var rd = await cmd.ExecuteReaderAsync();
+                if (!await rd.ReadAsync())
+                    return RespondError("لم يتم استلام نتيجة من إجراء الإدخال.");
+
+                ok = rd["IsSuccessful"] != DBNull.Value && Convert.ToBoolean(rd["IsSuccessful"]);
+                msg = rd["Message_"]?.ToString() ?? "";
+                if (rd["InsertedRows"] != DBNull.Value)
+                    insertedRows = Convert.ToInt32(rd["InsertedRows"]);
+
+                if (!ok)
+                    return RespondWarning(string.IsNullOrWhiteSpace(msg) ? "تعذر إدخال البيانات." : msg, new { fileHash });
+
+                // ✅ بعد النجاح: نظّف كل شيء علشان الصفحة ترجع فاضية
+                ClearExcelSession(deletePhysicalFile: true);
+
+                return RespondSuccess(
+                    $"{msg} | صفوف الإكسل: {dt.Rows.Count} | المُرسلة: {sentRows} | المُدخلة: {insertedRows}",
+                    new
+                    {
+                        totalExcelRows = dt.Rows.Count,
+                        sentRows,
+                        insertedRows,
+                        selectedColumns = new[] { p01, p02, p03, p04 },
+                        fileHash,
+                        refresh = true
+                    });
+            }
+            catch (SqlException ex)
+            {
+                return RespondError("خطأ SQL أثناء الإدخال: " + ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return RespondError("فشل الإدخال: " + ex.Message);
+            }
+        }
+
+        // ===============================
+        // Excel Helpers
+        // ===============================
+        private static DataTable ReadExcelToDataTable(string fullPath, bool useHeaderRow, int sheetIndex)
+        {
+            using var stream = System.IO.File.Open(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var reader = ExcelReaderFactory.CreateReader(stream);
+
+            var ds = reader.AsDataSet(new ExcelDataSetConfiguration
+            {
+                ConfigureDataTable = _ => new ExcelDataTableConfiguration { UseHeaderRow = useHeaderRow }
+            });
+
+            if (ds.Tables.Count == 0)
+                throw new InvalidOperationException("ملف الإكسل لا يحتوي على أي Sheets.");
+
+            if (sheetIndex < 0 || sheetIndex >= ds.Tables.Count)
+                sheetIndex = 0;
+
+            var dt = ds.Tables[sheetIndex];
+
+            for (int i = 0; i < dt.Columns.Count; i++)
+            {
+                if (string.IsNullOrWhiteSpace(dt.Columns[i].ColumnName))
+                    dt.Columns[i].ColumnName = $"Column{i + 1}";
+            }
+
+            return dt;
+        }
+
+        private static List<Dictionary<string, object?>> DataTableToPreview(DataTable dt, int maxRows)
+        {
+            var list = new List<Dictionary<string, object?>>();
+            int take = Math.Min(dt.Rows.Count, Math.Max(0, maxRows));
+
+            for (int r = 0; r < take; r++)
+            {
+                var row = dt.Rows[r];
+                var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (DataColumn col in dt.Columns)
+                {
+                    var val = row[col];
+                    dict[col.ColumnName] = val == DBNull.Value ? null : val;
+                }
+
+                list.Add(dict);
+            }
+
+            return list;
+        }
+
+        private static Dictionary<string, List<int>> FindEmptyCells(DataTable dt, IEnumerable<string> columns, int maxShowRows)
+        {
+            var result = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);
+            foreach (var col in columns) result[col] = new List<int>();
+
+            for (int i = 0; i < dt.Rows.Count; i++)
+            {
+                int excelRowNo = i + 2; // header row = 1
+
+                foreach (var colName in columns)
+                {
+                    if (result[colName].Count >= maxShowRows) continue;
+
+                    var v = dt.Rows[i][colName];
+                    var s = v == DBNull.Value ? null : v?.ToString();
+
+                    if (string.IsNullOrWhiteSpace(s))
+                        result[colName].Add(excelRowNo);
+                }
+            }
+
+            return result.Where(kv => kv.Value.Count > 0)
+                         .ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static string ComputeSha256Hex(string filePath)
+        {
+            using var sha = SHA256.Create();
+            using var fs = System.IO.File.OpenRead(filePath);
+            var hash = sha.ComputeHash(fs);
+            var sb = new StringBuilder(hash.Length * 2);
+            foreach (var b in hash)
+                sb.Append(b.ToString("x2"));
+            return sb.ToString();
+        }
+
+        private void ClearExcelSession(bool deletePhysicalFile = true)
+        {
+            var path = GetExcelFilePath();
+
+            HttpContext.Session.Remove(SessionKeyExcelPreview);
+            HttpContext.Session.Remove(SessionKeyExcelColumns);
+            HttpContext.Session.Remove(SessionKeyExcelFilePath);
+            HttpContext.Session.Remove(SessionKeyExcelRelative);
+            HttpContext.Session.Remove(SessionKeyExcelFileName);
+            HttpContext.Session.Remove(SessionKeyExcelUploadedAt);
+
+            if (deletePhysicalFile && !string.IsNullOrWhiteSpace(path))
+            {
+                try
+                {
+                    if (System.IO.File.Exists(path))
+                        System.IO.File.Delete(path);
+                }
+                catch
+                {
+                    // تجاهل
+                }
+            }
+        }
+
+        private static bool LooksLikeXlsx(string filePath)
+        {
+            // XLSX = ZIP => 50 4B 03 04
+            Span<byte> b = stackalloc byte[4];
+            using var fs = System.IO.File.OpenRead(filePath);
+            if (fs.Read(b) < 4) return false;
+            return b[0] == 0x50 && b[1] == 0x4B && b[2] == 0x03 && b[3] == 0x04;
+        }
+
+        private static bool LooksLikeXls(string filePath)
+        {
+            // XLS (OLE2) => D0 CF 11 E0 A1 B1 1A E1
+            Span<byte> b = stackalloc byte[8];
+            using var fs = System.IO.File.OpenRead(filePath);
+            if (fs.Read(b) < 8) return false;
+            return b[0] == 0xD0 && b[1] == 0xCF && b[2] == 0x11 && b[3] == 0xE0
+                && b[4] == 0xA1 && b[5] == 0xB1 && b[6] == 0x1A && b[7] == 0xE1;
+        }
+
+        private static string? ValidateExcelSignature(string filePath, string extLower)
+        {
+            // يرجع null إذا تمام، ويرجع رسالة خطأ إذا غير صالح
+            if (extLower == ".xlsx" && !LooksLikeXlsx(filePath))
+                return "الملف ليس XLSX صالح (قد يكون ملف مختلف تم تغيير امتداده).";
+            if (extLower == ".xls" && !LooksLikeXls(filePath))
+                return "الملف ليس XLS صالح (قد يكون ملف مختلف تم تغيير امتداده).";
+            return null;
+        }
+    }
+}

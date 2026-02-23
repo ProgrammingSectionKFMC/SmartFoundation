@@ -68,6 +68,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             string LastActionIDvalue = "";
             string ActionIDvalue = "";
             string LastActionTypeIDvalue = "";
+            string LastActionDatevalue = "";
 
 
             decimal insuranceRentAmount = 0m;
@@ -96,6 +97,10 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
                 if (dt1.Columns.Contains("LastActionTypeID") && rows["LastActionTypeID"] != DBNull.Value)
                     LastActionTypeIDvalue = rows["LastActionTypeID"].ToString();
+
+
+                if (dt1.Columns.Contains("LastActionDate") && rows["LastActionDate"] != DBNull.Value)
+                    LastActionDatevalue = rows["LastActionDate"].ToString();
 
 
 
@@ -197,8 +202,8 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
             string rowIdField = "";
             string rowIdField_dt3 = "";
-            bool canMeterReadForOccubentAndExit = false;
-            bool canUpdateMeterReadForOccubentAndExit = false;
+            bool canFINANCIALAUDITFOREXTENDANDEVICTIONS = false;
+            
            
 
 
@@ -336,15 +341,12 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         if (string.IsNullOrWhiteSpace(permissionName))
                             continue;
 
-                        if (permissionName.Equals("MeterReadForOccubentAndExit", StringComparison.OrdinalIgnoreCase))
+                        if (permissionName.Equals("FINANCIALAUDITFOREXTENDANDEVICTIONS", StringComparison.OrdinalIgnoreCase))
                         {
-                            canMeterReadForOccubentAndExit = true;
+                            canFINANCIALAUDITFOREXTENDANDEVICTIONS = true;
                         }
 
-                        if (permissionName.Equals("UpdateMeterReadForOccubentAndExit", StringComparison.OrdinalIgnoreCase))
-                        {
-                            canUpdateMeterReadForOccubentAndExit = true;
-                        }
+                        
                     }
 
 
@@ -715,7 +717,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "ApproveExtendFromFinance" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "FINANCIALAUDITFOREXTENDANDEVICTIONS" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -730,6 +732,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true,Value=residentInfoIDvalue },
                 new FieldConfig { Name = "p03", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsIDvalue },
                 new FieldConfig { Name = "p11", Label = "ملاحظات", Type = "textarea", ColCss = "6",Required = true,HelpText="يجب ان لاتتجاوز 4000 حرف*",MaxLength=3900 },
+                new FieldConfig { Name = "p30", Label = "ملاحظات", Type = "text", ColCss = "6",Value = LastActionDatevalue },
 
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true,Value = LastActionTypeIDvalue },
                 new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
@@ -773,7 +776,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                     ShowColumns = true,
                     ShowExportCsv = false,
                     ShowExportExcel = false,
-                    ShowAdd = true,
+                    ShowAdd = canFINANCIALAUDITFOREXTENDANDEVICTIONS,
                     EnableAdd = true,//AllAmount == 0,
                     ShowBulkDelete = false,
                     ShowExportPdf = false,

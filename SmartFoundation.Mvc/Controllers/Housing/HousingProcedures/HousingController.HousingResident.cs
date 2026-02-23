@@ -47,6 +47,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             string rowIdField = "";
             bool canHOUSINGESRESIDENTS = false;
+            bool canHOUSINGESRESIDENTSCUSTDY = false;
            
 
 
@@ -119,6 +120,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         var permissionName = row["permissionTypeName_E"]?.ToString()?.Trim().ToUpper();
 
                         if (permissionName == "HOUSINGESRESIDENTS") canHOUSINGESRESIDENTS = true;
+                        if (permissionName == "HOUSINGESRESIDENTSCUSTDY") canHOUSINGESRESIDENTSCUSTDY = true;
                         
                     }
 
@@ -239,7 +241,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "CustdyRecord" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "HOUSINGESRESIDENTSCUSTDY" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -278,7 +280,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "FinalOccupent" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "HOUSINGESRESIDENTS" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -344,7 +346,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowExportCsv = false,
                     ShowExportExcel = true,
                     ShowExportPdf = true,
-                    ShowEdit = canHOUSINGESRESIDENTS,  // Button always visible
+                    ShowEdit = canHOUSINGESRESIDENTSCUSTDY,  // Button always visible
+                    ShowEdit1 = canHOUSINGESRESIDENTS,  // Button always visible
                     ShowPrint1 = true,
                     ShowBulkDelete = false,
                     
@@ -426,14 +429,14 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                     Edit = new TableAction
                     {
-                        Label = "اتخاذ اجراء",
-                        Icon = "fa-solid fa-pen",
-                        Color = "success",
+                        Label = "تسجيل الملاحظات وطلب قراءة العدادات",
+                        Icon = "fa-solid fa-chair",
+                        Color = "info",
                         IsEdit = true,
                         OpenModal = true,
 
-                        ModalTitle = "",
-                        ModalMessage = "",
+                        ModalTitle = "تسجيل العهد والملاحظات",
+                        ModalMessage = "ملاحظة في حال وجود عدادت مرتبطة بالمنزل سيتم احالة الطلب للقسم المسؤول لاكمال الاجراءات",
                         ModalMessageClass = "bg-red-50 text-red-700",
                         ModalMessageIcon = "fa-solid fa-triangle-exclamation",
 
@@ -446,30 +449,101 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             Method = "post",
                             ActionUrl = "/crud/update",
                             SubmitText = "حفظ التعديلات",
-                            CancelText = "إلغاء"//,
-                           // Fields = updateFields
+                            CancelText = "إلغاء",
+                            Fields = CustdyFields
                         },
 
-                        Meta = new Dictionary<string, object?>
-                        {
-                            ["routeBy"] = "p16",
-                            ["routes"] = new Dictionary<string, object?>
-                            {
-                                ["45"] = new Dictionary<string, object?>
-                                {
-                                    ["title"] = "تسجيل العهد والملاحظات",
-                                    ["message"] = "ملاحظة في حال وجود عدادت مرتبطة بالمنزل سيتم احالة الطلب للقسم المسؤول لاكمال الاجراءات",
-                                    ["fields"] = CustdyFields
-                                },
-                                ["47"] = new Dictionary<string, object?>
-                                {
-                                    ["title"] = "تسكين المستفيد بشكل نهائي",
-                                    ["message"] = "سيتم تنفيذ تسكين المستفيد بشكل نهائي ولايمكن التراجع عن ذلك",
-                                    ["fields"] = FinalOccupentFields
-                                }
+                        //Meta = new Dictionary<string, object?>
+                        //{
+                        //    ["routeBy"] = "p16",
+                        //    ["routes"] = new Dictionary<string, object?>
+                        //    {
+                        //        ["45"] = new Dictionary<string, object?>
+                        //        {
+                        //            ["title"] = "تسجيل العهد والملاحظات",
+                        //            ["message"] = "ملاحظة في حال وجود عدادت مرتبطة بالمنزل سيتم احالة الطلب للقسم المسؤول لاكمال الاجراءات",
+                        //            ["fields"] = CustdyFields
+                        //        },
+                        //        ["47"] = new Dictionary<string, object?>
+                        //        {
+                        //            ["title"] = "تسكين المستفيد بشكل نهائي",
+                        //            ["message"] = "سيتم تنفيذ تسكين المستفيد بشكل نهائي ولايمكن التراجع عن ذلك",
+                        //            ["fields"] = FinalOccupentFields
+                        //        }
                                 
-                            }
+                        //    }
+                        //},
+
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1,
+
+                        Guards = new TableActionGuards
+                        {
+                            AppliesTo = "any",
+                            DisableWhenAny = new List<TableActionRule>
+                        {
+
+
+                              new TableActionRule
+                            {
+                                Field = "LastActionTypeID",
+                                Op = "neq",
+                                Value = "45",
+                                Message = "لايمكن تنفيذ هذا الاجراء",
+                                Priority = 3
+                            },
+                          }
+                       }
+                    },
+
+
+                    Edit1 = new TableAction
+                    {
+                        Label = "تسكين المستفيد بشكل نهائي",
+                        Icon = "fa-solid fa-key",
+                        Color = "success",
+                        IsEdit = true,
+                        OpenModal = true,
+
+                        ModalTitle = "تسكين المستفيد بشكل نهائي",
+                        ModalMessage = "سيتم تنفيذ تسكين المستفيد بشكل نهائي ولايمكن التراجع عن ذلك",
+                        ModalMessageClass = "bg-red-50 text-red-700",
+                        ModalMessageIcon = "fa-solid fa-triangle-exclamation",
+
+                        OnBeforeOpenJs = "sfRouteEditForm(table, act);",
+
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "BuildingTypeEditForm",
+                            Title = "",
+                            Method = "post",
+                            ActionUrl = "/crud/update",
+                            SubmitText = "حفظ التعديلات",
+                            CancelText = "إلغاء",
+                            Fields = FinalOccupentFields
                         },
+
+                        //Meta = new Dictionary<string, object?>
+                        //{
+                        //    ["routeBy"] = "p16",
+                        //    ["routes"] = new Dictionary<string, object?>
+                        //    {
+                        //        ["45"] = new Dictionary<string, object?>
+                        //        {
+                        //            ["title"] = "تسجيل العهد والملاحظات",
+                        //            ["message"] = "ملاحظة في حال وجود عدادت مرتبطة بالمنزل سيتم احالة الطلب للقسم المسؤول لاكمال الاجراءات",
+                        //            ["fields"] = CustdyFields
+                        //        },
+                        //        ["47"] = new Dictionary<string, object?>
+                        //        {
+                        //            ["title"] = "تسكين المستفيد بشكل نهائي",
+                        //            ["message"] = "سيتم تنفيذ تسكين المستفيد بشكل نهائي ولايمكن التراجع عن ذلك",
+                        //            ["fields"] = FinalOccupentFields
+                        //        }
+
+                        //    }
+                        //},
 
                         RequireSelection = true,
                         MinSelection = 1,
@@ -484,13 +558,13 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                               new TableActionRule
                             {
                                 Field = "LastActionTypeID",
-                                Op = "eq",
-                                Value = "46",
-                                Message = "تم ارسال طلب قراءة العدادات مسبقا",
+                                Op = "neq",
+                                Value = "47",
+                                Message = "لايمكن تنفيذ هذا الاجراء",
                                 Priority = 3
                             },
                           }
-                       }
+                        }
                     },
                 } 
             };

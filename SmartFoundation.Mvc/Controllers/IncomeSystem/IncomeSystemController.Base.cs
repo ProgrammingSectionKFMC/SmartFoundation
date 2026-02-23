@@ -1,29 +1,31 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SmartFoundation.Application.Services;
-using SmartFoundation.Mvc.Models;
-using SmartFoundation.UI.ViewModels.SmartForm;
-using SmartFoundation.UI.ViewModels.SmartPage;
-using SmartFoundation.UI.ViewModels.SmartTable;
 using System.Data;
 using System.Linq;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Net;
 using System.Net.Sockets;
 
 namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 {
+    // ✅ هذا هو الـ Base الحقيقي: نفس الكنترولر (partial) ويحتوي كل الاعتماديات المشتركة
     public partial class IncomeSystemController : Controller
     {
-        private readonly MastersServies _mastersServies;
-        private readonly CrudController _CrudController;
-        private readonly IWebHostEnvironment _env;
-        private readonly ILogger<IncomeSystemController> _logger;
+        // ===== Services (Shared) =====
+        protected readonly MastersServies _mastersServies;
+        protected readonly CrudController _CrudController;
+        protected readonly IWebHostEnvironment _env;
+        protected readonly ILogger<IncomeSystemController> _logger;
 
+        // ✅ مضافة لدعم UploadExcel داخل نفس الكنترولر
+        protected readonly IAntiforgery _antiforgery;
+        protected readonly IConfiguration _cfg;
+
+        // ===== Common Context =====
         protected string? ControllerName;
         protected string? PageName;
-
 
         protected string? usersId;
         protected string? FullName;
@@ -46,6 +48,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
         protected string? HostName;
         protected string? LastActivityUtc;
 
+        // ===== DataSet Split =====
         protected DataTable? permissionTable;
         protected DataTable? dt1;
         protected DataTable? dt2;
@@ -57,16 +60,22 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
         protected DataTable? dt8;
         protected DataTable? dt9;
 
+        // ✅ Constructor واحد فقط يخدم كل ملفات الـ partial
         public IncomeSystemController(
             MastersServies mastersServies,
             CrudController crudController,
             IWebHostEnvironment env,
-            ILogger<IncomeSystemController> logger)
+            ILogger<IncomeSystemController> logger,
+            IAntiforgery antiforgery,
+            IConfiguration cfg)
         {
             _mastersServies = mastersServies;
             _CrudController = crudController;
             _env = env;
             _logger = logger;
+
+            _antiforgery = antiforgery;
+            _cfg = cfg;
         }
 
         public IActionResult Index()
@@ -109,6 +118,12 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             HostName = HttpContext.Session.GetString("HostName");
             LastActivityUtc = HttpContext.Session.GetString("LastActivityUtc");
 
+            // (اختياري) fallback لاسم الجهاز لو ما موجود بالسيشن
+            if (string.IsNullOrWhiteSpace(HostName))
+            {
+                try { HostName = Dns.GetHostName(); } catch { /* ignore */ }
+            }
+
             return true;
         }
 
@@ -127,6 +142,23 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             dt7 = (ds?.Tables?.Count ?? 0) > 7 ? ds.Tables[7] : null;
             dt8 = (ds?.Tables?.Count ?? 0) > 8 ? ds.Tables[8] : null;
             dt9 = (ds?.Tables?.Count ?? 0) > 9 ? ds.Tables[9] : null;
+        }
+
+        /// <summary>
+        /// (اختياري) يساعدك تجيب IP داخلي للجهاز
+        /// </summary>
+        protected string? GetLocalIp()
+        {
+            try
+            {
+                var host = Dns.GetHostEntry(Dns.GetHostName());
+                var ip = host.AddressList.FirstOrDefault(a => a.AddressFamily == AddressFamily.InterNetwork);
+                return ip?.ToString();
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }
