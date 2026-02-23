@@ -99,6 +99,23 @@ namespace SmartFoundation.Mvc.Controllers.Housing
         }
 
         // ===============================
+        // Detect Browser Reload (F5 / Ctrl+R)
+        // ===============================
+        private bool IsBrowserRefresh()
+        {
+            
+            var cc = Request.Headers["Cache-Control"].ToString();
+            if (!string.IsNullOrWhiteSpace(cc) && cc.Contains("max-age=0", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            //  Pragma: no-cache
+            var pragma = Request.Headers["Pragma"].ToString();
+            if (!string.IsNullOrWhiteSpace(pragma) && pragma.Contains("no-cache", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            return false;
+        }
+        // ===============================
         // Unified Toastr responder:
         // - Ajax => JSON
         // - Normal form submit => Redirect(Index) + TempData
@@ -134,8 +151,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
         // GET: الصفحة
         // ===============================
         [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Index()
         {
+            if (IsBrowserRefresh())
+                ClearExcelSession(deletePhysicalFile: true);
+
             var previewCols = GetPreviewColumns();
             var previewRows = GetPreviewRows();
 
@@ -245,6 +266,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 ShowFilter = false,
                 FilterRow = true,
                 ShowColumnVisibility = true,
+                Selectable=false,
                 Toolbar = new TableToolbarConfig
                 {
                     ShowAdd = true,
@@ -254,7 +276,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowExportExcel = true,
                     ShowExportPdf = false,
                     ShowColumns = true,
-                    ShowRefresh = true,
+                    ShowRefresh = false,
 
                     Add = new TableAction
                     {

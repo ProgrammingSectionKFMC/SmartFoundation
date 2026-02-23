@@ -81,6 +81,24 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
         }
 
         // ===============================
+        // Detect Browser Reload (F5 / Ctrl+R)
+        // ===============================
+        private bool IsBrowserRefresh()
+        {
+
+            var cc = Request.Headers["Cache-Control"].ToString();
+            if (!string.IsNullOrWhiteSpace(cc) && cc.Contains("max-age=0", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            //  Pragma: no-cache
+            var pragma = Request.Headers["Pragma"].ToString();
+            if (!string.IsNullOrWhiteSpace(pragma) && pragma.Contains("no-cache", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            return false;
+        }
+
+        // ===============================
         // Unified Toastr responder
         // ===============================
         private IActionResult RespondSuccess(string msg, object? data = null)
@@ -117,9 +135,12 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
         // GET: صفحة رفع الاكسل
         // ===============================
         [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult UploadExcel()
         {
 
+            if (IsBrowserRefresh())
+                ClearExcelSession(deletePhysicalFile: true);
 
             if (!InitPageContext(out var redirect))
                 return redirect!;
@@ -257,6 +278,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 ShowFilter = false,
                 FilterRow = true,
                 ShowColumnVisibility = true,
+                Selectable=false,
                 Toolbar = new TableToolbarConfig
                 {
                     ShowAdd = true,
@@ -266,7 +288,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                     ShowExportExcel = true,
                     ShowExportPdf = false,
                     ShowColumns = true,
-                    ShowRefresh = true,
+                    ShowRefresh = false,
 
                     Add = new TableAction
                     {
