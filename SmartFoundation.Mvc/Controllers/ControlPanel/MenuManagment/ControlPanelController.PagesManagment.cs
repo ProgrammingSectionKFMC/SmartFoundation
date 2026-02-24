@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using CommunityToolkit.HighPerformance.Helpers;
+using Microsoft.AspNetCore.Mvc;
 using SmartFoundation.UI.ViewModels.SmartForm;
 using SmartFoundation.UI.ViewModels.SmartPage;
 using SmartFoundation.UI.ViewModels.SmartTable;
@@ -39,25 +40,78 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
             SplitDataSet(ds);
 
 
-            if (permissionTable is null || permissionTable.Rows.Count == 0)
-            {
-                TempData["Error"] = "تم رصد دخول غير مصرح به انت لاتملك صلاحية للوصول الى هذه الصفحة";
-                return RedirectToAction("Index", "Home");
-            }
+            //if (permissionTable is null || permissionTable.Rows.Count == 0)
+            //{
+            //    TempData["Error"] = "تم رصد دخول غير مصرح به انت لاتملك صلاحية للوصول الى هذه الصفحة";
+            //    return RedirectToAction("Index", "Home");
+            //}
 
             string? rowProgramsIdField = "";
             string? rowmenuDistributorIDField = "";
             string? rowdistributorPermissionTypeIDField = "";
-            bool canInsert = false;
-            bool canInsertFullAccess = false;
-            bool canUpdate = false;
-            bool canDelete = false;
+
+
+            bool canADDPROGRAM = false;
+            bool canADDMENU = false;
+            bool canADDPERMISSION = false;
+
+            bool canEDITMENU = false;
+            bool canEDITPERMISSION = false;
+            bool canEDITPPROGRAM = false;
+
+            bool canDELETEPROGRAM = false;
+            bool canDELETEMENU = false;
+            bool canDELETEPERMISSION = false;
 
             bool showPrograms = SearchID_ == "1";
             bool showMenu = SearchID_ == "2";
             bool showPermissions = SearchID_ == "3";
 
+
+            List<OptionItem> ActiveOptions = new()
+                    {
+                        new OptionItem { Value = "1", Text = "نشط" },
+                        new OptionItem { Value = "0", Text = "غير نشط" }
+                    };
+
+
+            // ---------------------- DDLValues ----------------------
+
+            JsonResult? result;
+            string json;
+
+
+            List<OptionItem> programOptions = new();
+            List<OptionItem> UsersAuthOptions = new();
+
+            //// ---------------------- programOptions ----------------------
+            result = await _CrudController.GetDDLValues(
+                "programName_A", "programID", "4", nameof(PagesManagment), usersId, IdaraId, HostName
+           ) as JsonResult;
+
+
+            json = JsonSerializer.Serialize(result!.Value);
+
+            programOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+
+            //// ---------------------- UsersAuthOptions ----------------------
+            result = await _CrudController.GetDDLValues(
+                "UsersAuthTypeName_A", "UsersAuthTypeID", "5", nameof(PagesManagment), usersId, IdaraId, HostName
+           ) as JsonResult;
+
+
+            json = JsonSerializer.Serialize(result!.Value);
+
+            UsersAuthOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+
+
+            //// ---------------------- END ----------------------
+
+
+
             FormConfig form = new();
+
+
 
             try
             {
@@ -67,6 +121,8 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                     new OptionItem { Value = "2", Text = "صفحة" },
                     new OptionItem { Value = "3", Text = "صلاحية" },
                 };
+
+               
 
                 form = new FormConfig
                 {
@@ -96,10 +152,17 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                     foreach (DataRow row in permissionTable.Rows)
                     {
                         var permissionName = row["permissionTypeName_E"]?.ToString()?.Trim().ToUpper();
-                        if (permissionName == "INSERT") canInsert = true;
-                        if (permissionName == "UPDATE") canUpdate = true;
-                        if (permissionName == "DELETE") canDelete = true;
-                        if (permissionName == "INSERTFULLACCESS") canInsertFullAccess = true;
+                        if (permissionName == "ADDPROGRAM") canADDPROGRAM = true;
+                        if (permissionName == "ADDMENU") canADDMENU = true;
+                        if (permissionName == "ADDPERMISSION") canADDPERMISSION = true;
+
+                        if (permissionName == "EDITMENU") canEDITMENU = true;
+                        if (permissionName == "EDITPERMISSION") canEDITPERMISSION = true;
+                        if (permissionName == "EDITPROGRAM") canEDITPPROGRAM = true;
+
+                        if (permissionName == "DELETEPROGRAM") canDELETEPROGRAM = true;
+                        if (permissionName == "DELETEMENU") canDELETEMENU = true;
+                        if (permissionName == "DELETEPERMISSION") canDELETEPERMISSION = true;
                     }
 
                     // ========== dt1: Programs ==========
@@ -135,13 +198,18 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                                      t == typeof(decimal))
                                 colType = "number";
 
+
+                            bool isprogramActiveBit = c.ColumnName.Equals("programActiveBit", StringComparison.OrdinalIgnoreCase);
+
+
+
                             dynamicColumnsPrograms.Add(new TableColumn
                             {
                                 Field = c.ColumnName,
                                 Label = headerMap.TryGetValue(c.ColumnName, out var label) ? label : c.ColumnName,
                                 Type = colType,
                                 Sortable = true,
-                                Visible = true
+                                Visible = !(isprogramActiveBit)
                             });
                         }
 
@@ -162,6 +230,8 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                             dict["p05"] = Get("programActive");
                             dict["p06"] = Get("programLink");
                             dict["p07"] = Get("programIcon");
+                            dict["p08"] = Get("programSerial");
+                            dict["p09"] = Get("programActiveBit");
 
                             rowsListPrograms.Add(dict);
                         }
@@ -317,11 +387,11 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
 
 
 
-             var AddPorgramFieldFields = new List<FieldConfig>
+             var AddMenuListFieldFields = new List<FieldConfig>
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "AddPorgram" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "AddMenuList" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -334,29 +404,23 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 new FieldConfig { Name = rowProgramsIdField, Type = "hidden" },
 
 
-                new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "ActionID" },
-                new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p14", Label = "الترتيب", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p15", Label = "الاسم", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p07", Label = "WaitingClassID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "date", ColCss = "3",Required = true },
-                new FieldConfig { Name = "p12", Label = "ملاحظات", Type = "textarea", ColCss = "12",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
+                new FieldConfig { Name = "p01", Label = "البرنامج التابع لها القائمة", Type = "select", ColCss = "3",Required = true,Options = programOptions},
+                new FieldConfig { Name = "p02", Label = "اسم القائمة (عربي)", Type = "text", TextMode = "arabic", ColCss = "3", Readonly = false ,Required = true },
+                new FieldConfig { Name = "p03", Label = "اسم القائمة (إنجليزي)", Type = "text", TextMode="english", ColCss = "3", Readonly = false ,Required = true },
+                new FieldConfig { Name = "p04", Label = "الوصف", Type = "text", ColCss = "3", Readonly = false ,Required = true },
+                new FieldConfig { Name = "p05", Label = "الترتيب", Type = "number", ColCss = "3", Readonly = false ,Required = true },
 
 
             };
 
 
-            var EditPorgramFieldFields = new List<FieldConfig>
+
+
+             var AddProgramFieldFields = new List<FieldConfig>
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "EditPorgram" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "AddProgram" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -369,29 +433,26 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 new FieldConfig { Name = rowProgramsIdField, Type = "hidden" },
 
 
-                new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "ActionID" },
-                new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p14", Label = "الترتيب", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p15", Label = "الاسم", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p07", Label = "WaitingClassID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "date", ColCss = "3",Required = true },
-                new FieldConfig { Name = "p12", Label = "ملاحظات", Type = "textarea", ColCss = "12",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
+                new FieldConfig { Name = "p01", Label = "programID", Type = "hidden", ColCss = "3", Readonly = false },
+                new FieldConfig { Name = "p02", Label = "اسم البرنامج (عربي)", Type = "text", TextMode = "arabic", ColCss = "3", Readonly = false ,Required = true },
+                new FieldConfig { Name = "p03", Label = "اسم البرنامج (إنجليزي)", Type = "text", TextMode="english", ColCss = "3", Readonly = false ,Required = true },
+                new FieldConfig { Name = "p04", Label = "الوصف", Type = "text", ColCss = "3", Readonly = false ,Required = true },
+                new FieldConfig { Name = "p05", Label = "programActive", Type = "hidden", ColCss = "3", Readonly = false ,Required = true },
+                new FieldConfig { Name = "p06", Label = "الرابط", Type = "text", ColCss = "3", Readonly = false ,Required = true },
+                new FieldConfig { Name = "p07", Label = "الأيقونة", Type = "text", TextMode="english", ColCss = "3", Readonly = false ,Required = true },
+                new FieldConfig { Name = "p08", Label = "الترتيب", Type = "text", ColCss = "3", Readonly = false ,Required = true },
+                new FieldConfig { Name = "p09", Label = "حالة البرنامج", Type = "select", ColCss = "3",Options=ActiveOptions ,Required = true },
+
 
 
             };
 
 
-            var DeletePorgramFieldFields = new List<FieldConfig>
+            var EditProgramFieldFields = new List<FieldConfig>
             {
 
-                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "DeletePorgram" },
+                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "EditProgram" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -404,20 +465,45 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 new FieldConfig { Name = rowProgramsIdField, Type = "hidden" },
 
 
-                new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "ActionID" },
-                new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p14", Label = "الترتيب", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p15", Label = "الاسم", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p07", Label = "WaitingClassID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "date", ColCss = "3",Required = true },
-                new FieldConfig { Name = "p12", Label = "ملاحظات", Type = "textarea", ColCss = "12",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
+                new FieldConfig { Name = "p01", Label = "programID", Type = "hidden", ColCss = "3", Readonly = false },
+                new FieldConfig { Name = "p02", Label = "اسم البرنامج (عربي)", Type = "text", TextMode = "arabic", ColCss = "3", Readonly = false ,Required = true },
+                new FieldConfig { Name = "p03", Label = "اسم البرنامج (إنجليزي)", Type = "text", TextMode="english", ColCss = "3", Readonly = false ,Required = true },
+                new FieldConfig { Name = "p04", Label = "الوصف", Type = "text", ColCss = "3", Readonly = false ,Required = true },
+                new FieldConfig { Name = "p05", Label = "programActive", Type = "hidden", ColCss = "3", Readonly = false ,Required = true },
+                new FieldConfig { Name = "p06", Label = "الرابط", Type = "text", ColCss = "3", Readonly = false ,Required = true },
+                new FieldConfig { Name = "p07", Label = "الأيقونة", Type = "text", TextMode="english", ColCss = "3", Readonly = false ,Required = true },
+                new FieldConfig { Name = "p08", Label = "الترتيب", Type = "text", ColCss = "3", Readonly = false ,Required = true },
+                new FieldConfig { Name = "p09", Label = "حالة البرنامج", Type = "hidden", ColCss = "3",Options=ActiveOptions ,Required = true },
 
+            };
+
+
+            var DeleteProgramFieldFields = new List<FieldConfig>
+            {
+
+                  new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "DeleteProgram" },
+                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
+                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
+                new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
+                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+
+
+                new FieldConfig { Name = rowProgramsIdField, Type = "hidden" },
+
+
+                new FieldConfig { Name = "p01", Label = "programID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p02", Label = "اسم البرنامج (عربي)", Type = "text", TextMode = "arabic", ColCss = "3", Readonly = true ,Required = true },
+                new FieldConfig { Name = "p03", Label = "اسم البرنامج (إنجليزي)", Type = "text", TextMode="english", ColCss = "3", Readonly = true ,Required = true },
+                new FieldConfig { Name = "p04", Label = "الوصف", Type = "text", ColCss = "3", Readonly = true ,Required = true },
+                new FieldConfig { Name = "p05", Label = "programActive", Type = "hidden", ColCss = "3", Readonly = true ,Required = true },
+                new FieldConfig { Name = "p06", Label = "الرابط", Type = "text", ColCss = "3", Readonly = true ,Required = true },
+                new FieldConfig { Name = "p07", Label = "الأيقونة", Type = "text", TextMode="english", ColCss = "3", Readonly = true ,Required = true },
+                new FieldConfig { Name = "p08", Label = "الترتيب", Type = "text", ColCss = "3", Readonly = true ,Required = true },
+                new FieldConfig { Name = "p09", Label = "حالة البرنامج", Type = "select", ColCss = "3",Options=ActiveOptions ,Required = true },
 
             };
 
@@ -438,14 +524,163 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 PanelTitle = "إدارة البرامج",
                 Toolbar = new TableToolbarConfig
                 {
-                    ShowRefresh = true,
+                    ShowRefresh = false,
                     ShowColumns = true,
-                    ShowAdd = canInsert,
-                    ShowEdit = canUpdate,
-                    ShowDelete = canDelete,
-                    // أضف Actions هنا لاحقاً
+                    ShowExportCsv = false,
+                    ShowExportExcel = false,
+                    ShowAdd = canADDPROGRAM,
+                    ShowAdd1 = canADDPROGRAM,
+                    ShowEdit = canEDITPPROGRAM,
+                    ShowDelete = canDELETEPROGRAM,
+                    ShowBulkDelete = false,
+
+
+                    Add = new TableAction
+                    {
+                        Label = "إضافة برنامج جديد",
+                        Icon = "fa fa-plus",
+                        Color = "success",
+                        OpenModal = true,
+                        ModalTitle = "إضافة برنامج جديد",
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "InsertForm",
+                            Title = "بيانات برنامج جديد",
+                            Method = "post",
+                            ActionUrl = "/crud/insert",
+                            Fields = AddProgramFieldFields,
+                            Buttons = new List<FormButtonConfig>
+                            {
+                                new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "success" /*Icon = "fa fa-save"*/ },
+                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", /*Icon = "fa fa-times",*/ OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" },
+
+                            }
+                        }
+                    },
+
+
+                    Add1 = new TableAction
+                    {
+                        Label = "إضافة قائمة جانبية جديد",
+                        Icon = "fa fa-list",
+                        Color = "success",
+                        OpenModal = true,
+                        ModalTitle = "إضافة برنامج جديد",
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "InsertForm",
+                            Title = "بيانات برنامج جديد",
+                            Method = "post",
+                            ActionUrl = "/crud/insert",
+                            Fields = AddMenuListFieldFields,
+                            Buttons = new List<FormButtonConfig>
+                            {
+                                new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "success" /*Icon = "fa fa-save"*/ },
+                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", /*Icon = "fa fa-times",*/ OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" },
+
+                            }
+                        }
+                    },
+
+
+
+                    // Edit: opens populated form for single selection and saves via SP
+                    Edit = new TableAction
+                    {
+                        Label = "تعديل برنامج",
+                        Icon = "fa fa-pen-to-square",
+                        Color = "info",
+                        IsEdit = true,
+                        OpenModal = true,
+                        ModalTitle = "تعديل بيانات الموظف",
+                        //ModalMessage = "بسم الله الرحمن الرحيم",
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "employeeEditForm",
+                            Title = "تعديل بيانات برنامج",
+                            Method = "post",
+                            ActionUrl = "/crud/update",
+                            SubmitText = "حفظ التعديلات",
+                            CancelText = "إلغاء",
+                            Fields = EditProgramFieldFields
+                        },
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1
+
+
+                    },
+
+                    Delete = new TableAction
+                    {
+                        Label = "ايقاف / تنشيط برنامج",
+                        Icon = "fa fa-recycle",
+                        Color = "warning",
+                        IsEdit = true,
+                        OpenModal = true,
+                        //ModalTitle = "رسالة تحذيرية",
+                        ModalTitle = "<i class='fa fa-exclamation-triangle text-red-600 text-xl mr-2'></i> تحذير",
+                        ModalMessage = "هل أنت متأكد من ايقاف / تنشيط البرنامج؟",
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "employeeDeleteForm",
+                            Title = "تأكيد ايقاف / تنشيط البرنامج",
+                            Method = "post",
+                            ActionUrl = "/crud/delete",
+                            Buttons = new List<FormButtonConfig>
+                            {
+                                new FormButtonConfig { Text = "تنفيذ", Type = "submit", Color = "danger", Icon = "fa fa-save" },
+                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", Icon = "fa fa-times", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
+                            },
+                            Fields = DeleteProgramFieldFields
+                        },
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1
+                    },
                 }
             };
+
+
+            dsModelPrograms.StyleRules = new List<TableStyleRule>
+                {
+
+                    new TableStyleRule
+                    {
+                        Target = "cell",
+                        Field = "programActive",
+                        Op = "eq",
+                        Value = "نشط",
+                        Priority = 1,
+                        PillEnabled=true,
+                        PillField="programActive",
+                        PillTextField="programActive",
+                        PillCssClass="pill pill-green",
+                        PillMode="replace"
+
+                    },
+                     new TableStyleRule
+                    {
+                        Target = "cell",
+                        Field = "programActive",
+                        Op = "neq",
+                        Value = "نشط",
+                        Priority = 1,
+                        PillEnabled=true,
+                        PillField="programActive",
+                        PillTextField="programActive",
+                        PillCssClass="pill pill-red",
+                        PillMode="replace"
+
+                    },
+                      
+
+
+                };
+
+
+
+
 
             var dsModelMenu = new SmartTableDsModel
             {
@@ -466,10 +701,9 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                     ShowColumns = true,
                     ShowExportCsv = false,
                     ShowExportExcel = false,
-                    ShowAdd = canInsert,
-                    ShowAdd1 = canInsertFullAccess,
-                    ShowEdit = canUpdate,
-                    ShowDelete = canDelete,
+                    ShowAdd = canADDMENU,
+                    ShowEdit = canEDITMENU,
+                    ShowDelete = canDELETEMENU,
                     ShowBulkDelete = false,
 
                     Add = new TableAction
@@ -485,7 +719,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                             Title = "بيانات الموظف الجديد",
                             Method = "post",
                             ActionUrl = "/crud/insert",
-                            Fields = AddPorgramFieldFields,
+                            Fields = AddProgramFieldFields,
                             Buttons = new List<FormButtonConfig>
                             {
                                 new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "success" /*Icon = "fa fa-save"*/ },
@@ -515,7 +749,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                             ActionUrl = "/crud/update",
                             SubmitText = "حفظ التعديلات",
                             CancelText = "إلغاء",
-                            Fields = EditPorgramFieldFields
+                            Fields = EditProgramFieldFields
                         },
                         RequireSelection = true,
                         MinSelection = 1,
@@ -545,7 +779,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                                 new FormButtonConfig { Text = "حذف", Type = "submit", Color = "danger", Icon = "fa fa-save" },
                                 new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", Icon = "fa fa-times", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
                             },
-                            Fields = DeletePorgramFieldFields
+                            Fields = DeleteProgramFieldFields
                         },
                         RequireSelection = true,
                         MinSelection = 1,
@@ -570,11 +804,21 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 {
                     ShowRefresh = true,
                     ShowColumns = true,
-                    ShowAdd = canInsert,
-                    ShowEdit = canUpdate,
-                    ShowDelete = canDelete,
+                    ShowAdd = canADDPERMISSION,
+                    ShowEdit = canEDITPERMISSION,
+                    ShowDelete = canDELETEPERMISSION,
                 }
             };
+
+
+
+
+
+
+
+
+
+
 
             var vm = new SmartPageViewModel
             {
