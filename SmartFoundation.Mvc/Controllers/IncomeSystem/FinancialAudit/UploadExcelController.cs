@@ -325,15 +325,27 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                     },
                 }
             };
-
-            // ✅ هنا التعديل المهم: نرجّع UploadExcel.cshtml مو Index
-            return View(UploadExcelViewPath, new SmartPageViewModel
+            var page = new SmartPageViewModel
             {
                 PageTitle = dsModel.PageTitle,
                 PanelTitle = dsModel.PanelTitle,
-                PanelIcon = "fa-solid fa-file-excel",
-                TableDS = dsModel
-            });
+                PanelIcon = "fa fa-list",
+
+               
+                TableDS =  dsModel
+
+            };
+
+            return View("FinancialAudit/UploadExcel", page);
+
+            // ✅ هنا التعديل المهم: نرجّع UploadExcel.cshtml مو Index
+            //return View("FinancialAudit", new SmartPageViewModel
+            //{
+            //    PageTitle = dsModel.PageTitle,
+            //    PanelTitle = dsModel.PanelTitle,
+            //    PanelIcon = "fa-solid fa-file-excel",
+            //    TableDS = dsModel
+            //});
         }
 
         // ===============================
@@ -495,10 +507,10 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
                 var tvp = new DataTable();
                 tvp.Columns.Add("RowNo", typeof(int));
-                tvp.Columns.Add("UploadExcel1", typeof(string));
-                tvp.Columns.Add("UploadExcel2", typeof(string));
-                tvp.Columns.Add("UploadExcel3", typeof(string));
-                tvp.Columns.Add("UploadExcel4", typeof(string));
+                tvp.Columns.Add("IDNumber", typeof(string));
+                tvp.Columns.Add("unitID", typeof(string));
+                tvp.Columns.Add("generalNo_FK", typeof(string));
+                tvp.Columns.Add("amount", typeof(string));
 
                 int rowNo = 0;
                 int sentRows = 0;
@@ -532,19 +544,19 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 await using var con = new SqlConnection(cs);
                 await con.OpenAsync();
 
-                await using var cmd = new SqlCommand("[Housing].[UploadExcel_ImportSelected3Cols]", con);
+                await using var cmd = new SqlCommand("[Housing].[ImportExcelForBuildingPayment]", con);
                 cmd.CommandType = CommandType.StoredProcedure;
 
-                cmd.Parameters.AddWithValue("@Column1Name", p01);
-                cmd.Parameters.AddWithValue("@Column2Name", p02);
-                cmd.Parameters.AddWithValue("@Column3Name", p03);
-                cmd.Parameters.AddWithValue("@Column4Name", p04);
+                cmd.Parameters.AddWithValue("@NationalIDs", p01);
+                cmd.Parameters.AddWithValue("@UnitNumbers", p02);
+                cmd.Parameters.AddWithValue("@GeneralNumbers", p03);
+                cmd.Parameters.AddWithValue("@Amounts", p04);
                 cmd.Parameters.AddWithValue("@FileHash", fileHash);
                 cmd.Parameters.AddWithValue("@OriginalFileName", originalName);
 
                 var pRows = cmd.Parameters.AddWithValue("@Rows", tvp);
                 pRows.SqlDbType = SqlDbType.Structured;
-                pRows.TypeName = "Housing.UploadExcelRowType";
+                pRows.TypeName = "Housing.ImportExcelForBuildingPaymentRowType";
 
                 bool ok;
                 string msg;
