@@ -172,6 +172,28 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             //}
 
             List<OptionItem> BillChargeTypeOptions = new();
+            List<OptionItem> monthOptions = new()
+                {
+                    new OptionItem { Value = "1", Text = "يناير" },
+                    new OptionItem { Value = "2", Text = "فبراير" },
+                    new OptionItem { Value = "3", Text = "مارس" },
+                    new OptionItem { Value = "4", Text = "أبريل" },
+                    new OptionItem { Value = "5", Text = "مايو" },
+                    new OptionItem { Value = "6", Text = "يونيو" },
+                    new OptionItem { Value = "7", Text = "يوليو" },
+                    new OptionItem { Value = "8", Text = "أغسطس" },
+                    new OptionItem { Value = "9", Text = "سبتمبر" },
+                    new OptionItem { Value = "10", Text = "أكتوبر" },
+                    new OptionItem { Value = "11", Text = "نوفمبر" },
+                    new OptionItem { Value = "12", Text = "ديسمبر" }
+                };
+
+            List<OptionItem> yearOptions = new();
+            for (int year = 2017; year <= 2037; year++)
+            {
+                yearOptions.Add(new OptionItem { Value = year.ToString(), Text = year.ToString() });
+            }
+
 
 
             // ---------------------- DDLValues ----------------------
@@ -281,6 +303,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 }
             };
 
+            // First, fix the form fields (p08-p10 should NOT be select with BillChargeTypeOptions):
             var processFields = new List<FieldConfig>
             {
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
@@ -294,13 +317,19 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 new FieldConfig { Name="__RequestVerificationToken", Type="hidden", Value=tokens.RequestToken ?? "" },
 
 
-                new FieldConfig { Name="p05", Label="نوع المسير", Type="select", ColCss="3", Options=BillChargeTypeOptions, Required = true },
+                new FieldConfig { Name="p05", Label="نوع المسير", Type="select", ColCss="4", Options=BillChargeTypeOptions, Required = true },
+                new FieldConfig { Name="p06", Label="شهر الحسم", Type="select", ColCss="4", Options=monthOptions, Required = true,Select2=true, Placeholder = "اختر الشهر" },
+                new FieldConfig { Name="p07", Label="سنة الحسم", Type="select", ColCss="4", Options=yearOptions, Required = true,Select2=true, Placeholder = "اختر السنة",Value = DateTime.Now.Year.ToString()},
+                new FieldConfig { Name="p08", Label="رقم المسير", Type="text", ColCss="4", Required = true },
+                new FieldConfig { Name="p09", Label="تاريخ المسير", Type="date", ColCss="4", Required = true },
+                new FieldConfig { Name="p10", Label="الوصف", Type="textarea", ColCss="4", Required = true },
 
 
-                new FieldConfig { Name="p01", Label="العمود المخصص للهوية الوطنية", Type="select", ColCss="3", Options=options, Required = true },
-                new FieldConfig { Name="p03", Label="العمود المخصص للرقم العام",   Type="select", ColCss="3", Options=options, Required = true },
-                new FieldConfig { Name="p02", Label="العمود المخصص للوحدة",        Type="select", ColCss="3", Options=options, Required = true },
-                new FieldConfig { Name="p04", Label="العمود المخصص لمبلغ الحسم",   Type="select", ColCss="3", Options=options, Required = true },
+                new FieldConfig { Name="p01", Label="العمود المخصص للهوية الوطنية", Type="select", ColCss="3",Select2=true, Options=options, Required = true },
+                new FieldConfig { Name="p03", Label="العمود المخصص للرقم العام",   Type="select", ColCss="3",Select2=true, Options=options, Required = true },
+                new FieldConfig { Name="p02", Label="العمود المخصص للوحدة",        Type="select", ColCss="3",Select2=true, Options=options, Required = true },
+                new FieldConfig { Name="p04", Label="العمود المخصص لمبلغ الحسم",   Type="select", ColCss="3",Select2=true, Options=options, Required = true },
+
             };
 
             var dsModel = new SmartTableDsModel
@@ -478,8 +507,9 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
         // ===============================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [HttpPost]
-        public async Task<IActionResult> ImportExcelForBuildingPaymentProcess(string? p01, string? p02, string? p03, string? p04, string? p05)
+        public async Task<IActionResult> ImportExcelForBuildingPaymentProcess(
+            string? p01, string? p02, string? p03, string? p04, string? p05, 
+            string? p06, string? p07, string? p08, string? p09, string? p10)
         {
             try
             {
@@ -491,19 +521,49 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                     return RespondError("لا يوجد ملف Excel محفوظ للمعالجة. ارفع الملف أولاً." + extra);
                 }
 
+                // Trim all parameters
                 p01 = (p01 ?? "").Trim();
                 p02 = (p02 ?? "").Trim();
                 p03 = (p03 ?? "").Trim();
                 p04 = (p04 ?? "").Trim();
                 p05 = (p05 ?? "").Trim();
+                p06 = (p06 ?? "").Trim();
+                p07 = (p07 ?? "").Trim();
+                p08 = (p08 ?? "").Trim();
+                p09 = (p09 ?? "").Trim();
+                p10 = (p10 ?? "").Trim();
 
+                // Validate p05 (BillChargeTypeID)
                 if (string.IsNullOrWhiteSpace(p05))
                     return RespondError("الرجاء اختيار نوع المسير.");
 
                 if (!int.TryParse(p05, out var billChargeTypeId) || billChargeTypeId <= 0)
                     return RespondError("قيمة نوع المسير غير صحيحة.");
 
-                if (string.IsNullOrWhiteSpace(p01) || string.IsNullOrWhiteSpace(p02) || string.IsNullOrWhiteSpace(p03) || string.IsNullOrWhiteSpace(p04))
+                // Validate p06 (Month)
+                if (string.IsNullOrWhiteSpace(p06))
+                    return RespondError("الرجاء اختيار شهر الحسم.");
+
+                // Validate p07 (Year)
+                if (string.IsNullOrWhiteSpace(p07))
+                    return RespondError("الرجاء اختيار سنة الحسم.");
+
+                // Validate p08 (DeductListNo)
+                if (string.IsNullOrWhiteSpace(p08))
+                    return RespondError("الرجاء إدخال رقم المسير.");
+
+                // Validate p09 (DeductListDate) - optional date validation
+                if (!string.IsNullOrWhiteSpace(p09))
+                {
+                    if (!DateTime.TryParse(p09, out _))
+                        return RespondError("تاريخ المسير غير صحيح.");
+                }
+
+                // p10 (Notes) is optional
+
+                // Validate column selections
+                if (string.IsNullOrWhiteSpace(p01) || string.IsNullOrWhiteSpace(p02) || 
+                    string.IsNullOrWhiteSpace(p03) || string.IsNullOrWhiteSpace(p04))
                     return RespondError("الرجاء اختيار جميع الأعمدة المطلوبة.");
 
                 var selected = new[] { p01, p02, p03, p04 }
@@ -557,7 +617,8 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                     var v3 = r[p03]?.ToString();
                     var v4 = r[p04]?.ToString();
 
-                    if (string.IsNullOrWhiteSpace(v1) && string.IsNullOrWhiteSpace(v2) && string.IsNullOrWhiteSpace(v3) && string.IsNullOrWhiteSpace(v4))
+                    if (string.IsNullOrWhiteSpace(v1) && string.IsNullOrWhiteSpace(v2) && 
+                        string.IsNullOrWhiteSpace(v3) && string.IsNullOrWhiteSpace(v4))
                         continue;
 
                     tvp.Rows.Add(rowNo, v1, v2, v3, v4);
@@ -581,12 +642,23 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.CommandTimeout = 120;
 
+                // Original parameters
                 cmd.Parameters.AddWithValue("@NationalIDs", p01);
                 cmd.Parameters.AddWithValue("@UnitNumbers", p02);
                 cmd.Parameters.AddWithValue("@GeneralNumbers", p03);
                 cmd.Parameters.AddWithValue("@Amounts", p04);
 
-                cmd.Parameters.Add("@BillChargeTypeID", SqlDbType.Int).Value = billChargeTypeId; // ✅ p05 هنا
+                // ✅ Send p05-p10 as per stored procedure signature
+                cmd.Parameters.Add("@BillChargeTypeID", SqlDbType.Int).Value = billChargeTypeId; // p05
+                cmd.Parameters.AddWithValue("@IssueMonth", string.IsNullOrWhiteSpace(p06) ? (object)DBNull.Value : p06); // p06
+                cmd.Parameters.AddWithValue("@IssueYear", string.IsNullOrWhiteSpace(p07) ? (object)DBNull.Value : p07); // p07
+                cmd.Parameters.AddWithValue("@DeductListNo", string.IsNullOrWhiteSpace(p08) ? (object)DBNull.Value : p08); // p08
+                cmd.Parameters.AddWithValue("@DeductListDate", string.IsNullOrWhiteSpace(p09) ? (object)DBNull.Value : p09); // p09
+                cmd.Parameters.AddWithValue("@Notes", string.IsNullOrWhiteSpace(p10) ? (object)DBNull.Value : p10); // p10
+
+                cmd.Parameters.AddWithValue("@IdaraId_FK", string.IsNullOrWhiteSpace(IdaraId) ? (object)DBNull.Value : IdaraId); // p10
+                cmd.Parameters.AddWithValue("@entryData", string.IsNullOrWhiteSpace(usersId) ? (object)DBNull.Value : usersId); // p10
+                cmd.Parameters.AddWithValue("@hostName", string.IsNullOrWhiteSpace(HostName) ? (object)DBNull.Value : HostName); // p10
 
                 cmd.Parameters.AddWithValue("@FileHash", fileHash);
                 cmd.Parameters.AddWithValue("@OriginalFileName", originalName);
@@ -622,6 +694,11 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         insertedRows,
                         selectedColumns = new[] { p01, p02, p03, p04 },
                         billChargeTypeId,
+                        issueMonth = p06,
+                        issueYear = p07,
+                        deductListNo = p08,
+                        deductListDate = p09,
+                        notes = p10,
                         fileHash,
                         refresh = true
                     });
