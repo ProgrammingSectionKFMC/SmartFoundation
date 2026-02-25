@@ -15,18 +15,18 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
     // ✅ مهم: Partial + بدون : Controller + بدون Constructor (DI موجود في Base)
     public partial class IncomeSystemController
     {
-        // ✅ مسار الفيو الصحيح (حسب الصورة عندك)
-        private const string UploadExcelViewPath = "~/Views/IncomeSystem/FinancialAudit/UploadExcel.cshtml";
+        // ✅ مسار الفيو الصحيح
+        //private const string UploadExcelViewPath = "~/Views/IncomeSystem/FinancialAudit/ImportExcelForBuildingPayment.cshtml";
 
         // ===============================
-        // Session Keys
+        // Session Keys  (✅ تم تغيير الاسم لمنع تداخل جلسات UploadExcel القديمة)
         // ===============================
-        private const string SessionKeyExcelPreview = "UploadExcel.Preview";
-        private const string SessionKeyExcelColumns = "UploadExcel.Columns";
-        private const string SessionKeyExcelFilePath = "UploadExcel.FilePath";
-        private const string SessionKeyExcelRelative = "UploadExcel.Relative";
-        private const string SessionKeyExcelFileName = "UploadExcel.OriginalFileName";
-        private const string SessionKeyExcelUploadedAt = "UploadExcel.UploadedAt";
+        private const string SessionKeyExcelPreview = "ImportExcelForBuildingPayment.Preview";
+        private const string SessionKeyExcelColumns = "ImportExcelForBuildingPayment.Columns";
+        private const string SessionKeyExcelFilePath = "ImportExcelForBuildingPayment.FilePath";
+        private const string SessionKeyExcelRelative = "ImportExcelForBuildingPayment.Relative";
+        private const string SessionKeyExcelFileName = "ImportExcelForBuildingPayment.OriginalFileName";
+        private const string SessionKeyExcelUploadedAt = "ImportExcelForBuildingPayment.UploadedAt";
 
         // ===============================
         // Session helpers
@@ -85,12 +85,10 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
         // ===============================
         private bool IsBrowserRefresh()
         {
-
             var cc = Request.Headers["Cache-Control"].ToString();
             if (!string.IsNullOrWhiteSpace(cc) && cc.Contains("max-age=0", StringComparison.OrdinalIgnoreCase))
                 return true;
 
-            //  Pragma: no-cache
             var pragma = Request.Headers["Pragma"].ToString();
             if (!string.IsNullOrWhiteSpace(pragma) && pragma.Contains("no-cache", StringComparison.OrdinalIgnoreCase))
                 return true;
@@ -99,7 +97,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
         }
 
         // ===============================
-        // Unified Toastr responder
+        // Unified Toastr responder (✅ RedirectToAction تم تغييره)
         // ===============================
         private IActionResult RespondSuccess(string msg, object? data = null)
         {
@@ -108,7 +106,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             if (IsAjaxRequest())
                 return Ok(new { ok = true, message = msg, data });
 
-            return RedirectToAction(nameof(UploadExcel));
+            return RedirectToAction(nameof(ImportExcelForBuildingPayment));
         }
 
         private IActionResult RespondWarning(string msg, object? data = null)
@@ -118,7 +116,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             if (IsAjaxRequest())
                 return Ok(new { ok = false, message = msg, data });
 
-            return RedirectToAction(nameof(UploadExcel));
+            return RedirectToAction(nameof(ImportExcelForBuildingPayment));
         }
 
         private IActionResult RespondError(string msg, object? data = null)
@@ -128,16 +126,18 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             if (IsAjaxRequest())
                 return Ok(new { ok = false, message = msg, data });
 
-            return RedirectToAction(nameof(UploadExcel));
+            return RedirectToAction(nameof(ImportExcelForBuildingPayment));
         }
 
         // ===============================
-        // GET: صفحة رفع الاكسل
+        // GET: صفحة الاستيراد (✅ الاسم الجديد)
         // ===============================
         [HttpGet]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-        public IActionResult UploadExcel()
+        public async Task<IActionResult> ImportExcelForBuildingPayment()
         {
+            // تنظيف ملفات قديمة (اختياري)
+            CleanupOldExcelFiles(olderThanDays: 1);
 
             if (IsBrowserRefresh())
                 ClearExcelSession(deletePhysicalFile: true);
@@ -146,12 +146,51 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 return redirect!;
 
             if (string.IsNullOrWhiteSpace(usersId))
-            {
                 return RedirectToAction("Index", "Login", new { logout = 4 });
-            }
 
             ControllerName = "IncomeSystem";
-            PageName = nameof(UploadExcel);
+            PageName = nameof(ImportExcelForBuildingPayment);
+
+            var spParameters = new object?[]
+           {
+             PageName ?? "ImportExcelForBuildingPayment",
+             IdaraId,
+             usersId,
+             HostName
+           };
+
+            DataSet ds = await _mastersServies.GetDataLoadDataSetAsync(spParameters);
+
+            //  تقسيم الداتا سيت للجدول الأول + جداول أخرى
+            SplitDataSet(ds);
+
+
+            //if (permissionTable is null || permissionTable.Rows.Count == 0)
+            //{
+            //    TempData["Error"] = "تم رصد دخول غير مصرح به انت لاتملك صلاحية للوصول الى هذه الصفحة";
+            //    return RedirectToAction("Index", "Home");
+            //}
+
+            List<OptionItem> BillChargeTypeOptions = new();
+
+
+            // ---------------------- DDLValues ----------------------
+
+            JsonResult? result;
+            string json;
+
+            //// ---------------------- insuranceOptions ----------------------
+
+            result = await _CrudController.GetDDLValues(
+                 "BillChargeTypeName_A", "BillChargeTypeID", "1", PageName, usersId, IdaraId, HostName
+            ) as JsonResult;
+
+            json = JsonSerializer.Serialize(result!.Value);
+
+            BillChargeTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+
+
+            //// ---------------------- END DDL ----------------------
 
             var previewCols = GetPreviewColumns();
             var previewRows = GetPreviewRows();
@@ -203,7 +242,6 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             }
 
             var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
-
             var currentUrl = Request.Path;
 
             var uploadFields = new List<FieldConfig>
@@ -245,30 +283,30 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
             var processFields = new List<FieldConfig>
             {
-
-                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
                 new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "FINANCIALAUDITFOREXTENDANDEVICTIONS" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
-                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectUrl",        Type = "hidden", Value = currentUrl },
                 new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
                 new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
                 new FieldConfig { Name="__RequestVerificationToken", Type="hidden", Value=tokens.RequestToken ?? "" },
-                new FieldConfig { Name="p01", Label="العمود المخصص للهوية الوطنية",  Type="select", ColCss="3", Options=options,Required = true },
-                new FieldConfig { Name="p02", Label="العمود المخصص للوحدة", Type="select", ColCss="3", Options=options,Required = true },
-                new FieldConfig { Name="p03", Label="العمود المخصص للرقم العام", Type="select", ColCss="3", Options=options,Required = true },
-                new FieldConfig { Name="p04", Label="العمود المخصص لمبلغ الحسم", Type="select", ColCss="3", Options=options,Required = true },
 
 
+                new FieldConfig { Name="p01", Label="نوع المسير", Type="select", ColCss="3", Options=BillChargeTypeOptions, Required = true },
 
 
+                new FieldConfig { Name="p01", Label="العمود المخصص للهوية الوطنية", Type="select", ColCss="3", Options=options, Required = true },
+                new FieldConfig { Name="p03", Label="العمود المخصص للرقم العام",   Type="select", ColCss="3", Options=options, Required = true },
+                new FieldConfig { Name="p02", Label="العمود المخصص للوحدة",        Type="select", ColCss="3", Options=options, Required = true },
+                new FieldConfig { Name="p04", Label="العمود المخصص لمبلغ الحسم",   Type="select", ColCss="3", Options=options, Required = true },
             };
 
             var dsModel = new SmartTableDsModel
             {
-                PageTitle = "رفع ملف Excel",
-                PanelTitle = "رفع ملف Excel",
+                PageTitle = "استيراد Excel (Building Payment)",
+                PanelTitle = "استيراد Excel (Building Payment)",
                 Columns = columns,
                 Rows = previewRows,
                 RowIdField = null,
@@ -278,7 +316,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 ShowFilter = false,
                 FilterRow = true,
                 ShowColumnVisibility = true,
-                Selectable=false,
+                Selectable = false,
                 Toolbar = new TableToolbarConfig
                 {
                     ShowAdd = true,
@@ -299,10 +337,10 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         ModalTitle = "رفع ملف Excel",
                         OpenForm = new FormConfig
                         {
-                            FormId = "UploadExcelForm",
+                            FormId = "ImportExcelForBuildingPaymentUploadForm",
                             Method = "post",
                             Enctype = "multipart/form-data",
-                            ActionUrl = Url.Action(nameof(UploadExcelUpload), "IncomeSystem")!,
+                            ActionUrl = Url.Action(nameof(ImportExcelForBuildingPaymentUpload), "IncomeSystem")!,
                             Fields = uploadFields
                         }
                     },
@@ -316,46 +354,36 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         ModalTitle = "معالجة الملف واعتماده",
                         OpenForm = new FormConfig
                         {
-                            FormId = "ProcessExcelForm",
+                            FormId = "ImportExcelForBuildingPaymentProcessForm",
                             Method = "post",
                             Enctype = "application/x-www-form-urlencoded",
-                            ActionUrl = Url.Action(nameof(UploadExcelProcess), "IncomeSystem")!,
+                            ActionUrl = Url.Action(nameof(ImportExcelForBuildingPaymentProcess), "IncomeSystem")!,
                             Fields = processFields
                         }
                     },
                 }
             };
+
             var page = new SmartPageViewModel
             {
                 PageTitle = dsModel.PageTitle,
                 PanelTitle = dsModel.PanelTitle,
                 PanelIcon = "fa fa-list",
-
-               
-                TableDS =  dsModel
-
+                TableDS = dsModel
             };
 
-            return View("FinancialAudit/UploadExcel", page);
-
-            // ✅ هنا التعديل المهم: نرجّع UploadExcel.cshtml مو Index
-            //return View("FinancialAudit", new SmartPageViewModel
-            //{
-            //    PageTitle = dsModel.PageTitle,
-            //    PanelTitle = dsModel.PanelTitle,
-            //    PanelIcon = "fa-solid fa-file-excel",
-            //    TableDS = dsModel
-            //});
+            // ✅ نفس الفيو (تقدر تغيره لاحقاً)
+            return View("FinancialAudit/ImportExcelForBuildingPayment", page);
         }
 
         // ===============================
-        // POST: Upload Excel + Preview
+        // POST: Upload Excel + Preview (✅ الاسم الجديد)
         // ===============================
         [HttpPost]
         [ValidateAntiForgeryToken]
         [RequestSizeLimit(20 * 1024 * 1024)]
         [RequestFormLimits(MultipartBodyLengthLimit = 20 * 1024 * 1024)]
-        public async Task<IActionResult> UploadExcelUpload()
+        public async Task<IActionResult> ImportExcelForBuildingPaymentUpload()
         {
             try
             {
@@ -400,7 +428,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 var sigErr = ValidateExcelSignature(fullPath, ext);
                 if (sigErr != null)
                 {
-                    ClearExcelSession(deletePhysicalFile: true); // ينظف ويحذف الملف
+                    ClearExcelSession(deletePhysicalFile: true);
                     return RespondError(sigErr + " إذا كان الملف محمي بكلمة مرور قم بفتحه في Excel ثم Save As بدون حماية.");
                 }
 
@@ -411,10 +439,10 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 }
                 catch (Exception ex)
                 {
-                    // ✅ رسالة أوضح
                     ClearExcelSession(deletePhysicalFile: true);
                     return RespondError("فشل قراءة الإكسل. تأكد أن الملف Excel صحيح وغير مشفر بكلمة مرور. التفاصيل: " + ex.Message);
                 }
+
                 var cols = dt.Columns.Cast<DataColumn>()
                     .Select(c => string.IsNullOrWhiteSpace(c.ColumnName) ? $"Column{c.Ordinal + 1}" : c.ColumnName.Trim())
                     .ToList();
@@ -446,11 +474,11 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
         }
 
         // ===============================
-        // POST: Process -> DB
+        // POST: Process -> DB (✅ الاسم الجديد)
         // ===============================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> UploadExcelProcess(string? p01, string? p02, string? p03, string? p04)
+        public async Task<IActionResult> ImportExcelForBuildingPaymentProcess(string? p01, string? p02, string? p03, string? p04)
         {
             try
             {
@@ -467,7 +495,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 p03 = (p03 ?? "").Trim();
                 p04 = (p04 ?? "").Trim();
 
-                if (string.IsNullOrWhiteSpace(p01) || string.IsNullOrWhiteSpace(p02) || string.IsNullOrWhiteSpace(p03)|| string.IsNullOrWhiteSpace(p04))
+                if (string.IsNullOrWhiteSpace(p01) || string.IsNullOrWhiteSpace(p02) || string.IsNullOrWhiteSpace(p03) || string.IsNullOrWhiteSpace(p04))
                     return RespondError("الرجاء اختيار جميع الأعمدة المطلوبة.");
 
                 var selected = new[] { p01, p02, p03, p04 }
@@ -482,10 +510,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                     .ToList();
 
                 if (duplicates.Any())
-                {
                     return RespondError($"تم تكرار العمود: {string.Join("، ", duplicates)}. الرجاء اختيار أعمدة مختلفة.");
-                }
-
 
                 DataTable dt = ReadExcelToDataTable(path, useHeaderRow: true, sheetIndex: 0);
 
@@ -493,7 +518,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                     dt.Columns.Cast<DataColumn>().Select(c => c.ColumnName),
                     StringComparer.OrdinalIgnoreCase);
 
-                if (!colSet.Contains(p01) || !colSet.Contains(p02) || !colSet.Contains(p03)|| !colSet.Contains(p04))
+                if (!colSet.Contains(p01) || !colSet.Contains(p02) || !colSet.Contains(p03) || !colSet.Contains(p04))
                     return RespondError("أحد الأعمدة المختارة غير موجود في ملف الإكسل.");
 
                 var emptyReport = FindEmptyCells(dt, new[] { p01, p02, p03, p04 }, maxShowRows: 15);
@@ -510,7 +535,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 tvp.Columns.Add("IDNumber", typeof(string));
                 tvp.Columns.Add("unitID", typeof(string));
                 tvp.Columns.Add("generalNo_FK", typeof(string));
-                tvp.Columns.Add("amount", typeof(string));
+                tvp.Columns.Add("amount", typeof(decimal));
 
                 int rowNo = 0;
                 int sentRows = 0;
@@ -546,6 +571,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
                 await using var cmd = new SqlCommand("[Housing].[ImportExcelForBuildingPayment]", con);
                 cmd.CommandType = CommandType.StoredProcedure;
+                cmd.CommandTimeout = 120;
 
                 cmd.Parameters.AddWithValue("@NationalIDs", p01);
                 cmd.Parameters.AddWithValue("@UnitNumbers", p02);
@@ -574,7 +600,6 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 if (!ok)
                     return RespondWarning(string.IsNullOrWhiteSpace(msg) ? "تعذر إدخال البيانات." : msg, new { fileHash });
 
-                // ✅ بعد النجاح: نظّف كل شيء علشان الصفحة ترجع فاضية
                 ClearExcelSession(deletePhysicalFile: true);
 
                 return RespondSuccess(
@@ -658,7 +683,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
             for (int i = 0; i < dt.Rows.Count; i++)
             {
-                int excelRowNo = i + 2; // header row = 1
+                int excelRowNo = i + 2;
 
                 foreach (var colName in columns)
                 {
@@ -705,16 +730,12 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                     if (System.IO.File.Exists(path))
                         System.IO.File.Delete(path);
                 }
-                catch
-                {
-                    // تجاهل
-                }
+                catch { }
             }
         }
 
         private static bool LooksLikeXlsx(string filePath)
         {
-            // XLSX = ZIP => 50 4B 03 04
             Span<byte> b = stackalloc byte[4];
             using var fs = System.IO.File.OpenRead(filePath);
             if (fs.Read(b) < 4) return false;
@@ -723,7 +744,6 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
         private static bool LooksLikeXls(string filePath)
         {
-            // XLS (OLE2) => D0 CF 11 E0 A1 B1 1A E1
             Span<byte> b = stackalloc byte[8];
             using var fs = System.IO.File.OpenRead(filePath);
             if (fs.Read(b) < 8) return false;
@@ -733,12 +753,37 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
         private static string? ValidateExcelSignature(string filePath, string extLower)
         {
-            // يرجع null إذا تمام، ويرجع رسالة خطأ إذا غير صالح
             if (extLower == ".xlsx" && !LooksLikeXlsx(filePath))
                 return "الملف ليس XLSX صالح (قد يكون ملف مختلف تم تغيير امتداده).";
             if (extLower == ".xls" && !LooksLikeXls(filePath))
                 return "الملف ليس XLS صالح (قد يكون ملف مختلف تم تغيير امتداده).";
             return null;
+        }
+
+        // تنظيف الملفات القديمة من مجلد uploads/excel
+        private void CleanupOldExcelFiles(int olderThanDays = 7)
+        {
+            try
+            {
+                var dir = Path.Combine(_env.WebRootPath, "uploads", "excel");
+                if (!Directory.Exists(dir)) return;
+
+                var cutoff = DateTime.Now.AddDays(-olderThanDays);
+
+                foreach (var file in Directory.GetFiles(dir, "*.*"))
+                {
+                    var ext = Path.GetExtension(file).ToLowerInvariant();
+                    if (ext != ".xls" && ext != ".xlsx") continue;
+
+                    var lastWrite = System.IO.File.GetLastWriteTime(file);
+                    if (lastWrite < cutoff)
+                        System.IO.File.Delete(file);
+                }
+            }
+            catch
+            {
+                // تجاهل (أو سجل في ErrorLog)
+            }
         }
     }
 }

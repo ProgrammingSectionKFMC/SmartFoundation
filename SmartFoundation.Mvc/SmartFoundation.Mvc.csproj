@@ -16,7 +16,6 @@
   <ItemGroup>
     <Folder Include="wwwroot\lib\fontawesome\" />
     <Folder Include="wwwroot\uploads\excel\" />
-    <Folder Include="wwwroot\uploads\lab\" />
   </ItemGroup>
 
   <ItemGroup>
@@ -62,9 +61,13 @@
 
   <ItemGroup>
     <Compile Remove="Controllers\ElectronicBillSystem\MeterRead\NewFolder\**" />
+    <Compile Remove="wwwroot\uploads\lab\**" />
     <Content Remove="Controllers\ElectronicBillSystem\MeterRead\NewFolder\**" />
+    <Content Remove="wwwroot\uploads\lab\**" />
     <EmbeddedResource Remove="Controllers\ElectronicBillSystem\MeterRead\NewFolder\**" />
+    <EmbeddedResource Remove="wwwroot\uploads\lab\**" />
     <None Remove="Controllers\ElectronicBillSystem\MeterRead\NewFolder\**" />
+    <None Remove="wwwroot\uploads\lab\**" />
   </ItemGroup>
 
 </Project>
