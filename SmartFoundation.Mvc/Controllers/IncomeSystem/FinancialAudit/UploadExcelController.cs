@@ -324,6 +324,10 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 new FieldConfig { Name="p09", Label="تاريخ المسير", Type="date", ColCss="4", Required = true },
                 new FieldConfig { Name="p10", Label="الوصف", Type="textarea", ColCss="4", Required = true },
 
+                new FieldConfig { Name="p11", Label="IdaraId_FK", Type="hidden", ColCss="4", Required = true   , Value = IdaraId },
+                new FieldConfig { Name="p12", Label="entryData", Type="hidden", ColCss="4", Required = true    , Value = usersId },
+                new FieldConfig { Name="p13", Label="hostName", Type="hidden", ColCss="4", Required = true , Value = HostName},
+
 
                 new FieldConfig { Name="p01", Label="العمود المخصص للهوية الوطنية", Type="select", ColCss="3",Select2=true, Options=options, Required = true },
                 new FieldConfig { Name="p03", Label="العمود المخصص للرقم العام",   Type="select", ColCss="3",Select2=true, Options=options, Required = true },
@@ -509,7 +513,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ImportExcelForBuildingPaymentProcess(
             string? p01, string? p02, string? p03, string? p04, string? p05, 
-            string? p06, string? p07, string? p08, string? p09, string? p10)
+            string? p06, string? p07, string? p08, string? p09, string? p10, string? p11, string? p12, string? p13)
         {
             try
             {
@@ -532,6 +536,9 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 p08 = (p08 ?? "").Trim();
                 p09 = (p09 ?? "").Trim();
                 p10 = (p10 ?? "").Trim();
+                p11 = (p11 ?? "").Trim();
+                p12 = (p12 ?? "").Trim();
+                p13 = (p13 ?? "").Trim();
 
                 // Validate p05 (BillChargeTypeID)
                 if (string.IsNullOrWhiteSpace(p05))
@@ -559,6 +566,8 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         return RespondError("تاريخ المسير غير صحيح.");
                 }
 
+                if (string.IsNullOrWhiteSpace(p10))
+                    return RespondError("الرجاء كتابة الوصف.");
                 // p10 (Notes) is optional
 
                 // Validate column selections
@@ -656,9 +665,11 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 cmd.Parameters.AddWithValue("@DeductListDate", string.IsNullOrWhiteSpace(p09) ? (object)DBNull.Value : p09); // p09
                 cmd.Parameters.AddWithValue("@Notes", string.IsNullOrWhiteSpace(p10) ? (object)DBNull.Value : p10); // p10
 
-                cmd.Parameters.AddWithValue("@IdaraId_FK", string.IsNullOrWhiteSpace(IdaraId) ? (object)DBNull.Value : IdaraId); // p10
-                cmd.Parameters.AddWithValue("@entryData", string.IsNullOrWhiteSpace(usersId) ? (object)DBNull.Value : usersId); // p10
-                cmd.Parameters.AddWithValue("@hostName", string.IsNullOrWhiteSpace(HostName) ? (object)DBNull.Value : HostName); // p10
+                cmd.Parameters.AddWithValue("@IdaraId_FK", string.IsNullOrWhiteSpace(p11) ? (object)DBNull.Value : p11); // p11
+                cmd.Parameters.AddWithValue("@entryData", string.IsNullOrWhiteSpace(p12) ? (object)DBNull.Value : p12); // p12
+                cmd.Parameters.AddWithValue("@hostName", string.IsNullOrWhiteSpace(p13) ? (object)DBNull.Value : p13); // p13
+
+               
 
                 cmd.Parameters.AddWithValue("@FileHash", fileHash);
                 cmd.Parameters.AddWithValue("@OriginalFileName", originalName);
@@ -699,6 +710,9 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         deductListNo = p08,
                         deductListDate = p09,
                         notes = p10,
+                        idaraId = p11,
+                        entryData = p12,
+                        hostName = p13,
                         fileHash,
                         refresh = true
                     });
