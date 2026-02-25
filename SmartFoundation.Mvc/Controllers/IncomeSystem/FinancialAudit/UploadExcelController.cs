@@ -294,7 +294,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 new FieldConfig { Name="__RequestVerificationToken", Type="hidden", Value=tokens.RequestToken ?? "" },
 
 
-                new FieldConfig { Name="p01", Label="نوع المسير", Type="select", ColCss="3", Options=BillChargeTypeOptions, Required = true },
+                new FieldConfig { Name="p05", Label="نوع المسير", Type="select", ColCss="3", Options=BillChargeTypeOptions, Required = true },
 
 
                 new FieldConfig { Name="p01", Label="العمود المخصص للهوية الوطنية", Type="select", ColCss="3", Options=options, Required = true },
@@ -478,7 +478,8 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
         // ===============================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ImportExcelForBuildingPaymentProcess(string? p01, string? p02, string? p03, string? p04)
+        [HttpPost]
+        public async Task<IActionResult> ImportExcelForBuildingPaymentProcess(string? p01, string? p02, string? p03, string? p04, string? p05)
         {
             try
             {
@@ -494,6 +495,13 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 p02 = (p02 ?? "").Trim();
                 p03 = (p03 ?? "").Trim();
                 p04 = (p04 ?? "").Trim();
+                p05 = (p05 ?? "").Trim();
+
+                if (string.IsNullOrWhiteSpace(p05))
+                    return RespondError("الرجاء اختيار نوع المسير.");
+
+                if (!int.TryParse(p05, out var billChargeTypeId) || billChargeTypeId <= 0)
+                    return RespondError("قيمة نوع المسير غير صحيحة.");
 
                 if (string.IsNullOrWhiteSpace(p01) || string.IsNullOrWhiteSpace(p02) || string.IsNullOrWhiteSpace(p03) || string.IsNullOrWhiteSpace(p04))
                     return RespondError("الرجاء اختيار جميع الأعمدة المطلوبة.");
@@ -577,6 +585,9 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 cmd.Parameters.AddWithValue("@UnitNumbers", p02);
                 cmd.Parameters.AddWithValue("@GeneralNumbers", p03);
                 cmd.Parameters.AddWithValue("@Amounts", p04);
+
+                cmd.Parameters.Add("@BillChargeTypeID", SqlDbType.Int).Value = billChargeTypeId; // ✅ p05 هنا
+
                 cmd.Parameters.AddWithValue("@FileHash", fileHash);
                 cmd.Parameters.AddWithValue("@OriginalFileName", originalName);
 
@@ -610,6 +621,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         sentRows,
                         insertedRows,
                         selectedColumns = new[] { p01, p02, p03, p04 },
+                        billChargeTypeId,
                         fileHash,
                         refresh = true
                     });
