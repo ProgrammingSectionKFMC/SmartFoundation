@@ -6,3 +6,83 @@
 
 @await Component.InvokeAsync("SmartRenderer", new { model = Model })
 
+<script>
+    (function() {
+
+        const url = '@Url.Action("GetMonthsByYear", "IncomeSystem")';
+
+        function getControls() {
+            const $form = $('#ImportExcelForBuildingPaymentProcessForm');
+            const $year = $form.find('[name="p07"]');
+            const $month = $form.find('[name="p06"]');
+            return { $form, $year, $month };
+        }
+
+        function fillMonths($month, items) {
+            const current = ($month.val() || '').toString();
+
+            $month.empty();
+            $month.append(new Option('اختر الشهر', '', true, false));
+
+            (items || []).forEach(x => {
+                // يدعم سواء camelCase أو PascalCase
+                const text = x.text ?? x.Text;
+                const value = x.value ?? x.Value;
+                $month.append(new Option(text, value, false, false));
+            });
+
+            // رجّع الشهر السابق إذا موجود
+            if (current && $month.find('option[value="' + current + '"]').length) {
+                $month.val(current);
+            } else {
+                $month.val('');
+            }
+
+            // تحديث select2
+            if ($month.hasClass('select2-hidden-accessible')) {
+                $month.trigger('change');
+            } else {
+                $month.trigger('change');
+            }
+        }
+
+        async function refreshMonths() {
+            const { $year, $month } = getControls();
+            if (!$year.length || !$month.length) return;
+
+            const yearVal = parseInt($year.val(), 10);
+            if (!yearVal) { fillMonths($month, []); return; }
+
+            try {
+                const res = await fetch(url + '?year=' + encodeURIComponent(yearVal), {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+
+                if (!res.ok) {
+                    console.error('GetMonthsByYear failed', res.status);
+                    fillMonths($month, []);
+                    return;
+                }
+
+                const data = await res.json();
+                fillMonths($month, Array.isArray(data) ? data : []);
+            } catch (e) {
+                console.error(e);
+                const { $month } = getControls();
+                if ($month.length) fillMonths($month, []);
+            }
+        }
+
+        // ✅ Delegation: يشتغل حتى لو الـselect اتولد بعدين
+        $(document).on('change', '#ImportExcelForBuildingPaymentProcessForm [name="p07"]', refreshMonths);
+
+        // ✅ عند فتح أي مودال (Bootstrap): لو نموذج المعالجة موجود حدث الشهور
+        $(document).on('shown.bs.modal', function() {
+            const { $year, $month } = getControls();
+            if ($year.length && $month.length) {
+                refreshMonths();
+            }
+        });
+
+    })();
+</script>

@@ -189,7 +189,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 };
 
             List<OptionItem> yearOptions = new();
-            for (int year = 2017; year <= 2037; year++)
+            for (int year = 2017; year <= Convert.ToInt32(DateTime.Now.ToString("yyyy")); year++)
             {
                 yearOptions.Add(new OptionItem { Value = year.ToString(), Text = year.ToString() });
             }
@@ -318,8 +318,9 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
 
                 new FieldConfig { Name="p05", Label="نوع المسير", Type="select", ColCss="4", Options=BillChargeTypeOptions, Required = true },
-                new FieldConfig { Name="p06", Label="شهر الحسم", Type="select", ColCss="4", Options=monthOptions, Required = true,Select2=true, Placeholder = "اختر الشهر" },
                 new FieldConfig { Name="p07", Label="سنة الحسم", Type="select", ColCss="4", Options=yearOptions, Required = true,Select2=true, Placeholder = "اختر السنة",Value = DateTime.Now.Year.ToString()},
+
+                new FieldConfig { Name="p06", Label="شهر الحسم", Type="select", ColCss="4", Options=monthOptions, Required = true,Select2=true, Placeholder = "اختر الشهر" },
                 new FieldConfig { Name="p08", Label="رقم المسير", Type="text", ColCss="4", Required = true },
                 new FieldConfig { Name="p09", Label="تاريخ المسير", Type="date", ColCss="4", Required = true },
                 new FieldConfig { Name="p10", Label="الوصف", Type="textarea", ColCss="4", Required = true },
@@ -861,6 +862,36 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             if (extLower == ".xls" && !LooksLikeXls(filePath))
                 return "الملف ليس XLS صالح (قد يكون ملف مختلف تم تغيير امتداده).";
             return null;
+        }
+
+        private static List<OptionItem> BuildMonthOptions(int selectedYear)
+        {
+            var now = DateTime.Now;
+            int maxMonth = (selectedYear < now.Year) ? 12
+                         : (selectedYear == now.Year) ? now.Month
+                         : 0;
+
+            var months = new (int Val, string Text)[]
+            {
+        (1,"يناير"), (2,"فبراير"), (3,"مارس"), (4,"أبريل"),
+        (5,"مايو"), (6,"يونيو"), (7,"يوليو"), (8,"أغسطس"),
+        (9,"سبتمبر"), (10,"أكتوبر"), (11,"نوفمبر"), (12,"ديسمبر")
+            };
+
+            return months
+                .Where(m => m.Val <= maxMonth)
+                .Select(m => new OptionItem { Value = m.Val.ToString(), Text = m.Text })
+                .ToList();
+        }
+
+        [HttpGet]
+        public IActionResult GetMonthsByYear(int year)
+        {
+            // حماية بسيطة: لا تسمح بسنة أكبر من الحالية
+            if (year > DateTime.Now.Year)
+                return Ok(new List<OptionItem>());
+
+            return Ok(BuildMonthOptions(year));
         }
 
         // تنظيف الملفات القديمة من مجلد uploads/excel
