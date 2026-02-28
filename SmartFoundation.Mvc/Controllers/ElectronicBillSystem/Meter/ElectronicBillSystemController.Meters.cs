@@ -145,6 +145,9 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             ["meterDescription"] = "الوصف",
                             ["meterStartDate"] = "تاريخ البدء",
                             ["meterEndDate"] = "تاريخ الانتهاء",
+                            ["meterServiceTypeName_A"] = "نوع الخدمة للعداد",
+                            ["meterTypeName_A"] = "نوع العداد",
+                            ["meterServicePrice"] = "سعر الخدمة",
                             ["IdaraId_FK"] = "الإدارة"
                         };
 
@@ -165,11 +168,16 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                 colType = "number";
 
                             // Hide foreign key columns
-                            bool isMeterTypeFK = c.ColumnName.Equals("meterTypeID_FK", StringComparison.OrdinalIgnoreCase);
-                            bool isIdaraFK = c.ColumnName.Equals("IdaraId_FK", StringComparison.OrdinalIgnoreCase);
                             
+                            bool isHidden = c.ColumnName.Equals("IdaraId_FK", StringComparison.OrdinalIgnoreCase)
+                                          || c.ColumnName.Equals("meterTypeID_FK", StringComparison.OrdinalIgnoreCase)
+                                          || c.ColumnName.Equals("meterServiceTypeID", StringComparison.OrdinalIgnoreCase)
+                                          || c.ColumnName.Equals("meterActive", StringComparison.OrdinalIgnoreCase)
+                                          || c.ColumnName.Equals("meterEndDate", StringComparison.OrdinalIgnoreCase)
+                                          || c.ColumnName.Equals("meterServicePriceID", StringComparison.OrdinalIgnoreCase);
+
                             // Add filter for meter type if needed
-                         
+
 
                             dynamicColumns.Add(new TableColumn
                             {
@@ -177,7 +185,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                 Label = headerMap.TryGetValue(c.ColumnName, out var label) ? label : c.ColumnName,
                                 Type = colType,
                                 Sortable = true,
-                                Visible = !(isMeterTypeFK || isIdaraFK),  // Hide FK columns only
+                                Visible = !(isHidden),  // Hide FK columns only
                               
                             });
                         }
@@ -194,6 +202,16 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             {
                                 var val = r[c];
                                 dict[c.ColumnName] = val == DBNull.Value ? null : val;
+                            }
+
+                            object? GetAsString(string key)
+                            {
+                                if (dict.TryGetValue(key, out var v) && v != null)
+                                {
+                                    // ✅ تحويل إلى string صريح (حتى لو 0)
+                                    return v.ToString();
+                                }
+                                return null;
                             }
 
                             // p01..p05
@@ -216,8 +234,8 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             dict["p16"] = Get("meterTypeEndDate");
                             dict["p17"] = Get("meterServicePrice");
                             dict["p18"] = Get("MeterNote");
-                            dict["p24"] = Get("firstReadValue");
-                           
+                            dict["p24"] = GetAsString("firstReadValue") ?? "0";  // ✅ تأكد من ظهور 0
+
 
                             rowsList.Add(dict);
                         }
@@ -236,15 +254,15 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                         // عناوين الأعمدة بالعربي
                         var headerMapmeterType = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                         {
-                            ["meterID"] = "رقم التسلسلي",
-                            ["meterTypeID_FK"] = "نوع العداد",
-                            ["meterNo"] = "رقم العداد",
-                            ["meterName_A"] = "اسم العداد (عربي)",
-                            ["meterName_E"] = "اسم العداد (إنجليزي)",
-                            ["meterDescription"] = "الوصف",
-                            ["meterStartDate"] = "تاريخ البدء",
-                            ["meterEndDate"] = "تاريخ الانتهاء",
-                            ["IdaraId_FK"] = "الإدارة"
+                            ["meterTypeID"] = "رقم التسلسلي",
+                            ["meterServiceTypeName_A"] = "نوع خدمة العداد",
+                            ["meterServicePrice"] = "سعر خدمة العداد",
+                            ["meterTypeName_A"] = "نوع العداد (عربي)",
+                            ["meterTypeName_E"] = "نوع العداد (إنجليزي)",
+                            ["meterTypeDescription"] = "الوصف",
+                            ["meterTypeStartDate"] = "تاريخ البدء",
+                            ["meterMaxRead"] = "اقصى قراءة لنوع العداد",
+                            ["meterTypeConversionFactor"] = "معامل التحويل"
                         };
 
 
@@ -264,8 +282,15 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                 colType = "number";
 
                             // Hide foreign key columns
-                            bool isMeterTypeFK = c.ColumnName.Equals("meterTypeID_FK", StringComparison.OrdinalIgnoreCase);
-                            bool isIdaraFK = c.ColumnName.Equals("IdaraId_FK", StringComparison.OrdinalIgnoreCase);
+                            
+                            bool isHidden = c.ColumnName.Equals("IdaraId_FK", StringComparison.OrdinalIgnoreCase)
+                                           || c.ColumnName.Equals("meterTypeID_FK", StringComparison.OrdinalIgnoreCase)
+                                           || c.ColumnName.Equals("meterServiceTypeID_FK", StringComparison.OrdinalIgnoreCase)
+                                           || c.ColumnName.Equals("meterTypeEndDate", StringComparison.OrdinalIgnoreCase)
+                                           || c.ColumnName.Equals("meterTypeActive", StringComparison.OrdinalIgnoreCase)
+                                           || c.ColumnName.Equals("entryDate", StringComparison.OrdinalIgnoreCase)
+                                           || c.ColumnName.Equals("entryData", StringComparison.OrdinalIgnoreCase)
+                                           || c.ColumnName.Equals("hostName", StringComparison.OrdinalIgnoreCase);
 
                             // Add filter for meter type if needed
 
@@ -276,7 +301,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                 Label = headerMapmeterType.TryGetValue(c.ColumnName, out var label) ? label : c.ColumnName,
                                 Type = colType,
                                 Sortable = true,
-                                Visible = !(isMeterTypeFK || isIdaraFK),  // Hide FK columns only
+                                Visible = !(isHidden),  // Hide FK columns only
 
                             });
                         }
@@ -361,7 +386,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
                             // Hide foreign key columns
                             bool isHidden = c.ColumnName.Equals("meterID_FK", StringComparison.OrdinalIgnoreCase)
-                                            //|| c.ColumnName.Equals("buildingDetailsID_FK", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("buildingDetailsID_FK", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("meterForBuildingEndDate", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("meterForBuildingActive", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("buildingUtilityTypeName_A", StringComparison.OrdinalIgnoreCase)
