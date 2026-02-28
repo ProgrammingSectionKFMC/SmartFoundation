@@ -5411,3 +5411,35 @@ window.sfMoneySarOnInput = function (el) {
     intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     el.value = decPart != null ? `${intPart}.${decPart}` : intPart;
 };
+
+
+
+    window.sfToggle = function(el, forcedValue) {
+        const d = el?.dataset || {};
+        const value = (forcedValue != null)
+            ? String(forcedValue).trim()
+            : String(el?.value ?? "").trim();
+
+        const group = d.sfToggleGroup;
+        const mapStr = d.sfToggleMap || "";
+        if (!group || !mapStr) return;
+
+        const root = el.closest('form') || document;
+
+        // اخفاء كل العناصر التابعة للمجموعة
+        root.querySelectorAll(`[data-sf-toggle-group="${group}"]`)
+            .forEach(x => x.closest('.form-group')?.style.setProperty('display', 'none'));
+
+        if (!value) return;
+
+        // استخراج القائمة المطلوبة من الخريطة: "1:A,B|2:C"
+        const rules = mapStr.split('|').map(s => s.trim()).filter(Boolean);
+        const rule = rules.find(r => r.startsWith(value + ':'));
+        if (!rule) return;
+
+        const names = rule.slice((value + ':').length).split(',').map(s => s.trim()).filter(Boolean);
+        names.forEach(n => {
+            const target = root.querySelector(`[name="${n}"]`);
+            if (target) target.closest('.form-group')?.style.setProperty('display', 'block');
+        });
+    };

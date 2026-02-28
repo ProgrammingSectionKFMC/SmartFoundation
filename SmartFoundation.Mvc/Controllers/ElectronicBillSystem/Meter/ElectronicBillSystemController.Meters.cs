@@ -468,7 +468,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     Type = "select", 
                     ColCss = "6", 
                     Required = true, 
-                    Options = meterTypeOptions,  // Load from MeterServiceType table if exists
+                    Options = MeterServiceTypeOptions,  // Load from MeterServiceType table if exists
                     
                     Icon = "fa-solid fa-server",
                     HelpText = "اختر نوع خدمة العداد (كهرباء، ماء، إلخ)"
@@ -844,7 +844,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     Name = "p02",
                     Label = "نوع العداد",
                     Type = "select",
-                    Options = new List<OptionItem> {}, //       Initial empty state
+                    Options = new List<OptionItem> { }, //       Initial empty state
                     ColCss = "6",
                     Required = true,
                     DependsOn = "p40",
@@ -1252,7 +1252,8 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     ColCss = "4",
                     Required = true,
                     DependsOn = "p40",
-                    DependsUrl = "/crud/DDLFiltered?FK=meterServiceTypeID_FK&textcol=meterTypeName_A&ValueCol=meterTypeID&PageName=Meters&TableIndex=2"
+                    DependsUrl = "/crud/DDLFiltered?FK=meterServiceTypeID_FK&textcol=meterTypeName_A&ValueCol=meterTypeID&PageName=Meters&TableIndex=2",
+                    OnChangeJs = "sfToggle(this);"
                 },
 
                   new FieldConfig
@@ -1260,7 +1261,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     Name = "p04",
                     Label = "رقم العداد",
                     Type = "select",
-                    Options = new List<OptionItem> {}, //       Initial empty state
+                    Options = new List<OptionItem> {new OptionItem { Value = "-1", Text = "اختر نوع العداد أولاً" } }, //       Initial empty state
                     ColCss = "4",
                     Required = true,
                     Select2 = true,
