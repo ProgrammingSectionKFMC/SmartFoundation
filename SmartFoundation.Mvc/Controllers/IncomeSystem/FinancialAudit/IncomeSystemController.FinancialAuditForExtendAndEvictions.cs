@@ -56,6 +56,27 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             //  تقسيم الداتا سيت للجدول الأول + جداول أخرى
             SplitDataSet(ds);
 
+            List<OptionItem> ExtendTypeOptions = new();
+
+
+            // ---------------------- DDLValues ----------------------
+
+            JsonResult? result;
+            string json;
+
+            //// ---------------------- rankOptions ----------------------
+            result = await _CrudController.GetDDLValues(
+                "ExtendReasonTypeName_A", "ExtendReasonTypeID", "9", nameof(FinancialAuditForExtendAndEvictions), usersId, IdaraId, HostName
+           ) as JsonResult;
+
+
+            json = JsonSerializer.Serialize(result!.Value);
+
+            ExtendTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+
+
+            //// ---------------------- END DDL ----------------------
+
 
             decimal AllAmount = 0m;
             decimal RentAmount = 0m;
@@ -69,6 +90,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             string ActionIDvalue = "";
             string LastActionTypeIDvalue = "";
             string LastActionDatevalue = "";
+            string LastActionExtendReasonTypeIDvalue = "";
 
 
             decimal insuranceRentAmount = 0m;
@@ -101,6 +123,9 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
                 if (dt1.Columns.Contains("LastActionDate") && rows["LastActionDate"] != DBNull.Value)
                     LastActionDatevalue = rows["LastActionDate"].ToString();
+
+                if (dt1.Columns.Contains("LastActionExtendReasonTypeID") && rows["LastActionExtendReasonTypeID"] != DBNull.Value)
+                    LastActionExtendReasonTypeIDvalue = rows["LastActionExtendReasonTypeID"].ToString();
 
 
 
@@ -215,8 +240,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
             // ---------------------- DDLValues ----------------------
 
-            JsonResult? result;
-            string json;
+            
 
           
 
@@ -419,6 +443,8 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                             bool isActionID = c.ColumnName.Equals("ActionID", StringComparison.OrdinalIgnoreCase);
 
 
+                           
+
                             dynamicColumns.Add(new TableColumn
                             {
                                 Field = c.ColumnName,
@@ -426,7 +452,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                                 Type = colType,
                                 Sortable = true
                                  ,
-                                Visible = !(isfirstName_A || isfirstName_E || issecondName_A || issecondName_E || isthirdName_A || isthirdName_E || islastName_A || islastName_E || isrankID_FK || ismilitaryUnitID_FK || ismartialStatusID_FK || isnationalityID_FK || isgenderID_FK || isFullName_E || isbirthdate || isnote || isIdaraID || isIdaraName || isbuildingDetailsID || isLastActionID || isLastActionTypeID || isActionID)
+                                Visible = !(isfirstName_A || isfirstName_E || issecondName_A || issecondName_E || isthirdName_A || isthirdName_E || islastName_A || islastName_E || isrankID_FK || ismilitaryUnitID_FK || ismartialStatusID_FK || isnationalityID_FK || isgenderID_FK || isFullName_E || isbirthdate || isnote || isIdaraID || isIdaraName || isbuildingDetailsID || isLastActionID || isLastActionTypeID || isActionID )
                             });
                         }
 
@@ -479,6 +505,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                             dict["p27"] = Get("note");
                             dict["p28"] = Get("buildingDetailsID");
                             dict["p29"] = Get("buildingDetailsNo");
+                            dict["p40"] = Get("LastActionExtendReasonTypeID");
                             dict["AllAmountresidual"] = AllAmount.ToString("0.00");
                             dict["AllAmountIsNegative"] = AllAmount < 0 ? "true" : "false";
                             dict["AllAmountIsPositve"] = AllAmount > 0 ? "true" : "false";
@@ -502,16 +529,21 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         {
                             
 
-                            ["TotalRentBillsAmount"] = "اجمالي مطالبات الايجار",
-                            ["TotalRentBillsPaid"] = "اجمالي المسدد من الايجار",
-                            ["RentBillsAmountresidual"] = "المتبقي من الايجار",
-                            ["TotalServiceBillsAmount"] = "اجمالي مطالبات فواتير الخدمات",
-                            ["TotalServiceBillsPaid"] = "اجمالي المسدد من فواتير الخدمات",
-                            ["ServiceBillsAmountresidual"] = "المتبقي من فواتير الخدمات",
+                            ["TotalRentBillsAmount"] = "اجمالي الايجارات",
+                            ["TotalRentBillsPaid"] = "المسدد من الايجار",
+                            ["RentBillsAmountresidual"] = "المتبقي",
+                            ["TotalElectrecityBillsAmount"] = "اجمالي فواتير الكهرباء",
+                            ["TotalElectrecityBillsPaid"] = "المسدد من كهرباء",
+                            ["ElectrecityBillsAmountresidual"] = "المتبقي",
                             ["AllAmountresidual"] = "اجمالي المطالبات",
-                            ["RentBillsStatus"] = "حالة مطالبات الايجار",
+                            ["RentBillsStatus"] = "حالة الايجار",
                             ["buildingDetailsNo"] = "رقم المنزل",
-                            ["ServiceBillStatus"] = "حالة مطالبات فواتير الخدمات"
+                            ["ElectrecityBillStatus"] = "حالة الكهرباء"
+
+
+
+
+
                         };
 
                         // الأعمدة
@@ -530,9 +562,11 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
                             bool isOrder_ = c.ColumnName.Equals("Order_", StringComparison.OrdinalIgnoreCase);
                             bool isRentBillsStatusID = c.ColumnName.Equals("RentBillsStatusID", StringComparison.OrdinalIgnoreCase);
-                            bool isServiceBillStatusID = c.ColumnName.Equals("ServiceBillStatusID", StringComparison.OrdinalIgnoreCase);
+                            bool isElectrecityBillStatusID = c.ColumnName.Equals("ElectrecityBillStatusID", StringComparison.OrdinalIgnoreCase);
                             bool isIdaraID = c.ColumnName.Equals("IdaraID", StringComparison.OrdinalIgnoreCase);
-
+                            bool isElectrecityBillStatus = c.ColumnName.Equals("ElectrecityBillStatus", StringComparison.OrdinalIgnoreCase);
+                            bool isRentBillsStatus = c.ColumnName.Equals("RentBillsStatus", StringComparison.OrdinalIgnoreCase);
+                           
 
 
                             dynamicColumns_dt3.Add(new TableColumn
@@ -542,7 +576,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                                 Type = colType,
                                 Sortable = true
                                  ,
-                                Visible = !( isresidentInfoID  || isOrder_|| isRentBillsStatusID || isServiceBillStatusID || isIdaraID)
+                                Visible = !( isresidentInfoID  || isOrder_|| isRentBillsStatusID || isElectrecityBillStatusID || isIdaraID || isRentBillsStatus || isElectrecityBillStatus)
                             });
                         }
 
@@ -676,42 +710,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             };
 
 
-            var insuranceFields = new List<FieldConfig>
-            {
-
-                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "UpdateMeterRead" },
-                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
-                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
-                new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
-                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
-                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
-                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
-                // selection context
-                new FieldConfig { Name = rowIdField, Type = "hidden" },
-                // hidden p01 actually posted to SP
-                 new FieldConfig { Name = "p01", Label = "Order_", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true,Value=residentInfoIDvalue },
-                new FieldConfig { Name = "p30", Label = "مطالبات الايجار", Type = "text", ColCss = "3", Readonly = true,Value=RentAmount.ToString() },
-                new FieldConfig { Name = "p31", Label = "مطالبات الفواتير", Type = "text", ColCss = "3", Readonly = true,Value=ServiceAmount.ToString() },
-                new FieldConfig { Name = "p32", Label = "مبلغ التامين الاحترازي", Type = "text", ColCss = "3", Readonly = true,Value=insuranceRentAmount.ToString() },
-                new FieldConfig { Name = "p33", Label = "مبلغ التامين المطالب به", Type = "text", ColCss = "3", Readonly = true,Value=AllinsuranceRentAmount.ToString() },
-                new FieldConfig { Name = "p23", Label = "رقم المنزل", Type = "text", ColCss = "3", Readonly = true,Value=buildingDetailsNovalue },
-                new FieldConfig { Name = "p22", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsIDvalue },
-                new FieldConfig { Name = "p34", Label = "وسيلة الدفع", Type = "select", ColCss = "3", Required = true, Options= insuranceOptions },
-
-                 new FieldConfig { Name = "p11", Label = "ملاحظات", Type = "text", ColCss = "6",Required = true,HelpText="يجب ان لاتتجاوز 1000 حرف*",MaxLength=1050 },
-
-                new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p19", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true },
-
-
-            };
+         
 
             var ApproveExtendFields = new List<FieldConfig>
             {
@@ -733,7 +732,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 new FieldConfig { Name = "p03", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsIDvalue },
                 new FieldConfig { Name = "p11", Label = "ملاحظات", Type = "textarea", ColCss = "6",Required = true,HelpText="يجب ان لاتتجاوز 4000 حرف*",MaxLength=3900 },
                 new FieldConfig { Name = "p30", Label = "ملاحظات", Type = "text", ColCss = "6",Value = LastActionDatevalue },
-
+                new FieldConfig { Name = "p40", Label = "سبب الامهال", Type = "hidden", ColCss = "4",Required = true,HelpText="المتقاعد والمفصول مطلوب تأمين احترازي يرجى الاختيار بدقة*",Options=ExtendTypeOptions,Value=LastActionExtendReasonTypeIDvalue},
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true,Value = LastActionTypeIDvalue },
                 new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p19", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true,Value = buildingDetailsNovalue },
@@ -745,7 +744,42 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             };
 
 
+            //var insuranceFields = new List<FieldConfig>
+            //{
 
+            //    new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+            //    new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "UpdateMeterRead" },
+            //    new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
+            //    new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
+            //    new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
+            //    new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+            //    new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+            //    new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+            //    new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+            //    // selection context
+            //    new FieldConfig { Name = rowIdField, Type = "hidden" },
+            //    // hidden p01 actually posted to SP
+            //     new FieldConfig { Name = "p01", Label = "Order_", Type = "hidden", ColCss = "3", Readonly = true },
+            //    new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true,Value=residentInfoIDvalue },
+            //    new FieldConfig { Name = "p30", Label = "مطالبات الايجار", Type = "text", ColCss = "3", Readonly = true,Value=RentAmount.ToString() },
+            //    new FieldConfig { Name = "p31", Label = "مطالبات الفواتير", Type = "text", ColCss = "3", Readonly = true,Value=ServiceAmount.ToString() },
+            //    new FieldConfig { Name = "p32", Label = "مبلغ التامين الاحترازي", Type = "text", ColCss = "3", Readonly = true,Value=insuranceRentAmount.ToString() },
+            //    new FieldConfig { Name = "p33", Label = "مبلغ التامين المطالب به", Type = "text", ColCss = "3", Readonly = true,Value=AllinsuranceRentAmount.ToString() },
+            //    new FieldConfig { Name = "p23", Label = "رقم المنزل", Type = "text", ColCss = "3", Readonly = true,Value=buildingDetailsNovalue },
+            //    new FieldConfig { Name = "p22", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsIDvalue },
+            //    new FieldConfig { Name = "p34", Label = "وسيلة الدفع", Type = "select", ColCss = "3", Required = true, Options= insuranceOptions },
+
+            //     new FieldConfig { Name = "p11", Label = "ملاحظات", Type = "text", ColCss = "6",Required = true,HelpText="يجب ان لاتتجاوز 1000 حرف*",MaxLength=1050 },
+
+            //    new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
+            //    new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
+            //    new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
+            //    new FieldConfig { Name = "p19", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true },
+            //    new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
+            //    new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true },
+
+
+            //};
 
 
             var dsModel = new SmartTableDsModel
@@ -864,35 +898,35 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
 
 
-                    Add = new TableAction
-                    {
-                        Label = "التأمين الاحترازي",
-                        Icon = "fa-solid fa-money-bill-1-wave",
-                        Color = "success",
-                        OpenModal = true,
-                        ModalTitle = "<i class='fa-solid fa-money-bill-1-wave text-emerald-600 text-xl mr-2'></i> تحصيل التأمين الاحترازي",
-                        ModalMessage = "في حال وجود مطالبات على المستفيد لم يتم تسويتها سيتم اضافتها للتأمين الاحترازي وفي حال وجود مبالغ زائدة للمستفيد سيتم حسمها من التأمين الاحترازي",
-                        ModalMessageIcon = "fa-solid fa-circle-info",
-                        ModalMessageClass = "mb-4 rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-800",
-                        Show = true,
-                        OpenForm = new FormConfig
-                        {
-                            FormId = "BuildingTypeInsertForm",
-                            Title = "التأمين الاحترازي",
-                            Method = "post",
-                            ActionUrl = "/crud/insert",
-                            Fields = insuranceFields,
-                            Buttons = new List<FormButtonConfig>
-                            {
-                                new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "success" },
-                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
-                            }
-                        },
-                        RequireSelection = true,
-                        MinSelection = 1,
-                        MaxSelection = 1
+                    //Add = new TableAction
+                    //{
+                    //    Label = "التأمين الاحترازي",
+                    //    Icon = "fa-solid fa-money-bill-1-wave",
+                    //    Color = "success",
+                    //    OpenModal = true,
+                    //    ModalTitle = "<i class='fa-solid fa-money-bill-1-wave text-emerald-600 text-xl mr-2'></i> تحصيل التأمين الاحترازي",
+                    //    ModalMessage = "في حال وجود مطالبات على المستفيد لم يتم تسويتها سيتم اضافتها للتأمين الاحترازي وفي حال وجود مبالغ زائدة للمستفيد سيتم حسمها من التأمين الاحترازي",
+                    //    ModalMessageIcon = "fa-solid fa-circle-info",
+                    //    ModalMessageClass = "mb-4 rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-800",
+                    //    Show = true,
+                    //    OpenForm = new FormConfig
+                    //    {
+                    //        FormId = "BuildingTypeInsertForm",
+                    //        Title = "التأمين الاحترازي",
+                    //        Method = "post",
+                    //        ActionUrl = "/crud/insert",
+                    //        Fields = insuranceFields,
+                    //        Buttons = new List<FormButtonConfig>
+                    //        {
+                    //            new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "success" },
+                    //            new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
+                    //        }
+                    //    },
+                    //    RequireSelection = true,
+                    //    MinSelection = 1,
+                    //    MaxSelection = 1
 
-                    },
+                    //},
 
 
                     
@@ -973,28 +1007,28 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                          new TableStyleRule
                         {
                             Target = "row",
-                            Field = "RentBillsStatusID",
+                            Field = "BillsStatusID",
                             Op = "eq",
                             Value = "0",
                             Priority = 1,
 
                             PillEnabled = true,
-                            PillField = "RentBillsStatus",
-                            PillTextField = "RentBillsStatus",
+                            PillField = "BillsStatus",
+                            PillTextField = "BillsStatus",
                             PillCssClass = "pill pill-red",
                             PillMode = "replace"
                         },
                         new TableStyleRule
                         {
                             Target = "row",
-                            Field = "RentBillsStatusID",
+                            Field = "BillsStatusID",
                             Op = "eq",
                             Value = "1",
                             Priority = 1,
 
                             PillEnabled = true,
-                            PillField = "RentBillsStatus",
-                            PillTextField = "RentBillsStatus",
+                            PillField = "BillsStatus",
+                            PillTextField = "BillsStatus",
                             PillCssClass = "pill pill-yellow",
                             PillMode = "replace"
                         },
@@ -1003,14 +1037,14 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         {
 
                             Target = "row",
-                            Field = "RentBillsStatusID",
+                            Field = "BillsStatusID",
                             Op = "eq",
                             Value = "2",
                             Priority = 1,
 
                             PillEnabled = true,
-                            PillField = "RentBillsStatus",
-                            PillTextField = "RentBillsStatus",
+                            PillField = "BillsStatus",
+                            PillTextField = "BillsStatus",
                             PillCssClass = "pill pill-green",
                             PillMode = "replace"
                         },
@@ -1019,142 +1053,44 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                           new TableStyleRule
                         {
                             Target = "row",
-                            Field = "RentBillsStatusID",
+                            Field = "BillsStatusID",
                             Op = "eq",
                             Value = "0",
                             Priority = 1,
 
                             PillEnabled = true,
-                            PillField = "RentBillsAmountresidual",
-                            PillTextField = "RentBillsAmountresidual",
+                            PillField = "BillsAmountresidual",
+                            PillTextField = "BillsAmountresidual",
                             PillCssClass = "pill pill-red",
                             PillMode = "replace"
                         },
-                        new TableStyleRule
+
+                           new TableStyleRule
                         {
                             Target = "row",
-                            Field = "RentBillsStatusID",
+                            Field = "BillsStatusID",
                             Op = "eq",
                             Value = "1",
                             Priority = 1,
 
                             PillEnabled = true,
-                            PillField = "RentBillsAmountresidual",
-                            PillTextField = "RentBillsAmountresidual",
+                            PillField = "BillsAmountresidual",
+                            PillTextField = "BillsAmountresidual",
                             PillCssClass = "pill pill-yellow",
                             PillMode = "replace"
                         },
 
-                        new TableStyleRule
+                            new TableStyleRule
                         {
-
                             Target = "row",
-                            Field = "RentBillsStatusID",
+                            Field = "BillsStatusID",
                             Op = "eq",
                             Value = "2",
                             Priority = 1,
 
                             PillEnabled = true,
-                            PillField = "RentBillsStatus",
-                            PillTextField = "RentBillsAmountresidual",
-                            PillCssClass = "pill pill-green",
-                            PillMode = "replace"
-                        },
-
-
-
-
-
-
-
-
-                         new TableStyleRule
-                        {
-                            Target = "row",
-                            Field = "ServiceBillStatusID",
-                            Op = "eq",
-                            Value = "0",
-                            Priority = 1,
-
-                            PillEnabled = true,
-                            PillField = "ServiceBillStatus",
-                            PillTextField = "ServiceBillStatus",
-                            PillCssClass = "pill pill-red",
-                            PillMode = "replace"
-                        },
-                        new TableStyleRule
-                        {
-                            Target = "row",
-                            Field = "ServiceBillStatusID",
-                            Op = "eq",
-                            Value = "1",
-                            Priority = 1,
-
-                            PillEnabled = true,
-                            PillField = "ServiceBillStatus",
-                            PillTextField = "ServiceBillStatus",
-                            PillCssClass = "pill pill-yellow",
-                            PillMode = "replace"
-                        },
-
-                        new TableStyleRule
-                        {
-
-                            Target = "row",
-                            Field = "ServiceBillStatusID",
-                            Op = "eq",
-                            Value = "2",
-                            Priority = 1,
-
-                            PillEnabled = true,
-                            PillField = "ServiceBillStatus",
-                            PillTextField = "ServiceBillStatus",
-                            PillCssClass = "pill pill-green",
-                            PillMode = "replace"
-                        },
-
-
-                        new TableStyleRule
-                        {
-                            Target = "row",
-                            Field = "ServiceBillStatusID",
-                            Op = "eq",
-                            Value = "0",
-                            Priority = 1,
-
-                            PillEnabled = true,
-                            PillField = "ServiceBillsAmountresidual",
-                            PillTextField = "ServiceBillsAmountresidual",
-                            PillCssClass = "pill pill-red",
-                            PillMode = "replace"
-                        },
-                        new TableStyleRule
-                        {
-                            Target = "row",
-                            Field = "ServiceBillStatusID",
-                            Op = "eq",
-                            Value = "1",
-                            Priority = 1,
-
-                            PillEnabled = true,
-                            PillField = "ServiceBillsAmountresidual",
-                            PillTextField = "ServiceBillsAmountresidual",
-                            PillCssClass = "pill pill-yellow",
-                            PillMode = "replace"
-                        },
-
-                        new TableStyleRule
-                        {
-
-                            Target = "row",
-                            Field = "ServiceBillStatusID",
-                            Op = "eq",
-                            Value = "2",
-                            Priority = 1,
-
-                            PillEnabled = true,
-                            PillField = "ServiceBillsAmountresidual",
-                            PillTextField = "ServiceBillsAmountresidual",
+                            PillField = "BillsAmountresidual",
+                            PillTextField = "BillsAmountresidual",
                             PillCssClass = "pill pill-green",
                             PillMode = "replace"
                         },

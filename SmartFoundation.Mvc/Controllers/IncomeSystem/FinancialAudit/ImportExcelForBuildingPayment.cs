@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Options;
 using SmartFoundation.UI.ViewModels.SmartForm;
 using SmartFoundation.UI.ViewModels.SmartPage;
 using SmartFoundation.UI.ViewModels.SmartTable;
@@ -137,16 +138,29 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
         public async Task<IActionResult> ImportExcelForBuildingPayment()
         {
             // تنظيف ملفات قديمة (اختياري)
+
+
             CleanupOldExcelFiles(olderThanDays: 1);
 
-            if (IsBrowserRefresh())
-                ClearExcelSession(deletePhysicalFile: true);
+
+           
+
+
 
             if (!InitPageContext(out var redirect))
                 return redirect!;
 
             if (string.IsNullOrWhiteSpace(usersId))
                 return RedirectToAction("Index", "Login", new { logout = 4 });
+
+            if (IsBrowserRefresh())
+                ClearExcelSession(deletePhysicalFile: true);
+
+            var referer = Request.Headers["Referer"].FirstOrDefault();
+            bool isDirectOpen = string.IsNullOrWhiteSpace(referer);
+
+            if (isDirectOpen)
+                ClearExcelSession(deletePhysicalFile: true);
 
             ControllerName = "IncomeSystem";
             PageName = nameof(ImportExcelForBuildingPayment);
@@ -165,6 +179,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             SplitDataSet(ds);
 
 
+
             //if (permissionTable is null || permissionTable.Rows.Count == 0)
             //{
             //    TempData["Error"] = "تم رصد دخول غير مصرح به انت لاتملك صلاحية للوصول الى هذه الصفحة";
@@ -172,28 +187,9 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             //}
 
             List<OptionItem> BillChargeTypeOptions = new();
-            List<OptionItem> monthOptions = new()
-                {
-                    new OptionItem { Value = "1", Text = "يناير" },
-                    new OptionItem { Value = "2", Text = "فبراير" },
-                    new OptionItem { Value = "3", Text = "مارس" },
-                    new OptionItem { Value = "4", Text = "أبريل" },
-                    new OptionItem { Value = "5", Text = "مايو" },
-                    new OptionItem { Value = "6", Text = "يونيو" },
-                    new OptionItem { Value = "7", Text = "يوليو" },
-                    new OptionItem { Value = "8", Text = "أغسطس" },
-                    new OptionItem { Value = "9", Text = "سبتمبر" },
-                    new OptionItem { Value = "10", Text = "أكتوبر" },
-                    new OptionItem { Value = "11", Text = "نوفمبر" },
-                    new OptionItem { Value = "12", Text = "ديسمبر" }
-                };
-
+            List<OptionItem> monthOptions = new();
             List<OptionItem> yearOptions = new();
-            for (int year = 2017; year <= Convert.ToInt32(DateTime.Now.ToString("yyyy")); year++)
-            {
-                yearOptions.Add(new OptionItem { Value = year.ToString(), Text = year.ToString() });
-            }
-
+           
 
 
             // ---------------------- DDLValues ----------------------
@@ -212,10 +208,40 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             BillChargeTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
 
+            //// ---------------------- insuranceOptions ----------------------
+
+            result = await _CrudController.GetDDLValues(
+                 "Year_", "Year_", "2", PageName, usersId, IdaraId, HostName
+            ) as JsonResult;
+
+            json = JsonSerializer.Serialize(result!.Value);
+
+            yearOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+            //// ---------------------- insuranceOptions ----------------------
+
+            result = await _CrudController.GetDDLValues(
+                 "ArabicMonthName", "MonthNumber", "3", PageName, usersId, IdaraId, HostName
+            ) as JsonResult;
+
+            json = JsonSerializer.Serialize(result!.Value);
+
+            monthOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+
+
             //// ---------------------- END DDL ----------------------
 
             var previewCols = GetPreviewColumns();
             var previewRows = GetPreviewRows();
+
+            var excelPath = GetExcelFilePath();
+            bool hasExcelFile = !string.IsNullOrWhiteSpace(excelPath) && System.IO.File.Exists(excelPath);
+
+            bool hasExcelPreview = previewCols.Count > 0 && previewRows.Count > 0;
+
+            bool isInfoOnly = (previewCols.Count == 1 &&
+                               previewCols[0].Equals("Info", StringComparison.OrdinalIgnoreCase));
+
+            bool canProcess = hasExcelFile && hasExcelPreview && !isInfoOnly;
 
             var options = previewCols
                 .Select(c => new OptionItem { Value = c, Text = c })
@@ -318,9 +344,22 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
 
                 new FieldConfig { Name="p05", Label="نوع المسير", Type="select", ColCss="4", Options=BillChargeTypeOptions, Required = true },
-                new FieldConfig { Name="p07", Label="سنة الحسم", Type="select", ColCss="4", Options=yearOptions, Required = true,Select2=true, Placeholder = "اختر السنة",Value = DateTime.Now.Year.ToString()},
+                new FieldConfig { Name="p07", Label="سنة الحسم", Type="select", ColCss="4", Options=yearOptions, Required = true, Placeholder = "الرجاء اختيار السنة" },
 
-                new FieldConfig { Name="p06", Label="شهر الحسم", Type="select", ColCss="4", Options=monthOptions, Required = true,Select2=true, Placeholder = "اختر الشهر" },
+                  // ✅ FIXED - Corrected syntax
+                  new FieldConfig
+                  {
+                      Name = "p06",
+                      Label = "شهر الحسم",
+                      Type = "select",
+                      Options = new List<OptionItem> { },
+                      ColCss = "4",
+                      Required = true,
+                      
+                      Placeholder = "الرجاء اختيار الشهر",
+                      DependsOn = "p07",
+                      DependsUrl = "/crud/DDLFiltered?FK=Year_&textcol=ArabicMonthName&ValueCol=MonthNumber&PageName=ImportExcelForBuildingPayment&TableIndex=3"
+                  },
                 new FieldConfig { Name="p08", Label="رقم المسير", Type="text", ColCss="4", Required = true },
                 new FieldConfig { Name="p09", Label="تاريخ المسير", Type="date", ColCss="4", Required = true },
                 new FieldConfig { Name="p10", Label="الوصف", Type="textarea", ColCss="4", Required = true },
@@ -355,6 +394,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 {
                     ShowAdd = true,
                     ShowAdd1 = true,
+                    EnableAdd1 = canProcess,
                     ShowEdit = false,
                     ShowDelete = false,
                     ShowExportExcel = true,

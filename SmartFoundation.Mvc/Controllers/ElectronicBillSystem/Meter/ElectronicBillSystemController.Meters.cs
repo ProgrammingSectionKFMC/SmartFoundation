@@ -36,8 +36,10 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
             var rowsList = new List<Dictionary<string, object?>>();
             var rowsmeterTypeList = new List<Dictionary<string, object?>>();
+            var rowsmeterlinkToBuilding = new List<Dictionary<string, object?>>();
             var dynamicColumns = new List<TableColumn>();
             var dynamicmeterTypeColumns = new List<TableColumn>();
+            var dynamicmeterlinkToBuildingColumns = new List<TableColumn>();
 
             DataSet ds = await _mastersServies.GetDataLoadDataSetAsync(spParameters);
 
@@ -53,6 +55,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
             string rowIdField = "";
             string rowIdmeterTypeField = "";
+            string rowIdmeterlinkToBuildingField = "";
             bool canINSERTNEWMETER = false;
             bool canINSERTNEWMETERTYPE = false;
             bool canUPDATENEWMETERTYPE = false;
@@ -65,6 +68,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
             List<OptionItem> meterTypeOptions = new();
             List<OptionItem> MeterServiceTypeOptions = new();
+            List<OptionItem> buildingDetailsNoWithMetersOptions = new();
 
             JsonResult? result;
                 string json;
@@ -74,7 +78,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
                  //// ---------------------- meterTypeOptions ----------------------
                  result = await _CrudController.GetDDLValues(
-                    "meterTypeName_A", "meterTypeID", "2", nameof(Meters), usersId, IdaraId, HostName
+                    "meterTypeName_A", "meterTypeID", "5", nameof(Meters), usersId, IdaraId, HostName
                ) as JsonResult;
 
 
@@ -82,15 +86,25 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
                 meterTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
-            //// ---------------------- meterTypeOptions ----------------------
+            //// ---------------------- MeterServiceTypeOptions ----------------------
             result = await _CrudController.GetDDLValues(
-                    "meterServiceTypeName_A", "meterServiceTypeID", "3", nameof(Meters), usersId, IdaraId, HostName
+                    "meterServiceTypeName_A", "meterServiceTypeID", "4", nameof(Meters), usersId, IdaraId, HostName
                ) as JsonResult;
 
 
                 json = JsonSerializer.Serialize(result!.Value);
 
-                meterTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+                MeterServiceTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+
+            //// ---------------------- buildingDetailsNoWithMetersOptions ----------------------
+            result = await _CrudController.GetDDLValues(
+                    "buildingDetailsNoWithMeters", "buildingDetailsID", "7", nameof(Meters), usersId, IdaraId, HostName
+               ) as JsonResult;
+
+
+                json = JsonSerializer.Serialize(result!.Value);
+
+            buildingDetailsNoWithMetersOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
 
                 // ----------------------END DDLValues ----------------------
@@ -123,8 +137,9 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                         var headerMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                         {
                             ["meterID"] = "رقم التسلسلي",
-                            ["meterTypeID_FK"] = "نوع العداد",
+                            ["meterTypeID_FK"] = "خدمة العداد",
                             ["meterNo"] = "رقم العداد",
+                            ["firstReadValue"] = "اول قراءة للعداد",
                             ["meterName_A"] = "اسم العداد (عربي)",
                             ["meterName_E"] = "اسم العداد (إنجليزي)",
                             ["meterDescription"] = "الوصف",
@@ -191,7 +206,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             dict["p06"] = Get("meterDescription");
                             dict["p07"] = Get("meterStartDate");
                             dict["p08"] = Get("meterEndDate");
-                            dict["p09"] = Get("meterServiceTypeID");
+                            dict["p40"] = Get("meterServiceTypeID");
                             dict["p10"] = Get("meterTypeName_A ");
                             dict["p11"] = Get("meterTypeName_E");
                             dict["p12"] = Get("meterTypeDescription");
@@ -201,6 +216,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             dict["p16"] = Get("meterTypeEndDate");
                             dict["p17"] = Get("meterServicePrice");
                             dict["p18"] = Get("MeterNote");
+                            dict["p24"] = Get("firstReadValue");
                            
 
                             rowsList.Add(dict);
@@ -302,6 +318,109 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             rowsmeterTypeList.Add(dictmeterType);
                         }
                     }
+
+
+
+                    if (dt3 != null && dt3.Columns.Count > 0)
+                    {
+                        // RowId
+                        rowIdmeterlinkToBuildingField = "meterForBuildingID";
+                        var possiblemeterlinkToBuildingIdNames = new[] { "meterForBuildingID", "MeterForBuildingID", "Id", "ID" };
+                        rowIdmeterlinkToBuildingField = possiblemeterlinkToBuildingIdNames.FirstOrDefault(n => dt3.Columns.Contains(n))
+                                     ?? dt3.Columns[0].ColumnName;
+
+                        // عناوين الأعمدة بالعربي
+                        var headerMapmeterlinkToBuilding = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                        {
+                            ["meterForBuildingID"] = "الرقم المرجعي",
+                            ["meterForBuildingStartDate"] = "تاريخ الربط",
+                            ["meterNo"] = "رقم العداد",
+                            ["meterName_A"] = "اسم العداد (عربي)",
+                            ["meterName_E"] = "اسم العداد (إنجليزي)",
+                            ["buildingDetailsNo"] = "رقم المبنى",
+                            ["buildingClassName_A"] = "فئة المبنى",
+                            ["buildingTypeName_A"] = "نوع المبنى",
+                            ["militaryLocationName_A"] = "موقع المبنى"
+                        };
+
+
+
+
+
+                        // الأعمدة
+                        foreach (DataColumn c in dt3.Columns)
+                        {
+
+                            string colType = "text";
+                            var t = c.DataType;
+                            if (t == typeof(bool)) colType = "bool";
+                            else if (t == typeof(DateTime)) colType = "date";
+                            else if (t == typeof(byte) || t == typeof(short) || t == typeof(int) || t == typeof(long)
+                                     || t == typeof(float) || t == typeof(double) || t == typeof(decimal))
+                                colType = "number";
+
+                            // Hide foreign key columns
+                            bool isHidden = c.ColumnName.Equals("meterID_FK", StringComparison.OrdinalIgnoreCase)
+                                            //|| c.ColumnName.Equals("buildingDetailsID_FK", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("meterForBuildingEndDate", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("meterForBuildingActive", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("buildingUtilityTypeName_A", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("BuildingIdaraName", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("BuildingIdaraID", StringComparison.OrdinalIgnoreCase);
+
+                            // Add filter for meter type if needed
+
+
+                            dynamicmeterlinkToBuildingColumns.Add(new TableColumn
+                            {
+                                Field = c.ColumnName,
+                                Label = headerMapmeterlinkToBuilding.TryGetValue(c.ColumnName, out var label) ? label : c.ColumnName,
+                                Type = colType,
+                                Sortable = true,
+                                Visible = !(isHidden),  // Hide FK columns only
+
+                            });
+                        }
+
+
+
+
+
+                        // الصفوف
+                        foreach (DataRow r in dt3.Rows)
+                        {
+                            var dictmeterlinkToBuilding = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+                            foreach (DataColumn c in dt3.Columns)
+                            {
+                                var val = r[c];
+                                dictmeterlinkToBuilding[c.ColumnName] = val == DBNull.Value ? null : val;
+                            }
+
+                            // p01..p05
+                            object? Get(string key) => dictmeterlinkToBuilding.TryGetValue(key, out var v) ? v : null;
+                            dictmeterlinkToBuilding["p01"] = Get("meterForBuildingID") ?? Get("meterForBuildingID");
+                            dictmeterlinkToBuilding["p02"] = Get("meterID_FK");
+                            dictmeterlinkToBuilding["p03"] = Get("buildingDetailsID_FK");
+                            dictmeterlinkToBuilding["p04"] = Get("meterForBuildingStartDate");
+                            dictmeterlinkToBuilding["p05"] = Get("meterForBuildingEndDate");
+                            dictmeterlinkToBuilding["p06"] = Get("meterForBuildingActive");
+
+                            dictmeterlinkToBuilding["p07"] = Get("meterNo");
+                            dictmeterlinkToBuilding["p08"] = Get("meterName_A");
+                            dictmeterlinkToBuilding["p09"] = Get("meterName_E");
+                            dictmeterlinkToBuilding["p10"] = Get("buildingDetailsNo");
+                            dictmeterlinkToBuilding["p11"] = Get("buildingClassName_A");
+                            dictmeterlinkToBuilding["p12"] = Get("buildingTypeName_A");
+                            dictmeterlinkToBuilding["p13"] = Get("buildingUtilityTypeName_A");
+                            dictmeterlinkToBuilding["p14"] = Get("militaryLocationName_A");
+                            dictmeterlinkToBuilding["p15"] = Get("BuildingIdaraName");
+                            dictmeterlinkToBuilding["p16"] = Get("BuildingIdaraID");
+
+
+
+                            rowsmeterlinkToBuilding.Add(dictmeterlinkToBuilding);
+                        }
+                    }
                 }
             }
             catch (Exception ex)
@@ -365,8 +484,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     ColCss = "4",
                     Required = true,
                     Icon = "fa-solid fa-calculator",
-                    HelpText = "معامل تحويل القراءة إلى وحدة القياس الفعلية",
-                    Value = "1"
+                    HelpText = "معامل تحويل القراءة إلى وحدة القياس الفعلية"
                 },
                 
                 new FieldConfig 
@@ -375,6 +493,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     Label = "الحد الأقصى للقراءة", 
                     Type = "number", 
                     ColCss = "4",
+                    Required = true,
                     Icon = "fa-solid fa-gauge-high",
                     HelpText = "أقصى قراءة ممكنة للعداد"
                 },
@@ -404,7 +523,9 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 {
                     Name = "p17",
                     Label = "سعر الخدمة للعداد",
-                    Type = "number",
+                    Type = "text",
+                    TextMode="money_sar",
+                    Required = true,
                     ColCss = "4",
                     Icon = "fa-solid fa-money-bill-1-wave"
                 },
@@ -557,9 +678,9 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
                 new FieldConfig
                 {
-                    Name = "p03",
+                    Name = "p02",
                     Label = "نوع خدمة العداد",
-                    Type = "text",
+                    Type = "hidden",
                     ColCss = "6",
                     Required = true,
                     Options = meterTypeOptions,  // Load from MeterServiceType table if exists
@@ -573,7 +694,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     Name = "p03",
                     Label = "اسم نوع العداد (عربي)",
                     Type = "text",
-                    ColCss = "3",
+                    ColCss = "6",
                     Required = true,
                     Readonly = true,
                     TextMode = "arabic",
@@ -587,7 +708,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     Name = "p04",
                     Label = "اسم نوع العداد (إنجليزي)",
                     Type = "text",
-                    ColCss = "3",
+                    ColCss = "6",
                     Readonly = true,
                     TextMode = "english",
                     Icon = "fa-solid fa-tag",
@@ -601,7 +722,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 {
                     Name = "p06",
                     Label = "معامل التحويل",
-                    Type = "number",
+                    Type = "hidden",
                     ColCss = "4",
                     Readonly = true,
                     Required = true,
@@ -614,7 +735,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 {
                     Name = "p07",
                     Label = "الحد الأقصى للقراءة",
-                    Type = "number",
+                    Type = "hidden",
                     ColCss = "4",
                     Readonly = true,
                     Icon = "fa-solid fa-gauge-high",
@@ -625,7 +746,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 {
                     Name = "p08",
                     Label = "تاريخ البدء",
-                    Type = "date",
+                    Type = "hidden",
                     ColCss = "4",
                     Readonly = true,
                     Required = true,
@@ -648,7 +769,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 {
                     Name = "p15",
                     Label = "سعر الخدمة للعداد",
-                    Type = "number",
+                    Type = "hidden",
                     ColCss = "4",
                     Readonly = true,
                     Icon = "fa-solid fa-money-bill-1-wave"
@@ -659,7 +780,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     Name = "p18",
                     Label = "سبب الحذف",
                     Type = "textarea",
-                    ColCss = "6",
+                    ColCss = "12",
                     MaxLength = 500,
                     Required = true,
                     Placeholder = "سبب الحذف لنوع العداد"
@@ -670,7 +791,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                new FieldConfig { Name = "hostname", Type = "hidden", Value = Request.Host.Value },
                new FieldConfig { Name = "entrydata", Type = "hidden", Value = usersId.ToString() },
                new FieldConfig { Name = "idaraID", Type = "hidden", Value = IdaraId.ToString() },
-               new FieldConfig { Name = "ActionType", Type = "hidden", Value = "UPDATENEWMETERTYPE" },
+               new FieldConfig { Name = "ActionType", Type = "hidden", Value = "DELETENEWMETERTYPE" },
                new FieldConfig { Name = "pageName_", Type = "hidden", Value = PageName },
                new FieldConfig { Name = "redirectAction", Type = "hidden", Value = PageName },
                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
@@ -681,18 +802,40 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
             var addNewMeterFields = new List<FieldConfig>
             {
                 new FieldConfig { Name = rowIdField, Type = "hidden" },
-
-                new FieldConfig
+                  new FieldConfig
+                {
+                    Name = "p40",
+                    Label = "نوع خدمة العداد",
+                    Type = "select",
+                    ColCss = "6",
+                    Required = true,
+                    Options = MeterServiceTypeOptions,  // Load from MeterServiceType table if exists
+                    
+                    Icon = "fa-solid fa-server",
+                    HelpText = "اختر نوع خدمة العداد (كهرباء، ماء، إلخ)"
+                },
+                 new FieldConfig
                 {
                     Name = "p02",
                     Label = "نوع العداد",
                     Type = "select",
+                    Options = new List<OptionItem> {}, //       Initial empty state
                     ColCss = "6",
                     Required = true,
-                    Options = meterTypeOptions,  // Load from meterType table (dt2)
-                    Select2 = true,
-                    Icon = "fa-solid fa-gauge"
+                    DependsOn = "p40",
+                    DependsUrl = "/crud/DDLFiltered?FK=meterServiceTypeID_FK&textcol=meterTypeName_A&ValueCol=meterTypeID&PageName=Meters&TableIndex=2"
                 },
+                //new FieldConfig
+                //{
+                //    Name = "p02",
+                //    Label = "نوع العداد",
+                //    Type = "select",
+                //    ColCss = "6",
+                //    Required = true,
+                //    Options = meterTypeOptions,  // Load from meterType table (dt2)
+                //    Select2 = true,
+                //    Icon = "fa-solid fa-gauge"
+                //},
 
                 new FieldConfig
                 {
@@ -705,6 +848,16 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     MaxLength = 50
                 },
 
+                  new FieldConfig
+                {
+                    Name = "p07",
+                    Label = "تاريخ بداية العداد",
+                    Type = "date",
+                    ColCss = "6",
+                    Required = true,
+                    Icon = "fa fa-calendar"
+                },
+
                 new FieldConfig
                 {
                     Name = "p04",
@@ -713,7 +866,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     ColCss = "6",
                     Required = true,
                     TextMode = "arabic",
-                    Icon = "fa-solid fa-gauge-simple-high",
+                    Icon = "fa-solid fa-pen",
                     MaxLength = 100
                 },
 
@@ -724,36 +877,41 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     Type = "text",
                     ColCss = "6",
                     TextMode = "english",
-                    Icon = "fa-solid fa-gauge-simple-high",
+                    Icon = "fa-solid fa-pen",
                     MaxLength = 100
                 },
 
-                new FieldConfig
-                {
-                    Name = "p06",
-                    Label = "الوصف",
-                    Type = "textarea",
-                    ColCss = "12",
-                    MaxLength = 500
-                },
+               
 
-                new FieldConfig
-                {
-                    Name = "p07",
-                    Label = "تاريخ البدء",
-                    Type = "date",
-                    ColCss = "6",
-                    Required = true,
-                    Icon = "fa fa-calendar"
-                },
+              
 
                 new FieldConfig
                 {
                     Name = "p08",
                     Label = "تاريخ الانتهاء",
-                    Type = "date",
+                    Type = "hidden",
                     ColCss = "6",
                     Icon = "fa fa-calendar"
+                },
+
+                 new FieldConfig
+                {
+                    Name = "p24",
+                    Label = "اول قراءة للعداد",
+                    Type = "number",
+                    ColCss = "6",
+                    Required = true,
+                    Icon = "fa-solid fa-gauge-high",
+                    HelpText = "اول قراءة للعداد"
+                },
+
+                  new FieldConfig
+                {
+                    Name = "p06",
+                    Label = "الوصف",
+                    Type = "textarea",
+                    ColCss = "6",
+                    MaxLength = 500
                 },
 
                 new FieldConfig
@@ -773,13 +931,564 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
             };
 
+            var updateMeterFields = new List<FieldConfig>
+            {
+                new FieldConfig { Name = rowIdField, Type = "hidden" },
+                new FieldConfig { Name = "p01", Type = "hidden" },
+                  new FieldConfig
+                {
+                    Name = "p40",
+                    Label = "نوع خدمة العداد",
+                    Type = "select",
+                    ColCss = "6",
+                    Required = true,
+                    Options = MeterServiceTypeOptions,  // Load from MeterServiceType table if exists
+                    
+                    Icon = "fa-solid fa-server",
+                    HelpText = "اختر نوع خدمة العداد (كهرباء، ماء، إلخ)"
+                },
+                 new FieldConfig
+                {
+                    Name = "p02",
+                    Label = "نوع العداد",
+                    Type = "select",
+                    Options = meterTypeOptions, //       Initial empty state
+                    ColCss = "6",
+                    Required = true,
+                    DependsOn = "p40",
+                    DependsUrl = "/crud/DDLFiltered?FK=meterServiceTypeID_FK&textcol=meterTypeName_A&ValueCol=meterTypeID&PageName=Meters&TableIndex=2"
+                },
+                //new FieldConfig
+                //{
+                //    Name = "p02",
+                //    Label = "نوع العداد",
+                //    Type = "select",
+                //    ColCss = "6",
+                //    Required = true,
+                //    Options = meterTypeOptions,  // Load from meterType table (dt2)
+                //    Select2 = true,
+                //    Icon = "fa-solid fa-gauge"
+                //},
+
+                new FieldConfig
+                {
+                    Name = "p03",
+                    Label = "رقم العداد",
+                    Type = "text",
+                    ColCss = "6",
+                    Required = true,
+                    Icon = "fa-solid fa-hashtag",
+                    MaxLength = 50
+                },
+
+                  new FieldConfig
+                {
+                    Name = "p07",
+                    Label = "تاريخ بداية العداد",
+                    Type = "date",
+                    ColCss = "6",
+                    Required = true,
+                    Icon = "fa fa-calendar"
+                },
+
+                new FieldConfig
+                {
+                    Name = "p04",
+                    Label = "اسم العداد (عربي)",
+                    Type = "text",
+                    ColCss = "6",
+                    Required = true,
+                    TextMode = "arabic",
+                    Icon = "fa-solid fa-pen",
+                    MaxLength = 100
+                },
+
+                new FieldConfig
+                {
+                    Name = "p05",
+                    Label = "اسم العداد (إنجليزي)",
+                    Type = "text",
+                    ColCss = "6",
+                    TextMode = "english",
+                    Icon = "fa-solid fa-pen",
+                    MaxLength = 100
+                },
 
 
 
-            // UPDATE fields
 
 
-            var dsModel = new SmartTableDsModel
+                new FieldConfig
+                {
+                    Name = "p08",
+                    Label = "تاريخ الانتهاء",
+                    Type = "hidden",
+                    ColCss = "6",
+                    Icon = "fa fa-calendar"
+                },
+
+                 new FieldConfig
+                {
+                    Name = "p24",
+                    Label = "اول قراءة للعداد",
+                    Type = "number",
+                    ColCss = "6",
+                    Required = true,
+                    Icon = "fa-solid fa-gauge-high",
+                    HelpText = "اول قراءة للعداد"
+                },
+
+                  new FieldConfig
+                {
+                    Name = "p06",
+                    Label = "الوصف",
+                    Type = "textarea",
+                    ColCss = "6",
+                    MaxLength = 500
+                },
+
+                new FieldConfig
+                {
+                    Name = "p09",
+                    Label = "الإدارة",
+                    Type = "hidden",  // Auto-filled from session
+                    Value = IdaraId
+                },
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+               new FieldConfig { Name = "hostname", Type = "hidden", Value = Request.Host.Value },
+               new FieldConfig { Name = "entrydata", Type = "hidden", Value = usersId.ToString() },
+               new FieldConfig { Name = "idaraID", Type = "hidden", Value = IdaraId.ToString() },
+               new FieldConfig { Name = "ActionType", Type = "hidden", Value = "EDITNEWMETER" },
+               new FieldConfig { Name = "pageName_", Type = "hidden", Value = PageName },
+               new FieldConfig { Name = "redirectAction", Type = "hidden", Value = PageName },
+               new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+            };
+
+
+            var deleteMeterFields = new List<FieldConfig>
+            {
+                new FieldConfig { Name = rowIdField, Type = "hidden" },
+                new FieldConfig { Name = "p01", Type = "hidden" },
+                  new FieldConfig
+                {
+                    Name = "p40",
+                    Label = "نوع خدمة العداد",
+                    Type = "hidden",
+                    ColCss = "6",
+                    Required = true,
+                    Options = MeterServiceTypeOptions,  // Load from MeterServiceType table if exists
+                    
+                    Icon = "fa-solid fa-server",
+                    HelpText = "اختر نوع خدمة العداد (كهرباء، ماء، إلخ)"
+                },
+                 new FieldConfig
+                {
+                    Name = "p02",
+                    Label = "نوع العداد",
+                    Type = "hidden",
+                    Options = meterTypeOptions, //       Initial empty state
+                    ColCss = "6",
+                    Required = true,
+                    DependsOn = "p40",
+                    DependsUrl = "/crud/DDLFiltered?FK=meterServiceTypeID_FK&textcol=meterTypeName_A&ValueCol=meterTypeID&PageName=Meters&TableIndex=2"
+                },
+                //new FieldConfig
+                //{
+                //    Name = "p02",
+                //    Label = "نوع العداد",
+                //    Type = "select",
+                //    ColCss = "6",
+                //    Required = true,
+                //    Options = meterTypeOptions,  // Load from meterType table (dt2)
+                //    Select2 = true,
+                //    Icon = "fa-solid fa-gauge"
+                //},
+
+                new FieldConfig
+                {
+                    Name = "p03",
+                    Label = "رقم العداد",
+                    Type = "text",
+                    ColCss = "4",
+                    Required = true,
+                    Readonly = true,
+                    Icon = "fa-solid fa-hashtag",
+                    MaxLength = 50
+                },
+
+                  new FieldConfig
+                {
+                    Name = "p07",
+                    Label = "تاريخ بداية العداد",
+                    Type = "hidden",
+                    ColCss = "6",
+                    Required = true,
+                    Icon = "fa fa-calendar"
+                },
+
+                new FieldConfig
+                {
+                    Name = "p04",
+                    Label = "اسم العداد (عربي)",
+                    Type = "text",
+                    ColCss = "4",
+                    Required = true,
+                    TextMode = "arabic",
+                    Readonly = true,
+                    Icon = "fa-solid fa-pen",
+                    MaxLength = 100
+                },
+
+                new FieldConfig
+                {
+                    Name = "p05",
+                    Label = "اسم العداد (إنجليزي)",
+                    Type = "text",
+                    ColCss = "4",
+                    TextMode = "english",
+                    Icon = "fa-solid fa-pen",
+                    Readonly = true,
+                    MaxLength = 100
+                },
+
+
+
+
+
+                new FieldConfig
+                {
+                    Name = "p08",
+                    Label = "تاريخ الانتهاء",
+                    Type = "hidden",
+                    ColCss = "6",
+                    Icon = "fa fa-calendar"
+                },
+
+                 new FieldConfig
+                {
+                    Name = "p24",
+                    Label = "اول قراءة للعداد",
+                    Type = "hidden",
+                    ColCss = "6",
+                    Required = true,
+                    Icon = "fa-solid fa-gauge-high",
+                    HelpText = "اول قراءة للعداد"
+                },
+
+                  new FieldConfig
+                {
+                    Name = "p45",
+                    Label = "سبب حذف العداد",
+                    Required = true,
+                    Type = "textarea",
+                    ColCss = "6",
+                    MaxLength = 500
+                },
+
+                new FieldConfig
+                {
+                    Name = "p09",
+                    Label = "الإدارة",
+                    Type = "hidden",  // Auto-filled from session
+                    Value = IdaraId
+                },
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+               new FieldConfig { Name = "hostname", Type = "hidden", Value = Request.Host.Value },
+               new FieldConfig { Name = "entrydata", Type = "hidden", Value = usersId.ToString() },
+               new FieldConfig { Name = "idaraID", Type = "hidden", Value = IdaraId.ToString() },
+               new FieldConfig { Name = "ActionType", Type = "hidden", Value = "DELETENEWMETER" },
+               new FieldConfig { Name = "pageName_", Type = "hidden", Value = PageName },
+               new FieldConfig { Name = "redirectAction", Type = "hidden", Value = PageName },
+               new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+            };
+
+
+            var addNewLinkMeterForBuildingFields = new List<FieldConfig>
+            {
+                new FieldConfig { Name = rowIdField, Type = "hidden" },
+                  new FieldConfig
+                {
+                    Name = "p40",
+                    Label = "نوع خدمة العداد",
+                    Type = "select",
+                    ColCss = "4",
+                    Required = true,
+                    Options = MeterServiceTypeOptions,  // Load from MeterServiceType table if exists
+                    
+                    Icon = "fa-solid fa-server",
+                    HelpText = "اختر نوع خدمة العداد (كهرباء، ماء، إلخ)"
+                },
+                 new FieldConfig
+                {
+                    Name = "p02",
+                    Label = "نوع العداد",
+                    Type = "select",
+                    Options = new List<OptionItem> {}, //       Initial empty state
+                    ColCss = "4",
+                    Required = true,
+                    DependsOn = "p40",
+                    DependsUrl = "/crud/DDLFiltered?FK=meterServiceTypeID_FK&textcol=meterTypeName_A&ValueCol=meterTypeID&PageName=Meters&TableIndex=2"
+                },
+
+                  new FieldConfig
+                {
+                    Name = "p04",
+                    Label = "رقم العداد",
+                    Type = "select",
+                    Options = new List<OptionItem> {}, //       Initial empty state
+                    ColCss = "4",
+                    Required = true,
+                    Select2 = true,
+                    DependsOn = "p02",
+                    DependsUrl = "/crud/DDLFiltered?FK=meterTypeID_FK&textcol=meterNo&ValueCol=meterID&PageName=Meters&TableIndex=6",
+                    HelpText="ستظهر العدادات الغير مرتبطة بمباني فقط"
+                },
+              
+                new FieldConfig
+                {
+                    Name = "p03",
+                    Label = "رقم المبنى",
+                    Type = "select",
+                    Options = buildingDetailsNoWithMetersOptions,
+                    HelpText="ستظهر اسماء المباني وعدد العدادات المرتبطة بها حاليا",
+                    Select2 = true,
+                    ColCss = "6",
+                    Required = true,
+                    Icon = "fa-solid fa-hashtag",
+                    MaxLength = 50
+                },
+
+                 new FieldConfig
+                {
+                    Name = "p24",
+                    Label = "قراءة العداد",
+                    Type = "number",
+                    ColCss = "6",
+                    Required = true,
+                    Icon = "fa-solid fa-gauge-high",
+                    HelpText = "قراءة العداد وقت الربط"
+                },
+
+                  new FieldConfig
+                {
+                    Name = "p45",
+                    Label = "ملاحظات",
+                    Type = "textarea",
+                    Required = true,
+                    ColCss = "6",
+                    MaxLength = 1000
+                },
+
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+               new FieldConfig { Name = "hostname", Type = "hidden", Value = Request.Host.Value },
+               new FieldConfig { Name = "entrydata", Type = "hidden", Value = usersId.ToString() },
+               new FieldConfig { Name = "idaraID", Type = "hidden", Value = IdaraId.ToString() },
+               new FieldConfig { Name = "ActionType", Type = "hidden", Value = "LINKMETERTOBUILDINGS" },
+               new FieldConfig { Name = "pageName_", Type = "hidden", Value = PageName },
+               new FieldConfig { Name = "redirectAction", Type = "hidden", Value = PageName },
+               new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+            };
+
+
+            var DeleteNewLinkMeterForBuildingFields = new List<FieldConfig>
+            {
+                new FieldConfig { Name = rowIdmeterlinkToBuildingField, Type = "hidden" },
+                 
+                  new FieldConfig
+                {
+                    Name = "p07",
+                    Label = "رقم العداد",
+                    Type = "text",
+                    Options = new List<OptionItem> {}, //       Initial empty state
+                    ColCss = "6",
+                    Readonly = true
+                },
+
+                new FieldConfig
+                {
+                    Name = "p10",
+                    Label = "رقم المبنى",
+                    Type = "text",
+                    ColCss = "6",
+                    Readonly = true,
+                    Icon = "fa-solid fa-hashtag"
+                },
+                new FieldConfig
+                {
+                    Name = "p03",
+                    Label = "buildingDetailsID_FK",
+                    Type = "text",
+                    ColCss = "4",
+                    Readonly = true,
+                    Icon = "fa-solid fa-hashtag"
+                },
+                new FieldConfig
+                {
+                    Name = "p02",
+                    Label = "meterID_FK",
+                    Type = "text",
+                    ColCss = "4",
+                    Readonly = true,
+                    Icon = "fa-solid fa-hashtag"
+                },
+
+                 new FieldConfig
+                {
+                    Name = "p24",
+                    Label = "قراءة العداد",
+                    Type = "number",
+                    ColCss = "6",
+                    Required = true,
+                    Icon = "fa-solid fa-gauge-high",
+                    HelpText = "قراءة العداد وقت الغاء الربط"
+                },
+
+                  new FieldConfig
+                {
+                    Name = "p45",
+                    Label = "ملاحظات",
+                    Type = "textarea",
+                    Required = true,
+                    ColCss = "6",
+                    MaxLength = 1000
+                },
+
+                    new FieldConfig
+                {
+                    Name = "p01",
+                    Label = "رقم ربط العداد",
+                    Type = "hidden",
+                    Options = new List<OptionItem> {}, //       Initial empty state
+                    ColCss = "4",
+                    Readonly = true
+                },
+
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+               new FieldConfig { Name = "hostname", Type = "hidden", Value = Request.Host.Value },
+               new FieldConfig { Name = "entrydata", Type = "hidden", Value = usersId.ToString() },
+               new FieldConfig { Name = "idaraID", Type = "hidden", Value = IdaraId.ToString() },
+               new FieldConfig { Name = "ActionType", Type = "hidden", Value = "UNLINKMETERTOBUILDINGS" },
+               new FieldConfig { Name = "pageName_", Type = "hidden", Value = PageName },
+               new FieldConfig { Name = "redirectAction", Type = "hidden", Value = PageName },
+               new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+            };
+
+
+            var dsModelMeterForBuilding = new SmartTableDsModel
+            {
+                PageTitle = "ربط العدادات بالمباني",  // Changed from "المستفيدين"
+                Columns = dynamicmeterlinkToBuildingColumns,
+                Rows = rowsmeterlinkToBuilding,
+                RowIdField = rowIdmeterlinkToBuildingField,
+                PageSize = 10,
+                PageSizes = new List<int> { 10, 25, 50, 200 },
+                QuickSearchFields = dynamicmeterlinkToBuildingColumns.Select(c => c.Field).Take(4).ToList(),
+                Searchable = true,
+                AllowExport = true,
+                PanelTitle = "ربط العدادات بالمباني",  // Changed
+                //TabelLabel = "بيانات المستفيدين",
+                //TabelLabelIcon = "fa-solid fa-user-group",
+                EnableCellCopy = true,
+                ShowFilter = true,
+                FilterRow = true,
+                FilterDebounce = 250,
+                ShowColumnVisibility = true,
+                RenderAsToggle = true,
+                ToggleLabel = "ربط العدادات بالمباني",
+                ToggleIcon = "fa-solid fa-house-signal",
+                ToggleDefaultOpen = false,
+                ShowToggleCount = true,
+
+                Toolbar = new TableToolbarConfig
+                {
+                    ShowRefresh = false,
+                    ShowColumns = true,
+                    ShowExportCsv = false,
+                    ShowExportExcel = false,
+                    ShowExportPdf = false,
+                    ShowAdd = canINSERTNEWMETER,  // This will now show "Add Meter Type"
+                    ShowEdit = canINSERTNEWMETER,
+                    ShowDelete = canINSERTNEWMETER,
+                    ShowPrint1 = false,
+                    ShowBulkDelete = false,
+
+                    CustomActions = new List<TableAction>
+                    {
+                        new TableAction
+                        {
+                            Label = "عرض التفاصيل",
+                            ModalTitle = "<i class='fa-solid fa-circle-info text-emerald-600 text-xl mr-2'></i> تفاصيل العداد",
+                            Icon = "fa-regular fa-file",
+                            OpenModal = true,
+                            RequireSelection = true,
+                            MinSelection = 1,
+                            MaxSelection = 1,
+                        },
+
+                    },
+
+                    // ✅ CHANGED: This is now for adding METER TYPE (not meter)
+
+
+
+                    Add = new TableAction
+                    {
+                        Label = "ربط عداد بمبنى",
+                        Icon = "fa fa-plug",
+                        Color = "success",
+                        OpenModal = true,
+                        RequireSelection = false,  // Don't require selection for adding
+                        ModalTitle = "<i class='fa-solid fa-gauge-high text-emerald-600 text-xl mr-2'></i> إضافة ربط عداد بمبنى",
+                       
+
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "AddNewMeterForBuildingForm",
+                            Title = "بيانات ربط العداد بالمبنى",
+                            Method = "post",
+                            ActionUrl = "/crud/insert",
+                            Fields = addNewLinkMeterForBuildingFields,  // ✅ Use addNewMeterFields here
+                            Buttons = new List<FormButtonConfig>
+                                {
+                                    new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "success" },
+                                    new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
+                                }
+                        }
+                    },
+
+
+                    Edit = new TableAction
+                    {
+                        Label = "الغاء ربط عداد بمبنى",  // ✅ Changed
+                        Icon = "fa-solid fa-xmark",
+                        Color = "danger",
+                        IsEdit = true,
+                        OpenModal = true,
+                        ModalTitle = "<i class='fa-solid fa-pen-to-square text-emerald-600 text-xl mr-2'></i> تعديل ربط عداد بمبنى",
+                        ModalMessage = "هل أنت متأكد من الغاء ربط العداد بالمبنى؟",  // ✅ Changed
+                        ModalMessageClass = "bg-red-100 text-red-700",
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "MeterEditForm",  // ✅ Changed
+                            Title = "الغاء ربط عداد بمبنى",  // ✅ Changed
+                            Method = "post",
+                            ActionUrl = "/crud/update",
+                            SubmitText = "حفظ التعديلات",
+                            CancelText = "إلغاء",
+                            Fields = DeleteNewLinkMeterForBuildingFields
+                        },
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1
+                    },
+
+
+                }
+            };
+
+
+
+            var dsModelMeter = new SmartTableDsModel
             {
                 PageTitle = "إدارة العدادات",  // Changed from "المستفيدين"
                 Columns = dynamicColumns,
@@ -801,7 +1510,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 RenderAsToggle = true,
                 ToggleLabel = "ادارة العدادات",
                 ToggleIcon = "fa-solid fa-bolt",
-                ToggleDefaultOpen = true,
+                ToggleDefaultOpen = false,
                 ShowToggleCount = true,
 
                 Toolbar = new TableToolbarConfig
@@ -877,7 +1586,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             ActionUrl = "/crud/update",
                             SubmitText = "حفظ التعديلات",
                             CancelText = "إلغاء",
-                            Fields = addNewMeterFields
+                            Fields = updateMeterFields
                         },
                         RequireSelection = true,
                         MinSelection = 1,
@@ -906,7 +1615,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                 new FormButtonConfig { Text = "حذف", Type = "submit", Color = "danger", },
                                 new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
                             },
-                            Fields = addNewMeterFields
+                            Fields = deleteMeterFields
                         },
                         RequireSelection = true,
                         MinSelection = 1,
@@ -939,7 +1648,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 RenderAsToggle = true,
                 ToggleLabel = "أنواع العدادات",
                 ToggleIcon = "fa-solid fa-toggle-on",
-                ToggleDefaultOpen = true,
+                ToggleDefaultOpen = false,
                 ShowToggleCount = true,
 
                 Toolbar = new TableToolbarConfig
@@ -1053,11 +1762,12 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
             var page = new SmartPageViewModel
             {
-                PageTitle = dsModel.PageTitle,
-                PanelTitle = dsModel.PanelTitle,
+                PageTitle = dsModelMeter.PageTitle,
+                PanelTitle = dsModelMeter.PanelTitle,
                 PanelIcon = "fa-solid fa-gauge-high",  // ✅ Changed from "fa-solid fa-user-group"
-                TableDS = dsModel,
-                TableDS1 = dsModelmeterType
+                TableDS = dsModelMeterForBuilding,
+                TableDS1 = dsModelMeter,
+                TableDS2 = dsModelmeterType
             };
 
 

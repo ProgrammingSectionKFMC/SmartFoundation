@@ -54,11 +54,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
            
 
 
-            List<OptionItem> rankOptions = new();
-            List<OptionItem> militaryUnitOptions = new();
-            List<OptionItem> MaritalStatusOptions = new();
-            List<OptionItem> NationalityOptions = new();
-            List<OptionItem> GenderOptions = new();
+            List<OptionItem> ExtendTypeOptions = new();
+
 
             // ---------------------- DDLValues ----------------------
 
@@ -67,49 +64,14 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             //// ---------------------- rankOptions ----------------------
             result = await _CrudController.GetDDLValues(
-                "rankNameA", "rankID", "2", nameof(Residents), usersId, IdaraId, HostName
+                "ExtendReasonTypeName_A", "ExtendReasonTypeID", "2", nameof(HousingExtend), usersId, IdaraId, HostName
            ) as JsonResult;
 
 
             json = JsonSerializer.Serialize(result!.Value);
 
-            rankOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-            //// ---------------------- militaryUnitOptions ----------------------
-            result = await _CrudController.GetDDLValues(
-                "militaryUnitName_A", "militaryUnitID", "3", nameof(Residents), usersId, IdaraId, HostName
-           ) as JsonResult;
+            ExtendTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
-
-            json = JsonSerializer.Serialize(result!.Value);
-
-            militaryUnitOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-            //// ---------------------- MaritalStatus ----------------------
-            result = await _CrudController.GetDDLValues(
-                "maritalStatusName_A", "maritalStatusID", "4", nameof(Residents), usersId, IdaraId, HostName
-           ) as JsonResult;
-
-
-            json = JsonSerializer.Serialize(result!.Value);
-
-            MaritalStatusOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-            //// ---------------------- Nationality ----------------------
-            result = await _CrudController.GetDDLValues(
-                "nationalityName_A", "nationalityID", "5", nameof(Residents), usersId, IdaraId, HostName
-           ) as JsonResult;
-
-
-            json = JsonSerializer.Serialize(result!.Value);
-
-            NationalityOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-            //// ---------------------- Gender ----------------------
-            result = await _CrudController.GetDDLValues(
-                "genderName_A", "genderID", "6", nameof(Residents), usersId, IdaraId, HostName
-           ) as JsonResult;
-
-
-            json = JsonSerializer.Serialize(result!.Value);
-
-            GenderOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
             //// ---------------------- END DDL ----------------------
 
@@ -155,6 +117,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ["FullName_A"] = "الاسم",
                             ["buildingActionTypeResidentAlias"] = "الحالة",
                             ["buildingDetailsNo"] = "رقم المنزل",
+                            ["ExtendReasonTypeName_A"] = "سبب الامهال",
                             ["WaitingListOrder"] = "الترتيب"
                         };
 
@@ -268,6 +231,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             dict["p23"] = Get("LastActionDecisionNo");
                             dict["p24"] = Get("ExtendFromDate");
                             dict["p25"] = Get("ExtendToDate");
+                            dict["p27"] = Get("LastActionExtendReasonTypeID");
 
 
                             rowsList.Add(dict);
@@ -319,7 +283,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p24", Label = "تاريخ بداية الامهال", Type = "date", ColCss = "3",Required = true },
                 new FieldConfig { Name = "p25", Label = "تاريخ نهاية الامهال", Type = "date", ColCss = "3",Required = true },
 
-                new FieldConfig { Name = "p12", Label = "ملاحظات", Type = "textarea", ColCss = "12",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
+                new FieldConfig { Name = "p27", Label = "سبب الامهال", Type = "select", ColCss = "4",Required = true,HelpText="المتقاعد والمفصول مطلوب تأمين احترازي يرجى الاختيار بدقة*",Options=ExtendTypeOptions},
+                new FieldConfig { Name = "p26", Label = "ملاحظات", Type = "textarea", ColCss = "6",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
 
                 new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
@@ -364,8 +329,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p23", Label = "رقم خطاب موافقة الامهال", Type = "text", ColCss = "3",Required = true },
                 new FieldConfig { Name = "p24", Label = "تاريخ بداية الامهال", Type = "date", ColCss = "3",Required = true },
                 new FieldConfig { Name = "p25", Label = "تاريخ نهاية الامهال", Type = "date", ColCss = "3",Required = true },
-
-                new FieldConfig { Name = "p12", Label = "ملاحظات", Type = "textarea", ColCss = "12",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
+                new FieldConfig { Name = "p27", Label = "سبب الامهال", Type = "select", ColCss = "4",Required = true,HelpText="المتقاعد والمفصول مطلوب تأمين احترازي يرجى الاختيار بدقة*",Options=ExtendTypeOptions},
+                new FieldConfig { Name = "p26", Label = "ملاحظات", Type = "textarea", ColCss = "6",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
 
                 new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
@@ -411,7 +376,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p23", Label = "رقم خطاب موافقة الامهال", Type = "text", ColCss = "3",Required = true, Readonly = true },
                 new FieldConfig { Name = "p24", Label = "تاريخ بداية الامهال", Type = "date", ColCss = "3",Required = true, Readonly = true },
                 new FieldConfig { Name = "p25", Label = "تاريخ نهاية الامهال", Type = "date", ColCss = "3",Required = true, Readonly = true },
-
+                new FieldConfig { Name = "p27", Label = "سبب الامهال", Type = "select", ColCss = "4",Required = true,HelpText="المتقاعد والمفصول مطلوب تأمين احترازي يرجى الاختيار بدقة*",Options=ExtendTypeOptions},
                 new FieldConfig { Name = "p26", Label = "ملاحظات", Type = "textarea", ColCss = "12",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
 
                 new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
@@ -458,7 +423,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p23", Label = "رقم خطاب موافقة الامهال", Type = "text", ColCss = "3",Required = true , Readonly = true },
                 new FieldConfig { Name = "p24", Label = "تاريخ بداية الامهال", Type = "date", ColCss = "3",Required = true , Readonly = true },
                 new FieldConfig { Name = "p25", Label = "تاريخ نهاية الامهال", Type = "date", ColCss = "3",Required = true , Readonly = true },
-
+                new FieldConfig { Name = "p27", Label = "سبب الامهال", Type = "hidden", ColCss = "4",Required = true,HelpText="المتقاعد والمفصول مطلوب تأمين احترازي يرجى الاختيار بدقة*",Options=ExtendTypeOptions},
                 new FieldConfig { Name = "p26", Label = "ملاحظات", Type = "textarea", ColCss = "12",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
 
                 new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
@@ -507,7 +472,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p24", Label = "تاريخ بداية الامهال", Type = "date", ColCss = "3",Required = true, Readonly = true },
                 new FieldConfig { Name = "p25", Label = "تاريخ نهاية الامهال", Type = "date", ColCss = "3",Required = true, Readonly = true },
 
-                new FieldConfig { Name = "p26", Label = "ملاحظات", Type = "textarea", ColCss = "12",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
+                new FieldConfig { Name = "p27", Label = "سبب الامهال", Type = "hidden", ColCss = "4",Required = true,HelpText="المتقاعد والمفصول مطلوب تأمين احترازي يرجى الاختيار بدقة*",Options=ExtendTypeOptions},
+                new FieldConfig { Name = "p26", Label = "ملاحظات", Type = "textarea", ColCss = "6",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
 
                 new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
