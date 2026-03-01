@@ -14,10 +14,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up SSH key
+      - name: Set up SSH key (base64)
         run: |
           mkdir -p ~/.ssh
-          printf '%s' "${{ secrets.MIRROR_SSH_KEY }}" | tr -d '\r' > ~/.ssh/id_ed25519
+          echo "${{ secrets.MIRROR_SSH_KEY_B64 }}" | tr -d '\r' | base64 -d > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan github.com >> ~/.ssh/known_hosts
 
