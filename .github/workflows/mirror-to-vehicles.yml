@@ -14,17 +14,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check token is present
+      - name: Set up SSH key
         run: |
-          if [ -z "${{ secrets.MIRROR_TOKEN }}" ]; then
-            echo "MIRROR_TOKEN is EMPTY or NOT AVAILABLE to this workflow"
-            exit 1
-          else
-            echo "MIRROR_TOKEN is present ✅"
-          fi
+          mkdir -p ~/.ssh
+          echo "${{ secrets.MIRROR_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
 
-      - name: Mirror push to destination
+      - name: Mirror push to destination (SSH)
         run: |
           git remote remove mirror 2>/dev/null || true
-          git remote add mirror https://x-access-token:${{ secrets.MIRROR_TOKEN }}@github.com/X5B00D/SmartFoundationVehicles.git
+          git remote add mirror git@github.com:X5B00D/SmartFoundationVehicles.git
           git push --mirror mirror
