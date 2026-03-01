@@ -2,8 +2,8 @@ name: Mirror to SmartFoundationVehicles
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   mirror:
@@ -14,7 +14,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Push mirror to destination repo
+      - name: Mirror push to destination
         run: |
+          git config user.name "mirror-bot"
+          git config user.email "mirror-bot@users.noreply.github.com"
+
+          git remote remove mirror 2>/dev/null || true
           git remote add mirror https://x-access-token:${{ secrets.MIRROR_TOKEN }}@github.com/X5B00D/SmartFoundationVehicles.git
+
           git push --mirror mirror
