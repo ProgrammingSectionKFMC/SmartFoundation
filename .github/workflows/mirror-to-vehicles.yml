@@ -15,8 +15,6 @@ jobs:
           fetch-depth: 0
 
       - name: Push mirror to destination repo
-        env:
-          MIRROR_TOKEN: ${{ secrets.MIRROR_TOKEN }}
         run: |
-          git remote add mirror https://x-access-token:${MIRROR_TOKEN}@github.com/X5B00D/SmartFoundationVehicles.git
+          git remote add mirror https://x-access-token:${{ secrets.MIRROR_TOKEN }}@github.com/X5B00D/SmartFoundationVehicles.git
           git push --mirror mirror
