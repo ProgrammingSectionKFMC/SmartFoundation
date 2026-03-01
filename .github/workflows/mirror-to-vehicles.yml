@@ -14,18 +14,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up SSH key (base64)
+      - name: Set up SSH key (Base64 decode)
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.MIRROR_SSH_KEY_B64 }}" | tr -d '\r' | base64 -d > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan github.com >> ~/.ssh/known_hosts
 
-      - name: Test SSH authentication
-        run: |
-          ssh -v -T git@github.com || true
-
-      - name: Mirror push to destination (SSH)
+      - name: Mirror push to destination
         run: |
           git remote remove mirror 2>/dev/null || true
           git remote add mirror git@github.com:X5B00D/SmartFoundationVehicles.git
