@@ -457,7 +457,7 @@ namespace SmartFoundation.Mvc.Controllers
 
 
             if (!int.TryParse(DDlValues, out int ddlValueId) || ddlValueId == -1)
-                return Json(new List<object> { new { value = "-1", text = "الرجاء الاختيار" } });
+                return Json(new List<object> { new { value = "-99999", text = "الرجاء الاختيار" } });
 
             
 
@@ -487,7 +487,7 @@ namespace SmartFoundation.Mvc.Controllers
             if (table is not null && table.Rows.Count > 0 && table.Columns.Contains(FK))
             {
 
-
+                items.Add(new { value = "-99999", text = "الرجاء الاختيار" });
                 foreach (DataRow row in table.Rows)
                 {
                     var fk = row[FK]?.ToString()?.Trim();

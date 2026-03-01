@@ -4450,6 +4450,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
 });
 
+document.body.addEventListener("change", function(e) {
+
+    if (e.target.tagName === "SELECT") {
+
+        if (e.target.value === "-99999") {
+            e.target.setCustomValidity("يرجى ملء هذا الحقل");
+        } else {
+            e.target.setCustomValidity("");
+        }
+
+    }
+
+}, true);
+
+
+
 
 // ===== SmartTable Dynamic Edit Routing =====
 window.sfRouteEditForm = function (table, act, row) {

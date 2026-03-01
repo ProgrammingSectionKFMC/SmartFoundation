@@ -1,23 +1,27 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using SmartFoundation.MVC.Reports;
 using SmartFoundation.UI.ViewModels.SmartForm;
 using SmartFoundation.UI.ViewModels.SmartPage;
-using SmartFoundation.UI.ViewModels.SmartPrint;
 using SmartFoundation.UI.ViewModels.SmartTable;
 using System.Data;
 using System.Linq;
 using System.Text.Json;
-using static LLama.Common.ChatHistory;
+
 
 namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 {
     public partial class ElectronicBillSystemController : Controller
     {
-        public async Task<IActionResult> AllMeterRead(int pdf = 0)
+        public async Task<IActionResult> AllMeterRead1()
         {
-            //  قراءة السيشن والكونتكست
-            if (!InitPageContext(out var redirect))
-                return redirect!;
+
+
+            if (!InitPageContext(out IActionResult? redirectResult))
+                return redirectResult!;
+
+            if (string.IsNullOrWhiteSpace(usersId))
+            {
+                return RedirectToAction("Index", "Login", new { logout = 4 });
+            }
 
             string? MeterServiceTypeID_ = Request.Query["U"].FirstOrDefault();
 
@@ -25,52 +29,52 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
             bool ready = false;
 
-            ControllerName = nameof(ElectronicBillSystem);
-            PageName = nameof(AllMeterRead);
+            
 
-            var spParameters = new object?[]
-            {
-             PageName ?? "AllMeterRead",
-             IdaraId,
-             usersId,
-             HostName,
-             MeterServiceTypeID_
-            };
+
+
+
+            // Sessions 
+
+            ControllerName = nameof(ElectronicBillSystem);
+            PageName = nameof(AllMeterRead1);
+
+            var spParameters = new object?[] { "AllMeterRead", IdaraId, usersId, HostName, MeterServiceTypeID_ };
+
+            DataSet ds;
+
 
             var rowsList = new List<Dictionary<string, object?>>();
             var dynamicColumns = new List<TableColumn>();
 
-            DataSet ds = await _mastersServies.GetDataLoadDataSetAsync(spParameters);
 
-            //  تقسيم الداتا سيت للجدول الأول + جداول أخرى
-            SplitDataSet(ds);
+            ds = await _mastersServies.GetDataLoadDataSetAsync(spParameters);
+
+
+
+           
+                SplitDataSet(ds);
 
 
             ready = !string.IsNullOrWhiteSpace(MeterServiceTypeID_);
-            //  التحقق من الصلاحيات
-            //if (permissionTable is null || permissionTable.Rows.Count == 0)
-            //{
-            //    TempData["Error"] = "تم رصد دخول غير مصرح به انت لاتملك صلاحية للوصول الى هذه الصفحة";
-            //    return RedirectToAction("Index", "Home");
-            //}
 
-            string rowIdField = "";
-            int count = 0;
+
+            if (permissionTable is null || permissionTable.Rows.Count == 0)
+            {
+                TempData["Error"] = "تم رصد دخول غير مصرح به انت لاتملك صلاحية للوصول الى هذه الصفحة";
+                return RedirectToAction("Index", "Home");
+            }
+
+
+           
             bool openperiod = false;
             bool closeperiod = false;
 
-            if (dt1 != null && dt1.Rows.Count > 0 &&
-                dt1.Columns.Contains("billPeriodID") &&
-                dt1.Columns.Contains("AssignPeriodID"))
-            {
-                count = dt1.AsEnumerable()
-                    .Count();
-            }
 
             if (dt1 != null && dt1.Rows.Count > 0 && MeterServiceTypeID_ is not null)
             {
-
-                TempData["countBiggerThanzero"] = $"يوجد فترة قراءة عدادت نشطة لهذا الشهر سارع بانهائها !! ";
+                
+              TempData["countBiggerThanzero"] = $"يوجد فترة قراءة عدادت نشطة لهذا الشهر سارع بانهائها !! ";
                 openperiod = false;
                 closeperiod = true;
             }
@@ -82,6 +86,8 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 closeperiod = false;
             }
 
+
+            string rowIdField = "";
             bool canOPENMETERREADPERIOD = false;
             bool canCLOSEMETERREADPERIOD = false;
             bool canREADELECTRICITYMETER = false;
@@ -95,41 +101,49 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
             bool canDELETEGASMETER = false;
 
 
-            FormConfig form = new();
+
 
             List<OptionItem> MeterServiceTypeOptions = new();
 
 
-            // ---------------------- DDLValues ----------------------
 
 
+            FormConfig form = new();
 
-
-            JsonResult? result;
-            string json;
-
-
-
-
-            //// ---------------------- BuildingUtilityType ----------------------
-            result = await _CrudController.GetDDLValues(
-                "meterServiceTypeName_A", "meterServiceTypeID", "3", nameof(AllMeterRead), usersId, IdaraId, HostName
-           ) as JsonResult;
-
-
-            json = JsonSerializer.Serialize(result!.Value);
-
-            MeterServiceTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-
-
-            // ----------------------END DDLValues ----------------------
 
             try
             {
 
-                form = new FormConfig
-                {
-                    Fields = new List<FieldConfig>
+                // ---------------------- DDLValues ----------------------
+
+
+
+
+                JsonResult? result;
+                string json;
+
+
+
+
+                //// ---------------------- BuildingUtilityType ----------------------
+                result = await _CrudController.GetDDLValues(
+                    "meterServiceTypeName_A", "meterServiceTypeID", "3", nameof(AllMeterRead1), usersId, IdaraId, HostName
+               ) as JsonResult;
+
+
+                json = JsonSerializer.Serialize(result!.Value);
+
+                MeterServiceTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+
+
+                // ----------------------END DDLValues ----------------------
+
+
+                // Determine which fields should be visible based on SearchID_
+
+                           form = new FormConfig
+                            {
+                                 Fields = new List<FieldConfig>
                                 {
                                     new FieldConfig
                                     {
@@ -176,7 +190,10 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
                 if (ds != null && ds.Tables.Count > 0 && permissionTable!.Rows.Count > 0)
                 {
-                    // صلاحيات
+                    // اقرأ الجدول الأول
+
+
+                    // نبحث عن صلاحيات محددة داخل الجدول
                     foreach (DataRow row in permissionTable.Rows)
                     {
                         var permissionName = row["permissionTypeName_E"]?.ToString()?.Trim().ToUpper();
@@ -194,20 +211,21 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                         if (permissionName == "EDITGASMETER") canEDITGASMETER = true;
                         if (permissionName == "DELETEGASMETER") canDELETEGASMETER = true;
 
-
+                       
                     }
+
 
                     if (dt1 != null && dt1.Columns.Count > 0)
                     {
 
-                       
-                        // RowId
+                        // Resolve a correct row id field (case sensitive match to actual DataTable column)
                         rowIdField = "billPeriodID";
-                        var possibleIdNames = new[] { "billPeriodID", "BillPeriodID", "Id", "ID" };
+                        var possibleIdNames = new[] { "BillPeriodID", "billPeriodID", "Id", "ID" };
+
                         rowIdField = possibleIdNames.FirstOrDefault(n => dt1.Columns.Contains(n))
                                      ?? dt1.Columns[0].ColumnName;
 
-                        // عناوين الأعمدة بالعربي
+                        //For change table name to arabic 
                         var headerMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                         {
                             ["billPeriodID"] = "الرقم المرجعي",
@@ -219,7 +237,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                         };
 
 
-                        // الأعمدة
+                        // build columns from DataTable schema
                         foreach (DataColumn c in dt1.Columns)
                         {
                             string colType = "text";
@@ -231,12 +249,12 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                 colType = "number";
 
                             bool isHidden = c.ColumnName.Equals("billPeriodTypeID_FK", StringComparison.OrdinalIgnoreCase)
-                                            || c.ColumnName.Equals("billPeriodActive", StringComparison.OrdinalIgnoreCase)
-                                            || c.ColumnName.Equals("IdaraId_FK", StringComparison.OrdinalIgnoreCase)
-                                            || c.ColumnName.Equals("ClosedBy", StringComparison.OrdinalIgnoreCase);
-
-
-
+                                            ||  c.ColumnName.Equals("billPeriodActive", StringComparison.OrdinalIgnoreCase)
+                                            ||  c.ColumnName.Equals("IdaraId_FK", StringComparison.OrdinalIgnoreCase)
+                                            ||  c.ColumnName.Equals("ClosedBy", StringComparison.OrdinalIgnoreCase);
+                           
+                            
+                            
 
                             dynamicColumns.Add(new TableColumn
                             {
@@ -250,7 +268,9 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             });
                         }
 
-                        // الصفوف
+
+
+                        // build rows (plain dictionaries) so JSON serialization is clean
                         foreach (DataRow r in dt1.Rows)
                         {
                             var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
@@ -260,7 +280,19 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                 dict[c.ColumnName] = val == DBNull.Value ? null : val;
                             }
 
-                            // p01..p05
+                            //Ensure the row id key actually exists with correct casing
+                            //if (!dict.ContainsKey(rowIdField))
+                           // {
+                                // Try to copy from a differently cased variant
+                            //    if (rowIdField.Equals("ActionID", StringComparison.OrdinalIgnoreCase) &&
+                             //       dict.TryGetValue("ActionID", out var alt))
+                             //       dict["ActionID"] = alt;
+                             //   else if (rowIdField.Equals("ActionID", StringComparison.OrdinalIgnoreCase) &&
+                             //            dict.TryGetValue("ActionID", out var alt2))
+                             //       dict["ActionID"] = alt2;
+                            //}
+
+                            // Prefill pXX fields on the row so Edit form (which uses pXX names) loads the selected row values
                             object? Get(string key) => dict.TryGetValue(key, out var v) ? v : null;
                             dict["p01"] = Get("BillPeriodID") ?? Get("billPeriodID");
                             dict["p02"] = Get("billPeriodTypeID_FK");
@@ -272,27 +304,33 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             dict["p08"] = Get("billPeriodActive");
                             dict["p09"] = Get("ClosedBy");
                             dict["p10"] = Get("IdaraId_FK");
-
+                           
 
                             rowsList.Add(dict);
                         }
-
-
-                       
                     }
+
+
                 }
             }
             catch (Exception ex)
             {
-                ViewBag.BuildingTypeDataSetError = ex.Message;
+                ViewBag.DataSetError = ex.Message;
+                //TempData["info"] = ex.Message;
             }
 
+
+            //ready = !string.IsNullOrWhiteSpace(MeterServiceTypeID_);
+            // && (canOPENMETERREADPERIOD == true || canCLOSEMETERREADPERIOD == true)
+
+            //ADD
 
             var currentUrl = Request.Path + Request.QueryString;
 
 
-            // UPDATE fields
-            var OpenPeriodFields = new List<FieldConfig>
+            //Delete fields: show confirmation as a label(not textbox) and show ID as label while still posting p01
+
+            var MOVETOASSIGNLISTFields = new List<FieldConfig>
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
@@ -334,8 +372,11 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
             };
 
 
-            //  UPDATE fields (Form Default / Form 46+)  تجريبي نرجع نمسحه او نعدل عليه
 
+
+
+
+            // then create dsModel (snippet shows toolbar parts that use the dynamic lists)
             var dsModel = new SmartTableDsModel
             {
                 PageTitle = "إمهال المستفيدين",
@@ -347,7 +388,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 QuickSearchFields = dynamicColumns.Select(c => c.Field).Take(4).ToList(),
                 Searchable = true,
                 AllowExport = true,
-                ShowPageSizeSelector=true,
+                ShowPageSizeSelector = true,
                 PanelTitle = "إمهال المستفيدين",
                 //TabelLabel = "بيانات المستفيدين",
                 //TabelLabelIcon = "fa-solid fa-user-group",
@@ -363,15 +404,15 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     ShowExportCsv = false,
                     ShowExportExcel = false,
 
-                    ShowEdit = canOPENMETERREADPERIOD,
-                    ShowEdit1 = canOPENMETERREADPERIOD,
-                    ShowDelete = canOPENMETERREADPERIOD,
-                    ShowDelete1 = canOPENMETERREADPERIOD,
-                    ShowDelete2 = canOPENMETERREADPERIOD,
-                    
+                    ShowEdit = true,
+                    ShowEdit1 = true,
+                    ShowDelete = true,
+                    ShowDelete1 = true,
+                    ShowDelete2 = true,
+
                     ShowBulkDelete = false,
-                    
-                   
+
+
 
                     ExportConfig = new TableExportConfig
                     {
@@ -382,20 +423,20 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                         PdfOrientation = "landscape",
                         PdfShowPageNumbers = true,
                         Filename = "Residents",
-                        PdfShowGeneratedAt = true, 
-                        PdfShowSerial = true,  
-                        PdfSerialLabel = "م",  
+                        PdfShowGeneratedAt = true,
+                        PdfShowSerial = true,
+                        PdfSerialLabel = "م",
                         RightHeaderLine1 = "المملكة العربية السعودية",
                         RightHeaderLine2 = "وزارة الدفاع",
                         RightHeaderLine3 = "القوات البرية الملكية السعودية",
                         RightHeaderLine4 = "الإدارة الهندسية للتشغيل والصيانة",
                         RightHeaderLine5 = "مدينة الملك فيصل العسكرية",
-                        PdfLogoUrl="/img/ppng.png",
+                        PdfLogoUrl = "/img/ppng.png",
 
 
                     },
 
-                            CustomActions = new List<TableAction>
+                    CustomActions = new List<TableAction>
                             {
                             //  Excel "
                             //new TableAction
@@ -430,7 +471,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                 RequireSelection = true,
                                 MinSelection = 1,
                                 MaxSelection = 1,
-                                
+
 
                             },
                         },
@@ -460,10 +501,10 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             ActionUrl = "/crud/update",
                             SubmitText = "حفظ التعديلات",
                             CancelText = "إلغاء",
-                           Fields = OpenPeriodFields
+                            Fields = MOVETOASSIGNLISTFields
                         },
 
-                       
+
 
                         RequireSelection = true,
                         MinSelection = 1,
@@ -501,228 +542,236 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             },
 
                           }
-                       }
+                        }
                     },
 
-                   
+                    Edit1 = new TableAction  // ✅ لازم تحدد Edit1 بدل Delete1!
+                    {
+                        Label = "تعديل امهال",
+                        Icon = "fa-solid fa-edit",
+                        Color = "warning",
+                        //Show = true,  // ✅ أضف
+                        IsEdit = true,
+                        OpenModal = true,
+
+                        ModalTitle = "",
+                        ModalMessage = "",
+                        ModalMessageClass = "bg-red-50 text-red-700",
+                        ModalMessageIcon = "fa-solid fa-triangle-exclamation",
+
+                        OnBeforeOpenJs = "sfRouteEditForm(table, act);",
+
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "BuildingTypeEditForm",
+                            Title = "",
+                            Method = "post",
+                            ActionUrl = "/crud/update",
+                            SubmitText = "حفظ التعديلات",
+                            CancelText = "إلغاء",
+                            Fields = MOVETOASSIGNLISTFields
+                        },
+
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1,
+
+                        Guards = new TableActionGuards
+                        {
+                            AppliesTo = "any",
+                            DisableWhenAny = new List<TableActionRule>
+                        {
+
+                              new TableActionRule
+                            {
+                                Field = "LastActionTypeID",
+                                Op = "neq",
+                                Value = "48",
+                                Message = "لايمكن تعديل الطلب",
+                                Priority = 3
+                            },
+                          }
+                        }
+                    },
 
 
-                  
+                    Delete = new TableAction
+                    {
+                        Label = "الغاء امهال مستفيد",
+                        Icon = "fa-solid fa-close",
+                        Color = "danger",
+                        //Show = true,  // ✅ أضف
+                        IsEdit = true,
+                        OpenModal = true,
 
-                   
+                        ModalTitle = "",
+                        ModalMessage = "",
+                        ModalMessageClass = "bg-red-50 text-red-700",
+                        ModalMessageIcon = "fa-solid fa-triangle-exclamation",
 
-                 
+                        OnBeforeOpenJs = "sfRouteEditForm(table, act);",
+
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "BuildingTypeEditForm",
+                            Title = "",
+                            Method = "post",
+                            ActionUrl = "/crud/update",
+                            SubmitText = "حفظ التعديلات",
+                            CancelText = "إلغاء",
+                            Fields = MOVETOASSIGNLISTFields
+                        },
+
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1,
+
+                        Guards = new TableActionGuards
+                        {
+                            AppliesTo = "any",
+                            DisableWhenAny = new List<TableActionRule>
+                        {
+
+                              new TableActionRule
+                            {
+                                Field = "LastActionTypeID",
+                                Op = "neq",
+                                Value = "48",
+                                Message = "لايمكن الغاء الطلب",
+                                Priority = 3
+                            },
+                          }
+                        }
+                    },
+
+                    Delete1 = new TableAction
+                    {
+                        Label = "ارسال للتدقيق المالي",
+                        Icon = "fa-solid fa-money-bill-wave",
+                        Color = "info",
+                        //Show = true,  // ✅ أضف
+                        IsEdit = true,
+                        OpenModal = true,
+
+                        ModalTitle = "",
+                        ModalMessage = "",
+                        ModalMessageClass = "bg-red-50 text-red-700",
+                        ModalMessageIcon = "fa-solid fa-triangle-exclamation",
+
+                        OnBeforeOpenJs = "sfRouteEditForm(table, act);",
+
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "BuildingTypeEditForm",
+                            Title = "",
+                            Method = "post",
+                            ActionUrl = "/crud/update",
+                            SubmitText = "حفظ التعديلات",
+                            CancelText = "إلغاء",
+                            Fields = MOVETOASSIGNLISTFields
+                        },
+
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1,
+
+                        Guards = new TableActionGuards
+                        {
+                            AppliesTo = "any",
+                            DisableWhenAny = new List<TableActionRule>
+                        {
+                                  new TableActionRule
+                            {
+                                Field = "LastActionTypeID",
+                                Op = "eq",
+                                Value = "2",
+                                Message = "لم يتم انشاء الطلب",
+                                Priority = 3
+                            },
+                                 new TableActionRule
+                            {
+                                Field = "LastActionTypeID",
+                                Op = "eq",
+                                Value = "24",
+                                Message = "لم يتم انشاء الطلب",
+                                Priority = 3
+                            },
+                              new TableActionRule
+                            {
+                                Field = "LastActionTypeID",
+                                Op = "eq",
+                                Value = "51",
+                                Message = "لايمكن الغاء الطلب",
+                                Priority = 3
+                            },
+                                 new TableActionRule
+                            {
+                                Field = "LastActionTypeID",
+                                Op = "eq",
+                                Value = "52",
+                                Message = "لايمكن الغاء الطلب",
+                                Priority = 3
+                            },
+                          }
+                        }
+                    },
+
+                    Delete2 = new TableAction  // ✅ لازم تحدد Edit1 بدل Delete1!
+                    {
+                        Label = "اعتماد الامهال",
+                        Icon = "fa-solid fa-check",
+                        Color = "success",
+                        //Show = true,  // ✅ أضف
+                        IsEdit = true,
+                        OpenModal = true,
+
+                        ModalTitle = "",
+                        ModalMessage = "",
+                        ModalMessageClass = "bg-red-50 text-red-700",
+                        ModalMessageIcon = "fa-solid fa-triangle-exclamation",
+
+                        OnBeforeOpenJs = "sfRouteEditForm(table, act);",
+
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "BuildingTypeEditForm",
+                            Title = "",
+                            Method = "post",
+                            ActionUrl = "/crud/update",
+                            SubmitText = "حفظ التعديلات",
+                            CancelText = "إلغاء",
+                            Fields = MOVETOASSIGNLISTFields
+                        },
+
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1,
+
+                        Guards = new TableActionGuards
+                        {
+                            AppliesTo = "any",
+                            DisableWhenAny = new List<TableActionRule>
+                        {
+
+                              new TableActionRule
+                            {
+                                Field = "LastActionTypeID",
+                                Op = "neq",
+                                Value = "52",
+                                Message = "لايمكن اعتماد الامهال لعدم انتهاء التدقيق المالي ",
+                                Priority = 3
+                            },
+                          }
+                        }
+                    },
 
                 }
             };
 
 
 
-            //dsModel.StyleRules = new List<TableStyleRule>
-            //    {
-
-            //        new TableStyleRule
-            //        {
-            //            Target = "row",
-            //            Field = "LastActionTypeID",
-            //            Op = "eq",
-            //            Value = "46",
-            //            CssClass = "row-blue",
-            //            Priority = 1
-
-            //        },
-            //         new TableStyleRule
-            //        {
-            //            Target = "row",
-            //            Field = "LastActionTypeID",
-            //            Op = "eq",
-            //            Value = "47",
-            //            CssClass = "row-yellow",
-            //            Priority = 1
-
-            //        },
-            //          new TableStyleRule
-            //        {
-            //            Target = "row",
-            //            Field = "LastActionTypeID",
-            //            Op = "eq",
-            //            Value = "2",
-            //            CssClass = "row-green",
-            //            Priority = 1
-            //        },
-            //           new TableStyleRule
-            //        {
-            //            Target = "row",
-            //            Field = "LastActionTypeID",
-            //            Op = "eq",
-            //            Value = "45",
-            //            CssClass = "row-gray",
-            //            Priority = 1
-            //        },
-
-            //    };
 
 
-
-                   dsModel.StyleRules = new List<TableStyleRule>
-                        {
-                           
-                            new TableStyleRule
-                            {
-                                Target="row", Field="LastActionTypeID", Op="eq", Value="2", Priority=1,
-                                PillEnabled=true,
-                                PillField="buildingActionTypeResidentAlias",
-                                PillTextField="buildingActionTypeResidentAlias",
-                                PillCssClass="pill pill-green",
-                                PillMode="replace"
-                            },
-                              new TableStyleRule
-                            {
-                                Target="row", Field="LastActionTypeID", Op="eq", Value="24", Priority=1,
-                                PillEnabled=true,
-                                PillField="buildingActionTypeResidentAlias",
-                                PillTextField="buildingActionTypeResidentAlias",
-                                PillCssClass="pill pill-green",
-                                PillMode="replace"
-                            },
-                            new TableStyleRule
-                            {
-                                Target="row", Field="LastActionTypeID", Op="eq", Value="48", Priority=1,
-                                PillEnabled=true,
-                                PillField="buildingActionTypeResidentAlias",
-                                PillTextField="buildingActionTypeResidentAlias",
-                                PillCssClass="pill pill-yellow",
-                                PillMode="replace"
-                            },
-                             new TableStyleRule
-                            {
-                                Target="row", Field="LastActionTypeID", Op="eq", Value="51", Priority=1,
-                                PillEnabled=true,
-                                PillField="buildingActionTypeResidentAlias",
-                                PillTextField="buildingActionTypeResidentAlias",
-                                PillCssClass="pill pill-red",
-                                PillMode="replace"
-                            },
-                               new TableStyleRule
-                            {
-                                Target="row", Field="LastActionTypeID", Op="eq", Value="52", Priority=1,
-                                PillEnabled=true,
-                                PillField="buildingActionTypeResidentAlias",
-                                PillTextField="buildingActionTypeResidentAlias",
-                                PillCssClass="pill pill-blue",
-                                PillMode="replace"
-                            }
-                        };
-
-
-
-           
-
-
-            if (pdf == 1)
-            {
-                //var printTable = dt1;
-                //int start1Based = 1; // يبدأ من الصف 200
-                //int count = 100;       // يطبع 50 سجل
-
-                //int startIndex = start1Based - 1;
-                //int endIndex = Math.Min(dt1.Rows.Count, startIndex + dt1.Rows.Count);
-
-                // جدول خفيف للطباعة
-                var printTable = new DataTable();
-                printTable.Columns.Add("NationalID", typeof(string));
-                printTable.Columns.Add("FullName_A", typeof(string));
-                printTable.Columns.Add("generalNo_FK", typeof(string));
-                printTable.Columns.Add("rankNameA", typeof(string));
-                printTable.Columns.Add("militaryUnitName_A", typeof(string));
-                printTable.Columns.Add("maritalStatusName_A", typeof(string));
-                printTable.Columns.Add("dependinceCounter", typeof(string));
-                printTable.Columns.Add("nationalityName_A", typeof(string));
-                printTable.Columns.Add("genderName_A", typeof(string));
-                printTable.Columns.Add("birthdate", typeof(string));
-                printTable.Columns.Add("residentcontactDetails", typeof(string));
-
-                //for (int i = startIndex; i < endIndex; i++)
-                foreach (DataRow r in dt1.Rows)
-                {
-                    //var r = dt1.Rows[i];
-
-                    printTable.Rows.Add(
-                        r["NationalID"],
-                        r["FullName_A"],
-                        r["generalNo_FK"],
-                        r["rankNameA"],
-                        r["militaryUnitName_A"],
-                        r["maritalStatusName_A"],
-                        r["dependinceCounter"],
-                        r["nationalityName_A"],
-                        r["genderName_A"],
-                        r["birthdate"],
-                        r["residentcontactDetails"]
-                    );
-                }
-
-                if (printTable == null || printTable.Rows.Count == 0)
-                    return Content("لا توجد بيانات للطباعة.");
-                var reportColumns = new List<ReportColumn>
-                    {
-                        new("NationalID", "رقم الهوية", Align:"center", Weight:2, FontSize:9),
-                        new("FullName_A", "الاسم", Align:"center", Weight:5, FontSize:9),
-                        new("generalNo_FK", "الرقم العام", Align:"center", Weight:2, FontSize:9),
-                        new("rankNameA", "الرتبة", Align:"center", Weight:2, FontSize:9),
-                        new("militaryUnitName_A", "الوحدة", Align:"center", Weight:3, FontSize:9),
-                        new("maritalStatusName_A", "الحالة الاجتماعية", Align:"center", Weight:3, FontSize:9),
-                        new("dependinceCounter", "عدد التابعين", Align:"center", Weight:2, FontSize:9),
-                        new("nationalityName_A", "الجنسية", Align:"center", Weight:2, FontSize:9),
-                        new("genderName_A", "الجنس", Align:"center", Weight:2, FontSize:9),
-                        new("birthdate", "تاريخ الميلاد", Align:"center", Weight:2, FontSize:9),
-                        new("residentcontactDetails", "رقم الجوال", Align:"center", Weight:2, FontSize:9),
-                    };
-
-                var logo = Path.Combine(_env.WebRootPath, "img", "ppng.png");
-                var header = new Dictionary<string, string>
-                {
-                    ["no"] = usersId,//"١٢٣/٤٥",
-                    ["date"] = DateTime.Now.ToString("yyyy/MM/dd"),
-                    ["attach"] = "—",
-                    ["subject"] = "قائمة المستفيدين",
-
-                    ["right1"] = "المملكة العربية السعودية",
-                    ["right2"] = "وزارة الدفاع",
-                    ["right3"] = "القوات البرية الملكية السعودية",
-                    ["right4"] = "الادارة الهندسية للتشغيل والصيانة",
-                    ["right5"] = "إدارة مدينة الملك فيصل العسكرية",
-
-                    //["bismillah"] = "بسم الله الرحمن الرحيم",
-                    ["midCaption"] = ""
-                };
-
-                var report = DataTableReportBuilder.FromDataTable(
-                    reportId: "BuildingType",
-                    title: "قائمة المستفيدين",
-                    table: printTable,
-                    columns: reportColumns,
-                    headerFields: header,
-                   //footerFields: new(),
-                   footerFields: new Dictionary<string, string>
-                   {
-                       ["تمت الطباعة بواسطة"] = FullName,
-                       ["ملاحظة"] = " هذا التقرير للاستخدام الرسمي",
-                       ["عدد السجلات"] = dt1.Rows.Count.ToString(),
-                       ["تاريخ ووقت الطباعة"] = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")
-                   },
-
-                    orientation: ReportOrientation.Landscape,
-                    headerType: ReportHeaderType.LetterOfficial,
-                    logoPath: logo,
-                    headerRepeat: ReportHeaderRepeat.FirstPageOnly
-                    //headerRepeat: ReportHeaderRepeat.AllPages
-                );
-
-                var pdfBytes = QuestPdfReportRenderer.Render(report);
-                Response.Headers["Content-Disposition"] = "inline; filename=BuildingType.pdf";
-                return File(pdfBytes, "application/pdf");
-            }
 
             var vm = new SmartPageViewModel
             {
@@ -731,8 +780,8 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 PanelIcon = "fa-home",
                 Form = form,
                 TableDS = ready ? dsModel : null
-                
             };
+
             return View("MeterRead/AllMeterRead", vm);
         }
     }
