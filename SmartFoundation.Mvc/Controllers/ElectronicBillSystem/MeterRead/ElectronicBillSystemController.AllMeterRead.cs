@@ -348,11 +348,14 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             ["PriceForSlide8"] = "شريحة 8",
                             ["PriceForSlide9"] = "شريحة 9",
                             ["PriceForSlide10"] = "شريحة 10",
-                            ["PRICE"] = "السعر",
+                            ["PRICE"] = "المبلغ",
                             ["PRICETAX"] = "الضريبة",
-                            ["meterServicePrice"] = "سعر الخدمة",
+                            ["meterServicePrice"] = "قيمة الخدمة",
+                            ["meterServicePriceWithTAX"] = "قيمة خدمة العداد",
                             ["meterServicePriceTAX"] = "ضريبة الخدمة",
                             ["TotalPrice"] = "الاجمالي",
+                            ["avrageMsg"] = "الحالة",
+                            ["AvgTotalPrice"] = "متوسط الفواتير",
                             ["entryDate"] = "وقت التنفيذ"
                         };
 
@@ -375,9 +378,16 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                             || c.ColumnName.Equals("idaraID_FK", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("entryData", StringComparison.OrdinalIgnoreCase)
-                                            || c.ColumnName.Equals("PriceForSlide3", StringComparison.OrdinalIgnoreCase)
-                                            || c.ColumnName.Equals("PriceForSlide4", StringComparison.OrdinalIgnoreCase)
-                                            || c.ColumnName.Equals("PriceForSlide5", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("avrageNo", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("entryDate", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("PeriodMonth", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("PeriodYear", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("meterName_A", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("meterServicePriceTAX", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("meterServicePrice", StringComparison.OrdinalIgnoreCase)
+                                            //|| c.ColumnName.Equals("PriceForSlide3", StringComparison.OrdinalIgnoreCase)
+                                            //|| c.ColumnName.Equals("PriceForSlide4", StringComparison.OrdinalIgnoreCase)
+                                            //|| c.ColumnName.Equals("PriceForSlide5", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("PriceForSlide6", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("PriceForSlide7", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("PriceForSlide8", StringComparison.OrdinalIgnoreCase)
@@ -392,6 +402,13 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                             || c.ColumnName.Equals("idaraID_FK", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("entryData", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("PeriodMonth", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("PeriodYear", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("meterName_A", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("meterServicePriceTAX", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("meterServicePrice", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("avrageNo", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("entryDate", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("PriceForSlide6", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("PriceForSlide7", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("PriceForSlide8", StringComparison.OrdinalIgnoreCase)
@@ -406,6 +423,13 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                            || c.ColumnName.Equals("idaraID_FK", StringComparison.OrdinalIgnoreCase)
                                            || c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase)
                                            || c.ColumnName.Equals("entryData", StringComparison.OrdinalIgnoreCase)
+                                           || c.ColumnName.Equals("PeriodMonth", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("PeriodYear", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("meterName_A", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("meterServicePriceTAX", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("meterServicePrice", StringComparison.OrdinalIgnoreCase)
+                                           || c.ColumnName.Equals("avrageNo", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("entryDate", StringComparison.OrdinalIgnoreCase)
                                            || c.ColumnName.Equals("PriceForSlide2", StringComparison.OrdinalIgnoreCase)
                                            || c.ColumnName.Equals("PriceForSlide3", StringComparison.OrdinalIgnoreCase)
                                            || c.ColumnName.Equals("PriceForSlide4", StringComparison.OrdinalIgnoreCase)
@@ -423,6 +447,13 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                           || c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase)
                                           || c.ColumnName.Equals("idaraID_FK", StringComparison.OrdinalIgnoreCase)
                                           || c.ColumnName.Equals("entryData", StringComparison.OrdinalIgnoreCase)
+                                          || c.ColumnName.Equals("PeriodMonth", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("PeriodYear", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("meterName_A", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("meterServicePriceTAX", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("meterServicePrice", StringComparison.OrdinalIgnoreCase)
+                                          || c.ColumnName.Equals("avrageNo", StringComparison.OrdinalIgnoreCase)
+                                          || c.ColumnName.Equals("entryDate", StringComparison.OrdinalIgnoreCase)
                                           || c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase);
 
                             }
@@ -690,8 +721,8 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     ShowExportCsv = false,
                     ShowExportExcel = false,
 
-                    ShowAdd = canOPENMETERREADPERIOD && !MeterServiceTypeready,
-                    ShowAdd1 = canOPENMETERREADPERIOD && MeterServiceTypeready,
+                    ShowAdd = canOPENMETERREADPERIOD,// && !MeterServiceTypeready,
+                    ShowAdd1 = canOPENMETERREADPERIOD,// && MeterServiceTypeready,
 
 
                     ShowBulkDelete = false,
@@ -762,15 +793,15 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
                     Add = new TableAction
                     {
-                        Label = "فتح فترة قراءة عدادات",
+                        Label = "اضافة قراءة عداد جديدة",
                         Icon = "fa fa-plus",
                         Color = "success",
                         OpenModal = true,
-                        ModalTitle = "فتح فترة قراءة عدادات",
+                        ModalTitle = "اضافة قراءة عداد جديدة",
                         OpenForm = new FormConfig
                         {
                             FormId = "buildingClassInsertForm",
-                            Title = "بيانات فترة قراءة عدادات",
+                            Title = "بيانات قراءة عداد جديدة",
                             Method = "post",
                             ActionUrl = "/crud/insert",
                             Fields = OpenPeriodFields,
@@ -781,17 +812,19 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             }
                         }
                     },
+
+
                     Add1 = new TableAction
                     {
-                        Label = "اغلاق فترة قراءة عدادات",
+                        Label = "تاكيد قراءة عداد",
                         Icon = "fa fa-plus",
-                        Color = "danger",
+                        Color = "warning",
                         OpenModal = true,
-                        ModalTitle = "اغلاق فترة قراءة عداداتت",
+                        ModalTitle = "تاكيد قراءة عداد ",
                         OpenForm = new FormConfig
                         {
                             FormId = "buildingClassInsertForm",
-                            Title = "بيانات اغلاق فترة قراءة عدادات",
+                            Title = "بيانات تاكيد قراءة عداد ",
                             Method = "post",
                             ActionUrl = "/crud/insert",
                             Fields = OpenPeriodFields,
@@ -823,12 +856,59 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
             dsModelMeterRead.StyleRules = new List<TableStyleRule>
                         {
                            
-                            new TableStyleRule
+                           
+                             new TableStyleRule
                             {
-                                Target="row", Field="PeriodMonth", Op="neq", Value="999", Priority=1,
+                                Target="row", Field="avrageNo", Op="eq", Value="1", Priority=1,
                                 PillEnabled=true,
                                 PillField="TotalPrice",
                                 PillTextField="TotalPrice",
+                                PillCssClass="pill pill-red",
+                                PillMode="replace"
+                            },
+                              new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="2", Priority=1,
+                                PillEnabled=true,
+                                PillField="TotalPrice",
+                                PillTextField="TotalPrice",
+                                PillCssClass="pill pill-yellow",
+                                PillMode="replace"
+                            },
+                               new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="3", Priority=1,
+                                PillEnabled=true,
+                                PillField="TotalPrice",
+                                PillTextField="TotalPrice",
+                                PillCssClass="pill pill-green",
+                                PillMode="replace"
+                            },
+
+                                new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="1", Priority=1,
+                                PillEnabled=true,
+                                PillField="avrageMsg",
+                                PillTextField="avrageMsg",
+                                PillCssClass="pill pill-red",
+                                PillMode="replace"
+                            },
+                              new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="2", Priority=1,
+                                PillEnabled=true,
+                                PillField="avrageMsg",
+                                PillTextField="avrageMsg",
+                                PillCssClass="pill pill-yellow",
+                                PillMode="replace"
+                            },
+                               new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="3", Priority=1,
+                                PillEnabled=true,
+                                PillField="avrageMsg",
+                                PillTextField="avrageMsg",
                                 PillCssClass="pill pill-green",
                                 PillMode="replace"
                             },
