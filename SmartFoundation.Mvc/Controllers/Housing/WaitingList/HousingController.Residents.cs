@@ -42,6 +42,93 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             //  تقسيم الداتا سيت للجدول الأول + جداول أخرى
             SplitDataSet(ds);
 
+
+
+
+
+
+
+            //يجيب البيانات الإضافية لكل مستفيد من الجداول الثانية ويربطها برقم المستفيد
+            // ===================================================== EXTRA =====================================================
+            var extraLookup = new Dictionary<string, List<Dictionary<string, object?>>>(StringComparer.OrdinalIgnoreCase);
+
+            // اجمع كل IDs الموجودة في dt1
+            var mainIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (dt1 != null && dt1.Rows.Count > 0)
+            {
+                var idCol =
+                    dt1.Columns.Contains("residentInfoID") ? "residentInfoID" :
+                    dt1.Columns.Contains("ResidentInfoID") ? "ResidentInfoID" :
+                    null;
+
+                if (!string.IsNullOrWhiteSpace(idCol))
+                {
+                    foreach (DataRow r in dt1.Rows)
+                    {
+                        var id = r[idCol]?.ToString()?.Trim();
+                        if (!string.IsNullOrWhiteSpace(id))
+                            mainIds.Add(id);
+                    }
+                }
+            }
+            DataTable? bestDt = null;
+            string? bestFk = null;
+            int bestMatch = 0;
+
+            if (ds != null && ds.Tables.Count > 1 && mainIds.Count > 0)
+            {
+                var fkCandidates = new[]
+                {
+        "residentInfoID","ResidentInfoID","residentInfoId",
+        "p01","id","ID","ResidentId","resident_id"
+    };
+
+                for (int ti = 1; ti < ds.Tables.Count; ti++)
+                {
+                    var t = ds.Tables[ti];
+                    if (t == null || t.Columns.Count == 0 || t.Rows.Count == 0) continue;
+
+                    var fkCol = fkCandidates.FirstOrDefault(n => t.Columns.Contains(n));
+                    if (string.IsNullOrWhiteSpace(fkCol)) continue;
+
+                    int match = 0;
+                    foreach (DataRow rr in t.Rows)
+                    {
+                        var fkVal = rr[fkCol]?.ToString()?.Trim();
+                        if (!string.IsNullOrWhiteSpace(fkVal) && mainIds.Contains(fkVal))
+                            match++;
+                    }
+
+                    if (match > bestMatch)
+                    {
+                        bestMatch = match;
+                        bestDt = t;
+                        bestFk = fkCol;
+                    }
+                }
+            }
+
+            if (bestDt != null && !string.IsNullOrWhiteSpace(bestFk) && bestMatch > 0)
+            {
+                foreach (DataRow rr in bestDt.Rows)
+                {
+                    var fkVal = rr[bestFk]?.ToString()?.Trim();
+                    if (string.IsNullOrWhiteSpace(fkVal)) continue;
+
+                    var d = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+                    foreach (DataColumn cc in bestDt.Columns)
+                        d[cc.ColumnName] = rr[cc] == DBNull.Value ? null : rr[cc];
+
+                    if (!extraLookup.TryGetValue(fkVal, out var list))
+                        extraLookup[fkVal] = list = new List<Dictionary<string, object?>>();
+
+                    list.Add(d);
+                }
+            }
+            // ===================================================== End EXTRA =====================================================
+
+
+
             //  التحقق من الصلاحيات
             if (permissionTable is null || permissionTable.Rows.Count == 0)
             {
@@ -249,15 +336,33 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         foreach (DataRow r in dt1.Rows)
                         {
                             var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+
                             foreach (DataColumn c in dt1.Columns)
                             {
                                 var val = r[c];
                                 dict[c.ColumnName] = val == DBNull.Value ? null : val;
                             }
 
-                            // p01..p05
                             object? Get(string key) => dict.TryGetValue(key, out var v) ? v : null;
+
+
+                            //===============================================================================================
+                            // تحديد رقم المستفيد الأساسي (RowId)
                             dict["p01"] = Get("residentInfoID") ?? Get("ResidentInfoID");
+
+                            // ربط كل صف ببياناته الإضافية (__extra) حسب رقم المستفيد لاستخدامها في زر "بيانات إضافية"
+                            var id =
+                                (Get("residentInfoID")?.ToString()?.Trim())
+                                ?? (Get("ResidentInfoID")?.ToString()?.Trim())
+                                ?? (Get("p01")?.ToString()?.Trim())
+                                ?? "";
+
+                            if (!string.IsNullOrWhiteSpace(id) && extraLookup.TryGetValue(id, out var ex))
+                                dict["__extra"] = ex;
+                            else
+                                dict["__extra"] = new List<Dictionary<string, object?>>();
+                            //===============================================================================================
+                            
                             dict["p02"] = Get("NationalID");
                             dict["p03"] = Get("generalNo_FK");
                             dict["p04"] = Get("firstName_A");
@@ -514,7 +619,54 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
                             },
-                        },
+
+
+
+                            //============================================================================================================
+
+                            new TableAction
+                            {
+                                Label = "بيانات إضافية",
+                                Icon = "fa-solid fa-database",
+                                Color = "secondary",
+                                OpenModal = true,
+                                RequireSelection = true,
+                                MinSelection = 1,
+                                MaxSelection = 1,
+                                ModalTitle = "<i class='fa-solid fa-database text-sky-600 text-xl mr-2'></i> بيانات إضافية",
+                                Meta = new Dictionary<string, object?>
+                                {
+                                    ["useRowExtra"] = true,
+
+                                    // المفتاح اللي نحقنه
+                                    ["extraKey"] = "__extra",
+                                    ["pageSize"] = 10,
+
+                                    // الاعمدة اللي نعرضها داخل المودال
+                                    ["visibleFields"] = new List<string>
+                                    {
+                                        "FullName_A",
+                                        "rankNameA",
+                                        "militaryUnitName_A",
+                                        "residentcontactDetails",
+                                        
+                                    },
+
+                                    // نحط اسم الاعمدة بالعربي
+                                    ["headerMap"] = new Dictionary<string, string>
+                                    {
+                                        ["FullName_A"] = "الاسم الكامل",
+                                        ["rankNameA"] = "الرتبة",
+                                        ["militaryUnitName_A"] = "الوحدة",
+                                        ["residentcontactDetails"] = "رقم الجوال",
+                                       
+                                    }
+                                }
+                              }
+                            },
+
+
+                    //============================================================================================================
 
 
                     Add = new TableAction
@@ -711,5 +863,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             }
             return View("WaitingList/Residents", page);
         }
+
+
+
+
+
     }
 }

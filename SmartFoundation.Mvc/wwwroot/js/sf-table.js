@@ -2232,7 +2232,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 if (!action) return;
 
                 try {
-                    // التحقق من متطلبات الاختيار
+                    
                     if (action.requireSelection) {
                         const selectedCount = this.selectedKeys.size;
                         if (selectedCount < (action.minSelection || 1)) {
@@ -2244,7 +2244,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             return;
                         }
 
-                        // إذا row ما وصل، جيبه من الاختيار الحالي
+                        
                         if (!row) row = this.getSelectedRowFromCurrentData();
                     }
 
@@ -2258,14 +2258,13 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     // Confirm if needed
                     if (action.confirmText && !confirm(action.confirmText)) return;
 
-                    // ✅ 1) OnClickJs (قبل المودال/السب)
+                    // 
                     const js = action.onClickJs || action.OnClickJs;
                     if (js && String(js).trim()) {
                         try {
                             const code = String(js).trim();
 
-                            // إذا مكتوب كاسم دالة فقط: myFunc
-                            // أو myFunc(...)
+                            
                             const isFnCallOrName =
                                 /^[a-zA-Z_$][\w$]*(\s*\(.*\))?$/.test(code);
 
@@ -2273,15 +2272,12 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 const fnName = code.split('(')[0].trim();
                                 const fn = window[fnName];
                                 if (typeof fn === "function") {
-                                    // استدعاء الدالة وتمرير (row, action, tableApi)
+                                    
                                     fn(row, action, this);
                                     return;
                                 }
                             }
 
-                            // تنفيذ نص JS مباشرة مع سياق (row/action/table)
-                            // نمرر row/action/table كمتغيرات داخل التنفيذ
-                            // eslint-disable-next-line no-new-func
                             const runner = new Function("row", "action", "table", code);
                             runner(row, action, this);
                             return;
@@ -2294,20 +2290,15 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     }
 
                     // Open modal
-                    // التأكيد إذا كان مطلوباً
+                    
                     if (action.confirmText && !confirm(action.confirmText)) {
                         return;
                     }
 
-
-                    //  2) OnBeforeOpenJs (قبل فتح المودال)
                     const beforeJs = action.onBeforeOpenJs || action.OnBeforeOpenJs;
                     if (beforeJs && String(beforeJs).trim()) {
                         try {
                             const code = String(beforeJs).trim();
-
-                            // نفّذ نص JS مباشرة مع سياق (table/action/row)
-                            // eslint-disable-next-line no-new-func
                             const runner = new Function("table", "act", "row", code);
                             runner(this, action, row || null);
 
@@ -2318,14 +2309,11 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         }
                     }
 
-
-                    //  لو sfRouteEditForm قرر ما فيه إجراء امنع فتح المودال
                     if (action.__cancelOpen) {
-                        // (اختياري) رسالة
+                        // () رسالة
                         this.showToast("لا يوجد إجراء لاحق لهذه الحالة", "error");
                         return;
                     }
-
 
                     // فتح المودال مع فحص Guards
                     if (action.openModal) {
@@ -2334,8 +2322,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     }
 
                     // Execute stored procedure
-                    // ===== OnClickJs للأزرار التي لا تفتح مودال =====
-
+                    
                     if (action.onClickJs) {
                         try {
                             // تنفيذ الكود الجافاسكربت المخصص
@@ -2398,9 +2385,9 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             // ===== Modal Management =====
             async openModal(action, row) {
                 this.modal.open = true;
-                window.__sfTableActive = this; //جديد
+                window.__sfTableActive = this;
                 this.modal.title = action.modalTitle || action.label || "";
-                this.modal.message = action.modalMessage || ""; //  جديد
+                this.modal.message = action.modalMessage || "";
                 this.modal.messageClass = action.modalMessageClass || "";
                 this.modal.messageIcon = action.modalMessageIcon || "";
                 this.modal.messageIsHtml = !!action.modalMessageIsHtml;
@@ -2410,35 +2397,298 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 this.modal.html = "";
 
                 try {
+                    const meta = action.meta || action.Meta || {};
 
-                    if (action.formUrl) {
+                    // Helpers
+                    const esc = (v) => {
+                        if (v == null) return "";
+                        return String(v)
+                            .replaceAll("&", "&amp;")
+                            .replaceAll("<", "&lt;")
+                            .replaceAll(">", "&gt;")
+                            .replaceAll('"', "&quot;")
+                            .replaceAll("'", "&#39;");
+                    };
+
+                    const normalizeObjKeyLookup = (obj) => {
+                        const map = {};
+                        if (!obj || typeof obj !== "object") return map;
+                        Object.keys(obj).forEach(k => { map[String(k).toLowerCase()] = obj[k]; });
+                        return map;
+                    };
+
+                    const buildColumnsFromArray = (arr) => {
+                        const colSet = new Set();
+                        (arr || []).forEach(r => Object.keys(r || {}).forEach(k => colSet.add(k)));
+                        return Array.from(colSet);
+                    };
+
+                    const resolveHeaderMap = () => {
+                        const hm = meta.headerMap || meta.HeaderMap || {};
+                        // keep original keys but also lowercase access
+                        const lower = {};
+                        Object.keys(hm || {}).forEach(k => lower[String(k).toLowerCase()] = hm[k]);
+                        return { raw: hm || {}, lower };
+                    };
+
+                    const resolveVisibleFields = () => {
+                        const vf = meta.visibleFields || meta.VisibleFields || null;
+                        if (Array.isArray(vf) && vf.length) return vf.map(x => String(x));
+                        return null;
+                    };
+
+                    const paginate = (items, page, pageSize) => {
+                        const total = items.length;
+                        const pages = Math.max(1, Math.ceil(total / pageSize));
+                        const p = Math.min(Math.max(1, page), pages);
+                        const start = (p - 1) * pageSize;
+                        const slice = items.slice(start, start + pageSize);
+                        return { page: p, pageSize, total, pages, slice, startIndex: start };
+                    };
+
+                    const renderPager = ({ page, pages }) => {
+                        if (pages <= 1) return "";
+
+                        // show up to 7 page buttons around current
+                        const maxBtns = 7;
+                        let start = Math.max(1, page - Math.floor(maxBtns / 2));
+                        let end = Math.min(pages, start + maxBtns - 1);
+                        start = Math.max(1, end - maxBtns + 1);
+
+                        const btn = (p, label, cls = "") => `
+                <button type="button"
+                        class="sf-extra-page-btn ${cls}"
+                        onclick="window.__sfTableActive?.__setExtraPage?.(${p})">
+                    ${label}
+                </button>`;
+
+                        let html = `<div class="sf-extra-pager">`;
+
+                        html += btn(Math.max(1, page - 1), "السابق", page <= 1 ? "is-disabled" : "");
+                        for (let p = start; p <= end; p++) {
+                            html += btn(p, p, p === page ? "is-active" : "");
+                        }
+                        html += btn(Math.min(pages, page + 1), "التالي", page >= pages ? "is-disabled" : "");
+
+                        html += `</div>`;
+                        return html;
+                    };
+
+                    const renderExtraTable = (extraArray, opts = {}) => {
+                        const headerMap = resolveHeaderMap();
+                        const visibleFields = resolveVisibleFields();
+
+                        const pageSize = Number(meta.pageSize || meta.PageSize || 10) || 10;
+                        const page = Number(this.modal.extraPage || 1) || 1;
+
+                        // columns
+                        let cols = buildColumnsFromArray(extraArray);
+
+                        // apply visibleFields (ordered)
+                        if (visibleFields) {
+                            const set = new Set(cols.map(c => String(c).toLowerCase()));
+                            cols = visibleFields.filter(f => set.has(String(f).toLowerCase()));
+                        }
+
+                        // fallback if empty
+                        if (!cols.length && extraArray.length) cols = Object.keys(extraArray[0] || {});
+
+                        const pg = paginate(extraArray, page, pageSize);
+
+                        const thead = cols.map(k => {
+                            const lbl = headerMap.raw?.[k] ?? headerMap.lower?.[String(k).toLowerCase()] ?? k;
+                            return `<th scope="col" class="sf-extra-th">${esc(lbl)}</th>`;
+                        }).join("");
+
+                        const rowsHtml = pg.slice.map((r, idx) => {
+                            const tds = cols.map(k => {
+                                const lk = String(k).toLowerCase();
+                                const rowLower = normalizeObjKeyLookup(r);
+                                const val = (r?.[k] ?? rowLower?.[lk] ?? "");
+                                return `<td class="sf-extra-td">${esc(val)}</td>`;
+                            }).join("");
+
+                            const serial = `<td class="sf-extra-td sf-extra-serial">${pg.startIndex + idx + 1}</td>`;
+                            return `<tr class="sf-extra-tr">${serial}${tds}</tr>`;
+                        }).join("");
+
+                        const serialHead = `<th scope="col" class="sf-extra-th sf-extra-serial">م</th>`;
+
+                        const info = `
+                <div class="sf-extra-meta">
+                    <div>عدد السجلات: <b>${pg.total}</b></div>
+                    <div>الصفحة: <b>${pg.page}</b> / <b>${pg.pages}</b></div>
+                </div>
+            `;
+
+                        return `
+                <div class="sf-extra-wrap">
+                    ${info}
+                    <div class="sf-extra-scroll">
+                        <table class="sf-extra-table" dir="rtl">
+                            <thead>
+                                <tr>${serialHead}${thead}</tr>
+                            </thead>
+                            <tbody>
+                                ${rowsHtml || `<tr><td class="sf-extra-empty" colspan="${cols.length + 1}">لا توجد بيانات</td></tr>`}
+                            </tbody>
+                        </table>
+                    </div>
+                    ${renderPager(pg)}
+                </div>
+            `;
+                    };
+
+                    if (action.__dynamicModal) {
+                        const dyn = action.__dynamicModal;
+
+                        const body = {
+                            Component: "Table",
+                            SpName: dyn.spName,
+                            Operation: dyn.op || "select",
+                            Params: dyn.params || {}
+                        };
+
+                        const json = await this.postJson(this.endpoint, body);
+
+                        const html = (json && (json.html ?? json.Html)) || null;
+                        const data = (json && (json.data ?? json.Data)) || null;
+
+                        if (typeof html === "string" && html.trim()) {
+                            this.modal.html = html;
+                        } else if (Array.isArray(data)) {
+                            if (!data.length) {
+                                this.modal.html = `<div class="p-4 text-gray-500">لا توجد بيانات</div>`;
+                            } else {
+                                this.modal.extraPage = 1;
+                                this.__setExtraPage = (p) => {
+                                    this.modal.extraPage = p;
+                                    this.modal.html = renderExtraTable(data);
+                                    this.$nextTick(() => this.initModalScripts());
+                                };
+                                this.modal.html = renderExtraTable(data);
+                            }
+                        } else if (data && typeof data === "object") {
+                            const cols = Object.keys(data).map(k => ({ Field: k, Label: k, Type: "text", Visible: true }));
+                            this.modal.html = this.formatDetailView(data, cols);
+                        } else {
+                            this.modal.html = `<div class="p-4 text-gray-500">لا توجد بيانات</div>`;
+                        }
+                    }
+
+                    // زر "بيانات إضافية" من نفس الـ DataSet (row[extraKey]) + Pagination + Arabic headers
+                    else if (meta.useRowExtra) {
+                        const extraKey = meta.extraKey || "__extra";
+                        const titleField = meta.titleField || null;
+
+                        const titleVal = titleField
+                            ? (row?.[titleField] ?? row?.[String(titleField).toLowerCase()] ?? "")
+                            : "";
+
+                        if (titleVal) {
+                            this.modal.title =
+                                (action.modalTitle || action.label || "بيانات إضافية") +
+                                ` <span class="text-xs text-gray-400">— ${esc(titleVal)}</span>`;
+                        }
+
+                        const extra = row?.[extraKey];
+
+                        if (Array.isArray(extra)) {
+                            if (!extra.length) {
+                                this.modal.html = `<div class="p-4 text-gray-500">لا توجد بيانات إضافية</div>`;
+                            } else {
+                                this.modal.extraPage = 1;
+
+                                // expose pager setter
+                                this.__setExtraPage = (p) => {
+                                    this.modal.extraPage = p;
+                                    this.modal.html = renderExtraTable(extra);
+                                    this.$nextTick(() => this.initModalScripts());
+                                };
+
+                                this.modal.html = renderExtraTable(extra);
+                            }
+                        } else if (extra && typeof extra === "object") {
+                            const headerMap = resolveHeaderMap();
+                            const cols = Object.keys(extra).map(k => ({
+                                Field: k,
+                                Label: headerMap.raw?.[k] ?? headerMap.lower?.[String(k).toLowerCase()] ?? k,
+                                Type: "text",
+                                Visible: true
+                            }));
+                            this.modal.html = this.formatDetailView(extra, cols);
+                        } else {
+                            this.modal.html = `<div class="p-4 text-gray-500">لا توجد بيانات إضافية</div>`;
+                        }
+                    }
+
+                    // (2) formUrl
+                    else if (action.formUrl) {
                         const url = this.fillUrl(action.formUrl, row);
                         const resp = await fetch(url);
                         if (!resp.ok) throw new Error(`Failed to load form: ${resp.status}`);
                         this.modal.html = await resp.text();
+                    }
 
-                    } else if (action.openForm) {
+                    // (3) openForm
+                    else if (action.openForm) {
                         this.modal.html = this.generateFormHtml(action.openForm, row);
+                    }
 
-                    } else if (row) {
-                        // يعرض تفاصيل الصف باستخدام أعمدة الجدول نفسها
-                        const columns =
-                            this.columns ||
-                            this.table?.columns ||
-                            this.$data?.columns ||
-                            [];
-
+                    // (4) row details
+                    else if (row) {
+                        const columns = this.columns || this.table?.columns || this.$data?.columns || [];
                         this.modal.html = this.formatDetailView(row, columns);
+                    }
 
-                    } else if (action.modalSp) {
+                    // (5) modalSp (optional)
+                    else if (action.modalSp) {
+                        const columns = this.columns || this.table?.columns || this.$data?.columns || [];
+                        const meta2 = action.meta || action.Meta || {};
+                        const idField = meta2.idField || "residentInfoID";
+                        const paramName = meta2.paramName || "residentInfoID";
+
+                        const idVal =
+                            row?.[idField] ??
+                            row?.p01 ??
+                            row?.residentInfoID ??
+                            row?.ResidentInfoID ??
+                            null;
+
+                        const params = {};
+                        if (idVal != null && idVal !== "") params[paramName] = idVal;
+
                         const body = {
                             Component: "Table",
                             SpName: action.modalSp,
                             Operation: action.modalOp || "detail",
-                            Params: row || {}
+                            Params: params
                         };
+
                         const json = await this.postJson(this.endpoint, body);
-                        this.modal.html = this.formatDetailView(json.data, columns);
+                        const html = (json && (json.html ?? json.Html)) || null;
+                        const data = (json && (json.data ?? json.Data)) || null;
+
+                        if (typeof html === "string" && html.trim()) {
+                            this.modal.html = html;
+                        } else if (Array.isArray(data)) {
+                            if (!data.length) {
+                                this.modal.html = `<div class="p-4 text-gray-500">لا توجد بيانات</div>`;
+                            } else {
+                                this.modal.extraPage = 1;
+                                this.__setExtraPage = (p) => {
+                                    this.modal.extraPage = p;
+                                    this.modal.html = renderExtraTable(data);
+                                    this.$nextTick(() => this.initModalScripts());
+                                };
+                                this.modal.html = renderExtraTable(data);
+                            }
+                        } else if (data && typeof data === "object") {
+                            const cols = Object.keys(data).map(k => ({ Field: k, Label: k, Type: "text", Visible: true }));
+                            this.modal.html = this.formatDetailView(data, cols);
+                        } else {
+                            this.modal.html = `<div class="p-4 text-gray-500">لا توجد بيانات</div>`;
+                        }
                     }
 
                     this.$nextTick(() => {
@@ -2450,31 +2700,25 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                         if (!modalEl) return;
 
-                        // زر الحفظ داخل المودال: يغيّر الزر فقط إلى "جاري الحفظ…"
+                        // حفظ
                         const form = modalEl.querySelector('form');
                         if (form && !form.__saveBound) {
                             form.__saveBound = true;
 
-                            // عند الضغط على حفظ (submit)
                             form.addEventListener('submit', (e) => {
                                 const btn =
                                     form.querySelector('.sf-modal-btn-save') ||
                                     form.querySelector('button[type="submit"]');
 
                                 if (!btn) return;
-
-                                // منع تكرار الضغط
                                 if (btn.__saving) return;
                                 btn.__saving = true;
 
-                                // حفظ النص الأصلي
                                 btn.__originalText = btn.textContent;
 
-                                // تغيير شكل/نص الزر فقط
                                 btn.disabled = true;
                                 btn.classList.add("opacity-60", "pointer-events-none");
-                                btn.textContent = "جاري الحفظ .."
-
+                                btn.textContent = "جاري الحفظ ..";
 
                                 clearTimeout(btn.__restoreTimer);
                                 btn.__restoreTimer = setTimeout(() => {
@@ -2484,10 +2728,9 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                         btn.textContent = btn.__originalText || "حفظ";
                                         btn.__saving = false;
                                     }
-                                }, 15000); // 15 ثانية
+                                }, 15000);
                             });
 
-                            // إذا الفورم غير صالح (required…): رجّع الزر مباشرة
                             form.addEventListener('invalid', (e) => {
                                 const btn =
                                     form.querySelector('.sf-modal-btn-save') ||
@@ -2501,20 +2744,17 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 btn.classList.remove("opacity-60", "pointer-events-none");
                                 btn.textContent = btn.__originalText || "حفظ";
                                 btn.__saving = false;
-
                             }, true);
                         }
 
-                        // datepickers داخل المودال
                         this.initDatePickers(modalEl);
 
-                        // ===== drag =====
+                        // drag
                         (function () {
                             const modal = modalEl;
                             const header = modal.querySelector('.sf-modal-header');
 
                             if (!modal || !header) return;
-
                             if (modal.__dragBound) return;
                             modal.__dragBound = true;
 
@@ -2561,19 +2801,14 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             }
                         })();
 
-                        // تفعيل التحجيم
                         this.enableModalResize(modalEl);
-
-                        // select2 داخل المودال
                         this.initSelect2InModal(modalEl);
                     });
 
-
-
-
                 } catch (e) {
                     console.error("Modal error:", e);
-                    this.modal.error = e.message;
+                    this.modal.error = e?.message || "فشل جلب البيانات";
+                    this.modal.html = `<div class="p-4 text-red-600">${this.modal.error}</div>`;
                 } finally {
                     this.modal.loading = false;
                 }
@@ -2586,7 +2821,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     this.__printHandle = null;
                 }
 
-                // (اختياري) احتياط عام
                 if (window.__sfPrintSession?.active) {
                     window.__sfPrintSession.canceled = true;
                 }
@@ -2595,11 +2829,11 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 this.modal.html = "";
                 this.modal.action = null;
                 this.modal.error = null;
-                this.modal.message = ""; //  جديد
+                this.modal.message = ""; 
                 this.modal.messageClass = "";
                 this.modal.messageIcon = "";
                 this.modal.messageIsHtml = false;
-                if (window.__sfTableActive === this) window.__sfTableActive = null;//جديد
+                if (window.__sfTableActive === this) window.__sfTableActive = null;
             },
 
             // ===== Form Generation =====
@@ -5458,4 +5692,7 @@ window.sfMoneySarOnInput = function (el) {
             const target = root.querySelector(`[name="${n}"]`);
             if (target) target.closest('.form-group')?.style.setProperty('display', 'block');
         });
-    };
+};
+
+
+

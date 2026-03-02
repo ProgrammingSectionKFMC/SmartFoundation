@@ -378,7 +378,7 @@
             class="btn"
             :class="[
               'btn-' + (act.action.color ?? 'secondary'),
-              !act.enable || (act.action.requireSelection && selectedKeys.size !== 1) ? 'opacity-50 cursor-not-allowed' : ''
+              !act.enable || (act.action.requireSelection && selectedKeys.size !== 1) ? 'cursor-not-allowed opacity-50' : ''
             ]"
             x-on:click="act.enable ? doAction(act.action, act.action.requireSelection ? getSingleSelection() : null) : toastr.warning('هذا الإجراء غير متاح حالياً')"
             :disabled="!act.enable || (act.action.requireSelection && selectedKeys.size !== 1)">
@@ -437,7 +437,7 @@
 
                     <button type="button"
                             class="w-full px-3 py-2 text-right hover:bg-gray-100"
-                            :class="!act.enable ? 'opacity-50 cursor-not-allowed' : ''"
+                            :class="!act.enable ? 'cursor-not-allowed opacity-50' : ''"
                             x-on:click="act.enable ? (doAction(act.action, act.action.requireSelection ? getSingleSelection() : null), open=false) : toastr.warning('هذا الإجراء غير متاح حالياً')"
                             :disabled="!act.enable || (act.action.requireSelection && selectedKeys.size !== 1)">
                         <i :class="act.action.icon"></i>
@@ -803,9 +803,13 @@
 
 
 
-                        <template x-if="!modal.lloading && !modal.error && modal.html">
+                        @* <template x-if="!modal.lloading && !modal.error && modal.html">
                             <div x-html="modal.html"></div>
-                        </template>
+                        </template> *@
+
+                                <template x-if="!modal.loading && !modal.error && modal.html">
+                                    <div x-html="modal.html"></div>
+                                </template>
 
                     </div>
                 </div>

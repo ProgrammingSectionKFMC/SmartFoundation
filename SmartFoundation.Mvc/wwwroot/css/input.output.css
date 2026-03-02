@@ -1,4 +1,4 @@
-/*! tailwindcss v4.1.18 | MIT License | https://tailwindcss.com */
+/*! tailwindcss v4.2.1 | MIT License | https://tailwindcss.com */
 @import url("/lib/fontawesome/css/all.min.css");
 @layer properties;
 @font-face {
@@ -459,6 +459,12 @@ body {
   .inset-y-0 {
     inset-block: calc(var(--spacing) * 0);
   }
+  .start {
+    inset-inline-start: var(--spacing);
+  }
+  .end {
+    inset-inline-end: var(--spacing);
+  }
   .-top-1 {
     top: calc(var(--spacing) * -1);
   }
@@ -742,7 +748,7 @@ body {
     min-height: calc(var(--spacing) * 0);
   }
   .w-1\/2 {
-    width: calc(1/2 * 100%);
+    width: calc(1 / 2 * 100%);
   }
   .w-4 {
     width: calc(var(--spacing) * 4);
@@ -1721,6 +1727,9 @@ body {
   .text-rose-900 {
     color: var(--color-rose-900);
   }
+  .text-sky-600 {
+    color: var(--color-sky-600);
+  }
   .text-sky-700 {
     color: var(--color-sky-700);
   }
@@ -2441,7 +2450,7 @@ body {
   }
   .sm\:w-3\/4 {
     @media (width >= 40rem) {
-      width: calc(3/4 * 100%);
+      width: calc(3 / 4 * 100%);
     }
   }
   .sm\:px-4 {
@@ -2512,7 +2521,7 @@ body {
   }
   .lg\:w-2\/4 {
     @media (width >= 64rem) {
-      width: calc(2/4 * 100%);
+      width: calc(2 / 4 * 100%);
     }
   }
   .lg\:translate-x-0 {
@@ -14276,6 +14285,103 @@ html, body {
   }
   .sf-file-size {
     max-width: 110px;
+  }
+}
+.sf-modal .sf-modal-body {
+  max-height: 72vh;
+  overflow: auto;
+}
+.sf-extra-wrap {
+  padding: 12px;
+}
+.sf-extra-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: #4b5563;
+}
+.sf-extra-scroll {
+  max-height: 58vh;
+  overflow: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+}
+.sf-extra-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+.sf-extra-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f1f5f9;
+  color: #0f172a;
+  text-align: right;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+.sf-extra-table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #111827;
+  vertical-align: middle;
+  text-align: right;
+}
+.sf-extra-table tbody tr:hover td {
+  background: #f8fafc;
+}
+.sf-extra-serial {
+  width: 52px;
+  text-align: center !important;
+  color: #6b7280 !important;
+  white-space: nowrap;
+}
+.sf-extra-empty {
+  padding: 16px;
+  text-align: center;
+  color: #6b7280;
+}
+.sf-extra-pager {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.sf-extra-page-btn {
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #111827;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  min-width: 44px;
+}
+.sf-extra-page-btn:hover {
+  background: #f9fafb;
+}
+.sf-extra-page-btn.is-active {
+  border-color: #0ea5e9;
+  background: #e0f2fe;
+  color: #075985;
+}
+.sf-extra-page-btn.is-disabled {
+  opacity: .45;
+  pointer-events: none;
+}
+@media (max-width: 768px) {
+  .sf-extra-scroll {
+    max-height: 60vh;
+  }
+  .sf-extra-table {
+    font-size: 12px;
   }
 }
 @property --tw-translate-x {
