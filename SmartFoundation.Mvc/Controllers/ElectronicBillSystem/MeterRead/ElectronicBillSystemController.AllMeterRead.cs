@@ -355,7 +355,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             ["meterServicePriceTAX"] = "ضريبة الخدمة",
                             ["TotalPrice"] = "الاجمالي",
                             ["avrageMsg"] = "الحالة",
-                            ["AvgTotalPrice"] = "متوسط الفواتير",
+                            ["AvgTotalPrice"] = "متوسط فواتير الساكن",
                             ["entryDate"] = "وقت التنفيذ"
                         };
 
@@ -385,9 +385,9 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                             || c.ColumnName.Equals("meterName_A", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("meterServicePriceTAX", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("meterServicePrice", StringComparison.OrdinalIgnoreCase)
-                                            //|| c.ColumnName.Equals("PriceForSlide3", StringComparison.OrdinalIgnoreCase)
-                                            //|| c.ColumnName.Equals("PriceForSlide4", StringComparison.OrdinalIgnoreCase)
-                                            //|| c.ColumnName.Equals("PriceForSlide5", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("PriceForSlide3", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("PriceForSlide4", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("PriceForSlide5", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("PriceForSlide6", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("PriceForSlide7", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("PriceForSlide8", StringComparison.OrdinalIgnoreCase)
@@ -519,11 +519,11 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
 
             // UPDATE fields
-            var OpenPeriodFields = new List<FieldConfig>
+            var OpenMetersReadPeriodFields = new List<FieldConfig>
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "MOVETOASSIGNLIST" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "OPENMETERREADPERIOD" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -541,9 +541,8 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
 
                 // hidden p01 actually posted to SP
-                new FieldConfig { Name = "p01",Label = "residentInfoID", Type = "text"},
-                new FieldConfig { Name = "p02", Label = "MeterServiceTypeID_", Type = "text", Value=MeterServiceTypeID_ },
-
+                
+                new FieldConfig { Name = "p01", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
 
 
             };
@@ -619,13 +618,16 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                         Color = "success",
                         OpenModal = true,
                         ModalTitle = "فتح فترة قراءة عدادات",
+                        ModalMessage = "هل أنت متأكد من فترة قراءة عدادات جديدة لهذه الخدمة؟",
+                        ModalMessageClass = "bg-blue-50 text-blue-700",
+                        ModalMessageIcon = "fa-solid fa-triangle-exclamation",
                         OpenForm = new FormConfig
                         {
                             FormId = "buildingClassInsertForm",
                             Title = "بيانات فترة قراءة عدادات",
                             Method = "post",
                             ActionUrl = "/crud/insert",
-                            Fields = OpenPeriodFields,
+                            Fields = OpenMetersReadPeriodFields,
                             Buttons = new List<FormButtonConfig>
                             {
                                 new FormButtonConfig { Text = "حفظ",   Type = "submit", Color = "success" },
@@ -646,7 +648,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             Title = "بيانات اغلاق فترة قراءة عدادات",
                             Method = "post",
                             ActionUrl = "/crud/insert",
-                            Fields = OpenPeriodFields,
+                            Fields = OpenMetersReadPeriodFields,
                             Buttons = new List<FormButtonConfig>
                             {
                                 new FormButtonConfig { Text = "حفظ",   Type = "submit", Color = "success" },
@@ -804,7 +806,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             Title = "بيانات قراءة عداد جديدة",
                             Method = "post",
                             ActionUrl = "/crud/insert",
-                            Fields = OpenPeriodFields,
+                            Fields = OpenMetersReadPeriodFields,
                             Buttons = new List<FormButtonConfig>
                             {
                                 new FormButtonConfig { Text = "حفظ",   Type = "submit", Color = "success" },
@@ -827,7 +829,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             Title = "بيانات تاكيد قراءة عداد ",
                             Method = "post",
                             ActionUrl = "/crud/insert",
-                            Fields = OpenPeriodFields,
+                            Fields = OpenMetersReadPeriodFields,
                             Buttons = new List<FormButtonConfig>
                             {
                                 new FormButtonConfig { Text = "حفظ",   Type = "submit", Color = "success" },
@@ -855,8 +857,74 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
             dsModelMeterRead.StyleRules = new List<TableStyleRule>
                         {
-                           
-                           
+                             //new TableStyleRule
+                             //{
+
+                             //    Target = "row",
+                             //    Field = "avrageNo",
+                             //    Op = "eq",
+                             //    Value = "5",
+                             //    CssClass = "row-red",
+                             //    Priority = 1
+                             //},
+                             //new TableStyleRule
+                             //{
+
+                             //    Target = "row",
+                             //    Field = "avrageNo",
+                             //    Op = "eq",
+                             //    Value = "6",
+                             //    CssClass = "row-yellow",
+                             //    Priority = 1
+                             //},
+
+                            new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="5", Priority=1,
+                                PillEnabled=true,
+                                PillField="TotalPrice",
+                                PillTextField="TotalPrice",
+                                PillCssClass="pill pill-red",
+                                PillMode="replace"
+                            },
+                            new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="6", Priority=1,
+                                PillEnabled=true,
+                                PillField="TotalPrice",
+                                PillTextField="TotalPrice",
+                                PillCssClass="pill pill-yellow",
+                                PillMode="replace"
+                            },
+                            new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="5", Priority=1,
+                                PillEnabled=true,
+                                PillField="avrageMsg",
+                                PillTextField="avrageMsg",
+                                PillCssClass="pill pill-red",
+                                PillMode="replace"
+                            },
+                            new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="6", Priority=1,
+                                PillEnabled=true,
+                                PillField="avrageMsg",
+                                PillTextField="avrageMsg",
+                                PillCssClass="pill pill-yellow",
+                                PillMode="replace"
+                            },
+
+
+                             new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="0", Priority=1,
+                                PillEnabled=true,
+                                PillField="TotalPrice",
+                                PillTextField="TotalPrice",
+                                PillCssClass="pill pill-green",
+                                PillMode="replace"
+                            },
                              new TableStyleRule
                             {
                                 Target="row", Field="avrageNo", Op="eq", Value="1", Priority=1,
@@ -885,6 +953,15 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                 PillMode="replace"
                             },
 
+                                new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="0", Priority=1,
+                                PillEnabled=true,
+                                PillField="avrageMsg",
+                                PillTextField="avrageMsg",
+                                PillCssClass="pill pill-gray",
+                                PillMode="replace"
+                            },
                                 new TableStyleRule
                             {
                                 Target="row", Field="avrageNo", Op="eq", Value="1", Priority=1,
