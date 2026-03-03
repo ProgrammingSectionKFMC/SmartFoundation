@@ -658,15 +658,18 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                     //  الاعمدة اللي نعرضها داخل المودال (مرتبة)
                                     ["visibleFields"] = new List<string>
                                     {
+                                        "NationalID",
                                         "FullName_A",
                                         "rankNameA",
                                         "militaryUnitName_A",
                                         "residentcontactDetails",
+                                        
                                     },
 
                                     //  أسماء الأعمدة بالعربي
                                     ["headerMap"] = new Dictionary<string, string>
                                     {
+                                        ["NationalID"] = "رقم الهوية",
                                         ["FullName_A"] = "الاسم الكامل",
                                         ["rankNameA"] = "الرتبة",
                                         ["militaryUnitName_A"] = "الوحدة",

@@ -1262,14 +1262,14 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     }
 
                     //  الضغط على الخلفية (خارج الصندوق) يغلق المودال
-                    const backdrop = e.target.closest('.sf-modal-backdrop');
-                    if (backdrop) {
-                        const inside = e.target.closest('.sf-modal');
-                        if (!inside) {
-                            e.preventDefault();
-                            api.closeModal();
-                        }
-                    }
+                    //const backdrop = e.target.closest('.sf-modal-backdrop');
+                    //if (backdrop) {
+                    //    const inside = e.target.closest('.sf-modal');
+                    //    if (!inside) {
+                    //        e.preventDefault();
+                    //        api.closeModal();
+                    //    }
+                    //}
                 });
 
                 // depends dropdowns (listener واحد فقط)
