@@ -633,18 +633,32 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 RequireSelection = true,
                                 MinSelection = 1,
                                 MaxSelection = 1,
+                                ModalMessage = "عرض تجريبي باقي نجربه ونطوره ونظيف له خصائص",
                                 ModalTitle = "<i class='fa-solid fa-database text-sky-600 text-xl mr-2'></i> بيانات إضافية",
+
                                 Meta = new Dictionary<string, object?>
                                 {
+                                    
                                     ["useRowExtra"] = true,
-
-                                    // المفتاح اللي نحقنه
                                     ["extraKey"] = "__extra",
                                     ["pageSize"] = 10,
 
-                                    // الاعمدة اللي نعرضها داخل المودال
+                                    // إخفاء وعرض (عدد السجلات/الصفحات)
+                                    ["showMeta"] = true,
+
+                                    //  إضافات جديدة للتحكم بالواجهة
+                                    ["enableSearch"] = true,           // إظهار مربع البحث
+                                    ["sortable"] = true,              // ترتيب بالضغط على الهيدر
+                                    ["showRowNumbers"] = true,        // عمود "م"
+                                    ["emptyText"] = "لا توجد بيانات",  // نص عند عدم وجود نتائج/بيانات
+
+                                    // (اختياري) لو  تضيف عنوان داخل المودال من قيمة في row
+                                    // ["titleField"] = "FullName_A",
+
+                                    //  الاعمدة اللي نعرضها داخل المودال (مرتبة)
                                     ["visibleFields"] = new List<string>
                                     {
+                                        "NationalID",
                                         "FullName_A",
                                         "rankNameA",
                                         "militaryUnitName_A",
@@ -652,17 +666,17 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                         
                                     },
 
-                                    // نحط اسم الاعمدة بالعربي
+                                    //  أسماء الأعمدة بالعربي
                                     ["headerMap"] = new Dictionary<string, string>
                                     {
+                                        ["NationalID"] = "رقم الهوية",
                                         ["FullName_A"] = "الاسم الكامل",
                                         ["rankNameA"] = "الرتبة",
                                         ["militaryUnitName_A"] = "الوحدة",
                                         ["residentcontactDetails"] = "رقم الجوال",
-                                       
                                     }
                                 }
-                              }
+                            }
                             },
 
 
