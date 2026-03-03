@@ -2367,6 +2367,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             // ===== Modal Management =====
 
             async openModal(action, row) {
+                console.log("[LazyExtra] openModal fired", { action, row });
                 this.modal.open = true;
                 window.__sfTableActive = this;
 
@@ -2524,6 +2525,19 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     // columns
                     let cols = buildColumnsFromArray(extraArray);
 
+
+                    // ✅ إذا لا توجد أعمدة نهائياً لا تعرض الهيدر ولا الجدول
+                    if (!cols.length) {
+                        const emptyText = meta.emptyText ?? meta.EmptyText ?? "لا يوجد بيانات";
+
+                        return `
+<div class="sf-extra-wrap">
+    <div class="sf-extra-empty text-center py-6 text-gray-500">
+        <i class="fa-solid fa-table text-2xl mb-2 block opacity-60"></i>
+        ${esc(emptyText)}
+    </div>
+</div>`;
+                    }
                     // apply visibleFields (ordered)
                     if (visibleFields) {
                         const set = new Set(cols.map(c => String(c).toLowerCase()));
@@ -2611,7 +2625,16 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
         <tr>${serialHead}${thead}</tr>
       </thead>
       <tbody>
-        ${rowsHtml || `<tr><td class="sf-extra-empty" colspan="${cols.length + (showRowNumbers ? 1 : 0)}">${esc(emptyText)}</td></tr>`}
+        ${rowsHtml || `
+<tr>
+    <td class="sf-extra-empty text-center py-6" 
+        colspan="${cols.length + (showRowNumbers ? 1 : 0)}">
+        <div class="text-gray-500">
+            <i class="fa-solid fa-table text-2xl mb-2 block opacity-60"></i>
+            ${esc(emptyText)}
+        </div>
+    </td>
+</tr>`}
       </tbody>
     </table>
   </div>
@@ -2713,6 +2736,195 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         }
                     }
 
+
+                    // ✅ (B0) lazy load row extra قبل عرض useRowExtra
+                    if (meta.useRowExtra && (meta.lazyExtra ?? meta.LazyExtra) === true) {
+                        const extraKey = meta.extraKey ?? meta.ExtraKey ?? "__extra";
+
+                        // إذا مو موجود أو فاضي => حمّل من السيرفر
+                        const cur = row?.[extraKey];
+                        const isEmptyArray = Array.isArray(cur) && cur.length === 0;
+                        const isMissing = cur == null;
+
+                    // ✅ إذا البيانات موجودة بالفعل: اعرضها فوراً (بدون fetch)
+                    if (!isMissing && Array.isArray(cur)) {
+                        this.modal.extraPage = 1;
+                        this.modal.extraQuery = "";
+                        this.modal.extraSort = null;
+                        this.modal.__extraCache = cur;
+
+                        const emptyText = meta.emptyText ?? meta.EmptyText ?? "لا يوجد بيانات";
+
+                        this.modal.html = renderExtraTable(cur);
+                    return;
+
+                      // ✅ مهم: لا تكمل لباقي الفروع
+                    }
+
+                        if ((isMissing || isEmptyArray) && row) {
+                            const endpoint = meta.extraEndpoint ?? meta.ExtraEndpoint ?? null;
+                            const req = meta.extraRequest ?? meta.ExtraRequest ?? {};
+                            const paramMap = req.paramMap ?? req.ParamMap ?? {};
+
+                            if (endpoint && req.pageName_ && req.ActionType) {
+                                // جهّز payload مثل اللي في CrudController.ExtraDataLoad
+                                //const payload = {
+                                //    pageName_: req.pageName_,
+                                //    ActionType: req.ActionType,
+                                //    idaraID: req.idaraID ?? this.idaraID ?? null,
+                                //    entrydata: req.entrydata ?? this.entrydata ?? null,
+                                //    hostname: req.hostname ?? this.hostname ?? null,
+                                //    tableIndex: (req.tableIndex ?? req.TableIndex) ?? null,
+                               //     parameters: {}
+                               // };
+
+                               const ctx = meta.ctx ?? meta.Ctx ?? {};
+
+                               const payload = {
+                                   pageName_: req.pageName_,
+                                   ActionType: req.ActionType,
+                               
+                                   // ✅ ناخذ القيم من ctx القادم من الكنترولر
+                                   idaraID: Number(ctx.idaraID ?? req.idaraID ?? 0) || null,
+                                   entrydata: ctx.entrydata ?? req.entrydata ?? null,
+                                   hostname: ctx.hostname ?? req.hostname ?? null,
+                               
+                                   tableIndex: (req.tableIndex ?? req.TableIndex) ?? null,
+                                   parameters: {}
+                               };
+                               
+                               console.log("[LazyExtra] payload:", payload);
+                               console.log("meta ctx:", meta.ctx);
+
+                                // خذ القيم من row حسب map (مثال: parameter_01 <- p01)
+                                for (const k of Object.keys(paramMap || {})) {
+                                    const rowField = paramMap[k];
+                                    payload.parameters[k] = row?.[rowField];
+                                }
+
+                    // ===== LazyExtra Dynamic Cache =====
+                    this.__lazyExtraCache = this.__lazyExtraCache || Object.create(null);
+
+                    // 1️⃣ نبني بصمة الصف من كل pXX
+                    const buildRowSignature = (rowObj) => {
+                        if (!rowObj || typeof rowObj !== "object") return "";
+
+                        return Object.keys(rowObj)
+                            .filter(k => /^p\d+$/i.test(k))   // أي p متبوعة برقم
+                            .sort()
+                            .map(k => `${k}:${rowObj[k]}`)
+                            .join("|");
+                    };
+
+                    const rowSignature = buildRowSignature(row);
+
+                    // 2️⃣ نبني بصمة البراميترات المرسلة
+                    const normalizeParams = (p) => {
+                        if (!p || typeof p !== "object") return {};
+                        const out = {};
+                        Object.keys(p)
+                            .sort((a, b) => a.localeCompare(b))
+                            .forEach(k => {
+                                const v = p[k];
+                                out[k] = v == null ? null : String(v);
+                            });
+                        return out;
+                    };
+
+                    const paramsSignature = JSON.stringify(normalizeParams(payload.parameters));
+
+                    // 3️⃣ ActionType
+                    const actionTypeKey = req?.ActionType ?? "Extra";
+
+                    // 4️⃣ المفتاح النهائي
+                    const cacheKey = `${actionTypeKey}|${rowSignature}|${paramsSignature}`;
+
+                    // 5️⃣ لو موجود بالكاش رجعه مباشرة
+                    if (this.__lazyExtraCache[cacheKey]) {
+                        const rows = this.__lazyExtraCache[cacheKey];
+
+                        row[extraKey] = rows;
+                        this.modal.extraPage = 1;
+                        this.modal.extraQuery = "";
+                        this.modal.extraSort = null;
+                        this.modal.__extraCache = rows;
+
+                        this.modal.html = rows.length
+                            ? renderExtraTable(rows)
+                            : `<div class="p-4 text-gray-500">لا توجد بيانات إضافية</div>`;
+
+                        return; // مهم جداً
+                    }
+
+                                // إذا عندك توكن CSRF ضيفه (اختياري)
+                                const token =
+                                    document.querySelector('input[name="__RequestVerificationToken"]')?.value ||
+                                    (document.querySelector('meta[name="RequestVerificationToken"]')?.content) ||
+                                    "";
+
+                                // Busy داخل المودال
+                                this.modal.html = `<div class="p-4 text-gray-500">جاري تحميل البيانات الإضافية...</div>`;
+
+                                console.log("[LazyExtra] sending...", payload);
+
+                    const resp = await fetch(endpoint, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-Requested-With": "XMLHttpRequest",
+                            ...(token ? { "RequestVerificationToken": token } : {})
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    console.log("[LazyExtra] resp status:", resp.status);
+
+                    const txt = await resp.text();
+                    console.log("[LazyExtra] resp text (first 300):", txt.slice(0, 300));
+
+                    // حاول تحويله JSON
+                    let json = null;
+                    try {
+                        json = txt ? JSON.parse(txt) : null;
+                    } catch (e) {
+                        console.error("[LazyExtra] JSON parse error:", e);
+                    }
+
+                    console.log("[LazyExtra] json:", json);
+
+                    const extraKey = meta.extraKey ?? "__extra";
+
+                    // ✅ خذ البيانات من API بالشكل الجديد
+                    const rows =
+                        (Array.isArray(json?.data) && json.data) ||
+                        (Array.isArray(json?.tables?.[0]?.rows) && json.tables[0].rows) ||
+                        (Array.isArray(json?.table?.rows) && json.table.rows) ||
+                        [];
+
+                    // ✅ خزّنها في الصف عشان فرع useRowExtra يشتغل
+                    row[extraKey] = rows;
+
+                    this.__lazyExtraCache[cacheKey] = rows;
+
+                    // ✅ صفّر حالة البحث/الصفحة ثم اعرض الجدول
+                    this.modal.extraPage = 1;
+                    this.modal.extraQuery = "";
+                    this.modal.extraSort = null;
+                    this.modal.__extraCache = rows;
+
+                    const emptyText = meta.emptyText ?? meta.EmptyText ?? "لا يوجد بيانات";
+
+                    this.modal.html = renderExtraTable(rows);
+
+                                //const json = await resp.json();
+
+                               
+                            } else {
+                                // meta ناقصة
+                                row[extraKey] = [];
+                            }
+                        }
+                    }
                     // -------- (B) useRowExtra (from row[__extra]) + enhanced table --------
                     else if (meta.useRowExtra) {
                         const extraKey = meta.extraKey ?? "__extra";
@@ -5837,6 +6049,64 @@ window.sfMoneySarOnInput = function (el) {
             if (target) target.closest('.form-group')?.style.setProperty('display', 'block');
         });
 };
+
+
+
+
+    // قبل فتح مودال useRowExtra
+    async function sfEnsureLazyExtraLoaded(action, row, ctx) {
+        const meta = action?.Meta || action?.meta || {};
+        if (!meta.useRowExtra || !meta.lazyExtra) return;
+
+        const extraKey = meta.extraKey || "__extra";
+
+        // لو موجود مسبقاً لا تعيد التحميل
+        if (Array.isArray(row[extraKey]) && row[extraKey].length > 0) return;
+
+        const endpoint = meta.extraEndpoint;
+        const req = meta.extraRequest || {};
+        const map = req.paramMap || {};
+
+        const payload = {
+            pageName_: req.pageName_,
+            ActionType: req.ActionType,
+            idaraID: ctx?.idaraID,
+            entrydata: ctx?.entrydata,
+            hostname: ctx?.hostname,
+            tableIndex: req.tableIndex ?? null,
+            parameters: {}
+        };
+
+        for (const [paramName, rowField] of Object.entries(map)) {
+            payload.parameters[paramName] = row[rowField];
+        }
+
+        // Busy (إذا عندك)
+        if (window.sfBusy?.show) sfBusy.show({ title: "جاري تحميل البيانات الإضافية..." });
+
+        const res = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const json = await res.json();
+
+        if (window.sfBusy?.hide) sfBusy.hide();
+
+        if (!json?.success) {
+            if (window.sfToast?.error) sfToast.error(json?.message || "فشل تحميل البيانات الإضافية");
+            row[extraKey] = [];
+            return;
+        }
+
+        // إذا رجّع table واحد
+        if (json.table?.rows) row[extraKey] = json.table.rows;
+        else row[extraKey] = json.data || [];
+    }
 
 
 

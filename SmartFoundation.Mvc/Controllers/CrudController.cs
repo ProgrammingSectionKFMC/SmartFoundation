@@ -566,5 +566,108 @@ namespace SmartFoundation.Mvc.Controllers
 
             return Json(items);
         }
+
+
+        public sealed class ExtraDataLoadRequest
+        {
+            public string? pageName_ { get; set; }
+            public string? ActionType { get; set; }
+            public int? idaraID { get; set; }
+            public int? entrydata { get; set; }
+            public string? hostname { get; set; }
+
+            // اختياري: لو تبي جدول واحد فقط
+            public int? tableIndex { get; set; }
+
+            // parameter_01..10 أو p01..p10
+            public Dictionary<string, object?>? parameters { get; set; }
+        }
+
+        
+        [HttpPost("extradataload")]
+        public async Task<IActionResult> ExtraDataLoad([FromBody] ExtraDataLoadRequest req)
+        {
+            if (string.IsNullOrWhiteSpace(req.pageName_) || string.IsNullOrWhiteSpace(req.ActionType))
+                return Json(new { success = false, message = "pageName_ و ActionType مطلوبة." });
+
+            var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["pageName_"] = req.pageName_!.Trim(),
+                ["ActionType"] = req.ActionType!.Trim(),
+                ["idaraID"] = req.idaraID,
+                ["entrydata"] = req.entrydata,
+                ["hostname"] = req.hostname
+            };
+
+            // parameter_01..10 (يدعم p01..p10 أيضاً)
+            if (req.parameters is not null)
+            {
+                for (int i = 1; i <= 10; i++)
+                {
+                    object? v = null;
+                    if (req.parameters.TryGetValue($"parameter_{i:00}", out var vv1)) v = vv1;
+                    else if (req.parameters.TryGetValue($"p{i:00}", out var vv2)) v = vv2;
+
+                    if (v is null) continue;
+                    dict[$"parameter_{i:00}"] = v;
+                }
+            }
+
+            DataSet ds;
+            try
+            {
+                ds = await _mastersServies.GetExtraDataLoadDataSetAsync(dict);
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
+
+            // ✅ لو المستخدم طلب جدول محدد فقط
+            if (req.tableIndex.HasValue)
+            {
+                var ti = req.tableIndex.Value;
+                if (ti < 0 || ti >= ds.Tables.Count)
+                    return Json(new { success = false, message = $"tableIndex خارج النطاق. المتاح 0..{ds.Tables.Count - 1}" });
+
+                return Json(new
+                {
+                    success = true,
+                    table = ToTableDto(ds.Tables[ti], ti)
+                });
+            }
+
+            // ✅ رجّع كل الجداول
+            var tables = new List<object>();
+            for (int ti = 0; ti < ds.Tables.Count; ti++)
+                tables.Add(ToTableDto(ds.Tables[ti], ti));
+
+            // (اختياري) إذا تحب “data” يكون أول جدول لتوافق سريع
+            var data = ds.Tables.Count > 0 ? ToRows(ds.Tables[0]) : new List<Dictionary<string, object?>>();
+
+            return Json(new { success = true, data, tables });
+
+            // ---------------- local helpers ----------------
+            static object ToTableDto(DataTable t, int index) => new
+            {
+                index,
+                name = string.IsNullOrWhiteSpace(t.TableName) ? $"Table{index}" : t.TableName,
+                columns = t.Columns.Cast<DataColumn>().Select(c => new { name = c.ColumnName, type = c.DataType.Name }).ToList(),
+                rows = ToRows(t)
+            };
+
+            static List<Dictionary<string, object?>> ToRows(DataTable t)
+            {
+                var rows = new List<Dictionary<string, object?>>(t.Rows.Count);
+                foreach (DataRow r in t.Rows)
+                {
+                    var d = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+                    foreach (DataColumn c in t.Columns)
+                        d[c.ColumnName] = r[c] == DBNull.Value ? null : r[c];
+                    rows.Add(d);
+                }
+                return rows;
+            }
+        }
     }
 }

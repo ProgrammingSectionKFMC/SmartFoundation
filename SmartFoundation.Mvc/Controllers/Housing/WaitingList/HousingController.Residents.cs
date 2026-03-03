@@ -34,99 +34,29 @@ namespace SmartFoundation.Mvc.Controllers.Housing
              HostName
             };
 
+
+            var spExtraParameters = new object?[]
+           {
+             PageName ?? "Residents",
+             "ResidentActions",
+             IdaraId,
+             usersId,
+             HostName,
+             "60014010"
+           };
+
             var rowsList = new List<Dictionary<string, object?>>();
             var dynamicColumns = new List<TableColumn>();
 
             DataSet ds = await _mastersServies.GetDataLoadDataSetAsync(spParameters);
 
+           
+
             //  تقسيم الداتا سيت للجدول الأول + جداول أخرى
             SplitDataSet(ds);
+           
 
-
-
-
-
-
-
-            //يجيب البيانات الإضافية لكل مستفيد من الجداول الثانية ويربطها برقم المستفيد
-            // ===================================================== EXTRA =====================================================
-            var extraLookup = new Dictionary<string, List<Dictionary<string, object?>>>(StringComparer.OrdinalIgnoreCase);
-
-            // اجمع كل IDs الموجودة في dt1
-            var mainIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            if (dt1 != null && dt1.Rows.Count > 0)
-            {
-                var idCol =
-                    dt1.Columns.Contains("residentInfoID") ? "residentInfoID" :
-                    dt1.Columns.Contains("ResidentInfoID") ? "ResidentInfoID" :
-                    null;
-
-                if (!string.IsNullOrWhiteSpace(idCol))
-                {
-                    foreach (DataRow r in dt1.Rows)
-                    {
-                        var id = r[idCol]?.ToString()?.Trim();
-                        if (!string.IsNullOrWhiteSpace(id))
-                            mainIds.Add(id);
-                    }
-                }
-            }
-            DataTable? bestDt = null;
-            string? bestFk = null;
-            int bestMatch = 0;
-
-            if (ds != null && ds.Tables.Count > 1 && mainIds.Count > 0)
-            {
-                var fkCandidates = new[]
-                {
-        "residentInfoID","ResidentInfoID","residentInfoId",
-        "p01","id","ID","ResidentId","resident_id"
-    };
-
-                for (int ti = 1; ti < ds.Tables.Count; ti++)
-                {
-                    var t = ds.Tables[ti];
-                    if (t == null || t.Columns.Count == 0 || t.Rows.Count == 0) continue;
-
-                    var fkCol = fkCandidates.FirstOrDefault(n => t.Columns.Contains(n));
-                    if (string.IsNullOrWhiteSpace(fkCol)) continue;
-
-                    int match = 0;
-                    foreach (DataRow rr in t.Rows)
-                    {
-                        var fkVal = rr[fkCol]?.ToString()?.Trim();
-                        if (!string.IsNullOrWhiteSpace(fkVal) && mainIds.Contains(fkVal))
-                            match++;
-                    }
-
-                    if (match > bestMatch)
-                    {
-                        bestMatch = match;
-                        bestDt = t;
-                        bestFk = fkCol;
-                    }
-                }
-            }
-
-            if (bestDt != null && !string.IsNullOrWhiteSpace(bestFk) && bestMatch > 0)
-            {
-                foreach (DataRow rr in bestDt.Rows)
-                {
-                    var fkVal = rr[bestFk]?.ToString()?.Trim();
-                    if (string.IsNullOrWhiteSpace(fkVal)) continue;
-
-                    var d = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
-                    foreach (DataColumn cc in bestDt.Columns)
-                        d[cc.ColumnName] = rr[cc] == DBNull.Value ? null : rr[cc];
-
-                    if (!extraLookup.TryGetValue(fkVal, out var list))
-                        extraLookup[fkVal] = list = new List<Dictionary<string, object?>>();
-
-                    list.Add(d);
-                }
-            }
-            // ===================================================== End EXTRA =====================================================
-
+          
 
 
             //  التحقق من الصلاحيات
@@ -349,20 +279,6 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             //===============================================================================================
                             // تحديد رقم المستفيد الأساسي (RowId)
                             dict["p01"] = Get("residentInfoID") ?? Get("ResidentInfoID");
-
-                            // ربط كل صف ببياناته الإضافية (__extra) حسب رقم المستفيد لاستخدامها في زر "بيانات إضافية"
-                            var id =
-                                (Get("residentInfoID")?.ToString()?.Trim())
-                                ?? (Get("ResidentInfoID")?.ToString()?.Trim())
-                                ?? (Get("p01")?.ToString()?.Trim())
-                                ?? "";
-
-                            if (!string.IsNullOrWhiteSpace(id) && extraLookup.TryGetValue(id, out var ex))
-                                dict["__extra"] = ex;
-                            else
-                                dict["__extra"] = new List<Dictionary<string, object?>>();
-                            //===============================================================================================
-                            
                             dict["p02"] = Get("NationalID");
                             dict["p03"] = Get("generalNo_FK");
                             dict["p04"] = Get("firstName_A");
@@ -624,59 +540,65 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                             //============================================================================================================
 
-                            new TableAction
+                         new TableAction
+                        {
+                            Label = "بيانات إضافية",
+                            Icon = "fa-solid fa-database",
+                            Color = "secondary",
+                            OpenModal = true,
+                            RequireSelection = true,
+                            MinSelection = 1,
+                            MaxSelection = 1,
+                        
+                            Meta = new Dictionary<string, object?>
                             {
-                                Label = "بيانات إضافية",
-                                Icon = "fa-solid fa-database",
-                                Color = "secondary",
-                                OpenModal = true,
-                                RequireSelection = true,
-                                MinSelection = 1,
-                                MaxSelection = 1,
-                                ModalMessage = "عرض تجريبي باقي نجربه ونطوره ونظيف له خصائص",
-                                ModalTitle = "<i class='fa-solid fa-database text-sky-600 text-xl mr-2'></i> بيانات إضافية",
-
-                                Meta = new Dictionary<string, object?>
+                                ["useRowExtra"] = true,
+                                ["extraKey"] = "__extra",
+                        
+                                // ✅ جديد: تحميل عند الضغط
+                                ["lazyExtra"] = true,
+                                ["extraEndpoint"] = "/crud/extradataload",
+                                 ["ctx"] = new Dictionary<string, object?>
                                 {
-                                    
-                                    ["useRowExtra"] = true,
-                                    ["extraKey"] = "__extra",
-                                    ["pageSize"] = 10,
-
-                                    // إخفاء وعرض (عدد السجلات/الصفحات)
-                                    ["showMeta"] = true,
-
-                                    //  إضافات جديدة للتحكم بالواجهة
-                                    ["enableSearch"] = true,           // إظهار مربع البحث
-                                    ["sortable"] = true,              // ترتيب بالضغط على الهيدر
-                                    ["showRowNumbers"] = true,        // عمود "م"
-                                    ["emptyText"] = "لا توجد بيانات",  // نص عند عدم وجود نتائج/بيانات
-
-                                    // (اختياري) لو  تضيف عنوان داخل المودال من قيمة في row
-                                    // ["titleField"] = "FullName_A",
-
-                                    //  الاعمدة اللي نعرضها داخل المودال (مرتبة)
-                                    ["visibleFields"] = new List<string>
+                                    ["idaraID"] = IdaraId,
+                                    ["entrydata"] = usersId,
+                                    ["hostname"] = HostName
+                                },// اسم الأكشن اللي أضفته في CrudController
+                                ["extraRequest"] = new Dictionary<string, object?>
+                                {
+                                    ["pageName_"] = PageName,          // ديناميك
+                                    ["ActionType"] = "ResidentActions",// أو أي ActionType تبغاه للصفحة
+                                    ["tableIndex"] = 0,                // (اختياري) 0 = أول جدول
+                                    ["paramMap"] = new Dictionary<string, string>
                                     {
-                                        "NationalID",
-                                        "FullName_A",
-                                        "rankNameA",
-                                        "militaryUnitName_A",
-                                        "residentcontactDetails",
-                                        
-                                    },
-
-                                    //  أسماء الأعمدة بالعربي
-                                    ["headerMap"] = new Dictionary<string, string>
-                                    {
-                                        ["NationalID"] = "رقم الهوية",
-                                        ["FullName_A"] = "الاسم الكامل",
-                                        ["rankNameA"] = "الرتبة",
-                                        ["militaryUnitName_A"] = "الوحدة",
-                                        ["residentcontactDetails"] = "رقم الجوال",
+                                        ["parameter_01"] = "p01"       // parameter_01 يأخذ قيمته من row.p01
                                     }
+                                },
+                        
+                                // عرض المودال
+                                ["pageSize"] = 10,
+                                ["showMeta"] = true,
+                                ["enableSearch"] = true,
+                                ["sortable"] = true,
+                                ["showRowNumbers"] = true,
+                               // ["emptyText"] = "لا يوجد actions",
+
+                                ["visibleFields"] = new List<string>
+                                {
+                                    "generalNo_FK","buildingActionID","residentInfoID_FK","buildingActionDecisionNo","buildingActionDecisionDate","buildingActionTypeID_FK"
+                                },
+                                ["headerMap"] = new Dictionary<string, string>
+                                {
+                                    ["generalNo_FK"] = "رقم الهوية",
+                                    ["buildingActionID"] = "الاسم الكامل",
+                                    ["residentInfoID_FK"] = "الرتبة",
+                                   
                                 }
                             }
+                        }
+
+
+
                             },
 
 

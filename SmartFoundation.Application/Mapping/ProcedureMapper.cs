@@ -19,6 +19,7 @@ public static class ProcedureMapper
         { "employee:getById", "dbo.sp_SmartFormDemo" },
 
         { "MastersDataLoad:getData", "dbo.Masters_DataLoad" },
+        { "MastersExtraDataLoad:getData", "dbo.Masters_ExtraDataLoad" },
         { "MastersCrud:crud", "dbo.Masters_CRUD" },
         
         // Menu operations

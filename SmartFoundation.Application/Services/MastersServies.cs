@@ -359,6 +359,110 @@ namespace SmartFoundation.Application.Services
         }
 
 
+        public async Task<DataSet> GetExtraDataLoadDataSetAsync(params object?[] args)
+        {
+            // الترتيب:
+            // [0] pageName, [1] idaraID, [2] entryData, [3] hostName,
+            // [4..] parameter_01..parameter_10 (فقط إلى 10 كما طلبت)
+
+            string pageName = args.Length > 0 ? args[0]?.ToString() ?? "" : "";
+            string ActionType = args.Length > 0 ? args[1]?.ToString() ?? "" : "";
+            int? idaraID = args.Length > 1 ? (args[2] == null ? (int?)null : Convert.ToInt32(args[1])) : (int?)null;
+            int? entryData = args.Length > 2 ? (args[3] == null ? (int?)null : Convert.ToInt32(args[2])) : (int?)null;
+            string? hostName = args.Length > 3 ? args[4]?.ToString() : null;
+
+            var extraParams = args.Skip(5).ToArray();
+
+            // دالة مساعدة: تضيف المفتاح فقط إذا القيمة ليست null وليست DBNull
+            void AddIfHasValue(IDictionary<string, object?> d, string key, object? val)
+            {
+                if (val == null || val == DBNull.Value) return;
+                d[key] = val;
+            }
+
+            var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+
+            // القيم الأساسية
+            // pageName غالبًا إجباري – نرسله حتى لو كان فاضي
+            dict["pageName_"] = pageName;
+            dict["ActionType"] = ActionType;
+
+            // البقية نضيفها فقط عند وجود قيمة
+            AddIfHasValue(dict, "idaraID", idaraID);
+            AddIfHasValue(dict, "entrydata", entryData);
+            AddIfHasValue(dict, "hostname", hostName);
+
+            // parameter_01 .. parameter_10 حسب ما تم تمريره فقط
+            int take = Math.Min(extraParams.Length, 20);
+            for (int i = 1; i <= take; i++)
+            {
+                var val = extraParams[i - 1];
+                if (val == DBNull.Value) val = null; // أمان إضافي
+                AddIfHasValue(dict, $"parameter_{i:00}", val);
+            }
+
+            // الآن استدعِ النسخة التي تقبل Dictionary (كما لديك)
+            return await GetExtraDataLoadDataSetAsync(dict);
+        }
+
+        public async Task<DataSet> GetExtraDataLoadDataSetAsync(Dictionary<string, object?> parameters)
+        {
+            _logger.LogInformation("GetDataLoadDataSetAsync called with parameters: {Params}", JsonSerializer.Serialize(parameters));
+
+            // Resolve SP name via ProcedureMapper (no hard-coded SP name)
+            var spName = ProcedureMapper.GetProcedureName("MastersExtraDataLoad", "getData");
+
+            var request = new SmartRequest
+            {
+                Operation = "sp",
+                SpName = spName,
+                Params = parameters ?? new Dictionary<string, object?>()
+            };
+
+            SmartResponse response;
+            try
+            {
+                response = await _dataEngine.ExecuteAsync(request);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error executing stored procedure {SpName}", spName);
+                throw new InvalidOperationException($"Failed to execute stored procedure '{spName}': {ex.Message}", ex);
+            }
+
+            if (!response.Success)
+            {
+                var msg = response.Message ?? response.Error ?? "Stored procedure execution failed";
+                _logger.LogWarning("Stored procedure {SpName} returned failure: {Message}", spName, msg);
+                throw new InvalidOperationException(msg);
+            }
+
+            // Convert SmartResponse (Datasets / Data) to DataSet
+            var ds = new DataSet();
+
+            if (response.Datasets is { Count: > 0 })
+            {
+                for (var i = 0; i < response.Datasets.Count; i++)
+                {
+                    var rows = response.Datasets[i];
+                    var dt = CreateDataTableFromRowList(rows, $"Table{i}");
+                    ds.Tables.Add(dt);
+                }
+            }
+            else if (response.Data is { Count: > 0 })
+            {
+                var dt = CreateDataTableFromRowList(response.Data, "Table0");
+                ds.Tables.Add(dt);
+            }
+            else
+            {
+                ds.Tables.Add(new DataTable("Table0"));
+            }
+
+            return ds;
+        }
+
+
         //END OF MastersDataLoadService
 
 

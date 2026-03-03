@@ -355,7 +355,8 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             ["meterServicePriceTAX"] = "ضريبة الخدمة",
                             ["TotalPrice"] = "الاجمالي",
                             ["avrageMsg"] = "الحالة",
-                            ["AvgTotalPrice"] = "متوسط فواتير الساكن",
+                            
+                            ["previosBillTotalPrice"] = "الفاتورة السابقة",
                             ["entryDate"] = "وقت التنفيذ"
                         };
 
@@ -402,13 +403,13 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                             || c.ColumnName.Equals("idaraID_FK", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("entryData", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("avrageNo", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("entryDate", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("PeriodMonth", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("PeriodYear", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("meterName_A", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("meterServicePriceTAX", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("meterServicePrice", StringComparison.OrdinalIgnoreCase)
-                                            || c.ColumnName.Equals("avrageNo", StringComparison.OrdinalIgnoreCase)
-                                            || c.ColumnName.Equals("entryDate", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("PriceForSlide6", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("PriceForSlide7", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("PriceForSlide8", StringComparison.OrdinalIgnoreCase)
@@ -419,42 +420,52 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             else if (MeterServiceTypeID_ == "3")
                             {
                                 isHidden = c.ColumnName.Equals("meterID", StringComparison.OrdinalIgnoreCase)
-                                           || c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase)
-                                           || c.ColumnName.Equals("idaraID_FK", StringComparison.OrdinalIgnoreCase)
-                                           || c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase)
-                                           || c.ColumnName.Equals("entryData", StringComparison.OrdinalIgnoreCase)
-                                           || c.ColumnName.Equals("PeriodMonth", StringComparison.OrdinalIgnoreCase)
-                                            || c.ColumnName.Equals("PeriodYear", StringComparison.OrdinalIgnoreCase)
-                                            || c.ColumnName.Equals("meterName_A", StringComparison.OrdinalIgnoreCase)
-                                            || c.ColumnName.Equals("meterServicePriceTAX", StringComparison.OrdinalIgnoreCase)
-                                            || c.ColumnName.Equals("meterServicePrice", StringComparison.OrdinalIgnoreCase)
-                                           || c.ColumnName.Equals("avrageNo", StringComparison.OrdinalIgnoreCase)
-                                            || c.ColumnName.Equals("entryDate", StringComparison.OrdinalIgnoreCase)
-                                           || c.ColumnName.Equals("PriceForSlide2", StringComparison.OrdinalIgnoreCase)
-                                           || c.ColumnName.Equals("PriceForSlide3", StringComparison.OrdinalIgnoreCase)
-                                           || c.ColumnName.Equals("PriceForSlide4", StringComparison.OrdinalIgnoreCase)
-                                           || c.ColumnName.Equals("PriceForSlide5", StringComparison.OrdinalIgnoreCase)
-                                           || c.ColumnName.Equals("PriceForSlide6", StringComparison.OrdinalIgnoreCase)
-                                           || c.ColumnName.Equals("PriceForSlide7", StringComparison.OrdinalIgnoreCase)
-                                           || c.ColumnName.Equals("PriceForSlide8", StringComparison.OrdinalIgnoreCase)
-                                           || c.ColumnName.Equals("PriceForSlide9", StringComparison.OrdinalIgnoreCase)
-                                           || c.ColumnName.Equals("PriceForSlide10", StringComparison.OrdinalIgnoreCase);
+                                             || c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("idaraID_FK", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("entryData", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("avrageNo", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("entryDate", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("PeriodMonth", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("PeriodYear", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("meterName_A", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("meterServicePriceTAX", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("meterServicePrice", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("PriceForSlide2", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("PriceForSlide3", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("PriceForSlide4", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("PriceForSlide5", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("PriceForSlide6", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("PriceForSlide7", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("PriceForSlide8", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("PriceForSlide9", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("PriceForSlide10", StringComparison.OrdinalIgnoreCase);
 
                             }
                             else 
                             {
                                 isHidden = c.ColumnName.Equals("meterID", StringComparison.OrdinalIgnoreCase)
-                                          || c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase)
-                                          || c.ColumnName.Equals("idaraID_FK", StringComparison.OrdinalIgnoreCase)
-                                          || c.ColumnName.Equals("entryData", StringComparison.OrdinalIgnoreCase)
-                                          || c.ColumnName.Equals("PeriodMonth", StringComparison.OrdinalIgnoreCase)
-                                            || c.ColumnName.Equals("PeriodYear", StringComparison.OrdinalIgnoreCase)
-                                            || c.ColumnName.Equals("meterName_A", StringComparison.OrdinalIgnoreCase)
-                                            || c.ColumnName.Equals("meterServicePriceTAX", StringComparison.OrdinalIgnoreCase)
-                                            || c.ColumnName.Equals("meterServicePrice", StringComparison.OrdinalIgnoreCase)
-                                          || c.ColumnName.Equals("avrageNo", StringComparison.OrdinalIgnoreCase)
-                                          || c.ColumnName.Equals("entryDate", StringComparison.OrdinalIgnoreCase)
-                                          || c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase);
+                                             || c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("idaraID_FK", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("entryData", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("avrageNo", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("entryDate", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("PeriodMonth", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("PeriodYear", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("meterName_A", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("meterServicePriceTAX", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("meterServicePrice", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("PriceForSlide1", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("PriceForSlide2", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("PriceForSlide3", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("PriceForSlide4", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("PriceForSlide5", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("PriceForSlide6", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("PriceForSlide7", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("PriceForSlide8", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("PriceForSlide9", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("PriceForSlide10", StringComparison.OrdinalIgnoreCase);
 
                             }
 
