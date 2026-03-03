@@ -2232,54 +2232,59 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 if (!action) return;
 
                 try {
-                    
-                    if (action.requireSelection) {
-                        const selectedCount = this.selectedKeys.size;
-                        if (selectedCount < (action.minSelection || 1)) {
-                            this.showToast(`يجب اختيار ${action.minSelection || 1} عنصر على الأقل`, 'error');
+                    // normalize (support both PascalCase + camelCase from backend)
+                    const openModalFlag = !!(action.openModal ?? action.OpenModal);
+                    const requireSelection = !!(action.requireSelection ?? action.RequireSelection);
+                    const minSelection = Number(action.minSelection ?? action.MinSelection ?? 1) || 1;
+                    const maxSelection = Number(action.maxSelection ?? action.MaxSelection ?? 0) || 0;
+
+                    // selection checks
+                    if (requireSelection) {
+                        const selectedCount = this.selectedKeys?.size || 0;
+
+                        if (selectedCount < minSelection) {
+                            this.showToast(`يجب اختيار ${minSelection} عنصر على الأقل`, "error");
                             return;
                         }
-                        if (action.maxSelection > 0 && selectedCount > action.maxSelection) {
-                            this.showToast(`لا يمكن اختيار أكثر من ${action.maxSelection} عنصر`, 'error');
+                        if (maxSelection > 0 && selectedCount > maxSelection) {
+                            this.showToast(`لا يمكن اختيار أكثر من ${maxSelection} عنصر`, "error");
                             return;
                         }
 
-                        
-                        if (!row) row = this.getSelectedRowFromCurrentData();
+                        if (!row) row = this.getSelectedRowFromCurrentData?.() || null;
                     }
 
                     // Guards
-                    const guardRes = this.evalGuards(action);
+                    const guardRes = this.evalGuards?.(action) || { allowed: true };
                     if (!guardRes.allowed) {
                         this.showToast(guardRes.message || "غير مسموح", "error");
                         return;
                     }
 
-                    // Confirm if needed
-                    if (action.confirmText && !confirm(action.confirmText)) return;
+                    // confirm (once only)
+                    const confirmText = action.confirmText ?? action.ConfirmText ?? "";
+                    if (confirmText && !confirm(confirmText)) return;
 
-                    // 
-                    const js = action.onClickJs || action.OnClickJs;
-                    if (js && String(js).trim()) {
+                    // OnClickJs / onClickJs
+                    const clickJs = action.onClickJs ?? action.OnClickJs ?? "";
+                    if (clickJs && String(clickJs).trim()) {
                         try {
-                            const code = String(js).trim();
+                            const code = String(clickJs).trim();
 
-                            
-                            const isFnCallOrName =
-                                /^[a-zA-Z_$][\w$]*(\s*\(.*\))?$/.test(code);
-
+                            // if it's a function name or a function call, try call window.fn(row, action, table)
+                            const isFnCallOrName = /^[a-zA-Z_$][\w$]*(\s*\(.*\))?$/.test(code);
                             if (isFnCallOrName) {
-                                const fnName = code.split('(')[0].trim();
-                                const fn = window[fnName];
+                                const fnName = code.split("(")[0].trim();
+                                const fn = window?.[fnName];
                                 if (typeof fn === "function") {
-                                    
-                                    fn(row, action, this);
+                                    fn(row || null, action, this);
                                     return;
                                 }
                             }
 
+                            // otherwise run as snippet: (row, action, table)
                             const runner = new Function("row", "action", "table", code);
-                            runner(row, action, this);
+                            runner(row || null, action, this);
                             return;
 
                         } catch (err) {
@@ -2289,79 +2294,56 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         }
                     }
 
-                    // Open modal
-                    
-                    if (action.confirmText && !confirm(action.confirmText)) {
-                        return;
-                    }
+                    // Open modal path (supports meta before open)
+                    if (openModalFlag) {
+                        const beforeJs = action.onBeforeOpenJs ?? action.OnBeforeOpenJs ?? "";
+                        if (beforeJs && String(beforeJs).trim()) {
+                            try {
+                                const code = String(beforeJs).trim();
+                                const runner = new Function("table", "act", "row", code);
+                                runner(this, action, row || null);
 
-                    const beforeJs = action.onBeforeOpenJs || action.OnBeforeOpenJs;
-                    if (beforeJs && String(beforeJs).trim()) {
-                        try {
-                            const code = String(beforeJs).trim();
-                            const runner = new Function("table", "act", "row", code);
-                            runner(this, action, row || null);
+                            } catch (err) {
+                                console.error("OnBeforeOpenJs failed:", err);
+                                this.showToast("فشل تجهيز المودال", "error");
+                                return;
+                            }
+                        }
 
-                        } catch (err) {
-                            console.error("OnBeforeOpenJs failed:", err);
-                            this.showToast("فشل تجهيز المودال", "error");
+                        if (action.__cancelOpen) {
+                            this.showToast("لا يوجد إجراء لاحق لهذه الحالة", "error");
                             return;
                         }
-                    }
 
-                    if (action.__cancelOpen) {
-                        // () رسالة
-                        this.showToast("لا يوجد إجراء لاحق لهذه الحالة", "error");
+                        await this.openModal(action, row || null);
                         return;
                     }
 
-                    // فتح المودال مع فحص Guards
-                    if (action.openModal) {
-                        await this.openModal(action, row);
-                        return;
-                    }
-
-                    // Execute stored procedure
-                    
-                    if (action.onClickJs) {
-                        try {
-                            // تنفيذ الكود الجافاسكربت المخصص
-
-                            const fn = new Function('action', 'row', action.onClickJs);
-                            fn.call(this, action, row);
-                        } catch (e) {
-                            console.error("OnClickJs execution error:", e);
-                            this.showToast("فشل تنفيذ الإجراء", 'error');
-                        }
-                        return;
-                    }
-
-                    // تنفيذ stored procedure
-                    if (action.saveSp) {
-                        const success = await this.executeSp(action.saveSp, action.saveOp || "execute", row);
+                    // Execute stored procedure (saveSp)
+                    const saveSp = action.saveSp ?? action.SaveSp ?? "";
+                    if (saveSp) {
+                        const op = action.saveOp ?? action.SaveOp ?? "execute";
+                        const success = await this.executeSp?.(saveSp, op, row || null);
                         if (success && this.autoRefresh) {
-                            this.clearSelection();
-                            await this.refresh();
+                            this.clearSelection?.();
+                            await this.refresh?.();
                         }
                         return;
                     }
 
                 } catch (e) {
                     console.error("Action error:", e);
-                    this.showToast("فشل في تنفيذ الإجراء: " + e.message, 'error');
+                    this.showToast("فشل في تنفيذ الإجراء: " + (e?.message || e), "error");
                 }
             },
 
-
             async doBulkDelete() {
-                if (this.selectedKeys.size === 0) {
-                    this.showToast("لم يتم اختيار أي عناصر للحذف", 'error');
+                if ((this.selectedKeys?.size || 0) === 0) {
+                    this.showToast("لم يتم اختيار أي عناصر للحذف", "error");
                     return;
                 }
 
-                if (!confirm(`هل تريد حقاً حذف ${this.selectedKeys.size} عنصر؟`)) {
-                    return;
-                }
+                if (!confirm(`هل تريد حقاً حذف ${this.selectedKeys.size} عنصر؟`)) return;
 
                 try {
                     const body = {
@@ -2372,173 +2354,327 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     };
 
                     await this.postJson(this.endpoint, body);
-                    this.showToast(`تم حذف ${this.selectedKeys.size} عنصر بنجاح`, 'success');
+                    this.showToast(`تم حذف ${this.selectedKeys.size} عنصر بنجاح`, "success");
                     this.clearSelection();
                     await this.refresh();
 
                 } catch (e) {
                     console.error("Bulk delete error:", e);
-                    this.showToast("فشل في الحذف: " + e.message, 'error');
+                    this.showToast("فشل في الحذف: " + (e?.message || e), "error");
                 }
             },
 
             // ===== Modal Management =====
+
             async openModal(action, row) {
                 this.modal.open = true;
                 window.__sfTableActive = this;
-                this.modal.title = action.modalTitle || action.label || "";
-                this.modal.message = action.modalMessage || "";
-                this.modal.messageClass = action.modalMessageClass || "";
-                this.modal.messageIcon = action.modalMessageIcon || "";
-                this.modal.messageIsHtml = !!action.modalMessageIsHtml;
+
+                // reset/prepare
+                this.modal.title = action.modalTitle ?? action.ModalTitle ?? action.label ?? action.Label ?? "";
+                this.modal.message = action.modalMessage ?? action.ModalMessage ?? "";
+                this.modal.messageClass = action.modalMessageClass ?? action.ModalMessageClass ?? "";
+                this.modal.messageIcon = action.modalMessageIcon ?? action.ModalMessageIcon ?? "";
+                this.modal.messageIsHtml = !!(action.modalMessageIsHtml ?? action.ModalMessageIsHtml);
+
                 this.modal.action = action;
                 this.modal.loading = true;
                 this.modal.error = null;
                 this.modal.html = "";
 
-                try {
-                    const meta = action.meta || action.Meta || {};
+                // internal modal state for "extra table"
+                this.modal.extraPage = Number(this.modal.extraPage || 1) || 1;
+                this.modal.extraQuery = String(this.modal.extraQuery || "");
+                this.modal.extraSort = this.modal.extraSort || null; // { key, dir: 'asc'|'desc' }
 
-                    // Helpers
-                    const esc = (v) => {
-                        if (v == null) return "";
-                        return String(v)
-                            .replaceAll("&", "&amp;")
-                            .replaceAll("<", "&lt;")
-                            .replaceAll(">", "&gt;")
-                            .replaceAll('"', "&quot;")
-                            .replaceAll("'", "&#39;");
-                    };
+                // helpers
+                const esc = (v) => {
+                    if (v == null) return "";
+                    return String(v)
+                        .replaceAll("&", "&amp;")
+                        .replaceAll("<", "&lt;")
+                        .replaceAll(">", "&gt;")
+                        .replaceAll('"', "&quot;")
+                        .replaceAll("'", "&#39;");
+                };
 
-                    const normalizeObjKeyLookup = (obj) => {
-                        const map = {};
-                        if (!obj || typeof obj !== "object") return map;
-                        Object.keys(obj).forEach(k => { map[String(k).toLowerCase()] = obj[k]; });
-                        return map;
-                    };
+                const normalizeObjKeyLookup = (obj) => {
+                    const map = {};
+                    if (!obj || typeof obj !== "object") return map;
+                    Object.keys(obj).forEach(k => { map[String(k).toLowerCase()] = obj[k]; });
+                    return map;
+                };
 
-                    const buildColumnsFromArray = (arr) => {
-                        const colSet = new Set();
-                        (arr || []).forEach(r => Object.keys(r || {}).forEach(k => colSet.add(k)));
-                        return Array.from(colSet);
-                    };
+                const buildColumnsFromArray = (arr) => {
+                    const colSet = new Set();
+                    (arr || []).forEach(r => Object.keys(r || {}).forEach(k => colSet.add(k)));
+                    return Array.from(colSet);
+                };
 
-                    const resolveHeaderMap = () => {
-                        const hm = meta.headerMap || meta.HeaderMap || {};
-                        // keep original keys but also lowercase access
-                        const lower = {};
-                        Object.keys(hm || {}).forEach(k => lower[String(k).toLowerCase()] = hm[k]);
-                        return { raw: hm || {}, lower };
-                    };
+                const resolveMeta = () => (action.meta ?? action.Meta ?? {});
 
-                    const resolveVisibleFields = () => {
-                        const vf = meta.visibleFields || meta.VisibleFields || null;
-                        if (Array.isArray(vf) && vf.length) return vf.map(x => String(x));
-                        return null;
-                    };
+                const resolveHeaderMap = (meta) => {
+                    const hm = meta.headerMap ?? meta.HeaderMap ?? {};
+                    const lower = {};
+                    Object.keys(hm || {}).forEach(k => lower[String(k).toLowerCase()] = hm[k]);
+                    return { raw: hm || {}, lower };
+                };
 
-                    const paginate = (items, page, pageSize) => {
-                        const total = items.length;
-                        const pages = Math.max(1, Math.ceil(total / pageSize));
-                        const p = Math.min(Math.max(1, page), pages);
-                        const start = (p - 1) * pageSize;
-                        const slice = items.slice(start, start + pageSize);
-                        return { page: p, pageSize, total, pages, slice, startIndex: start };
-                    };
+                const resolveVisibleFields = (meta) => {
+                    const vf = meta.visibleFields ?? meta.VisibleFields ?? null;
+                    if (Array.isArray(vf) && vf.length) return vf.map(x => String(x));
+                    return null;
+                };
 
-                    const renderPager = ({ page, pages }) => {
-                        if (pages <= 1) return "";
+                const paginate = (items, page, pageSize) => {
+                    const total = items.length;
+                    const pages = Math.max(1, Math.ceil(total / pageSize));
+                    const p = Math.min(Math.max(1, page), pages);
+                    const start = (p - 1) * pageSize;
+                    const slice = items.slice(start, start + pageSize);
+                    return { page: p, pageSize, total, pages, slice, startIndex: start };
+                };
 
-                        // show up to 7 page buttons around current
-                        const maxBtns = 7;
-                        let start = Math.max(1, page - Math.floor(maxBtns / 2));
-                        let end = Math.min(pages, start + maxBtns - 1);
-                        start = Math.max(1, end - maxBtns + 1);
+                const renderPager = ({ page, pages }) => {
+                    if (pages <= 1) return "";
 
-                        const btn = (p, label, cls = "") => `
-                <button type="button"
-                        class="sf-extra-page-btn ${cls}"
-                        onclick="window.__sfTableActive?.__setExtraPage?.(${p})">
-                    ${label}
-                </button>`;
+                    const maxBtns = 7;
+                    let start = Math.max(1, page - Math.floor(maxBtns / 2));
+                    let end = Math.min(pages, start + maxBtns - 1);
+                    start = Math.max(1, end - maxBtns + 1);
 
-                        let html = `<div class="sf-extra-pager">`;
+                    const btn = (p, label, cls = "") => `
+<button type="button"
+        class="sf-extra-page-btn ${cls}"
+        onclick="window.__sfTableActive?.__setExtraPage?.(${p})">
+    ${label}
+</button>`;
 
-                        html += btn(Math.max(1, page - 1), "السابق", page <= 1 ? "is-disabled" : "");
-                        for (let p = start; p <= end; p++) {
-                            html += btn(p, p, p === page ? "is-active" : "");
-                        }
-                        html += btn(Math.min(pages, page + 1), "التالي", page >= pages ? "is-disabled" : "");
+                    let html = `<div class="sf-extra-pager">`;
+                    html += btn(Math.max(1, page - 1), "السابق", page <= 1 ? "is-disabled" : "");
+                    for (let p = start; p <= end; p++) html += btn(p, p, p === page ? "is-active" : "");
+                    html += btn(Math.min(pages, page + 1), "التالي", page >= pages ? "is-disabled" : "");
+                    html += `</div>`;
+                    return html;
+                };
 
-                        html += `</div>`;
-                        return html;
-                    };
+                // filtering + sorting (safe defaults)
+                const applyFilterSort = (data, cols, meta) => {
+                    let out = Array.isArray(data) ? data.slice() : [];
 
-                    const renderExtraTable = (extraArray, opts = {}) => {
-                        const headerMap = resolveHeaderMap();
-                        const visibleFields = resolveVisibleFields();
-
-                        const pageSize = Number(meta.pageSize || meta.PageSize || 10) || 10;
-                        const page = Number(this.modal.extraPage || 1) || 1;
-
-                        // columns
-                        let cols = buildColumnsFromArray(extraArray);
-
-                        // apply visibleFields (ordered)
-                        if (visibleFields) {
-                            const set = new Set(cols.map(c => String(c).toLowerCase()));
-                            cols = visibleFields.filter(f => set.has(String(f).toLowerCase()));
-                        }
-
-                        // fallback if empty
-                        if (!cols.length && extraArray.length) cols = Object.keys(extraArray[0] || {});
-
-                        const pg = paginate(extraArray, page, pageSize);
-
-                        const thead = cols.map(k => {
-                            const lbl = headerMap.raw?.[k] ?? headerMap.lower?.[String(k).toLowerCase()] ?? k;
-                            return `<th scope="col" class="sf-extra-th">${esc(lbl)}</th>`;
-                        }).join("");
-
-                        const rowsHtml = pg.slice.map((r, idx) => {
-                            const tds = cols.map(k => {
+                    // filter
+                    const enableSearch = (meta.enableSearch ?? meta.EnableSearch ?? true) !== false;
+                    const q = enableSearch ? String(this.modal.extraQuery || "").trim().toLowerCase() : "";
+                    if (q) {
+                        out = out.filter(r => {
+                            const lower = normalizeObjKeyLookup(r);
+                            for (const k of cols) {
                                 const lk = String(k).toLowerCase();
-                                const rowLower = normalizeObjKeyLookup(r);
-                                const val = (r?.[k] ?? rowLower?.[lk] ?? "");
-                                return `<td class="sf-extra-td">${esc(val)}</td>`;
-                            }).join("");
+                                const val = (r?.[k] ?? lower?.[lk] ?? "");
+                                if (val == null) continue;
+                                if (String(val).toLowerCase().includes(q)) return true;
+                            }
+                            return false;
+                        });
+                    }
 
-                            const serial = `<td class="sf-extra-td sf-extra-serial">${pg.startIndex + idx + 1}</td>`;
-                            return `<tr class="sf-extra-tr">${serial}${tds}</tr>`;
-                        }).join("");
+                    // sort
+                    const sortable = (meta.sortable ?? meta.Sortable ?? true) !== false;
+                    const sort = sortable ? this.modal.extraSort : null;
+                    if (sort && sort.key) {
+                        const key = sort.key;
+                        const dir = (sort.dir === "desc") ? -1 : 1;
 
-                        const serialHead = `<th scope="col" class="sf-extra-th sf-extra-serial">م</th>`;
+                        out.sort((a, b) => {
+                            const la = normalizeObjKeyLookup(a);
+                            const lb = normalizeObjKeyLookup(b);
+                            const av = (a?.[key] ?? la?.[String(key).toLowerCase()]);
+                            const bv = (b?.[key] ?? lb?.[String(key).toLowerCase()]);
 
-                        const info = `
-                <div class="sf-extra-meta">
-                    <div>عدد السجلات: <b>${pg.total}</b></div>
-                    <div>الصفحة: <b>${pg.page}</b> / <b>${pg.pages}</b></div>
-                </div>
-            `;
+                            // nulls last
+                            if (av == null && bv == null) return 0;
+                            if (av == null) return 1;
+                            if (bv == null) return -1;
 
+                            // numeric compare if both numbers
+                            const an = Number(av), bn = Number(bv);
+                            const aNum = !Number.isNaN(an) && String(av).trim() !== "";
+                            const bNum = !Number.isNaN(bn) && String(bv).trim() !== "";
+                            if (aNum && bNum) return (an - bn) * dir;
+
+                            // string compare
+                            return String(av).localeCompare(String(bv), "ar", { numeric: true, sensitivity: "base" }) * dir;
+                        });
+                    }
+
+                    return out;
+                };
+
+                const renderExtraTable = (extraArray) => {
+                    const meta = resolveMeta();
+                    const headerMap = resolveHeaderMap(meta);
+                    const visibleFields = resolveVisibleFields(meta);
+
+                    const pageSize = Number(meta.pageSize ?? meta.PageSize ?? 10) || 10;
+                    const showRowNumbers = (meta.showRowNumbers ?? meta.ShowRowNumbers ?? true) !== false;
+                    const emptyText = meta.emptyText ?? meta.EmptyText ?? "لا توجد بيانات";
+                    const enableSearch = (meta.enableSearch ?? meta.EnableSearch ?? true) !== false;
+                    const sortable = (meta.sortable ?? meta.Sortable ?? true) !== false;
+
+                    // columns
+                    let cols = buildColumnsFromArray(extraArray);
+
+                    // apply visibleFields (ordered)
+                    if (visibleFields) {
+                        const set = new Set(cols.map(c => String(c).toLowerCase()));
+                        cols = visibleFields.filter(f => set.has(String(f).toLowerCase()));
+                    }
+
+                    // fallback if empty
+                    if (!cols.length && extraArray.length) cols = Object.keys(extraArray[0] || {});
+
+                    // filter + sort
+                    const filtered = applyFilterSort(extraArray, cols, meta);
+
+                    // paginate
+                    const page = Number(this.modal.extraPage || 1) || 1;
+                    const pg = paginate(filtered, page, pageSize);
+
+                    // header click sort
+                    const sortBtn = (key) => {
+                        if (!sortable) return "";
+                        const cur = this.modal.extraSort;
+                        const isCur = cur && String(cur.key).toLowerCase() === String(key).toLowerCase();
+                        const dir = isCur ? (cur.dir === "asc" ? "desc" : "asc") : "asc";
+                        const arrow = isCur ? (cur.dir === "asc" ? "▲" : "▼") : "";
                         return `
-                <div class="sf-extra-wrap">
-                    ${info}
-                    <div class="sf-extra-scroll">
-                        <table class="sf-extra-table" dir="rtl">
-                            <thead>
-                                <tr>${serialHead}${thead}</tr>
-                            </thead>
-                            <tbody>
-                                ${rowsHtml || `<tr><td class="sf-extra-empty" colspan="${cols.length + 1}">لا توجد بيانات</td></tr>`}
-                            </tbody>
-                        </table>
-                    </div>
-                    ${renderPager(pg)}
-                </div>
-            `;
+<button type="button" class="sf-extra-sort-btn"
+        onclick="window.__sfTableActive?.__setExtraSort?.('${esc(key)}','${dir}')">
+    ${arrow}
+</button>`;
                     };
 
+                    const thead = cols.map(k => {
+                        const lbl = headerMap.raw?.[k] ?? headerMap.lower?.[String(k).toLowerCase()] ?? k;
+                        return `<th scope="col" class="sf-extra-th">${esc(lbl)} ${sortBtn(k)}</th>`;
+                    }).join("");
+
+                    const rowsHtml = pg.slice.map((r, idx) => {
+                        const rowLower = normalizeObjKeyLookup(r);
+
+                        const tds = cols.map(k => {
+                            const lk = String(k).toLowerCase();
+                            const val = (r?.[k] ?? rowLower?.[lk] ?? "");
+                            const text = (val == null || val === "") ? "—" : String(val);
+                            return `<td class="sf-extra-td" title="${esc(text)}">${esc(text)}</td>`;
+                        }).join("");
+
+                        const serial = showRowNumbers
+                            ? `<td class="sf-extra-td sf-extra-serial">${pg.startIndex + idx + 1}</td>`
+                            : "";
+
+                        return `<tr class="sf-extra-tr">${serial}${tds}</tr>`;
+                    }).join("");
+
+                    const serialHead = showRowNumbers
+                        ? `<th scope="col" class="sf-extra-th sf-extra-serial">م</th>`
+                        : "";
+
+                    // ✅ تحكم بإظهار شريط (عدد السجلات/الصفحات)
+                    const showMeta = (meta.showMeta ?? meta.ShowMeta ?? true) !== false;
+
+                    const infoHtml = showMeta ? `
+<div class="sf-extra-meta">
+  <div>عدد السجلات: <b>${pg.total}</b></div>
+  <div>الصفحة: <b>${pg.page}</b> / <b>${pg.pages}</b></div>
+</div>` : "";
+
+                    const searchBox = enableSearch ? `
+<div class="sf-extra-search">
+  <input type="text"
+         class="sf-extra-search-input"
+         placeholder="بحث داخل البيانات..."
+         value="${esc(this.modal.extraQuery || "")}"
+         oninput="window.__sfTableActive?.__setExtraQuery?.(this.value)" />
+  <button type="button"
+          class="sf-extra-search-clear"
+          onclick="window.__sfTableActive?.__setExtraQuery?.('')">مسح</button>
+</div>` : "";
+
+                    return `
+<div class="sf-extra-wrap">
+  ${searchBox}
+
+  <div class="sf-extra-scroll">
+    <table class="sf-extra-table" dir="rtl">
+      <thead>
+        <tr>${serialHead}${thead}</tr>
+      </thead>
+      <tbody>
+        ${rowsHtml || `<tr><td class="sf-extra-empty" colspan="${cols.length + (showRowNumbers ? 1 : 0)}">${esc(emptyText)}</td></tr>`}
+      </tbody>
+    </table>
+  </div>
+
+  ${infoHtml}
+  ${renderPager(pg)}
+</div>`;
+                };
+
+                try {
+                    const meta = resolveMeta();
+
+                    // -------- expose modal setters (stable + safe) --------
+                    this.__setExtraPage = (p) => {
+                        const n = Number(p) || 1;
+                        this.modal.extraPage = n;
+                        // keep current cached dataset if present
+                        if (this.modal.__extraCache && Array.isArray(this.modal.__extraCache)) {
+                            this.modal.html = renderExtraTable(this.modal.__extraCache);
+                            this.$nextTick(() => this.initModalScripts?.());
+                        }
+                    };
+
+                    this.__setExtraQuery = (q) => {
+                        // ✅ احفظ العنصر الحالي (input) وحالة المؤشر قبل إعادة الرسم
+                        const inputEl = document.querySelector(".sf-extra-search-input");
+                        const hadFocus = !!(inputEl && document.activeElement === inputEl);
+                        const selStart = inputEl ? inputEl.selectionStart : null;
+                        const selEnd = inputEl ? inputEl.selectionEnd : null;
+
+                        this.modal.extraQuery = String(q ?? "");
+                        this.modal.extraPage = 1;
+
+                        if (this.modal.__extraCache && Array.isArray(this.modal.__extraCache)) {
+                            this.modal.html = renderExtraTable(this.modal.__extraCache);
+
+                            this.$nextTick(() => {
+                                this.initModalScripts?.();
+
+                                // ✅ رجّع الفوكس والمؤشر بعد إعادة الرسم
+                                if (hadFocus) {
+                                    const el = document.querySelector(".sf-extra-search-input");
+                                    if (el) {
+                                        el.focus({ preventScroll: true });
+                                        if (selStart != null && selEnd != null && typeof el.setSelectionRange === "function") {
+                                            el.setSelectionRange(selStart, selEnd);
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    };
+
+                    this.__setExtraSort = (key, dir) => {
+                        this.modal.extraSort = { key: String(key || ""), dir: (dir === "desc" ? "desc" : "asc") };
+                        this.modal.extraPage = 1;
+                        if (this.modal.__extraCache && Array.isArray(this.modal.__extraCache)) {
+                            this.modal.html = renderExtraTable(this.modal.__extraCache);
+                            this.$nextTick(() => this.initModalScripts?.());
+                        }
+                    };
+
+                    // -------- (A) dynamic modal (server) --------
                     if (action.__dynamicModal) {
                         const dyn = action.__dynamicModal;
 
@@ -2556,39 +2692,39 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                         if (typeof html === "string" && html.trim()) {
                             this.modal.html = html;
+
                         } else if (Array.isArray(data)) {
                             if (!data.length) {
                                 this.modal.html = `<div class="p-4 text-gray-500">لا توجد بيانات</div>`;
                             } else {
                                 this.modal.extraPage = 1;
-                                this.__setExtraPage = (p) => {
-                                    this.modal.extraPage = p;
-                                    this.modal.html = renderExtraTable(data);
-                                    this.$nextTick(() => this.initModalScripts());
-                                };
+                                this.modal.extraQuery = "";
+                                this.modal.extraSort = null;
+                                this.modal.__extraCache = data;
                                 this.modal.html = renderExtraTable(data);
                             }
+
                         } else if (data && typeof data === "object") {
                             const cols = Object.keys(data).map(k => ({ Field: k, Label: k, Type: "text", Visible: true }));
                             this.modal.html = this.formatDetailView(data, cols);
+
                         } else {
                             this.modal.html = `<div class="p-4 text-gray-500">لا توجد بيانات</div>`;
                         }
                     }
 
-                    // زر "بيانات إضافية" من نفس الـ DataSet (row[extraKey]) + Pagination + Arabic headers
+                    // -------- (B) useRowExtra (from row[__extra]) + enhanced table --------
                     else if (meta.useRowExtra) {
-                        const extraKey = meta.extraKey || "__extra";
-                        const titleField = meta.titleField || null;
+                        const extraKey = meta.extraKey ?? "__extra";
+                        const titleField = meta.titleField ?? null;
 
                         const titleVal = titleField
                             ? (row?.[titleField] ?? row?.[String(titleField).toLowerCase()] ?? "")
                             : "";
 
                         if (titleVal) {
-                            this.modal.title =
-                                (action.modalTitle || action.label || "بيانات إضافية") +
-                                ` <span class="text-xs text-gray-400">— ${esc(titleVal)}</span>`;
+                            const baseTitle = (action.modalTitle ?? action.ModalTitle ?? action.label ?? action.Label ?? "بيانات إضافية");
+                            this.modal.title = `${baseTitle} <span class="text-xs text-gray-400">— ${esc(titleVal)}</span>`;
                         }
 
                         const extra = row?.[extraKey];
@@ -2598,18 +2734,17 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 this.modal.html = `<div class="p-4 text-gray-500">لا توجد بيانات إضافية</div>`;
                             } else {
                                 this.modal.extraPage = 1;
+                                this.modal.extraQuery = "";
+                                this.modal.extraSort = null;
 
-                                // expose pager setter
-                                this.__setExtraPage = (p) => {
-                                    this.modal.extraPage = p;
-                                    this.modal.html = renderExtraTable(extra);
-                                    this.$nextTick(() => this.initModalScripts());
-                                };
+                                // cache for search/sort/paging without breaking existing pages
+                                this.modal.__extraCache = extra;
 
                                 this.modal.html = renderExtraTable(extra);
                             }
+
                         } else if (extra && typeof extra === "object") {
-                            const headerMap = resolveHeaderMap();
+                            const headerMap = resolveHeaderMap(meta);
                             const cols = Object.keys(extra).map(k => ({
                                 Field: k,
                                 Label: headerMap.raw?.[k] ?? headerMap.lower?.[String(k).toLowerCase()] ?? k,
@@ -2617,34 +2752,35 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 Visible: true
                             }));
                             this.modal.html = this.formatDetailView(extra, cols);
+
                         } else {
                             this.modal.html = `<div class="p-4 text-gray-500">لا توجد بيانات إضافية</div>`;
                         }
                     }
 
-                    // (2) formUrl
-                    else if (action.formUrl) {
-                        const url = this.fillUrl(action.formUrl, row);
+                    // -------- (C) formUrl --------
+                    else if (action.formUrl ?? action.FormUrl) {
+                        const url = this.fillUrl(action.formUrl ?? action.FormUrl, row);
                         const resp = await fetch(url);
                         if (!resp.ok) throw new Error(`Failed to load form: ${resp.status}`);
                         this.modal.html = await resp.text();
                     }
 
-                    // (3) openForm
-                    else if (action.openForm) {
-                        this.modal.html = this.generateFormHtml(action.openForm, row);
+                    // -------- (D) openForm --------
+                    else if (action.openForm ?? action.OpenForm) {
+                        this.modal.html = this.generateFormHtml(action.openForm ?? action.OpenForm, row);
                     }
 
-                    // (4) row details
+                    // -------- (E) row details --------
                     else if (row) {
                         const columns = this.columns || this.table?.columns || this.$data?.columns || [];
                         this.modal.html = this.formatDetailView(row, columns);
                     }
 
-                    // (5) modalSp (optional)
-                    else if (action.modalSp) {
+                    // -------- (F) modalSp (optional) --------
+                    else if (action.modalSp ?? action.ModalSp) {
                         const columns = this.columns || this.table?.columns || this.$data?.columns || [];
-                        const meta2 = action.meta || action.Meta || {};
+                        const meta2 = action.meta ?? action.Meta ?? {};
                         const idField = meta2.idField || "residentInfoID";
                         const paramName = meta2.paramName || "residentInfoID";
 
@@ -2660,8 +2796,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                         const body = {
                             Component: "Table",
-                            SpName: action.modalSp,
-                            Operation: action.modalOp || "detail",
+                            SpName: (action.modalSp ?? action.ModalSp),
+                            Operation: (action.modalOp ?? action.ModalOp ?? "detail"),
                             Params: params
                         };
 
@@ -2671,49 +2807,51 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                         if (typeof html === "string" && html.trim()) {
                             this.modal.html = html;
+
                         } else if (Array.isArray(data)) {
                             if (!data.length) {
                                 this.modal.html = `<div class="p-4 text-gray-500">لا توجد بيانات</div>`;
                             } else {
                                 this.modal.extraPage = 1;
-                                this.__setExtraPage = (p) => {
-                                    this.modal.extraPage = p;
-                                    this.modal.html = renderExtraTable(data);
-                                    this.$nextTick(() => this.initModalScripts());
-                                };
+                                this.modal.extraQuery = "";
+                                this.modal.extraSort = null;
+                                this.modal.__extraCache = data;
                                 this.modal.html = renderExtraTable(data);
                             }
+
                         } else if (data && typeof data === "object") {
                             const cols = Object.keys(data).map(k => ({ Field: k, Label: k, Type: "text", Visible: true }));
                             this.modal.html = this.formatDetailView(data, cols);
+
                         } else {
                             this.modal.html = `<div class="p-4 text-gray-500">لا توجد بيانات</div>`;
                         }
                     }
 
+                    // ----- after render -----
                     this.$nextTick(() => {
-                        this.initModalScripts();
+                        this.initModalScripts?.();
 
                         const modalEl =
-                            document.querySelector('.sf-modal') ||
-                            this.$el.querySelector('.sf-modal');
+                            document.querySelector(".sf-modal") ||
+                            this.$el?.querySelector?.(".sf-modal");
 
                         if (!modalEl) return;
 
-                        // حفظ
-                        const form = modalEl.querySelector('form');
+                        // bind save spinner once
+                        const form = modalEl.querySelector("form");
                         if (form && !form.__saveBound) {
                             form.__saveBound = true;
 
-                            form.addEventListener('submit', (e) => {
+                            form.addEventListener("submit", (e) => {
                                 const btn =
-                                    form.querySelector('.sf-modal-btn-save') ||
+                                    form.querySelector(".sf-modal-btn-save") ||
                                     form.querySelector('button[type="submit"]');
 
                                 if (!btn) return;
                                 if (btn.__saving) return;
-                                btn.__saving = true;
 
+                                btn.__saving = true;
                                 btn.__originalText = btn.textContent;
 
                                 btn.disabled = true;
@@ -2731,15 +2869,14 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 }, 15000);
                             });
 
-                            form.addEventListener('invalid', (e) => {
+                            form.addEventListener("invalid", (e) => {
                                 const btn =
-                                    form.querySelector('.sf-modal-btn-save') ||
+                                    form.querySelector(".sf-modal-btn-save") ||
                                     form.querySelector('button[type="submit"]');
 
                                 if (!btn) return;
 
                                 clearTimeout(btn.__restoreTimer);
-
                                 btn.disabled = false;
                                 btn.classList.remove("opacity-60", "pointer-events-none");
                                 btn.textContent = btn.__originalText || "حفظ";
@@ -2747,13 +2884,12 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             }, true);
                         }
 
-                        this.initDatePickers(modalEl);
+                        this.initDatePickers?.(modalEl);
 
-                        // drag
+                        // drag (safe)
                         (function () {
                             const modal = modalEl;
-                            const header = modal.querySelector('.sf-modal-header');
-
+                            const header = modal?.querySelector?.(".sf-modal-header");
                             if (!modal || !header) return;
                             if (modal.__dragBound) return;
                             modal.__dragBound = true;
@@ -2764,8 +2900,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             let startLeft = 0;
                             let startTop = 0;
 
-                            header.addEventListener('mousedown', function (e) {
-                                if (e.target.closest('.sf-modal-close,[data-modal-close],button,a,input,select,textarea')) return;
+                            header.addEventListener("mousedown", function (e) {
+                                if (e.target.closest(".sf-modal-close,[data-modal-close],button,a,input,select,textarea")) return;
 
                                 e.preventDefault();
                                 isDragging = true;
@@ -2776,63 +2912,71 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 startLeft = rect.left;
                                 startTop = rect.top;
 
-                                modal.style.transform = 'none';
-                                modal.style.left = startLeft + 'px';
-                                modal.style.top = startTop + 'px';
+                                modal.style.transform = "none";
+                                modal.style.left = startLeft + "px";
+                                modal.style.top = startTop + "px";
 
-                                document.addEventListener('mousemove', onMouseMove);
-                                document.addEventListener('mouseup', onMouseUp);
+                                document.addEventListener("mousemove", onMouseMove);
+                                document.addEventListener("mouseup", onMouseUp);
                             });
 
                             function onMouseMove(e) {
                                 if (!isDragging) return;
-
                                 const dx = e.clientX - startX;
                                 const dy = e.clientY - startY;
-
-                                modal.style.left = (startLeft + dx) + 'px';
-                                modal.style.top = (startTop + dy) + 'px';
+                                modal.style.left = (startLeft + dx) + "px";
+                                modal.style.top = (startTop + dy) + "px";
                             }
 
                             function onMouseUp() {
                                 isDragging = false;
-                                document.removeEventListener('mousemove', onMouseMove);
-                                document.removeEventListener('mouseup', onMouseUp);
+                                document.removeEventListener("mousemove", onMouseMove);
+                                document.removeEventListener("mouseup", onMouseUp);
                             }
                         })();
 
-                        this.enableModalResize(modalEl);
-                        this.initSelect2InModal(modalEl);
+                        this.enableModalResize?.(modalEl);
+                        this.initSelect2InModal?.(modalEl);
                     });
 
                 } catch (e) {
                     console.error("Modal error:", e);
                     this.modal.error = e?.message || "فشل جلب البيانات";
-                    this.modal.html = `<div class="p-4 text-red-600">${this.modal.error}</div>`;
+                    this.modal.html = `<div class="p-4 text-red-600">${esc(this.modal.error)}</div>`;
                 } finally {
                     this.modal.loading = false;
                 }
             },
 
             closeModal() {
-
+                // cancel print sessions safely
                 if (this.__printHandle && typeof this.__printHandle.cancel === "function") {
                     this.__printHandle.cancel();
                     this.__printHandle = null;
                 }
+                if (window.__sfPrintSession?.active) window.__sfPrintSession.canceled = true;
 
-                if (window.__sfPrintSession?.active) {
-                    window.__sfPrintSession.canceled = true;
-                }
-
+                // clear modal
                 this.modal.open = false;
                 this.modal.html = "";
                 this.modal.action = null;
                 this.modal.error = null;
-                this.modal.message = ""; 
+                this.modal.message = "";
                 this.modal.messageClass = "";
                 this.modal.messageIcon = "";
                 this.modal.messageIsHtml = false;
+
+                // clear extra state (do not affect other pages)
+                this.modal.extraPage = 1;
+                this.modal.extraQuery = "";
+                this.modal.extraSort = null;
+                this.modal.__extraCache = null;
+
+                // remove exposed handlers
+                this.__setExtraPage = null;
+                this.__setExtraQuery = null;
+                this.__setExtraSort = null;
+
                 if (window.__sfTableActive === this) window.__sfTableActive = null;
             },
 
