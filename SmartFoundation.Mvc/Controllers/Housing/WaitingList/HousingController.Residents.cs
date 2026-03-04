@@ -437,8 +437,196 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             };
 
+            // ----------------- قوالب الميتا داتا -----------------
 
-            
+            //جزء مشترك (أنصحك تحفظه وتعيد استخدامه)
+            var extraCtx = new Dictionary<string, object?>
+            {
+                ["idaraID"] = IdaraId,
+                ["entrydata"] = usersId,
+                ["hostname"] = HostName
+            };
+
+            var extraRequestBase = new Dictionary<string, object?>
+            {
+                ["pageName_"] = PageName,          // ديناميك حسب الصفحة
+                ["ActionType"] = "ResidentActions",// غيّره حسب احتياجك
+                ["tableIndex"] = 0
+            };
+
+            //1) جدول فقط داخل المودل (Load on open) xxx
+            var extraMeta_TableOnly_LoadOnOpen = new Dictionary<string, object?>
+            {
+                ["useRowExtra"] = true,
+                ["lazyExtra"] = true,
+                ["extraEndpoint"] = "/crud/extradataload",
+                ["allowNoSelection"] = true,
+
+                ["ctx"] = extraCtx,
+                ["extraRequest"] = extraRequestBase,
+
+                // حمّل عند فتح المودل (بدون انتظار اختيار)
+                ["extraLoadOnOpen"] = true,
+
+                // قيم ثابتة/افتراضية تُرسل عند الفتح (اختياري)
+                ["extraParams"] = new Dictionary<string, object?>
+                {
+                    ["parameter_01"] = "14143"
+                },
+
+                ["pageSize"] = 10,
+                ["showMeta"] = true,
+                ["enableSearch"] = true,
+                ["sortable"] = true,
+                ["showRowNumbers"] = true,
+                ["emptyText"] = "لا يوجد بيانات",
+            };
+
+
+            //2) جدول + فورم ويتغير الجدول حسب قيمة قائمة منسدلة (Depends) ooo
+            var extraMeta_TableAndForm_DependsOnSelect = new Dictionary<string, object?>
+            {
+                ["useRowExtra"] = true,
+                ["lazyExtra"] = true,
+                ["extraEndpoint"] = "/crud/extradataload",
+                ["allowNoSelection"] = true,
+
+                ["ctx"] = extraCtx,
+                ["extraRequest"] = extraRequestBase,
+
+                // يعتمد على اختيار من داخل المودل
+                ["extraDependsOn"] = "p01",              // اسم حقل الفورم (select)
+                ["extraParamName"] = "parameter_01",     // اسم البراميتر المرسل للـ ExtraDataLoad
+                ["extraLoadOnOpen"] = false,             // لا تحمل عند فتح المودل
+                ["extraEmptyTextBeforeSelect"] = "اختر أولاً لعرض الجدول",
+
+                ["pageSize"] = 10,
+                ["showMeta"] = true,
+                ["enableSearch"] = true,
+                ["sortable"] = true,
+                ["showRowNumbers"] = true,
+                ["emptyText"] = "لا يوجد بيانات",
+                ["Searchable"] = true,
+                ["visibleFields"] = new List<string>
+                                {
+                                    "generalNo_FK","buildingActionID","residentInfoID_FK","buildingActionDecisionNo","buildingActionDecisionDate","buildingActionTypeID_FK"
+                                },
+                ["headerMap"] = new Dictionary<string, string>
+                {
+                    ["generalNo_FK"] = "رقم الهوية",
+                    ["buildingActionID"] = "الاسم الكامل",
+                    ["residentInfoID_FK"] = "الرتبة",
+
+                }
+            };
+
+            //3) جدول + فورم والجدول ثابت من بداية فتح المودل (Static Params) xxx
+            var extraMeta_TableAndForm_StaticLoad = new Dictionary<string, object?>
+            {
+                ["useRowExtra"] = true,
+                ["lazyExtra"] = true,
+                ["extraEndpoint"] = "/crud/extradataload",
+                ["allowNoSelection"] = true,
+
+                ["ctx"] = extraCtx,
+                ["extraRequest"] = extraRequestBase,
+
+                // تحميل عند الفتح
+                ["extraLoadOnOpen"] = true,
+
+                // باراميترات ثابتة تُرسل للجدول عند الفتح
+                ["extraParams"] = new Dictionary<string, object?>
+                {
+                    ["parameter_01"] = 14143
+                },
+
+                ["pageSize"] = 10,
+                ["showMeta"] = true,
+                ["enableSearch"] = true,
+                ["sortable"] = true,
+                ["showRowNumbers"] = true,
+                ["emptyText"] = "لا يوجد بيانات",
+            };
+
+
+            //4) إرسال أكثر من براميتر لـ ExtraLoad (Multi Params) xxx
+            var extraMeta_DependsOnSelect_MultiParams = new Dictionary<string, object?>
+            {
+                ["useRowExtra"] = true,
+                ["lazyExtra"] = true,
+                ["extraEndpoint"] = "/crud/extradataload",
+                ["allowNoSelection"] = true,
+
+                ["ctx"] = extraCtx,
+                ["extraRequest"] = extraRequestBase,
+
+                // يعتمد على اختيار
+                ["extraDependsOn"] = "p01",
+                ["extraLoadOnOpen"] = false,
+                ["extraEmptyTextBeforeSelect"] = "اختر أولاً لعرض الجدول",
+
+                // ✅ جديد: خارطة باراميترات متعددة من فورم المودل
+                // p01 -> parameter_01
+                // p02 -> parameter_02
+                ["extraParamMap"] = new Dictionary<string, object?>
+                {
+                    ["parameter_01"] = "p01"
+                    //,
+                    //["parameter_02"] = "p02"
+                },
+
+                // (اختياري) باراميترات ثابتة إضافية مع الخريطة
+                ["extraParams"] = new Dictionary<string, object?>
+                {
+                    //["parameter_03"] = "STATIC",
+                    ["parameter_02"] = 1
+                },
+
+                ["pageSize"] = 10,
+                ["showMeta"] = true,
+                ["enableSearch"] = true,
+                ["sortable"] = true,
+                ["showRowNumbers"] = true,
+                ["emptyText"] = "لا يوجد بيانات",
+            };
+
+            //4-B) Static Multi Params (تحميل عند الفتح)
+            var extraMeta_Static_MultiParams_LoadOnOpen = new Dictionary<string, object?>
+            {
+                ["useRowExtra"] = true,
+                ["lazyExtra"] = true,
+                ["extraEndpoint"] = "/crud/extradataload",
+                ["allowNoSelection"] = true,
+
+                ["ctx"] = extraCtx,
+                ["extraRequest"] = extraRequestBase,
+
+                ["extraLoadOnOpen"] = true,
+
+                // ✅ باراميترات متعددة ثابتة
+                ["extraParams"] = new Dictionary<string, object?>
+                {
+                    ["parameter_01"] = 14143,
+                    ["parameter_02"] = 7,
+                    ["parameter_03"] = "X",
+                    ["parameter_04"] = "2026-03-04"
+                },
+
+                ["pageSize"] = 10,
+                ["showMeta"] = true,
+                ["enableSearch"] = true,
+                ["sortable"] = true,
+                ["showRowNumbers"] = true,
+                ["emptyText"] = "لا يوجد بيانات",
+            };
+
+
+            // ----------------- نهاية قوالب الميتا داتا -----------------
+
+
+
+
+
 
             var dsModel = new SmartTableDsModel
             {
@@ -461,6 +649,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 FilterRow = true,
                 FilterDebounce = 250,
                 ShowColumnVisibility=true,
+                
 
                 Toolbar = new TableToolbarConfig
                 {
@@ -562,52 +751,58 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             MaxSelection = 0,
                         OpenForm = new FormConfig
                         {
-                            FormId = "ResidentActionInsertForm",
+                            FormId = "ResidentActionInsertFormnew",
                             Title = "إضافة إجراء",
                             Method = "post",
                             ActionUrl = "/crud/insert",
                             Fields = addFields
                         },
-                           Meta = new Dictionary<string, object?>
-{
-    ["useRowExtra"] = true,
-    ["lazyExtra"] = true,
-    ["extraEndpoint"] = "/crud/extradataload",
-    ["allowNoSelection"] = true,
-    ["extraTableTitle"] = "سجل الإجراءات",
-["extraFormTitle"]  = "إضافة إجراء",
-["extraLayout"]     = "stack",
-["visibleFields"] = new [] { "col1", "col2", "col3" },
-["headerMap"] = new Dictionary<string,string> { ["col1"]="...", ["col2"]="..." },
+                        //Meta = extraMeta_TableAndForm_DependsOnSelect
 
-    ["ctx"] = new Dictionary<string, object?>
-    {
-        ["idaraID"] = IdaraId,
-        ["entrydata"] = usersId,
-        ["hostname"] = HostName
-    },
+                          },
 
-    ["extraRequest"] = new Dictionary<string, object?>
-    {
-        ["pageName_"] = PageName,
-        ["ActionType"] = "ResidentActions",
-        ["tableIndex"] = 0,
-    },
 
-    // ✅ جديد: جدول يعتمد على اختيار من فورم داخل المودل
-    ["extraDependsOn"] = "p01",
-    ["extraParamName"] = "parameter_01",
-    ["extraLoadOnOpen"] = false,
-    ["extraEmptyTextBeforeSelect"] = "اختر رقم الهوية أولاً لعرض الجدول",
 
-    ["pageSize"] = 10,
-    ["showMeta"] = true,
-    ["enableSearch"] = true,
-    ["sortable"] = true,
-    ["showRowNumbers"] = true,
-    ["emptyText"] = "لا يوجد بيانات",
-}
-                        },
+                           //Meta = new Dictionary<string, object?>
+                           //     {
+                           //         ["useRowExtra"] = true,
+                           //         ["lazyExtra"] = true,
+                           //         ["extraEndpoint"] = "/crud/extradataload",
+                           //         ["allowNoSelection"] = true,
+                           //         ["extraTableTitle"] = "سجل الإجراءات",
+                           //     ["extraFormTitle"]  = "إضافة إجراء",
+                           //     ["extraLayout"]     = "stack",
+                           //     ["visibleFields"] = new [] { "col1", "col2", "col3" },
+                           //     ["headerMap"] = new Dictionary<string,string> { ["col1"]="...", ["col2"]="..." },
+                                
+                           //         ["ctx"] = new Dictionary<string, object?>
+                           //         {
+                           //             ["idaraID"] = IdaraId,
+                           //             ["entrydata"] = usersId,
+                           //             ["hostname"] = HostName
+                           //         },
+                                
+                           //         ["extraRequest"] = new Dictionary<string, object?>
+                           //         {
+                           //             ["pageName_"] = PageName,
+                           //             ["ActionType"] = "ResidentActions",
+                           //             ["tableIndex"] = 0,
+                           //         },
+                                
+                           //         // ✅ جديد: جدول يعتمد على اختيار من فورم داخل المودل
+                           //         ["extraDependsOn"] = "p01",
+                           //         ["extraParamName"] = "parameter_01",
+                           //         ["extraLoadOnOpen"] = false,
+                           //         ["extraEmptyTextBeforeSelect"] = "اختر رقم الهوية أولاً لعرض الجدول",
+                                
+                           //         ["pageSize"] = 10,
+                           //         ["showMeta"] = true,
+                           //         ["enableSearch"] = true,
+                           //         ["sortable"] = true,
+                           //         ["showRowNumbers"] = true,
+                           //         ["emptyText"] = "لا يوجد بيانات",
+                           //     }
+                      
 
                             //============================================================================================================
 
@@ -745,7 +940,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "success" },
                                 new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
                             }
-                        }
+                        },
+                        Meta = extraMeta_TableAndForm_DependsOnSelect
                     },
 
                     Edit = new TableAction

@@ -2708,6 +2708,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 </div>`;
                 };
 
+                window.__sfTableActive.__renderExtraTable = renderExtraTable;
+
                 this.renderExtraTable = renderExtraTable;
 
                 try {
@@ -3431,45 +3433,145 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
             bindExtraDepends(modalEl, meta, action, row) {
                 try {
-                    if (!meta) return;
+                    if (!modalEl || !meta) return;
 
-                    const dependsOn = meta.extraDependsOn ?? meta.ExtraDependsOn;
-                    const paramName = meta.extraParamName ?? meta.ExtraParamName; // مثال: "parameter_01"
-                    const loadOnOpen = (meta.extraLoadOnOpen ?? meta.ExtraLoadOnOpen) !== false;
-
-                    if (!dependsOn || !paramName) return;
-
-                    const endpoint = meta.extraEndpoint ?? meta.ExtraEndpoint ?? "/crud/extradataload";
-                    const req = meta.extraRequest ?? meta.ExtraRequest ?? {};
-                    const ctx = meta.ctx ?? meta.Ctx ?? {};
-
-                    // حقل القائمة داخل المودال
-                    const sel = modalEl.querySelector(`[name="${dependsOn}"]`);
-                    if (!sel) return;
-
-                    // لا تعيد ربطه مرتين
-                    if (sel.__extraBound) return;
-                    sel.__extraBound = true;
-
-                    const emptyText = meta.extraEmptyTextBeforeSelect ?? meta.ExtraEmptyTextBeforeSelect ?? "اختر أولاً لعرض الجدول";
-
-                    const renderEmpty = () => {
-                        this.modal.__extraCache = [];
-                        this.modal.extraPage = 1;
-                        this.modal.extraQuery = "";
-                        this.modal.extraSort = null;
-                        this.modal.html = `<div class="p-4 text-gray-500">${emptyText}</div>` +
-                            (action?.openForm ? this.generateFormHtml(action.openForm, row || {}) : "");
+                    // =========================
+                    // Helpers (safe + local)
+                    // =========================
+                    const esc = (v) => {
+                        if (v == null) return "";
+                        return String(v)
+                            .replaceAll("&", "&amp;")
+                            .replaceAll("<", "&lt;")
+                            .replaceAll(">", "&gt;")
+                            .replaceAll('"', "&quot;")
+                            .replaceAll("'", "&#39;");
                     };
 
-                    const loadTable = async (value) => {
-                        const v = String(value ?? "").trim();
-                        if (!v || v === "-1" || v === "-99999") { // قيم "اختر"
-                            renderEmpty();
-                            return;
+                    const get = (obj, k1, k2, def = null) => {
+                        const v = obj?.[k1];
+                        if (v !== undefined && v !== null) return v;
+                        const v2 = obj?.[k2];
+                        if (v2 !== undefined && v2 !== null) return v2;
+                        return def;
+                    };
+
+                    // داخل openModal عندك renderExtraTable كـ function محلية (مو method)
+                    // فنحتاج نستخدم اللي موجود في window.__sfTableActive إن وجد.
+                    const renderTableHtml = (rows) => {
+                        // 1) لو component عنده method اسمها renderExtraTable
+                        if (typeof this.renderExtraTable === "function") return this.renderExtraTable(rows);
+
+                        // 2) لو موجودة داخل component كـ function محلية لا يمكن الوصول لها هنا
+                        // فنستخدم cached renderer من window.__sfTableActive (موجود عندك)
+                        if (window.__sfTableActive && typeof window.__sfTableActive.__renderExtraTable === "function") {
+                            return window.__sfTableActive.__renderExtraTable(rows);
                         }
 
-                        // ✅ نفس payload الخاص بـ ExtraDataLoad
+                        // 3) fallback
+                        if (Array.isArray(rows) && rows.length === 0) {
+                            return `<div class="p-4 text-gray-500">لا يوجد بيانات</div>`;
+                        }
+                        return `<div class="p-4 text-gray-500">تعذر رسم الجدول (renderer غير موجود)</div>`;
+                    };
+
+                    // لو تبي: خزن renderer من داخل openModal بعد تعريف renderExtraTable:
+                    // window.__sfTableActive.__renderExtraTable = renderExtraTable;
+
+                    // =========================
+                    // Read Meta
+                    // =========================
+                    const endpoint = get(meta, "extraEndpoint", "ExtraEndpoint", "/crud/extradataload");
+                    const ctx = get(meta, "ctx", "Ctx", {}) || {};
+                    const req = get(meta, "extraRequest", "ExtraRequest", {}) || {};
+
+                    const dependsOn = get(meta, "extraDependsOn", "ExtraDependsOn", null);         // مثال: "p01"
+                    const loadOnOpen = get(meta, "extraLoadOnOpen", "ExtraLoadOnOpen", false) === true;
+                    const emptyBefore = get(meta, "extraEmptyTextBeforeSelect", "ExtraEmptyTextBeforeSelect", "اختر أولاً لعرض الجدول");
+
+                    // ✅ وضع العرض
+                    // table => جدول فقط
+                    // both  => جدول + فورم (OpenForm)
+                    const uiMode = String(get(meta, "extraUi", "ExtraUi", "both") || "both").toLowerCase();
+
+                    // =========================
+                    // Param modes
+                    // =========================
+                    // (A) single param
+                    const singleParamName = get(meta, "extraParamName", "ExtraParamName", null); // مثال: "parameter_01"
+
+                    // (B) map params from modal fields
+                    // مثال:
+                    // ["extraParamMap"] = { ["parameter_01"]="p01", ["parameter_02"]="p02" }
+                    const paramMap = get(meta, "extraParamMap", "ExtraParamMap", null);
+
+                    // (C) static extra params always sent
+                    // مثال:
+                    // ["extraParams"] = { ["parameter_03"]=1, ["parameter_04"]="X" }
+                    const staticParams = get(meta, "extraParams", "ExtraParams", null);
+
+                    // =========================
+                    // Validate request
+                    // =========================
+                    if (!endpoint || !req?.pageName_ || !req?.ActionType) {
+                        console.warn("[bindExtraDepends] Missing endpoint/pageName_/ActionType", { endpoint, req });
+                        return;
+                    }
+
+                    // =========================
+                    // Locate select/fields inside modal
+                    // =========================
+                    const sel = dependsOn ? modalEl.querySelector(`[name="${dependsOn}"]`) : null;
+
+                    // ✅ إذا ما فيه dependsOn:
+                    // هذا يعني تحميل ثابت عند فتح المودل (بـ staticParams أو extraRequest.paramMap الخ..)
+                    // نخليه يشتغل لو loadOnOpen=true أو إذا ما فيه dependsOn أصلاً.
+                    const isDependsFlow = !!sel;
+
+                    // =========================
+                    // Cleanup previous bindings (IMPORTANT)
+                    // =========================
+                    // نزيل أي ربط سابق على نفس المودل/نفس الحقل حتى ما تتعارض Actions
+                    if (modalEl.__sfExtraDelegatedHandler) {
+                        modalEl.removeEventListener("change", modalEl.__sfExtraDelegatedHandler);
+                        modalEl.__sfExtraDelegatedHandler = null;
+                    }
+                    if (sel && sel.__sfExtraHandler) {
+                        sel.removeEventListener("change", sel.__sfExtraHandler);
+                        sel.__sfExtraHandler = null;
+                    }
+                    // reset flags
+                    if (sel) {
+                        sel.__extraBound = false;
+                        sel.__sfExtraBound = false;
+                    }
+
+                    // =========================
+                    // Render placeholder (keep modal open)
+                    // =========================
+                    const ensurePlaceholder = () => {
+                        // لا تكرر placeholder
+                        if (modalEl.querySelector("[data-extra-placeholder]")) return;
+
+                        // إذا في جدول قديم احذفه
+                        modalEl.querySelector(".sf-extra-wrap")?.remove();
+
+                        modalEl.insertAdjacentHTML(
+                            "afterbegin",
+                            `<div class="p-4 text-gray-500" data-extra-placeholder>${esc(emptyBefore)}</div>`
+                        );
+                    };
+
+                    const setPlaceholderText = (text) => {
+                        ensurePlaceholder();
+                        const ph = modalEl.querySelector("[data-extra-placeholder]");
+                        if (ph) ph.innerHTML = esc(text);
+                    };
+
+                    // =========================
+                    // Build payload from modal values
+                    // =========================
+                    const buildPayload = (pickedVal) => {
                         const payload = {
                             pageName_: req.pageName_,
                             ActionType: req.ActionType,
@@ -3480,21 +3582,39 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             parameters: {}
                         };
 
-                        // ✅ باراميتر يعتمد على الاختيار
-                        payload.parameters[paramName] = v;
-
-                        // ✅ (اختياري) باراميترات ثابتة
-                        const staticParams = req.staticParams ?? req.StaticParams ?? null;
+                        // 1) static params (always)
                         if (staticParams && typeof staticParams === "object") {
-                            Object.keys(staticParams).forEach(k => payload.parameters[k] = staticParams[k]);
+                            Object.keys(staticParams).forEach(k => {
+                                payload.parameters[k] = staticParams[k];
+                            });
                         }
 
+                        // 2) map params from modal inputs (extraParamMap)
+                        if (paramMap && typeof paramMap === "object") {
+                            Object.keys(paramMap).forEach(paramKey => {
+                                const fieldName = paramMap[paramKey]; // مثال "p01"
+                                const input = modalEl.querySelector(`[name="${fieldName}"]`);
+                                const v = input ? String(input.value ?? "").trim() : "";
+                                payload.parameters[paramKey] = v;
+                            });
+                        }
+
+                        // 3) single param fallback (extraParamName + dependsOn)
+                        // إذا ما أعطيت extraParamMap و أعطيت extraParamName
+                        if ((!paramMap || typeof paramMap !== "object") && singleParamName) {
+                            payload.parameters[singleParamName] = String(pickedVal ?? "").trim();
+                        }
+
+                        return payload;
+                    };
+
+                    // =========================
+                    // Fetch + render rows
+                    // =========================
+                    const fetchRows = async (payload) => {
                         const token =
                             document.querySelector('input[name="__RequestVerificationToken"]')?.value ||
                             document.querySelector('meta[name="RequestVerificationToken"]')?.content || "";
-
-                        this.modal.html = `<div class="p-4 text-gray-500">جاري تحميل الجدول...</div>` +
-                            (action?.openForm ? this.generateFormHtml(action.openForm, row || {}) : "");
 
                         const resp = await fetch(endpoint, {
                             method: "POST",
@@ -3508,7 +3628,9 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                         const txt = await resp.text();
                         let json = null;
-                        try { json = txt ? JSON.parse(txt) : null; } catch { }
+                        try { json = txt ? JSON.parse(txt) : null; } catch (e) {
+                            console.error("[bindExtraDepends] JSON parse error", e, txt);
+                        }
 
                         const rows =
                             (Array.isArray(json?.data) && json.data) ||
@@ -3516,40 +3638,94 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             (Array.isArray(json?.table?.rows) && json.table.rows) ||
                             [];
 
-                        this.modal.__extraCache = rows;
+                        return rows;
+                    };
+
+                    const renderRowsIntoModal = (rows) => {
+                        // خزّن للحركات (بحث/تصفح) إذا عندك نفس نظام extraCache
+                        this.modal.__extraCache = Array.isArray(rows) ? rows : [];
                         this.modal.extraPage = 1;
                         this.modal.extraQuery = "";
                         this.modal.extraSort = null;
 
-                        // ✅ ارسم الجدول + الفورم بدون ما يقفل المودال
-                        const tableHtml = this.renderExtraTable
-                            ? this.renderExtraTable(rows) // لو عندك renderExtraTable كـ method
-                            : (window.__sfTableActive?.renderExtraTable ? window.__sfTableActive.renderExtraTable(rows) : "");
+                        // احذف placeholder
+                        modalEl.querySelector("[data-extra-placeholder]")?.remove();
 
-                        const formHtml = action?.openForm ? this.generateFormHtml(action.openForm, row || {}) : "";
+                        // ارسم الجدول
+                        const tableHtml = renderTableHtml(this.modal.__extraCache);
 
-                        this.modal.html = (tableHtml || `<div class="p-4 text-gray-500">لا يوجد بيانات</div>`) + formHtml;
+                        // ارسم الفورم إذا uiMode = both و action فيه openForm
+                        const formCfg = action?.openForm ?? action?.OpenForm ?? null;
+                        const formHtml =
+                            (uiMode === "both" && formCfg)
+                                ? this.generateFormHtml(formCfg, row || {})
+                                : "";
 
-                        // مهم لو الفورم فيه Alpine/Select2
+                        // استبدل/أضف .sf-extra-wrap
+                        const oldWrap = modalEl.querySelector(".sf-extra-wrap");
+                        if (oldWrap) oldWrap.outerHTML = tableHtml;
+                        else modalEl.insertAdjacentHTML("afterbegin", tableHtml);
+
+                        // لو في فورم ضيفه تحت (بدون تكرار)
+                        if (uiMode === "both" && formHtml) {
+                            const hasFormAlready = !!modalEl.querySelector("form");
+                            if (!hasFormAlready) modalEl.insertAdjacentHTML("beforeend", formHtml);
+                        }
+
+                        // إعادة تهيئة Alpine لو موجود
                         if (window.Alpine && typeof window.Alpine.initTree === "function") {
                             window.Alpine.initTree(modalEl);
                         }
-                        this.initSelect2InModal?.(modalEl);
                     };
 
-                    // ✅ اربط الأحداث (change + select2)
-                    const handler = () => loadTable(sel.value);
-                    sel.addEventListener("change", handler);
+                    // =========================
+                    // Main load function
+                    // =========================
+                    const loadTable = async (pickedVal) => {
+                        const val = String(pickedVal ?? "").trim();
 
-                    // لو select2
-                    sel.addEventListener("select2:select", handler);
-                    sel.addEventListener("select2:clear", handler);
+                        // إذا DependsOn: لا تحمل قبل اختيار
+                        if (isDependsFlow) {
+                            if (!val || val === "-1" || val === "-99999") {
+                                // جدول فاضي قبل الاختيار
+                                this.modal.__extraCache = [];
+                                setPlaceholderText(emptyBefore);
+                                return;
+                            }
+                        }
 
-                    // ✅ عند فتح المودال
-                    if (loadOnOpen) {
-                        handler();
+                        const payload = buildPayload(val);
+
+                        // ✅ لو paramMap موجود: تأكد ما فيه قيم ناقصة (اختياري)
+                        // (لا نفرض هذا شرط لأن بعض الصفحات ممكن ما تحتاج كل الحقول)
+                        console.log("[bindExtraDepends] POST", endpoint, payload);
+
+                        setPlaceholderText("جاري تحميل الجدول...");
+
+                        const rows = await fetchRows(payload);
+                        console.log("[bindExtraDepends] rows:", rows.length);
+
+                        renderRowsIntoModal(rows);
+                    };
+
+                    // =========================
+                    // Wire events
+                    // =========================
+                    if (isDependsFlow) {
+                        // ✅ ربط مباشر على select (الأوضح والأقوى)
+                        const handler = () => loadTable(sel.value);
+                        sel.__sfExtraHandler = handler;
+                        sel.addEventListener("change", handler);
+
+                        // عند الفتح
+                        if (loadOnOpen) handler();
+                        else ensurePlaceholder();
+
                     } else {
-                        renderEmpty();
+                        // ✅ لا يوجد dependsOn => تحميل ثابت عند فتح المودل
+                        // لازم يكون عندك staticParams أو paramMap يمسك قيم من hidden/inputs موجودة
+                        // أو extraParamName مع قيمة ثابتة داخل extraParams
+                        loadTable(null);
                     }
 
                 } catch (e) {
