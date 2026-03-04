@@ -2510,9 +2510,73 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                     return out;
                 };
+                // filtering + sorting ...
+                // ===== Extra UI helpers (table / form / both) =====
 
+                // 1) يحدد وضع العرض: table | form | both
+                const resolveExtraUi = (meta) =>
+                    String(meta.extraUi ?? meta.ExtraUi ?? "table").trim().toLowerCase();
+
+                // 2) رسالة/HTML الفراغ (مع أيقونة) — ممكن تخصصها من meta.extraEmptyHtml
+                const resolveEmptyHtml = (meta) => {
+                    const emptyHtml = meta.extraEmptyHtml ?? meta.ExtraEmptyHtml ?? null;
+                    if (typeof emptyHtml === "string" && emptyHtml.trim()) return emptyHtml;
+
+                    const emptyText = meta.emptyText ?? meta.EmptyText ?? "لا يوجد بيانات";
+                    return `
+<div class="p-6 text-center text-gray-500">
+  <i class="fa-solid fa-table text-2xl mb-2 block opacity-60"></i>
+  ${esc(emptyText)}
+</div>`;
+                };
+
+                // 3) يرسم الفورم من meta.extraForm
+                // ✅ يرندر الفورم الرسمي عبر السيرفر (SmartForm ViewComponent)
+                const renderSmartFormHtml = async (meta, row) => {
+                    const formConfig = meta.extraFormConfig ?? meta.ExtraFormConfig ?? null;
+                    if (!formConfig) return "";
+
+                    const token =
+                        document.querySelector('input[name="__RequestVerificationToken"]')?.value ||
+                        document.querySelector('meta[name="RequestVerificationToken"]')?.content || "";
+
+                    const resp = await fetch("/crud/renderform", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-Requested-With": "XMLHttpRequest",
+                            ...(token ? { "RequestVerificationToken": token } : {})
+                        },
+                        body: JSON.stringify({ form: formConfig, row: row || {} })
+                    });
+
+                    return await resp.text();
+                };
+
+                // 4) يدمج الجدول + الفورم حسب extraUi
+                const renderExtraUi = async (meta, rows, row) => {
+                    const ui = resolveExtraUi(meta);
+
+                    const tableHtml = (ui === "form")
+                        ? ""
+                        : (Array.isArray(rows) && rows.length ? renderExtraTable(rows) : resolveEmptyHtml(meta));
+
+                    const formHtml = (ui === "table")
+                        ? ""
+                        : await renderSmartFormHtml(meta, row);
+
+                    if (ui === "form") return formHtml;
+                    if (ui === "both") return tableHtml + formHtml;
+                    return tableHtml; // default
+                };
+      
                 const renderExtraTable = (extraArray) => {
                     const meta = resolveMeta();
+
+                    // ===== Extra UI helpers =====
+
+                    
+
                     const headerMap = resolveHeaderMap(meta);
                     const visibleFields = resolveVisibleFields(meta);
 
@@ -2644,6 +2708,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 </div>`;
                 };
 
+                this.renderExtraTable = renderExtraTable;
+
                 try {
                     const meta = resolveMeta();
 
@@ -2696,6 +2762,21 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             this.$nextTick(() => this.initModalScripts?.());
                         }
                     };
+
+                    // ===================== Extra UI (table / form / both) =====================
+
+                
+
+               
+
+                    // template payload: يدعم $row.p01 و $ctx.idaraID
+              
+
+                    // يدمج العرض: table / form / both
+                
+
+                    // ===================== Extra Form Submit Handler =====================
+                   
 
                     // -------- (A) dynamic modal (server) --------
                     if (action.__dynamicModal) {
@@ -2755,17 +2836,49 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                         const emptyText = meta.emptyText ?? meta.EmptyText ?? "لا يوجد بيانات";
 
-                        this.modal.html = renderExtraTable(cur);
-                    return;
+                        this.modal.html = await renderExtraUi(meta, cur, row);
+                        return;
 
                       // ✅ مهم: لا تكمل لباقي الفروع
                     }
 
-                        if ((isMissing || isEmptyArray) && row) {
+                        const allowNoSelection = (meta.allowNoSelection ?? meta.AllowNoSelection) === true;
+                        // ✅ إذا عندنا extraDependsOn و extraLoadOnOpen = false: لا تحمل الآن، انتظر اختيار المستخدم
+                        const dep = meta.extraDependsOn ?? meta.ExtraDependsOn;
+                        const loadOnOpen = (meta.extraLoadOnOpen ?? meta.ExtraLoadOnOpen) === true;
+                        if (allowNoSelection && dep && !loadOnOpen) {
+                            const beforeText = meta.extraEmptyTextBeforeSelect ?? meta.ExtraEmptyTextBeforeSelect ?? "اختر أولاً لعرض الجدول";
+                            const formCfg = action.openForm ?? action.OpenForm ?? null;
+                            const formHtml = formCfg ? this.generateFormHtml(formCfg, row || {}) : "";
+
+                            // اعرض رسالة + الفورم، لكن لا تخرج من openModal
+                            this.modal.html = `<div class="p-4 text-gray-500" data-extra-placeholder>${esc(beforeText)}</div>` + formHtml;
+
+                            // ✅ علمنا أنه "لا نعمل fetch هنا"
+                            this.modal.__skipLazyExtraFetch = true;
+                        }
+                        // ✅ شغّل التحميل سواء فيه row أو لا (إذا allowNoSelection = true)
+
+                        if ((isMissing || isEmptyArray) && (row || allowNoSelection) && !this.modal.__skipLazyExtraFetch) {
                             const endpoint = meta.extraEndpoint ?? meta.ExtraEndpoint ?? null;
                             const req = meta.extraRequest ?? meta.ExtraRequest ?? {};
                             const paramMap = req.paramMap ?? req.ParamMap ?? {};
+                            const staticParams = req.staticParams ?? req.StaticParams ?? null;
+                            const extraKey = meta.extraKey ?? meta.ExtraKey ?? "__extra";
 
+                            // ✅ fallback: لو extraRequest ناقص لا تترك المودال فاضي
+                            if (!endpoint || !req?.pageName_ || !req?.ActionType) {
+                                const cur2 = row?.[extraKey];
+                                const rows2 = Array.isArray(cur2) ? cur2 : [];
+
+                                this.modal.extraPage = 1;
+                                this.modal.extraQuery = "";
+                                this.modal.extraSort = null;
+                                this.modal.__extraCache = rows2;
+
+                                this.modal.html = renderExtraTable(rows2);
+                                return;
+                            }
                             if (endpoint && req.pageName_ && req.ActionType) {
                                 // جهّز payload مثل اللي في CrudController.ExtraDataLoad
                                 //const payload = {
@@ -2800,6 +2913,12 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 for (const k of Object.keys(paramMap || {})) {
                                     const rowField = paramMap[k];
                                     payload.parameters[k] = row?.[rowField];
+                                }
+
+                                if (staticParams && typeof staticParams === "object") {
+                                    for (const k of Object.keys(staticParams)) {
+                                        payload.parameters[k] = staticParams[k];
+                                    }
                                 }
 
                     // ===== LazyExtra Dynamic Cache =====
@@ -2843,7 +2962,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     if (this.__lazyExtraCache[cacheKey]) {
                         const rows = this.__lazyExtraCache[cacheKey];
 
-                        row[extraKey] = rows;
+                        if (row) row[extraKey] = rows; // ✅ فقط لو فيه row
                         this.modal.extraPage = 1;
                         this.modal.extraQuery = "";
                         this.modal.extraSort = null;
@@ -2902,7 +3021,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         [];
 
                     // ✅ خزّنها في الصف عشان فرع useRowExtra يشتغل
-                    row[extraKey] = rows;
+                    if (row) row[extraKey] = rows; // ✅ فقط لو فيه row
 
                     this.__lazyExtraCache[cacheKey] = rows;
 
@@ -2912,9 +3031,18 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     this.modal.extraSort = null;
                     this.modal.__extraCache = rows;
 
-                    const emptyText = meta.emptyText ?? meta.EmptyText ?? "لا يوجد بيانات";
+                                const emptyText = meta.emptyText ?? meta.EmptyText ?? "لا يوجد بيانات";
 
-                    this.modal.html = renderExtraTable(rows);
+                                //this.modal.html = await renderExtraUi(meta, rows, row);
+                                const formCfg = action.openForm ?? action.OpenForm ?? null;
+
+                                // ✅ row افتراضي لو ما فيه اختيار (وخله يحمل p01 ثابت)
+                                const rowForForm = row || { p01: payload?.parameters?.parameter_01 ?? null };
+
+                                const formHtml = formCfg ? this.generateFormHtml(formCfg, rowForForm) : "";
+                                this.modal.html = renderExtraTable(rows) + formHtml;
+                                
+                                return;
 
                                 //const json = await resp.json();
 
@@ -2924,6 +3052,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 row[extraKey] = [];
                             }
                         }
+
                     }
                     // -------- (B) useRowExtra (from row[__extra]) + enhanced table --------
                     else if (meta.useRowExtra) {
@@ -3048,7 +3177,128 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             document.querySelector(".sf-modal") ||
                             this.$el?.querySelector?.(".sf-modal");
 
+                        // ✅ Extra Table depends on normal <select> inside modal (NO select2)
+                        try {
+                            const meta2 = resolveMeta();
+                            const dep = meta2.extraDependsOn ?? meta2.ExtraDependsOn; // "p01"
+                            const paramName = meta2.extraParamName ?? meta2.ExtraParamName ?? "parameter_01";
+                            const beforeText = meta2.extraEmptyTextBeforeSelect ?? meta2.ExtraEmptyTextBeforeSelect ?? "اختر أولاً لعرض الجدول";
+
+                            if (modalEl && dep && !modalEl.__sfExtraDelegated) {
+                                modalEl.__sfExtraDelegated = true;
+
+                                const ensurePlaceholder = () => {
+                                    if (!modalEl.querySelector(".sf-extra-wrap") && !modalEl.querySelector("[data-extra-placeholder]")) {
+                                        modalEl.insertAdjacentHTML(
+                                            "afterbegin",
+                                            `<div class="p-4 text-gray-500" data-extra-placeholder>${esc(beforeText)}</div>`
+                                        );
+                                    }
+                                };
+
+                                const loadTable = async (v) => {
+                                    const val = String(v ?? "").trim();
+                                    console.log("[ExtraDepends] loadTable start", val);
+
+                                    if (!val || val === "-1" || val === "-99999") {
+                                        // قبل الاختيار
+                                        modalEl.querySelector(".sf-extra-wrap")?.remove();
+                                        ensurePlaceholder();
+                                        const ph = modalEl.querySelector("[data-extra-placeholder]");
+                                        if (ph) ph.innerHTML = esc(beforeText);
+                                        return;
+                                    }
+
+                                    const endpoint = meta2.extraEndpoint ?? meta2.ExtraEndpoint;
+                                    const req = meta2.extraRequest ?? meta2.ExtraRequest ?? {};
+                                    const ctx = meta2.ctx ?? meta2.Ctx ?? {};
+
+                                    if (!endpoint || !req?.pageName_ || !req?.ActionType) {
+                                        console.warn("[ExtraDepends] Missing endpoint/pageName_/ActionType", { endpoint, req });
+                                        return;
+                                    }
+
+                                    const payload = {
+                                        pageName_: req.pageName_,
+                                        ActionType: req.ActionType,
+                                        idaraID: Number(ctx.idaraID ?? 0) || null,
+                                        entrydata: ctx.entrydata ?? null,
+                                        hostname: ctx.hostname ?? null,
+                                        tableIndex: (req.tableIndex ?? req.TableIndex) ?? null,
+                                        parameters: { [paramName]: val }
+                                    };
+
+                                    console.log("[ExtraDepends] POST payload", payload);
+
+                                    const token =
+                                        document.querySelector('input[name="__RequestVerificationToken"]')?.value ||
+                                        document.querySelector('meta[name="RequestVerificationToken"]')?.content || "";
+
+                                    ensurePlaceholder();
+                                    const ph = modalEl.querySelector("[data-extra-placeholder]");
+                                    if (ph) ph.innerHTML = "جاري تحميل الجدول...";
+
+                                    console.log("[ExtraDepends] POST", endpoint, payload);
+
+                                    const resp = await fetch(endpoint, {
+                                        method: "POST",
+                                        headers: {
+                                            "Content-Type": "application/json",
+                                            "X-Requested-With": "XMLHttpRequest",
+                                            ...(token ? { "RequestVerificationToken": token } : {})
+                                        },
+                                        body: JSON.stringify(payload)
+                                    });
+
+                                    const txt = await resp.text();
+                                    let json = null;
+                                    try { json = txt ? JSON.parse(txt) : null; } catch (e) { console.error("[ExtraDepends] JSON parse error", e, txt); }
+
+                                    const rows =
+                                        (Array.isArray(json?.data) && json.data) ||
+                                        (Array.isArray(json?.tables?.[0]?.rows) && json.tables[0].rows) ||
+                                        (Array.isArray(json?.table?.rows) && json.table.rows) ||
+                                        [];
+
+                                    console.log("[ExtraDepends] response rows", rows.length);
+
+                                    this.modal.__extraCache = rows;
+                                    this.modal.extraPage = 1;
+                                    this.modal.extraQuery = "";
+                                    this.modal.extraSort = null;
+
+                                    // احذف placeholder
+                                    modalEl.querySelector("[data-extra-placeholder]")?.remove();
+
+                                    // استبدل/أضف الجدول
+                                    const oldWrap = modalEl.querySelector(".sf-extra-wrap");
+                                    if (oldWrap) oldWrap.outerHTML = renderExtraTable(rows);
+                                    else modalEl.insertAdjacentHTML("afterbegin", renderExtraTable(rows));
+                                };
+
+                                // ✅ Delegation: يسمع لأي تغيير على select name="p01" داخل المودل
+                                modalEl.addEventListener("change", (e) => {
+                                    const t = e.target;
+                                    if (!t) return;
+
+                                    if (t.matches && t.matches(`[name="${dep}"]`)) {
+                                        console.log("[ExtraDepends] changed", t.value);
+                                        loadTable(t.value);
+                                    }
+                                });
+
+                                // ✅ عند فتح المودل: اعرض رسالة قبل الاختيار
+                                ensurePlaceholder();
+                            }
+                        } catch (e) {
+                            console.warn("[ExtraDepends] wiring failed:", e);
+                        }
+
                         if (!modalEl) return;
+
+                        if (window.Alpine && typeof window.Alpine.initTree === "function") {
+                            window.Alpine.initTree(modalEl);
+                        }
 
                         // bind save spinner once
                         const form = modalEl.querySelector("form");
@@ -3149,6 +3399,24 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                         this.enableModalResize?.(modalEl);
                         this.initSelect2InModal?.(modalEl);
+                        
+
+                        // ✅ Extra table depends on a select inside modal (like DependsOn)
+                        try {
+                            const meta = resolveMeta();
+                            const dep = meta.extraDependsOn ?? meta.ExtraDependsOn;
+                            const paramName = meta.extraParamName ?? meta.ExtraParamName ?? "parameter_01";
+                            const loadOnOpen = (meta.extraLoadOnOpen ?? meta.ExtraLoadOnOpen) === true;
+                            const beforeText = meta.extraEmptyTextBeforeSelect ?? meta.ExtraEmptyTextBeforeSelect ?? "اختر أولاً";
+
+                            //if (dep) {
+                               
+                            //}
+                        } catch (e) {
+                            console.warn("extraDependsOn wiring failed:", e);
+                        }
+
+
                     });
 
                 } catch (e) {
@@ -3157,6 +3425,135 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     this.modal.html = `<div class="p-4 text-red-600">${esc(this.modal.error)}</div>`;
                 } finally {
                     this.modal.loading = false;
+                }
+            },
+
+
+            bindExtraDepends(modalEl, meta, action, row) {
+                try {
+                    if (!meta) return;
+
+                    const dependsOn = meta.extraDependsOn ?? meta.ExtraDependsOn;
+                    const paramName = meta.extraParamName ?? meta.ExtraParamName; // مثال: "parameter_01"
+                    const loadOnOpen = (meta.extraLoadOnOpen ?? meta.ExtraLoadOnOpen) !== false;
+
+                    if (!dependsOn || !paramName) return;
+
+                    const endpoint = meta.extraEndpoint ?? meta.ExtraEndpoint ?? "/crud/extradataload";
+                    const req = meta.extraRequest ?? meta.ExtraRequest ?? {};
+                    const ctx = meta.ctx ?? meta.Ctx ?? {};
+
+                    // حقل القائمة داخل المودال
+                    const sel = modalEl.querySelector(`[name="${dependsOn}"]`);
+                    if (!sel) return;
+
+                    // لا تعيد ربطه مرتين
+                    if (sel.__extraBound) return;
+                    sel.__extraBound = true;
+
+                    const emptyText = meta.extraEmptyTextBeforeSelect ?? meta.ExtraEmptyTextBeforeSelect ?? "اختر أولاً لعرض الجدول";
+
+                    const renderEmpty = () => {
+                        this.modal.__extraCache = [];
+                        this.modal.extraPage = 1;
+                        this.modal.extraQuery = "";
+                        this.modal.extraSort = null;
+                        this.modal.html = `<div class="p-4 text-gray-500">${emptyText}</div>` +
+                            (action?.openForm ? this.generateFormHtml(action.openForm, row || {}) : "");
+                    };
+
+                    const loadTable = async (value) => {
+                        const v = String(value ?? "").trim();
+                        if (!v || v === "-1" || v === "-99999") { // قيم "اختر"
+                            renderEmpty();
+                            return;
+                        }
+
+                        // ✅ نفس payload الخاص بـ ExtraDataLoad
+                        const payload = {
+                            pageName_: req.pageName_,
+                            ActionType: req.ActionType,
+                            idaraID: Number(ctx.idaraID ?? 0) || null,
+                            entrydata: ctx.entrydata ?? null,
+                            hostname: ctx.hostname ?? null,
+                            tableIndex: (req.tableIndex ?? req.TableIndex) ?? null,
+                            parameters: {}
+                        };
+
+                        // ✅ باراميتر يعتمد على الاختيار
+                        payload.parameters[paramName] = v;
+
+                        // ✅ (اختياري) باراميترات ثابتة
+                        const staticParams = req.staticParams ?? req.StaticParams ?? null;
+                        if (staticParams && typeof staticParams === "object") {
+                            Object.keys(staticParams).forEach(k => payload.parameters[k] = staticParams[k]);
+                        }
+
+                        const token =
+                            document.querySelector('input[name="__RequestVerificationToken"]')?.value ||
+                            document.querySelector('meta[name="RequestVerificationToken"]')?.content || "";
+
+                        this.modal.html = `<div class="p-4 text-gray-500">جاري تحميل الجدول...</div>` +
+                            (action?.openForm ? this.generateFormHtml(action.openForm, row || {}) : "");
+
+                        const resp = await fetch(endpoint, {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "X-Requested-With": "XMLHttpRequest",
+                                ...(token ? { "RequestVerificationToken": token } : {})
+                            },
+                            body: JSON.stringify(payload)
+                        });
+
+                        const txt = await resp.text();
+                        let json = null;
+                        try { json = txt ? JSON.parse(txt) : null; } catch { }
+
+                        const rows =
+                            (Array.isArray(json?.data) && json.data) ||
+                            (Array.isArray(json?.tables?.[0]?.rows) && json.tables[0].rows) ||
+                            (Array.isArray(json?.table?.rows) && json.table.rows) ||
+                            [];
+
+                        this.modal.__extraCache = rows;
+                        this.modal.extraPage = 1;
+                        this.modal.extraQuery = "";
+                        this.modal.extraSort = null;
+
+                        // ✅ ارسم الجدول + الفورم بدون ما يقفل المودال
+                        const tableHtml = this.renderExtraTable
+                            ? this.renderExtraTable(rows) // لو عندك renderExtraTable كـ method
+                            : (window.__sfTableActive?.renderExtraTable ? window.__sfTableActive.renderExtraTable(rows) : "");
+
+                        const formHtml = action?.openForm ? this.generateFormHtml(action.openForm, row || {}) : "";
+
+                        this.modal.html = (tableHtml || `<div class="p-4 text-gray-500">لا يوجد بيانات</div>`) + formHtml;
+
+                        // مهم لو الفورم فيه Alpine/Select2
+                        if (window.Alpine && typeof window.Alpine.initTree === "function") {
+                            window.Alpine.initTree(modalEl);
+                        }
+                        this.initSelect2InModal?.(modalEl);
+                    };
+
+                    // ✅ اربط الأحداث (change + select2)
+                    const handler = () => loadTable(sel.value);
+                    sel.addEventListener("change", handler);
+
+                    // لو select2
+                    sel.addEventListener("select2:select", handler);
+                    sel.addEventListener("select2:clear", handler);
+
+                    // ✅ عند فتح المودال
+                    if (loadOnOpen) {
+                        handler();
+                    } else {
+                        renderEmpty();
+                    }
+
+                } catch (e) {
+                    console.error("[bindExtraDepends] error:", e);
                 }
             },
 
@@ -5028,31 +5425,31 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 })();
 
 
-document.addEventListener("DOMContentLoaded", () => {
+//document.addEventListener("DOMContentLoaded", () => {
 
-    document.body.addEventListener("invalid", function (e) {
-        e.target.setCustomValidity("يرجى ملء هذا الحقل");
-    }, true);
+//    document.body.addEventListener("invalid", function (e) {
+//        e.target.setCustomValidity("يرجى ملء هذا الحقل");
+//    }, true);
 
-    document.body.addEventListener("input", function (e) {
-        e.target.setCustomValidity("");
-    }, true);
+//    document.body.addEventListener("input", function (e) {
+//        e.target.setCustomValidity("");
+//    }, true);
 
-});
+//});
 
-document.body.addEventListener("change", function(e) {
+//document.body.addEventListener("change", function(e) {
 
-    if (e.target.tagName === "SELECT") {
+//    if (e.target.tagName === "SELECT") {
 
-        if (e.target.value === "-99999") {
-            e.target.setCustomValidity("يرجى ملء هذا الحقل");
-        } else {
-            e.target.setCustomValidity("");
-        }
+//        if (e.target.value === "-99999") {
+//            e.target.setCustomValidity("يرجى ملء هذا الحقل");
+//        } else {
+//            e.target.setCustomValidity("");
+//        }
 
-    }
+//    }
 
-}, true);
+//}, true);
 
 
 

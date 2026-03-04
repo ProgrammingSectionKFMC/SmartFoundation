@@ -78,6 +78,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             List<OptionItem> MaritalStatusOptions = new();
             List<OptionItem> NationalityOptions = new();
             List<OptionItem> GenderOptions = new();
+            List<OptionItem> residentOptions = new();
 
             // ---------------------- DDLValues ----------------------
 
@@ -129,6 +130,15 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             json = JsonSerializer.Serialize(result!.Value);
 
             GenderOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+            //// ---------------------- resident ----------------------
+            result = await _CrudController.GetDDLValues(
+                "FullName_A", "residentInfoID", "7", nameof(Residents), usersId, IdaraId, HostName
+           ) as JsonResult;
+
+
+            json = JsonSerializer.Serialize(result!.Value);
+
+            residentOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
             //// ---------------------- END DDL ----------------------
 
@@ -321,7 +331,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             {
                 new FieldConfig { Name = rowIdField, Type = "hidden" },
 
-                new FieldConfig { Name = "p01", Label = "رقم الهوية", Type = "nationalid", ColCss = "6",Icon = "fa-solid fa-address-card", Required = true  },
+                new FieldConfig { Name = "p01", Label = "رقم الهوية", Type = "select", ColCss = "6",Icon = "fa-solid fa-address-card", Required = true,Options =residentOptions  },
                 new FieldConfig { Name = "p02", Label = "الرقم العام", Type = "number", ColCss = "6", Required = true , Icon = "fa-solid fa-user-tag",Autocomplete="off" },
                 
 
@@ -427,6 +437,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             };
 
+
+            
+
             var dsModel = new SmartTableDsModel
             {
                 PageTitle = "المستفيدين",
@@ -460,6 +473,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowAdd = canInsert,
                     ShowEdit = canUpdate,
                     ShowDelete = canDelete,
+                    ShowDelete1 = canDelete,
                     ShowPrint1 = false,
                     ShowBulkDelete = false,
                     Print1 = new TableAction
@@ -536,66 +550,115 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                             },
 
-
-
-                            //============================================================================================================
-
-                         new TableAction
+                      new TableAction
                         {
                             Label = "بيانات إضافية",
                             Icon = "fa-solid fa-database",
                             Color = "secondary",
                             OpenModal = true,
-                            RequireSelection = true,
-                            MinSelection = 1,
-                            MaxSelection = 1,
                         
-                            Meta = new Dictionary<string, object?>
-                            {
-                                ["useRowExtra"] = true,
-                                ["extraKey"] = "__extra",
-                        
-                                // ✅ جديد: تحميل عند الضغط
-                                ["lazyExtra"] = true,
-                                ["extraEndpoint"] = "/crud/extradataload",
-                                 ["ctx"] = new Dictionary<string, object?>
-                                {
-                                    ["idaraID"] = IdaraId,
-                                    ["entrydata"] = usersId,
-                                    ["hostname"] = HostName
-                                },// اسم الأكشن اللي أضفته في CrudController
-                                ["extraRequest"] = new Dictionary<string, object?>
-                                {
-                                    ["pageName_"] = PageName,          // ديناميك
-                                    ["ActionType"] = "ResidentActions",// أو أي ActionType تبغاه للصفحة
-                                    ["tableIndex"] = 0,                // (اختياري) 0 = أول جدول
-                                    ["paramMap"] = new Dictionary<string, string>
-                                    {
-                                        ["parameter_01"] = "p01"       // parameter_01 يأخذ قيمته من row.p01
-                                    }
-                                },
-                        
-                                // عرض المودال
-                                ["pageSize"] = 10,
-                                ["showMeta"] = true,
-                                ["enableSearch"] = true,
-                                ["sortable"] = true,
-                                ["showRowNumbers"] = true,
-                               // ["emptyText"] = "لا يوجد actions",
+                            RequireSelection = false,
+                            MinSelection = 0,
+                            MaxSelection = 0,
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "ResidentActionInsertForm",
+                            Title = "إضافة إجراء",
+                            Method = "post",
+                            ActionUrl = "/crud/insert",
+                            Fields = addFields
+                        },
+                           Meta = new Dictionary<string, object?>
+{
+    ["useRowExtra"] = true,
+    ["lazyExtra"] = true,
+    ["extraEndpoint"] = "/crud/extradataload",
+    ["allowNoSelection"] = true,
+    ["extraTableTitle"] = "سجل الإجراءات",
+["extraFormTitle"]  = "إضافة إجراء",
+["extraLayout"]     = "stack",
+["visibleFields"] = new [] { "col1", "col2", "col3" },
+["headerMap"] = new Dictionary<string,string> { ["col1"]="...", ["col2"]="..." },
 
-                                ["visibleFields"] = new List<string>
-                                {
-                                    "generalNo_FK","buildingActionID","residentInfoID_FK","buildingActionDecisionNo","buildingActionDecisionDate","buildingActionTypeID_FK"
-                                },
-                                ["headerMap"] = new Dictionary<string, string>
-                                {
-                                    ["generalNo_FK"] = "رقم الهوية",
-                                    ["buildingActionID"] = "الاسم الكامل",
-                                    ["residentInfoID_FK"] = "الرتبة",
+    ["ctx"] = new Dictionary<string, object?>
+    {
+        ["idaraID"] = IdaraId,
+        ["entrydata"] = usersId,
+        ["hostname"] = HostName
+    },
+
+    ["extraRequest"] = new Dictionary<string, object?>
+    {
+        ["pageName_"] = PageName,
+        ["ActionType"] = "ResidentActions",
+        ["tableIndex"] = 0,
+    },
+
+    // ✅ جديد: جدول يعتمد على اختيار من فورم داخل المودل
+    ["extraDependsOn"] = "p01",
+    ["extraParamName"] = "parameter_01",
+    ["extraLoadOnOpen"] = false,
+    ["extraEmptyTextBeforeSelect"] = "اختر رقم الهوية أولاً لعرض الجدول",
+
+    ["pageSize"] = 10,
+    ["showMeta"] = true,
+    ["enableSearch"] = true,
+    ["sortable"] = true,
+    ["showRowNumbers"] = true,
+    ["emptyText"] = "لا يوجد بيانات",
+}
+                        },
+
+                            //============================================================================================================
+
+                         
+                        
+                            //Meta = new Dictionary<string, object?>
+                            //{
+                            //    ["useRowExtra"] = true,
+                            //    ["extraKey"] = "__extra",
+                        
+                            //    // ✅ جديد: تحميل عند الضغط
+                            //    ["lazyExtra"] = true,
+                            //    ["extraEndpoint"] = "/crud/extradataload",
+                            //     ["ctx"] = new Dictionary<string, object?>
+                            //    {
+                            //        ["idaraID"] = IdaraId,
+                            //        ["entrydata"] = usersId,
+                            //        ["hostname"] = HostName
+                            //    },// اسم الأكشن اللي أضفته في CrudController
+                            //    ["extraRequest"] = new Dictionary<string, object?>
+                            //    {
+                            //        ["pageName_"] = PageName,          // ديناميك
+                            //        ["ActionType"] = "ResidentActions",// أو أي ActionType تبغاه للصفحة
+                            //        ["tableIndex"] = 0,                // (اختياري) 0 = أول جدول
+                            //        ["paramMap"] = new Dictionary<string, string>
+                            //        {
+                            //            ["parameter_01"] = "p01"       // parameter_01 يأخذ قيمته من row.p01
+                            //        }
+                            //    },
+                        
+                            //    // عرض المودال
+                            //    ["pageSize"] = 10,
+                            //    ["showMeta"] = true,
+                            //    ["enableSearch"] = true,
+                            //    ["sortable"] = true,
+                            //    ["showRowNumbers"] = true,
+                            //   // ["emptyText"] = "لا يوجد actions",
+
+                            //    ["visibleFields"] = new List<string>
+                            //    {
+                            //        "generalNo_FK","buildingActionID","residentInfoID_FK","buildingActionDecisionNo","buildingActionDecisionDate","buildingActionTypeID_FK"
+                            //    },
+                            //    ["headerMap"] = new Dictionary<string, string>
+                            //    {
+                            //        ["generalNo_FK"] = "رقم الهوية",
+                            //        ["buildingActionID"] = "الاسم الكامل",
+                            //        ["residentInfoID_FK"] = "الرتبة",
                                    
-                                }
-                            }
-                        }
+                            //    }
+                            //}
+                        
 
 
 
@@ -604,6 +667,63 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                     //============================================================================================================
 
+                    Delete1 = new TableAction
+                    {
+                        Label = "بيانات إضافية",
+                        Icon = "fa-solid fa-database",
+                        Color = "secondary",
+                        OpenModal = true,
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1,
+
+                        Meta = new Dictionary<string, object?>
+                        {
+                            ["useRowExtra"] = true,
+                            ["extraKey"] = "__extra",
+                            ["lazyExtra"] = true,
+                            ["extraEndpoint"] = "/crud/extradataload",
+                            ["ctx"] = new Dictionary<string, object?>
+                            {
+                                ["idaraID"] = IdaraId,
+                                ["entrydata"] = usersId,
+                                ["hostname"] = HostName
+                            },
+                            ["extraRequest"] = new Dictionary<string, object?>
+                            {
+                                ["pageName_"] = PageName,
+                                ["ActionType"] = "ResidentActions",
+                                ["tableIndex"] = 0,
+                                ["paramMap"] = new Dictionary<string, string>
+                                {
+                                    ["parameter_01"] = "p01"
+                                }
+                            },
+
+                            ["pageSize"] = 10,
+                            ["showMeta"] = true,
+                            ["enableSearch"] = true,
+                            ["sortable"] = true,
+                            ["showRowNumbers"] = true,
+                            ["emptyText"] = "لا يوجد إجراءات",
+                        },
+
+                        // ✅ الرسمي: نفس أسلوب Delete
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "ResidentActionInsert",
+                            Title = "إضافة إجراء",
+                            Method = "post",
+                            ActionUrl = "/crud/insert",
+                            Fields = addFields, // اللي طلبت تزبيطه
+                            Buttons = new List<FormButtonConfig>
+        {
+            new() { Text="حفظ", Type="submit", Color="success" },
+            new() { Text="إلغاء", Type="button", Color="secondary",
+                    OnClickJs="this.closest('.sf-modal').__x.$data.closeModal();" }
+        }
+                        }
+                    },
 
                     Add = new TableAction
                     {

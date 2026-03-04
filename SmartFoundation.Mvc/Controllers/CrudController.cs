@@ -669,5 +669,37 @@ namespace SmartFoundation.Mvc.Controllers
                 return rows;
             }
         }
+
+
+        public sealed class RenderFormRequest
+        {
+            public FormConfig? form { get; set; }
+            public Dictionary<string, object?>? row { get; set; }
+        }
+
+        [HttpPost("renderform")]
+        public IActionResult RenderForm([FromBody] RenderFormRequest req)
+        {
+            if (req.form == null) return Content("", "text/html");
+
+            // بدّل $row.xxx داخل Values
+            void ReplaceTokens(FieldConfig f)
+            {
+                if (!string.IsNullOrWhiteSpace(f.Value) && f.Value.StartsWith("$row.", StringComparison.OrdinalIgnoreCase))
+                {
+                    var key = f.Value.Substring(5);
+                    if (req.row != null && req.row.TryGetValue(key, out var v))
+                        f.Value = v?.ToString() ?? "";
+                    else
+                        f.Value = "";
+                }
+            }
+
+            if (req.form.Fields != null)
+                foreach (var fld in req.form.Fields) ReplaceTokens(fld);
+
+            // يرندر الـ SmartForm الرسمي
+            return ViewComponent("SmartForm", new { model = req.form });
+        }
     }
 }
