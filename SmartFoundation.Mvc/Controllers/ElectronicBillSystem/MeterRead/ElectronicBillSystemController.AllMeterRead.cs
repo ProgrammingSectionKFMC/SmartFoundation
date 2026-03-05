@@ -5,6 +5,7 @@ using SmartFoundation.UI.ViewModels.SmartPage;
 using SmartFoundation.UI.ViewModels.SmartPrint;
 using SmartFoundation.UI.ViewModels.SmartTable;
 using System.Data;
+using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Text.Json;
 using static LLama.Common.ChatHistory;
@@ -126,6 +127,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
             FormConfig form = new();
 
             List<OptionItem> MeterServiceTypeOptions = new();
+            List<OptionItem> MeterOptions = new();
 
 
             // ---------------------- DDLValues ----------------------
@@ -139,7 +141,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
 
 
-            //// ---------------------- BuildingUtilityType ----------------------
+            //// ---------------------- MeterServiceTypeOptions ----------------------
             result = await _CrudController.GetDDLValues(
                 "meterServiceTypeName_A", "meterServiceTypeID", "4", nameof(AllMeterRead), usersId, IdaraId, HostName
            ) as JsonResult;
@@ -148,6 +150,17 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
             json = JsonSerializer.Serialize(result!.Value);
 
             MeterServiceTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+
+
+            //// ---------------------- MeterOptions ----------------------
+            result = await _CrudController.GetDDLValues(
+                "meterNo", "meterID", "3", nameof(AllMeterRead), usersId, IdaraId, HostName,MeterServiceTypeID_
+           ) as JsonResult;
+
+
+            json = JsonSerializer.Serialize(result!.Value);
+
+            MeterOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
 
             // ----------------------END DDLValues ----------------------
@@ -554,11 +567,69 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 // hidden p01 actually posted to SP
                 
                 new FieldConfig { Name = "p01", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
+                new FieldConfig { Name = "p02", Label = "رقم الهوية", Type = "select", ColCss = "6",Icon = "fa-solid fa-address-card", Required = true,Options =MeterOptions  },
+                new FieldConfig { Name = "p03", Label = "رقم الهوية", Type = "hidden", ColCss = "6",Icon = "fa-solid fa-address-card", Required = true,Value = PeriodID_  },
 
 
             };
 
 
+            var extraCtx = new Dictionary<string, object?>
+            {
+                ["idaraID"] = IdaraId,
+                ["entrydata"] = usersId,
+                ["hostname"] = HostName
+            };
+
+            var extraRequestBase = new Dictionary<string, object?>
+            {
+                ["pageName_"] = PageName,          // ديناميك حسب الصفحة
+                ["ActionType"] = "MeterLastBill",// غيّره حسب احتياجك
+                ["tableIndex"] = 0
+            };
+
+
+
+            var extraMeta_DependsOnSelect_MultiParams = new Dictionary<string, object?>
+            {
+                ["useRowExtra"] = true,
+                ["lazyExtra"] = true,
+                ["extraEndpoint"] = "/crud/extradataload",
+                ["allowNoSelection"] = true,
+                ["EnableSearch"] = false,   // أو true
+                ["ShowMeta"] = false,        // أو false
+                ["PageSize"] = 5,           // 5/10/20...
+                ["Sortable"] = false,        // أو false
+                ["showRowNumbers"] = false,
+                ["emptyText"] = "لا يوجد بيانات",
+
+                ["ctx"] = extraCtx,
+                ["extraRequest"] = extraRequestBase,
+
+                // يعتمد على اختيار
+                ["extraDependsOn"] = "p02",
+                ["extraLoadOnOpen"] = false,
+                ["extraEmptyTextBeforeSelect"] = "اختر أولاً لعرض الجدول",
+
+                // ✅ جديد: خارطة باراميترات متعددة من فورم المودل
+                // p01 -> parameter_01
+                // p02 -> parameter_02
+                ["extraParamMap"] = new Dictionary<string, string>
+                {
+                    ["parameter_01"] = "p01",
+                    ["parameter_02"] = "p02",
+                    ["parameter_03"] = "p03"
+                },
+
+                // (اختياري) باراميترات ثابتة إضافية مع الخريطة
+                //["extraParams"] = new Dictionary<string, object?>
+                //{
+                //    //["parameter_03"] = "STATIC",
+                //    ["parameter_02"] = 1
+                //},
+
+                
+            };
 
 
             //  UPDATE fields (Form Default / Form 46+)  تجريبي نرجع نمسحه او نعدل عليه
@@ -766,28 +837,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
                     CustomActions = new List<TableAction>
                             {
-                            //  Excel "
-                            //new TableAction
-                            //{
-                            //    Label = "تصدير Excel",
-                            //    Icon = "fa-regular fa-file-excel",
-                            //    Color = "info",
-                            //    //Show = true,  // ✅ أضف
-                            //    RequireSelection = false,
-                            //    OnClickJs = "table.exportData('excel');"
-                            //},
-
-                            ////  PDF "
-                            //new TableAction
-                            //{
-                            //    Label = "تصدير PDF",
-                            //    Icon = "fa-regular fa-file-pdf",
-                            //    Color = "danger",
-                            //    //Show = true,  // ✅ أضف
-                            //    RequireSelection = false,
-                            //    OnClickJs = "table.exportData('pdf');"
-                            //},
-
+ 
                              //  details "       
                             new TableAction
                             {
@@ -823,7 +873,8 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                 new FormButtonConfig { Text = "حفظ",   Type = "submit", Color = "success" },
                                 new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
                             }
-                        }
+                        },
+                        Meta = extraMeta_DependsOnSelect_MultiParams
                     },
 
 

@@ -2399,6 +2399,15 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         .replaceAll("'", "&#39;");
                 };
 
+                const toBool = (v, def = true) => {
+                    if (v === true || v === false) return v;
+                    if (v == null) return def;
+                    const s = String(v).trim().toLowerCase();
+                    if (["0", "false", "no", "off"].includes(s)) return false;
+                    if (["1", "true", "yes", "on"].includes(s)) return true;
+                    return def;
+                };
+
                 const normalizeObjKeyLookup = (obj) => {
                     const map = {};
                     if (!obj || typeof obj !== "object") return map;
@@ -2464,7 +2473,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     let out = Array.isArray(data) ? data.slice() : [];
 
                     // filter
-                    const enableSearch = (meta.enableSearch ?? meta.EnableSearch ?? true) !== false;
+                    const enableSearch = toBool(meta.enableSearch ?? meta.EnableSearch, true);
                     const q = enableSearch ? String(this.modal.extraQuery || "").trim().toLowerCase() : "";
                     if (q) {
                         out = out.filter(r => {
@@ -2566,7 +2575,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         : await renderSmartFormHtml(meta, row);
 
                     if (ui === "form") return formHtml;
-                    if (ui === "both") return tableHtml + formHtml;
+                    if (ui === "both") return formHtml + tableHtml;
                     return tableHtml; // default
                 };
       
@@ -2581,7 +2590,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     const visibleFields = resolveVisibleFields(meta);
 
                     const pageSize = Number(meta.pageSize ?? meta.PageSize ?? 10) || 10;
-                    const showRowNumbers = (meta.showRowNumbers ?? meta.ShowRowNumbers ?? true) !== false;
+                    const showRowNumbers = toBool(meta.showRowNumbers ?? meta.ShowRowNumbers, true);
                     const emptyText = meta.emptyText ?? meta.EmptyText ?? "لا توجد بيانات";
                     const enableSearch = (meta.enableSearch ?? meta.EnableSearch ?? true) !== false;
                     const sortable = (meta.sortable ?? meta.Sortable ?? true) !== false;
@@ -2659,7 +2668,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         : "";
 
                     // ✅ تحكم بإظهار شريط (عدد السجلات/الصفحات)
-                    const showMeta = (meta.showMeta ?? meta.ShowMeta ?? true) !== false;
+                    const showMeta = toBool(meta.showMeta ?? meta.ShowMeta, true);
 
                     const infoHtml = showMeta ? `
 <div class="sf-extra-meta">
@@ -2712,6 +2721,24 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                 this.renderExtraTable = renderExtraTable;
 
+                const injectExtraUnderGreenHeader = (extraHtml) => {
+                    const modalEl =
+                        document.querySelector(".sf-modal") ||
+                        this.$el?.querySelector?.(".sf-modal");
+
+                    if (!modalEl) return false;
+
+                    // احذف أي Extra سابق
+                    modalEl.querySelectorAll(".sf-extra-wrap,[data-extra-placeholder]").forEach(x => x.remove());
+
+                    const formEl = modalEl.querySelector("form");
+                    if (!formEl) return false;
+
+                    // ✅ ضع الجدول قبل الفورم (تحت الهيدر الأخضر مباشرة)
+                    formEl.insertAdjacentHTML("beforebegin", extraHtml);
+                    return true;
+                };
+
                 try {
                     const meta = resolveMeta();
 
@@ -2719,10 +2746,25 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     this.__setExtraPage = (p) => {
                         const n = Number(p) || 1;
                         this.modal.extraPage = n;
-                        // keep current cached dataset if present
+
                         if (this.modal.__extraCache && Array.isArray(this.modal.__extraCache)) {
-                            this.modal.html = renderExtraTable(this.modal.__extraCache);
-                            this.$nextTick(() => this.initModalScripts?.());
+                            const html = renderExtraTable(this.modal.__extraCache);
+
+                            this.$nextTick(() => {
+                                injectExtraUnderGreenHeader(html);
+                                this.initModalScripts?.();
+
+                                // ✅ رجّع الفوكس والمؤشر بعد إعادة الرسم
+                                if (hadFocus) {
+                                    const el = document.querySelector(".sf-extra-search-input");
+                                    if (el) {
+                                        el.focus({ preventScroll: true });
+                                        if (selStart != null && selEnd != null && typeof el.setSelectionRange === "function") {
+                                            el.setSelectionRange(selStart, selEnd);
+                                        }
+                                    }
+                                }
+                            });
                         }
                     };
 
@@ -2737,9 +2779,10 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         this.modal.extraPage = 1;
 
                         if (this.modal.__extraCache && Array.isArray(this.modal.__extraCache)) {
-                            this.modal.html = renderExtraTable(this.modal.__extraCache);
+                            const html = renderExtraTable(this.modal.__extraCache);
 
                             this.$nextTick(() => {
+                                injectExtraUnderGreenHeader(html);
                                 this.initModalScripts?.();
 
                                 // ✅ رجّع الفوكس والمؤشر بعد إعادة الرسم
@@ -2760,8 +2803,23 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         this.modal.extraSort = { key: String(key || ""), dir: (dir === "desc" ? "desc" : "asc") };
                         this.modal.extraPage = 1;
                         if (this.modal.__extraCache && Array.isArray(this.modal.__extraCache)) {
-                            this.modal.html = renderExtraTable(this.modal.__extraCache);
-                            this.$nextTick(() => this.initModalScripts?.());
+                            const html = renderExtraTable(this.modal.__extraCache);
+
+                            this.$nextTick(() => {
+                                injectExtraUnderGreenHeader(html);
+                                this.initModalScripts?.();
+
+                                // ✅ رجّع الفوكس والمؤشر بعد إعادة الرسم
+                                if (hadFocus) {
+                                    const el = document.querySelector(".sf-extra-search-input");
+                                    if (el) {
+                                        el.focus({ preventScroll: true });
+                                        if (selStart != null && selEnd != null && typeof el.setSelectionRange === "function") {
+                                            el.setSelectionRange(selStart, selEnd);
+                                        }
+                                    }
+                                }
+                            });
                         }
                     };
 
@@ -2854,7 +2912,14 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             const formHtml = formCfg ? this.generateFormHtml(formCfg, row || {}) : "";
 
                             // اعرض رسالة + الفورم، لكن لا تخرج من openModal
-                            this.modal.html = `<div class="p-4 text-gray-500" data-extra-placeholder>${esc(beforeText)}</div>` + formHtml;
+                            this.modal.html = formHtml;
+
+                            this.$nextTick(() => {
+                                injectExtraUnderGreenHeader(
+                                    `<div class="p-4 text-gray-500" data-extra-placeholder>${esc(beforeText)}</div>`
+                                );
+                                this.initModalScripts?.();
+                            });
 
                             // ✅ علمنا أنه "لا نعمل fetch هنا"
                             this.modal.__skipLazyExtraFetch = true;
@@ -3042,8 +3107,16 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 const rowForForm = row || { p01: payload?.parameters?.parameter_01 ?? null };
 
                                 const formHtml = formCfg ? this.generateFormHtml(formCfg, rowForForm) : "";
-                                this.modal.html = renderExtraTable(rows) + formHtml;
-                                
+
+                                // 1) اعرض الفورم فقط
+                                this.modal.html = formHtml;
+
+                                // 2) بعد ما ينرسم DOM، احقن الجدول تحت الهيدر الأخضر وقبل الحقول
+                                this.$nextTick(() => {
+                                    injectExtraUnderGreenHeader(renderExtraTable(rows));
+                                    this.initModalScripts?.();
+                                });
+
                                 return;
 
                                 //const json = await resp.json();
@@ -3180,43 +3253,98 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             this.$el?.querySelector?.(".sf-modal");
 
                         // ✅ Extra Table depends on normal <select> inside modal (NO select2)
+                        // ✅ Extra Table depends on selects inside modal (supports multi params)
                         try {
                             const meta2 = resolveMeta();
-                            const dep = meta2.extraDependsOn ?? meta2.ExtraDependsOn; // "p01"
+
+                            // dependsOn: string "p01" OR "p01,p02" OR array ["p01","p02"]
+                            const depRaw = meta2.extraDependsOn ?? meta2.ExtraDependsOn;
+                            const depList = Array.isArray(depRaw)
+                                ? depRaw.map(x => String(x).trim()).filter(Boolean)
+                                : String(depRaw ?? "").split(",").map(x => x.trim()).filter(Boolean);
+
                             const paramName = meta2.extraParamName ?? meta2.ExtraParamName ?? "parameter_01";
+                            const paramMapRaw = meta2.extraParamMap ?? meta2.ExtraParamMap ?? null;
+                            const extraParamsRaw = meta2.extraParams ?? meta2.ExtraParams ?? null;
+
                             const beforeText = meta2.extraEmptyTextBeforeSelect ?? meta2.ExtraEmptyTextBeforeSelect ?? "اختر أولاً لعرض الجدول";
 
-                            if (modalEl && dep && !modalEl.__sfExtraDelegated) {
+                            if (modalEl && depList.length && !modalEl.__sfExtraDelegated) {
                                 modalEl.__sfExtraDelegated = true;
 
                                 const ensurePlaceholder = () => {
                                     if (!modalEl.querySelector(".sf-extra-wrap") && !modalEl.querySelector("[data-extra-placeholder]")) {
-                                        modalEl.insertAdjacentHTML(
-                                            "afterbegin",
+                                        injectExtraUnderGreenHeader(
                                             `<div class="p-4 text-gray-500" data-extra-placeholder>${esc(beforeText)}</div>`
                                         );
+                                        
                                     }
                                 };
 
-                                const loadTable = async (v) => {
-                                    const val = String(v ?? "").trim();
-                                    console.log("[ExtraDepends] loadTable start", val);
+                                const readFieldValue = (name) => {
+                                    const el = modalEl.querySelector(`[name="${name}"]`);
+                                    if (!el) return null;
+                                    return String(el.value ?? "").trim();
+                                };
 
-                                    if (!val || val === "-1" || val === "-99999") {
-                                        // قبل الاختيار
-                                        modalEl.querySelector(".sf-extra-wrap")?.remove();
-                                        ensurePlaceholder();
-                                        const ph = modalEl.querySelector("[data-extra-placeholder]");
-                                        if (ph) ph.innerHTML = esc(beforeText);
-                                        return;
+                                // ✅ build parameters object
+                                const buildParameters = () => {
+                                    const parameters = {};
+
+                                    // 1) multi param map (preferred)
+                                    if (paramMapRaw && typeof paramMapRaw === "object") {
+                                        for (const k of Object.keys(paramMapRaw)) {
+                                            const fieldName = String(paramMapRaw[k] ?? "").trim(); // e.g. "p01"
+                                            if (!fieldName) continue;
+                                            parameters[k] = readFieldValue(fieldName);
+                                        }
+                                    } else {
+                                        // 2) fallback single paramName from first dependsOn
+                                        const firstDep = depList[0];
+                                        parameters[paramName] = readFieldValue(firstDep);
                                     }
 
+                                    // 3) static extraParams (optional)
+                                    if (extraParamsRaw && typeof extraParamsRaw === "object") {
+                                        for (const k of Object.keys(extraParamsRaw)) {
+                                            parameters[k] = extraParamsRaw[k];
+                                        }
+                                    }
+
+                                    return parameters;
+                                };
+
+                                const anyInvalidSelection = (parameters) => {
+                                    // إذا أي باراميتر "مطلوب" فاضي أو -1 اعتبره قبل الاختيار
+                                    // (هنا اعتبرت كل القيم اللي جاية من paramMap مطلوبة)
+                                    for (const k of Object.keys(parameters)) {
+                                        const v = parameters[k];
+                                        if (v == null) return true;
+                                        const s = String(v).trim();
+                                        if (!s || s === "-1" || s === "-99999") return true;
+                                    }
+                                    return false;
+                                };
+
+                                const loadTable = async () => {
                                     const endpoint = meta2.extraEndpoint ?? meta2.ExtraEndpoint;
                                     const req = meta2.extraRequest ?? meta2.ExtraRequest ?? {};
                                     const ctx = meta2.ctx ?? meta2.Ctx ?? {};
 
                                     if (!endpoint || !req?.pageName_ || !req?.ActionType) {
                                         console.warn("[ExtraDepends] Missing endpoint/pageName_/ActionType", { endpoint, req });
+                                        return;
+                                    }
+
+                                    const parameters = buildParameters();
+
+                                    console.log("[ExtraDepends] parameters built", parameters);
+
+                                    if (anyInvalidSelection(parameters)) {
+                                        modalEl.querySelector(".sf-extra-wrap")?.remove();
+                                        ensurePlaceholder();
+                                        const ph = modalEl.querySelector("[data-extra-placeholder]");
+                                        if (ph) ph.innerHTML = esc(beforeText);
                                         return;
                                     }
 
@@ -3227,7 +3355,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                         entrydata: ctx.entrydata ?? null,
                                         hostname: ctx.hostname ?? null,
                                         tableIndex: (req.tableIndex ?? req.TableIndex) ?? null,
-                                        parameters: { [paramName]: val }
+                                        parameters
                                     };
 
                                     console.log("[ExtraDepends] POST payload", payload);
@@ -3239,8 +3367,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                     ensurePlaceholder();
                                     const ph = modalEl.querySelector("[data-extra-placeholder]");
                                     if (ph) ph.innerHTML = "جاري تحميل الجدول...";
-
-                                    console.log("[ExtraDepends] POST", endpoint, payload);
 
                                     const resp = await fetch(endpoint, {
                                         method: "POST",
@@ -3254,7 +3380,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                                     const txt = await resp.text();
                                     let json = null;
-                                    try { json = txt ? JSON.parse(txt) : null; } catch (e) { console.error("[ExtraDepends] JSON parse error", e, txt); }
+                                    try { json = txt ? JSON.parse(txt) : null; }
+                                    catch (e) { console.error("[ExtraDepends] JSON parse error", e, txt); }
 
                                     const rows =
                                         (Array.isArray(json?.data) && json.data) ||
@@ -3269,27 +3396,26 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                     this.modal.extraQuery = "";
                                     this.modal.extraSort = null;
 
-                                    // احذف placeholder
                                     modalEl.querySelector("[data-extra-placeholder]")?.remove();
 
-                                    // استبدل/أضف الجدول
+                                    const html = renderExtraTable(rows);
+
                                     const oldWrap = modalEl.querySelector(".sf-extra-wrap");
-                                    if (oldWrap) oldWrap.outerHTML = renderExtraTable(rows);
-                                    else modalEl.insertAdjacentHTML("afterbegin", renderExtraTable(rows));
+                                    if (oldWrap) oldWrap.outerHTML = html;
+                                    else injectExtraUnderGreenHeader(html);
                                 };
 
-                                // ✅ Delegation: يسمع لأي تغيير على select name="p01" داخل المودل
+                                // ✅ Delegation: on change for ANY depended field
                                 modalEl.addEventListener("change", (e) => {
                                     const t = e.target;
-                                    if (!t) return;
-
-                                    if (t.matches && t.matches(`[name="${dep}"]`)) {
-                                        console.log("[ExtraDepends] changed", t.value);
-                                        loadTable(t.value);
+                                    if (!t?.name) return;
+                                    if (depList.includes(String(t.name))) {
+                                        console.log("[ExtraDepends] changed", t.name, t.value);
+                                        loadTable();
                                     }
                                 });
 
-                                // ✅ عند فتح المودل: اعرض رسالة قبل الاختيار
+                                // ✅ on open show placeholder
                                 ensurePlaceholder();
                             }
                         } catch (e) {

@@ -57,6 +57,17 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
         protected DataTable? dt8;
         protected DataTable? dt9;
 
+
+        protected DataTable? dtExtra1;
+        protected DataTable? dtExtra2;
+        protected DataTable? dtExtra3;
+        protected DataTable? dtExtra4;
+        protected DataTable? dtExtra5;
+        protected DataTable? dtExtra6;
+        protected DataTable? dtExtra7;
+        protected DataTable? dtExtra8;
+        protected DataTable? dtExtra9;
+
         public ElectronicBillSystemController(
             MastersServies mastersServies,
             CrudController crudController,
@@ -127,6 +138,20 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
             dt7 = (ds?.Tables?.Count ?? 0) > 7 ? ds.Tables[7] : null;
             dt8 = (ds?.Tables?.Count ?? 0) > 8 ? ds.Tables[8] : null;
             dt9 = (ds?.Tables?.Count ?? 0) > 9 ? ds.Tables[9] : null;
+        }
+
+        protected void SplitExtraDataSet(DataSet dsExtra)
+        {
+            permissionTable = (dsExtra?.Tables?.Count ?? 0) > 0 ? dsExtra.Tables[0] : null;
+            dtExtra1 = (dsExtra?.Tables?.Count ?? 0) > 1 ? dsExtra.Tables[1] : null;
+            dtExtra2 = (dsExtra?.Tables?.Count ?? 0) > 2 ? dsExtra.Tables[2] : null;
+            dtExtra3 = (dsExtra?.Tables?.Count ?? 0) > 3 ? dsExtra.Tables[3] : null;
+            dtExtra4 = (dsExtra?.Tables?.Count ?? 0) > 4 ? dsExtra.Tables[4] : null;
+            dtExtra5 = (dsExtra?.Tables?.Count ?? 0) > 5 ? dsExtra.Tables[5] : null;
+            dtExtra6 = (dsExtra?.Tables?.Count ?? 0) > 6 ? dsExtra.Tables[6] : null;
+            dtExtra7 = (dsExtra?.Tables?.Count ?? 0) > 7 ? dsExtra.Tables[7] : null;
+            dtExtra8 = (dsExtra?.Tables?.Count ?? 0) > 8 ? dsExtra.Tables[8] : null;
+            dtExtra9 = (dsExtra?.Tables?.Count ?? 0) > 9 ? dsExtra.Tables[9] : null;
         }
     }
 }
