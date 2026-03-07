@@ -3140,8 +3140,10 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         this.enableModalResize?.(modalEl);
                         this.initSelect2InModal?.(modalEl);
 
+                     const extraBtns = modalEl.querySelectorAll("[data-extra-trigger='1']");
+                    if (extraBtns.length) {
                         try {
-                            modalEl.querySelectorAll("[data-extra-trigger='1']").forEach(btn => {
+                            extraBtns.forEach(btn => {
                                 if (btn.__extraTriggerBound) return;
                                 btn.__extraTriggerBound = true;
 
@@ -3230,6 +3232,67 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                         (Array.isArray(json?.table?.rows) && json.table.rows) ||
                                         [];
 
+
+                    // =====================
+                    // Toggle field from meta
+                    // =====================
+
+                    const toggleField = meta.toggleField ?? meta.ToggleField;
+                    const toggleColumn = meta.toggleColumn ?? meta.ToggleColumn;
+                    const toggleOperator = meta.toggleOperator ?? meta.ToggleOperator;
+
+                    // ثابت
+                    const toggleValue = meta.toggleValue ?? meta.ToggleValue;
+
+                    // أو عمود آخر
+                    const toggleCompareColumn = meta.toggleCompareColumn ?? meta.ToggleCompareColumn;
+
+                    if (toggleField && toggleColumn && rows.length) {
+
+                        const r = rows[0];
+
+                        const leftRaw = r?.[toggleColumn];
+
+                        let rightRaw = null;
+
+                        // إذا فيه عمود مقارنة، استخدمه
+                        if (toggleCompareColumn) {
+                            rightRaw = r?.[toggleCompareColumn];
+                        } else {
+                            // وإلا استخدم القيمة الثابتة
+                            rightRaw = toggleValue;
+                        }
+
+                        const leftNum = Number(leftRaw);
+                        const rightNum = Number(rightRaw);
+
+                        const bothNumeric =
+                            !Number.isNaN(leftNum) && String(leftRaw ?? "").trim() !== "" &&
+                            !Number.isNaN(rightNum) && String(rightRaw ?? "").trim() !== "";
+
+                        const left = bothNumeric ? leftNum : String(leftRaw ?? "");
+                        const right = bothNumeric ? rightNum : String(rightRaw ?? "");
+
+                        let show = true;
+
+                        switch (toggleOperator) {
+                            case ">": show = left > right; break;
+                            case "<": show = left < right; break;
+                            case "=":
+                            case "==": show = left == right; break;
+                            case "!=": show = left != right; break;
+                            case ">=": show = left >= right; break;
+                            case "<=": show = left <= right; break;
+                            default: show = true; break;
+                        }
+
+                        const field = modalEl.querySelector(`[name="${toggleField}"]`);
+                        const wrapper = field?.closest(".form-group");
+
+                        if (wrapper) {
+                            wrapper.style.display = show ? "" : "none";
+                        }
+                    }
                                     const st = getState(slotKey);
                                     st.cache = rows;
                                     st.page = 1;
@@ -3247,6 +3310,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         } catch (e) {
                             console.warn("[ExtraButton] bind failed:", e);
                         }
+                    }
                         
 
                         // ✅ Extra table depends on a select inside modal (like DependsOn)

@@ -424,7 +424,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                 isHidden = c.ColumnName.Equals("meterID", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("idaraID_FK", StringComparison.OrdinalIgnoreCase)
-                                            || c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase)
+                                           // || c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("entryData", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("avrageNo", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("entryDate", StringComparison.OrdinalIgnoreCase)
@@ -448,7 +448,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                 isHidden = c.ColumnName.Equals("meterID", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("idaraID_FK", StringComparison.OrdinalIgnoreCase)
-                                            || c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase)
+                                            //|| c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("entryData", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("avrageNo", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("entryDate", StringComparison.OrdinalIgnoreCase)
@@ -469,7 +469,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                 isHidden = c.ColumnName.Equals("meterID", StringComparison.OrdinalIgnoreCase)
                                              || c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase)
                                              || c.ColumnName.Equals("idaraID_FK", StringComparison.OrdinalIgnoreCase)
-                                             || c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase)
+                                            // || c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase)
                                              || c.ColumnName.Equals("entryData", StringComparison.OrdinalIgnoreCase)
                                              || c.ColumnName.Equals("avrageNo", StringComparison.OrdinalIgnoreCase)
                                              || c.ColumnName.Equals("entryDate", StringComparison.OrdinalIgnoreCase)
@@ -494,7 +494,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                 isHidden = c.ColumnName.Equals("meterID", StringComparison.OrdinalIgnoreCase)
                                              || c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase)
                                              || c.ColumnName.Equals("idaraID_FK", StringComparison.OrdinalIgnoreCase)
-                                             || c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase)
+                                             //|| c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase)
                                              || c.ColumnName.Equals("entryData", StringComparison.OrdinalIgnoreCase)
                                              || c.ColumnName.Equals("avrageNo", StringComparison.OrdinalIgnoreCase)
                                              || c.ColumnName.Equals("entryDate", StringComparison.OrdinalIgnoreCase)
@@ -554,9 +554,9 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             dictbills["p08"] = Get("buildingDetailsID");
                             dictbills["p09"] = Get("meterReadID");
                             dictbills["p10"] = Get("CurrentRead");
-                            dictbills["p10"] = Get("LastRead");
-                            dictbills["p11"] = Get("ReadDiff");
-                            dictbills["p12"] = Get("TotalPrice");
+                            dictbills["p11"] = Get("LastRead");
+                            dictbills["p12"] = Get("ReadDiff");
+                            dictbills["p13"] = Get("TotalPrice");
                             
 
 
@@ -667,7 +667,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 new FieldConfig { Name = "p01", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
                 new FieldConfig { Name = "p02", Label = "رقم العداد", Type = "select", ColCss = "3", Required = true, Options= MeterOptions },
                 new FieldConfig { Name = "p03", Label = "PeriodID_", Type = "hidden", ColCss = "3", Required = true, Value = PeriodID_ },
-               new FieldConfig
+                new FieldConfig
                     {
                         Name = "p04",
                         Label = "القراءة الجديدة",
@@ -709,12 +709,13 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
                 // hidden p01 actually posted to SP
                 
-                new FieldConfig { Name = "p41", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
+                new FieldConfig { Name = "p41", Label = "MeterServiceTypeID_", Type = "text", Value=MeterServiceTypeID_ },
                 new FieldConfig { Name = "p01", Label = "BillsID", Type = "text" },
                 new FieldConfig { Name = "p05", Label = "MeterID", Type = "number", ColCss = "3", Required = true },
                 new FieldConfig { Name = "p09", Label = "ReadID", Type = "text", ColCss = "3", Required = true },
                 new FieldConfig { Name = "p10", Label = "CurrentRead", Type = "text", ColCss = "3", Required = true },
-               
+                new FieldConfig { Name = "p39", Label = "PeriodID_", Type = "text", ColCss = "3", Required = true, Value = PeriodID_ },
+
 
             };
 
@@ -791,6 +792,8 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             ["SlotKey"] = "m3"
                         }
                     },
+                    new FieldConfig { Name = "p50", Label = "هل انت متأكد", Type = "checkbox" },
+
 
 
             };
@@ -818,11 +821,12 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
                 // hidden p01 actually posted to SP
                 
-                new FieldConfig { Name = "p41", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
+                 new FieldConfig { Name = "p41", Label = "MeterServiceTypeID_", Type = "text", Value=MeterServiceTypeID_ },
                 new FieldConfig { Name = "p01", Label = "BillsID", Type = "text" },
-                new FieldConfig { Name = "p05", Label = "MeterID", Type = "text", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p05", Label = "MeterID", Type = "number", ColCss = "3", Required = true },
                 new FieldConfig { Name = "p09", Label = "ReadID", Type = "text", ColCss = "3", Required = true },
                 new FieldConfig { Name = "p10", Label = "CurrentRead", Type = "text", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p39", Label = "PeriodID_", Type = "text", ColCss = "3", Required = true, Value = PeriodID_ },
 
 
             };
@@ -927,11 +931,12 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
                 // hidden p01 actually posted to SP
                 
-                new FieldConfig { Name = "p41", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
+                 new FieldConfig { Name = "p41", Label = "MeterServiceTypeID_", Type = "text", Value=MeterServiceTypeID_ },
                 new FieldConfig { Name = "p01", Label = "BillsID", Type = "text" },
-                new FieldConfig { Name = "p05", Label = "MeterID", Type = "text", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p05", Label = "MeterID", Type = "number", ColCss = "3", Required = true },
                 new FieldConfig { Name = "p09", Label = "ReadID", Type = "text", ColCss = "3", Required = true },
                 new FieldConfig { Name = "p10", Label = "CurrentRead", Type = "text", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p39", Label = "PeriodID_", Type = "text", ColCss = "3", Required = true, Value = PeriodID_ },
 
 
             };
@@ -1071,6 +1076,9 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 ["allowNoSelection"] = true,
 
                 ["extraTriggerMode"] = "button",
+                ["extraTriggerField"] = "p50",
+
+                ["extraTriggerMode"] = "button",
                 ["extraTriggerField"] = "p03",
                 ["extraButtonText"] = "تحقق",
 
@@ -1083,10 +1091,23 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     ["parameter_04"] = "p04",
                     ["parameter_02"] = "p02"
                 },
+                ["toggleField"] = "p50",
+                ["toggleColumn"] = "checks",
+                ["toggleOperator"] = "=",
+                ["toggleValue"] = 0,
+                ["toggleDefaultHidden"] = true,
+                ["toggleRequiredWhenShown"] = true,
+
+
+                //["toggleField"] = "p50",
+                //["toggleColumn"] = "TotalPrice",
+                //["toggleOperator"] = "=",
+                //["toggleCompareColumn"] = "ServicePriceWithTAX",
+
 
                 ["visibleFields"] = new List<string>
     {
-         "meterNo","LastRead","CurrentRead","ReadDiff","PRICE","PRICETAX","ServicePriceWithTAX","TotalPrice"
+         "meterNo","LastRead","CurrentRead","ReadDiff","PRICE","PRICETAX","ServicePriceWithTAX","TotalPrice","checks"
     },
 
                 ["headerMap"] = new Dictionary<string, string>

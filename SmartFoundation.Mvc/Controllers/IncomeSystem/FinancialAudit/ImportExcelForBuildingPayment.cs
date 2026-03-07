@@ -575,6 +575,25 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
             };
 
+
+            var ShowFields = new List<FieldConfig>
+            {
+                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "FINANCIALAUDITFOREXTENDANDEVICTIONS" },
+                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
+                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
+                new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
+                new FieldConfig { Name = "redirectUrl",        Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+                new FieldConfig { Name="__RequestVerificationToken", Type="hidden", Value=tokens.RequestToken ?? "" },
+
+
+                new FieldConfig { Name="p01", Label="نوع المسير", Type="hidden", ColCss="4", Options=BillChargeTypeOptions, Required = true },
+                
+
+            };
+
             var dsModel = new SmartTableDsModel
             {
                 PageTitle = "رفع ومعالجة المسيرات",
@@ -661,7 +680,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             var extraMetaAutoOpen = new Dictionary<string, object?>
             {
                 ["extraSlotKey"] = "m1",
-                ["extraTitle"] = "بيانات إضافية",
+                ["extraTitle"] = "بيانات المسير",
                 ["useRowExtra"] = true,
                 ["lazyExtra"] = true,
                 ["extraEndpoint"] = "/crud/extradataload",
@@ -688,16 +707,16 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
                 ["visibleFields"] = new List<string>
     {
-        "meterNo","LastRead", "CurrentRead","ReadDiff", "TotalPrice"
+        "deductListID_FK","generalNo_FK","IDNumber", "unitID","amount"
     },
 
                 ["headerMap"] = new Dictionary<string, string>
                 {
-                    ["meterNo"] = "رقم العداد",
-                    ["LastRead"] = "القراءة السابقة",
-                    ["CurrentRead"] = "القراءة الحالية",
-                    ["ReadDiff"] = "فرق القراءة",
-                    ["TotalPrice"] = "الإجمالي"
+                    ["generalNo_FK"] = "الرقم العام",
+                    ["IDNumber"] = "الهوية الوطنية",
+                    ["unitID"] = "رمز الوحدة",
+                    ["amount"] = "المبلغ",
+                    ["deductListID_FK"] = "الرقم المرجعي للمسير"
                 }
             };
 
@@ -762,38 +781,25 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                             },
                         },
 
-                    Add = new TableAction
-                    {
-                        Label = "فتح فترة قراءة عدادات",
-                        Icon = "fa fa-plus",
-                        Color = "success",
-                        OpenModal = true,
-                        ModalTitle = "فتح فترة قراءة عدادات",
-                        ModalMessage = "هل أنت متأكد من فترة قراءة عدادات جديدة لهذه الخدمة؟",
-                        ModalMessageClass = "bg-blue-50 text-blue-700",
-                        ModalMessageIcon = "fa-solid fa-triangle-exclamation",
-                        
-                       Meta = extraMetaAutoOpen
-                    },
-
 
                     Edit1 = new TableAction
                     {
-                        Label = "اغلاق فترة قراءة عدادات",
-                        Icon = "fa fa-plus",
-                        Color = "danger",
+                        Label = "استعراض تفاصيل المسير",
+                        Icon = "fa fa-newspaper",
+                        Color = "success",
                         OpenModal = true,
-                        ModalTitle = "اغلاق فترة قراءة عداداتت",
+                        ModalTitle = "استعراض تفاصيل المسير",
+                        
                         OpenForm = new FormConfig
                         {
                             FormId = "buildingClassInsertForm",
-                            Title = "بيانات اغلاق فترة قراءة عدادات",
+                            Title = "بيانات استعراض تفاصيل المسير",
                             Method = "post",
                             ActionUrl = "/crud/insert",
-                            Fields = processFields,
+                            Fields = ShowFields,
                             Buttons = new List<FormButtonConfig>
                             {
-                                new FormButtonConfig { Text = "حفظ",   Type = "submit", Color = "success" },
+                               // new FormButtonConfig { Text = "حفظ",   Type = "submit", Color = "success" },
                                 new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
                             }
                         },
