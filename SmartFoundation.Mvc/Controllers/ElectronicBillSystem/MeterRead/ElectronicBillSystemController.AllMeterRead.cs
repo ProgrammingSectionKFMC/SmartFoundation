@@ -1055,9 +1055,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
             var extraMeta2 = new Dictionary<string, object?>
             {
-                
-                
-                
+               
               
                 ["EnableSearch"] = false,   // أو true
                 ["ShowMeta"] = false,        // أو false

@@ -41,8 +41,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
              "ResidentActions",
              IdaraId,
              usersId,
-             HostName,
-             "60014010"
+             HostName
            };
 
             var rowsList = new List<Dictionary<string, object?>>();

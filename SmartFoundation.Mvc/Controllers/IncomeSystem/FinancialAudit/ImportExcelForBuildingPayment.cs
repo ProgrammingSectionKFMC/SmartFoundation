@@ -175,10 +175,22 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
             DataSet ds = await _mastersServies.GetDataLoadDataSetAsync(spParameters);
 
+
+            var rowsList = new List<Dictionary<string, object?>>();
+            var dynamicColumns = new List<TableColumn>();
             //  تقسيم الداتا سيت للجدول الأول + جداول أخرى
             SplitDataSet(ds);
 
+            if (permissionTable is null || permissionTable.Rows.Count == 0)
+            {
+                TempData["Error"] = "تم رصد دخول غير مصرح به انت لاتملك صلاحية للوصول الى هذه الصفحة";
+                return RedirectToAction("Index", "Home");
+            }
 
+
+            string rowIdField = "";
+            bool canInsert = false;
+            bool canView = false;
 
             //if (permissionTable is null || permissionTable.Rows.Count == 0)
             //{
@@ -230,6 +242,193 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
             //// ---------------------- END DDL ----------------------
 
+
+
+            try
+            {
+                if (ds != null && ds.Tables.Count > 0 && permissionTable!.Rows.Count > 0)
+                {
+                    // صلاحيات
+                    foreach (DataRow row in permissionTable.Rows)
+                    {
+                        var permissionName = row["permissionTypeName_E"]?.ToString()?.Trim().ToUpper();
+
+                        if (permissionName == "IMPORTEXCELFORBUILDINGPAYMENT") canView = true;
+
+                    }
+
+                    if (dt4 != null && dt4.Columns.Count > 0)
+                    {
+                        // RowId
+                        rowIdField = "deductListID";
+                        var possibleIdNames = new[] { "deductListID", "DeductListID", "Id", "ID" };
+                        rowIdField = possibleIdNames.FirstOrDefault(n => dt4.Columns.Contains(n))
+                                     ?? dt4.Columns[0].ColumnName;
+
+                        // عناوين الأعمدة بالعربي
+                        var headerMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                        {
+                            ["deductListID"] = "الرقم المرجعي",
+                            ["NationalID"] = "رقم الهوية",
+                            ["generalNo_FK"] = "الرقم العام",
+                            ["rankNameA"] = "الرتبة",
+                            ["militaryUnitName_A"] = "الوحدة",
+                            ["maritalStatusName_A"] = "الحالة الاجتماعية",
+                            ["dependinceCounter"] = "عدد التابعين",
+                            ["nationalityName_A"] = "الجنسية",
+                            ["genderName_A"] = "الجنس",
+                            ["FullName_A"] = "الاسم بالعربي",
+                            ["FullName_E"] = "الاسم بالانجليزي",
+                            ["birthdate"] = "تاريخ الميلاد",
+                            ["residentcontactDetails"] = "رقم الجوال",
+                            ["note"] = "ملاحظات"
+                        };
+
+
+
+
+
+                        // الأعمدة
+                        foreach (DataColumn c in dt4.Columns)
+                        {
+                            string colType = "text";
+                            var t = c.DataType;
+                            if (t == typeof(bool)) colType = "bool";
+                            else if (t == typeof(DateTime)) colType = "date";
+                            else if (t == typeof(byte) || t == typeof(short) || t == typeof(int) || t == typeof(long)
+                                     || t == typeof(float) || t == typeof(double) || t == typeof(decimal))
+                                colType = "number";
+
+                            bool isfirstName_A = c.ColumnName.Equals("firstName_A", StringComparison.OrdinalIgnoreCase);
+                            bool issecondName_A = c.ColumnName.Equals("secondName_A", StringComparison.OrdinalIgnoreCase);
+                            bool isthirdName_A = c.ColumnName.Equals("thirdName_A", StringComparison.OrdinalIgnoreCase);
+                            bool islastName_A = c.ColumnName.Equals("lastName_A", StringComparison.OrdinalIgnoreCase);
+                            bool isfirstName_E = c.ColumnName.Equals("firstName_E", StringComparison.OrdinalIgnoreCase);
+                            bool issecondName_E = c.ColumnName.Equals("secondName_E", StringComparison.OrdinalIgnoreCase);
+                            bool isthirdName_E = c.ColumnName.Equals("thirdName_E", StringComparison.OrdinalIgnoreCase);
+                            bool islastName_E = c.ColumnName.Equals("lastName_E", StringComparison.OrdinalIgnoreCase);
+
+                            bool isrankID_FK = c.ColumnName.Equals("rankID_FK", StringComparison.OrdinalIgnoreCase);
+                            bool ismilitaryUnitID_FK = c.ColumnName.Equals("militaryUnitID_FK", StringComparison.OrdinalIgnoreCase);
+                            bool ismartialStatusID_FK = c.ColumnName.Equals("martialStatusID_FK", StringComparison.OrdinalIgnoreCase);
+                            bool isnationalityID_FK = c.ColumnName.Equals("nationalityID_FK", StringComparison.OrdinalIgnoreCase);
+                            bool isgenderID_FK = c.ColumnName.Equals("genderID_FK", StringComparison.OrdinalIgnoreCase);
+
+                            bool isMilitaryUnitName = c.ColumnName.Equals("militaryUnitName_A", StringComparison.OrdinalIgnoreCase);
+                            bool isNote = c.ColumnName.Equals("note", StringComparison.OrdinalIgnoreCase);
+
+                            //  فقط هذي الأعمدة نبي لها فلتر select
+                            bool isRankName = c.ColumnName.Equals("rankNameA", StringComparison.OrdinalIgnoreCase);
+                            bool isUnitName = c.ColumnName.Equals("militaryUnitName_A", StringComparison.OrdinalIgnoreCase);
+                            bool isNationalityName = c.ColumnName.Equals("nationalityName_A", StringComparison.OrdinalIgnoreCase);
+
+                            //  جهز خيارات الفلتر من نفس بيانات الجدول (عشان التطابق يكون صحيح)
+                            List<OptionItem> filterOpts = new();
+                            if (isRankName || isUnitName || isNationalityName)
+                            {
+                                var field = c.ColumnName;
+
+                                var distinctVals = dt4.AsEnumerable()
+                                    .Select(r => (r[field] == DBNull.Value ? "" : r[field]?.ToString())?.Trim())
+                                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                                    .Distinct()
+                                    .OrderBy(s => s)
+                                    .ToList();
+
+                                filterOpts = distinctVals
+                                    .Select(s => new OptionItem { Value = s!, Text = s! })
+                                    .ToList();
+                            }
+
+                            dynamicColumns.Add(new TableColumn
+                            {
+                                Field = c.ColumnName,
+                                Label = headerMap.TryGetValue(c.ColumnName, out var label) ? label : c.ColumnName,
+                                Type = colType,
+                                Sortable = true,
+
+                                Visible = !(isfirstName_A || isfirstName_E || issecondName_A || issecondName_E || isthirdName_A || isthirdName_E ||
+                                            islastName_A || islastName_E || isrankID_FK || ismilitaryUnitID_FK || ismartialStatusID_FK ||
+                                            isnationalityID_FK || isgenderID_FK),
+
+                                truncate = isMilitaryUnitName || isNote,
+
+                                //  فلتر للرتبة + الوحدة + الجنسية
+                                Filter = (isRankName || isUnitName || isNationalityName)
+                                    ? new TableColumnFilter
+                                    {
+                                        Enabled = true,
+                                        Type = "select",
+                                        Options = filterOpts
+                                    }
+                                    : new TableColumnFilter
+                                    {
+                                        Enabled = false
+                                    }
+                            });
+                        }
+
+
+
+
+
+                        // الصفوف
+                        foreach (DataRow r in dt4.Rows)
+                        {
+                            var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+
+                            foreach (DataColumn c in dt4.Columns)
+                            {
+                                var val = r[c];
+                                dict[c.ColumnName] = val == DBNull.Value ? null : val;
+                            }
+
+                            object? Get(string key) => dict.TryGetValue(key, out var v) ? v : null;
+
+
+                            //===============================================================================================
+                            // تحديد رقم المستفيد الأساسي (RowId)
+                            dict["p01"] = Get("deductListID") ?? Get("DeductListID");
+                            dict["p02"] = Get("NationalID");
+                            dict["p03"] = Get("generalNo_FK");
+                            dict["p04"] = Get("firstName_A");
+                            dict["p05"] = Get("secondName_A");
+                            dict["p06"] = Get("thirdName_A");
+                            dict["p07"] = Get("lastName_A");
+                            dict["p08"] = Get("firstName_E");
+                            dict["p09"] = Get("secondName_E");
+                            dict["p10"] = Get("thirdName_E");
+                            dict["p11"] = Get("lastName_E");
+                            dict["p12"] = Get("FullName_A");
+                            dict["p13"] = Get("FullName_E");
+                            dict["p14"] = Get("rankID_FK");
+                            dict["p15"] = Get("rankNameA");
+                            dict["p16"] = Get("militaryUnitID_FK");
+                            dict["p17"] = Get("militaryUnitName_A");
+                            dict["p18"] = Get("martialStatusID_FK");
+                            dict["p19"] = Get("maritalStatusName_A");
+                            dict["p20"] = Get("dependinceCounter");
+                            dict["p21"] = Get("nationalityID_FK");
+                            dict["p22"] = Get("nationalityName_A");
+                            dict["p23"] = Get("genderID_FK");
+                            dict["p24"] = Get("genderName_A");
+                            dict["p25"] = Get("birthdate");
+                            dict["p26"] = Get("residentcontactDetails");
+                            dict["p27"] = Get("note");
+
+                            rowsList.Add(dict);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ViewBag.BuildingTypeDataSetError = ex.Message;
+            }
+
+
+
+            ////------------------------------
             var previewCols = GetPreviewColumns();
             var previewRows = GetPreviewRows();
 
@@ -378,8 +577,8 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
             var dsModel = new SmartTableDsModel
             {
-                PageTitle = "استيراد Excel (Building Payment)",
-                PanelTitle = "استيراد Excel (Building Payment)",
+                PageTitle = "رفع ومعالجة المسيرات",
+                PanelTitle = "رفع ومعالجة المسيرات",
                 Columns = columns,
                 Rows = previewRows,
                 RowIdField = null,
@@ -390,6 +589,11 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 FilterRow = true,
                 ShowColumnVisibility = true,
                 Selectable = false,
+                RenderAsToggle = true,
+                ToggleLabel = "استيراد Excel جديد",
+                ToggleIcon = "fa-solid fa-newspaper",
+                ToggleDefaultOpen = true,
+                ShowToggleCount = false,
                 Toolbar = new TableToolbarConfig
                 {
                     ShowAdd = true,
@@ -438,12 +642,198 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 }
             };
 
+
+
+            var extraEditCtx = new Dictionary<string, object?>
+            {
+                ["idaraID"] = IdaraId,
+                ["entrydata"] = usersId,
+                ["hostname"] = HostName
+            };
+
+            var extraEditRequestBase = new Dictionary<string, object?>
+            {
+                ["pageName_"] = PageName,
+                ["ActionType"] = "GetBuildingPaymentByDeductList",
+                ["tableIndex"] = 0
+            };
+
+            var extraMetaAutoOpen = new Dictionary<string, object?>
+            {
+                ["extraSlotKey"] = "m1",
+                ["extraTitle"] = "بيانات إضافية",
+                ["useRowExtra"] = true,
+                ["lazyExtra"] = true,
+                ["extraEndpoint"] = "/crud/extradataload",
+                ["allowNoSelection"] = true,
+
+                // المهم
+                ["extraLoadOnOpen"] = true,
+
+                ["ctx"] = extraEditCtx,
+                ["extraRequest"] = extraEditRequestBase,
+
+                ["extraParamMap"] = new Dictionary<string, string>
+                {
+                    ["parameter_01"] = "p01"
+                    //,
+                    //["parameter_05"] = "p05"
+                },
+
+                ["EnableSearch"] = false,
+                ["ShowMeta"] = false,
+                ["PageSize"] = 10,
+                ["Sortable"] = false,
+                ["showRowNumbers"] = false,
+
+                ["visibleFields"] = new List<string>
+    {
+        "meterNo","LastRead", "CurrentRead","ReadDiff", "TotalPrice"
+    },
+
+                ["headerMap"] = new Dictionary<string, string>
+                {
+                    ["meterNo"] = "رقم العداد",
+                    ["LastRead"] = "القراءة السابقة",
+                    ["CurrentRead"] = "القراءة الحالية",
+                    ["ReadDiff"] = "فرق القراءة",
+                    ["TotalPrice"] = "الإجمالي"
+                }
+            };
+
+
+
+            var dsModelDeductListDetails = new SmartTableDsModel
+            {
+                PageTitle = "قراءة العدادات الدورية",
+                Columns = dynamicColumns,
+                Rows = rowsList,
+                RowIdField = rowIdField,
+                PageSize = 10,
+                PageSizes = new List<int> { 10, 25, 50, 200, },
+                QuickSearchFields = dynamicColumns.Select(c => c.Field).Take(4).ToList(),
+                Searchable = true,
+                AllowExport = true,
+                ShowPageSizeSelector = true,
+                PanelTitle = "قراءة العدادات الدورية",
+                //TabelLabel = "بيانات المستفيدين",
+                //TabelLabelIcon = "fa-solid fa-user-group",
+                EnableCellCopy = true,
+                ShowColumnVisibility = true,
+                ShowFilter = true,
+                FilterRow = true,
+                FilterDebounce = 250,
+                RenderAsToggle = true,
+                ToggleLabel = "فترات القراءة",
+                ToggleIcon = "fa-solid fa-newspaper",
+                ToggleDefaultOpen = true,
+                ShowToggleCount = false,
+                Toolbar = new TableToolbarConfig
+                {
+                    ShowRefresh = false,
+                    ShowColumns = true,
+                    ShowExportCsv = false,
+                    ShowExportExcel = false,
+
+                    ShowAdd = canView ,
+                    ShowEdit1 = canView,
+
+
+                    ShowBulkDelete = false,
+
+
+
+
+                    CustomActions = new List<TableAction>
+                       {
+
+                            new TableAction
+                            {
+                                Label = "عرض التفاصيل",
+                                ModalTitle = "<i class='fa-solid fa-circle-info text-emerald-600 text-xl mr-2'></i> تفاصيل المستفيد",
+                                Icon = "fa-regular fa-file",
+                                //Show = true,  // ✅ أضف
+                                OpenModal = true,
+                                RequireSelection = true,
+                                MinSelection = 1,
+                                MaxSelection = 1,
+
+
+                            },
+                        },
+
+                    Add = new TableAction
+                    {
+                        Label = "فتح فترة قراءة عدادات",
+                        Icon = "fa fa-plus",
+                        Color = "success",
+                        OpenModal = true,
+                        ModalTitle = "فتح فترة قراءة عدادات",
+                        ModalMessage = "هل أنت متأكد من فترة قراءة عدادات جديدة لهذه الخدمة؟",
+                        ModalMessageClass = "bg-blue-50 text-blue-700",
+                        ModalMessageIcon = "fa-solid fa-triangle-exclamation",
+                        
+                       Meta = extraMetaAutoOpen
+                    },
+
+
+                    Edit1 = new TableAction
+                    {
+                        Label = "اغلاق فترة قراءة عدادات",
+                        Icon = "fa fa-plus",
+                        Color = "danger",
+                        OpenModal = true,
+                        ModalTitle = "اغلاق فترة قراءة عداداتت",
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "buildingClassInsertForm",
+                            Title = "بيانات اغلاق فترة قراءة عدادات",
+                            Method = "post",
+                            ActionUrl = "/crud/insert",
+                            Fields = processFields,
+                            Buttons = new List<FormButtonConfig>
+                            {
+                                new FormButtonConfig { Text = "حفظ",   Type = "submit", Color = "success" },
+                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
+                            }
+                        },
+                        Meta = extraMetaAutoOpen,
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1,
+
+                        Guards = new TableActionGuards
+                        {
+                            AppliesTo = "any",
+                            DisableWhenAny = new List<TableActionRule>
+                        {
+
+                              new TableActionRule
+                            {
+                                Field = "AllMeterNotReaded",
+                                Op = "eq",
+                                Value = "0",
+                                Message = "لايمكن اغلاق الفترة قبل انهاء قراءة جميع العدادات ",
+                                Priority = 3
+                            },
+
+
+                          }
+                        }
+                    },
+
+                }
+            };
+   
+           
+
             var page = new SmartPageViewModel
             {
                 PageTitle = dsModel.PageTitle,
                 PanelTitle = dsModel.PanelTitle,
                 PanelIcon = "fa fa-list",
-                TableDS = dsModel
+                TableDS = dsModel,
+                TableDS1 = dsModelDeductListDetails
             };
 
             // ✅ نفس الفيو (تقدر تغيره لاحقاً)
