@@ -43,6 +43,7 @@ namespace SmartFoundation.UI.ViewModels.SmartForm
         public string? DependsOn { get; set; }
         public string? DependsUrl { get; set; }
         public string? SectionTitle { get; set; }
+        public Dictionary<string, object?>? ExtraButton { get; set; }
         public List<OptionItem> Options { get; set; } = new();
 
         // أنواع خاصة
@@ -190,7 +191,9 @@ namespace SmartFoundation.UI.ViewModels.SmartForm
         public string? DownloadEndpoint { get; set; }          // API تحميل الملف
         public string? DeleteEndpoint { get; set; }            // API حذف الملف
 
-        
+        public string? ExtraButtonText { get; set; }
+        public string? ExtraButtonSlot { get; set; }
+        public string? ExtraButtonClass { get; set; }
 
         public SmartTable.TableConfig? Table { get; set; }
 

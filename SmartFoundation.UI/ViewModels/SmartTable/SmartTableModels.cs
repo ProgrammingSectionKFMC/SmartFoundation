@@ -185,6 +185,11 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
 
         public string? OnBeforeOpenJs { get; set; }
         public Dictionary<string, object?>? Meta { get; set; }
+        public Dictionary<string, object?>? Meta1 { get; set; }
+
+        public Dictionary<string, object?>? Meta2 { get; set; }
+        public Dictionary<string, object?>? Meta3 { get; set; }
+        public Dictionary<string, object?>? Meta4 { get; set; }
 
         public bool Show { get; set; } = true;
         public bool OpenModal { get; set; } = false;

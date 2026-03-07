@@ -9,6 +9,8 @@ using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Text.Json;
 using static LLama.Common.ChatHistory;
+using System.Net.Http.Json;
+
 
 namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 {
@@ -143,7 +145,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
             //// ---------------------- MeterServiceTypeOptions ----------------------
             result = await _CrudController.GetDDLValues(
-                "meterServiceTypeName_A", "meterServiceTypeID", "4", nameof(AllMeterRead), usersId, IdaraId, HostName
+                "meterServiceTypeName_A", "meterServiceTypeID", "3", nameof(AllMeterRead), usersId, IdaraId, HostName
            ) as JsonResult;
 
 
@@ -151,16 +153,48 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
             MeterServiceTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
+            //// ---------------------- MeterServiceTypeOptions ----------------------
+            var tMeters = (ds.Tables.Count > 4) ? ds.Tables[4] : null;
+
+            var meterOptions = new List<OptionItem>();
+            if (tMeters != null)
+            {
+                foreach (DataRow r in tMeters.Rows)
+                {
+                    meterOptions.Add(new OptionItem
+                    {
+                        Value = r["meterID"]?.ToString(),
+                        Text = r["meterNo"]?.ToString(),
+                    });
+                }
+            }
+
+            MeterOptions = meterOptions;
+
+
+            // //// ---------------------- MeterOptions ----------------------
+            // result = await _CrudController.GetDDLValues(
+            //     "meterNo", "meterID", "3", nameof(AllMeterRead), usersId, IdaraId, HostName,MeterServiceTypeID_
+            //) as JsonResult;
+
+
+            // json = JsonSerializer.Serialize(result!.Value);
+
+            // MeterOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+
+
 
             //// ---------------------- MeterOptions ----------------------
-            result = await _CrudController.GetDDLValues(
-                "meterNo", "meterID", "3", nameof(AllMeterRead), usersId, IdaraId, HostName,MeterServiceTypeID_
-           ) as JsonResult;
+            //            result = await _CrudController.GetDDLValues(
+            //    "meterNo",                 // Text
+            //    "meterID",                 // Value
+            //    "4",
+            //    nameof(AllMeterRead),
+            //    usersId, IdaraId, HostName
+            //) as JsonResult;
 
-
-            json = JsonSerializer.Serialize(result!.Value);
-
-            MeterOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+            //            json = JsonSerializer.Serialize(result!.Value);
+            //            MeterOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
 
             // ----------------------END DDLValues ----------------------
@@ -510,16 +544,21 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
                             // p01..p05
                             object? Get(string key) => dictbills.TryGetValue(key, out var v) ? v : null;
-                            dictbills["p01"] = Get("BillPeriodID") ?? Get("billPeriodID");
-                            dictbills["p02"] = Get("billPeriodTypeID_FK");
-                            dictbills["p03"] = Get("billPeriodTypeName_A");
-                            dictbills["p04"] = Get("billPeriodName_A");
-                            dictbills["p05"] = Get("billPeriodName_E");
-                            dictbills["p06"] = Get("billPeriodStartDate");
-                            dictbills["p07"] = Get("billPeriodEndDate");
-                            dictbills["p08"] = Get("billPeriodActive");
-                            dictbills["p09"] = Get("ClosedBy");
-                            dictbills["p10"] = Get("IdaraId_FK");
+                            dictbills["p01"] = Get("BillsID") ?? Get("billsID");
+                            dictbills["p02"] = Get("BillNumber");
+                            dictbills["p03"] = Get("PeriodMonth");
+                            dictbills["p04"] = Get("PeriodYear");
+                            dictbills["p05"] = Get("meterID");
+                            dictbills["p06"] = Get("meterName_A");
+                            dictbills["p07"] = Get("buildingDetailsNo");
+                            dictbills["p08"] = Get("buildingDetailsID");
+                            dictbills["p09"] = Get("meterReadID");
+                            dictbills["p10"] = Get("CurrentRead");
+                            dictbills["p10"] = Get("LastRead");
+                            dictbills["p11"] = Get("ReadDiff");
+                            dictbills["p12"] = Get("TotalPrice");
+                            
+
 
 
                             rowsListbills.Add(dictbills);
@@ -567,8 +606,364 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 // hidden p01 actually posted to SP
                 
                 new FieldConfig { Name = "p01", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
-                new FieldConfig { Name = "p02", Label = "رقم الهوية", Type = "select", ColCss = "6",Icon = "fa-solid fa-address-card", Required = true,Options =MeterOptions  },
-                new FieldConfig { Name = "p03", Label = "رقم الهوية", Type = "hidden", ColCss = "6",Icon = "fa-solid fa-address-card", Required = true,Value = PeriodID_  },
+              
+
+            };
+
+            var CLOSEMetersReadPeriodFields = new List<FieldConfig>
+            {
+
+                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "CLOSEMETERREADPERIOD" },
+                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
+                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
+                new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
+
+                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+
+
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+
+                // selection context
+                new FieldConfig { Name = rowIdField, Type = "hidden" },
+
+
+
+                // hidden p01 actually posted to SP
+                
+               
+                new FieldConfig { Name = "p01", Label = "PeriodID_", Type = "text", ColCss = "3", Required = true, Value = PeriodID_ },
+                 new FieldConfig { Name = "p02", Label = "MeterServiceTypeID_", Type = "text", Value=MeterServiceTypeID_ },
+
+
+            };
+
+
+            var READELECTRICITYMETERFields = new List<FieldConfig>
+            {
+
+                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "READELECTRICITYMETER" },
+                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
+                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
+                new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
+
+                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+
+
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+
+                // selection context
+                new FieldConfig { Name = rowIdField, Type = "hidden" },
+
+
+
+                // hidden p01 actually posted to SP
+                
+                new FieldConfig { Name = "p01", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
+                new FieldConfig { Name = "p02", Label = "رقم العداد", Type = "select", ColCss = "3", Required = true, Options= MeterOptions },
+                new FieldConfig { Name = "p03", Label = "PeriodID_", Type = "hidden", ColCss = "3", Required = true, Value = PeriodID_ },
+               new FieldConfig
+                    {
+                        Name = "p04",
+                        Label = "القراءة الجديدة",
+                        Type = "search",
+                        TextMode = "numeric",
+                        ColCss = "6",
+                        Required = true,
+                        ExtraButton = new Dictionary<string, object?>
+                        {
+                            ["Text"] = "تحقق",
+                            ["ClassName"] = "btn btn-warning",
+                            ["SlotKey"] = "m3"
+                        }
+                    },
+
+
+            };
+
+            var EDITELECTRICITYMETERFields = new List<FieldConfig>
+            {
+
+                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "EDITELECTRICITYMETER" },
+                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
+                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
+                new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
+
+                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+
+
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+
+                // selection context
+                new FieldConfig { Name = rowIdField, Type = "hidden" },
+
+
+
+                // hidden p01 actually posted to SP
+                
+                new FieldConfig { Name = "p41", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
+                new FieldConfig { Name = "p01", Label = "BillsID", Type = "text" },
+                new FieldConfig { Name = "p05", Label = "MeterID", Type = "number", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p09", Label = "ReadID", Type = "text", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p10", Label = "CurrentRead", Type = "text", ColCss = "3", Required = true },
+               
+
+            };
+
+            var DELETEELECTRICITYMETERFields = new List<FieldConfig>
+            {
+
+                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "DELETEELECTRICITYMETER" },
+                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
+                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
+                new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
+
+                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+
+
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+
+                // selection context
+                new FieldConfig { Name = rowIdField, Type = "hidden" },
+
+
+
+                // hidden p01 actually posted to SP
+                
+                new FieldConfig { Name = "p41", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
+                new FieldConfig { Name = "p01", Label = "BillsID", Type = "text" },
+                new FieldConfig { Name = "p05", Label = "MeterID", Type = "text", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p09", Label = "ReadID", Type = "text", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p10", Label = "CurrentRead", Type = "text", ColCss = "3", Required = true },
+               
+
+            };
+
+
+            var READWATERMETERFields = new List<FieldConfig>
+            {
+
+                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "READWATERMETER" },
+                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
+                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
+                new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
+
+                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+
+
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+
+                // selection context
+                new FieldConfig { Name = rowIdField, Type = "hidden" },
+
+
+
+                // hidden p01 actually posted to SP
+                
+                new FieldConfig { Name = "p01", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
+                new FieldConfig { Name = "p02", Label = "رقم العداد", Type = "select", ColCss = "3", Required = true, Options= MeterOptions },
+                new FieldConfig { Name = "p03", Label = "PeriodID_", Type = "hidden", ColCss = "3", Required = true, Value = PeriodID_ },
+               new FieldConfig
+                    {
+                        Name = "p04",
+                        Label = "القراءة الجديدة",
+                        Type = "search",
+                        TextMode = "numeric",
+                        ColCss = "6",
+                        ExtraButton = new Dictionary<string, object?>
+                        {
+                            ["Text"] = "تحقق",
+                            ["ClassName"] = "btn btn-warning",
+                            ["SlotKey"] = "m3"
+                        }
+                    },
+
+
+            };
+
+            var EDITWATERMETERFields = new List<FieldConfig>
+            {
+
+                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "EDITWATERMETER" },
+                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
+                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
+                new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
+
+                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+
+
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+
+                // selection context
+                new FieldConfig { Name = rowIdField, Type = "hidden" },
+
+
+
+                // hidden p01 actually posted to SP
+                
+                new FieldConfig { Name = "p41", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
+                new FieldConfig { Name = "p01", Label = "BillsID", Type = "text" },
+                new FieldConfig { Name = "p05", Label = "MeterID", Type = "text", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p09", Label = "ReadID", Type = "text", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p10", Label = "CurrentRead", Type = "text", ColCss = "3", Required = true },
+
+
+            };
+
+            var DELETEWATERMETERFields = new List<FieldConfig>
+            {
+
+                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "DELETEWATERMETER" },
+                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
+                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
+                new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
+
+                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+
+
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+
+                // selection context
+                new FieldConfig { Name = rowIdField, Type = "hidden" },
+
+
+
+                // hidden p01 actually posted to SP
+                
+                new FieldConfig { Name = "p41", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
+                new FieldConfig { Name = "p01", Label = "BillsID", Type = "text" },
+                new FieldConfig { Name = "p05", Label = "MeterID", Type = "text", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p09", Label = "ReadID", Type = "text", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p10", Label = "CurrentRead", Type = "text", ColCss = "3", Required = true },
+
+
+            };
+
+
+            var READGASMETERFields = new List<FieldConfig>
+            {
+
+                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "READGASMETER" },
+                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
+                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
+                new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
+
+                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+
+
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+
+                // selection context
+                new FieldConfig { Name = rowIdField, Type = "hidden" },
+
+
+
+                // hidden p01 actually posted to SP
+                
+                new FieldConfig { Name = "p01", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
+                new FieldConfig { Name = "p02", Label = "رقم العداد", Type = "select", ColCss = "3", Required = true, Options= MeterOptions },
+                new FieldConfig { Name = "p03", Label = "PeriodID_", Type = "hidden", ColCss = "3", Required = true, Value = PeriodID_ },
+               new FieldConfig
+                    {
+                        Name = "p04",
+                        Label = "القراءة الجديدة",
+                        Type = "search",
+                        TextMode = "numeric",
+                        ColCss = "6",
+                        ExtraButton = new Dictionary<string, object?>
+                        {
+                            ["Text"] = "تحقق",
+                            ["ClassName"] = "btn btn-warning",
+                            ["SlotKey"] = "m3"
+                        }
+                    },
+
+
+            };
+
+            var EDITGASMETERFields = new List<FieldConfig>
+            {
+
+                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "EDITGASMETER" },
+                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
+                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
+                new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
+
+                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+
+
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+
+                // selection context
+                new FieldConfig { Name = rowIdField, Type = "hidden" },
+
+
+
+                // hidden p01 actually posted to SP
+                
+                new FieldConfig { Name = "p41", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
+                new FieldConfig { Name = "p01", Label = "BillsID", Type = "text" },
+                new FieldConfig { Name = "p05", Label = "MeterID", Type = "text", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p09", Label = "ReadID", Type = "text", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p10", Label = "CurrentRead", Type = "text", ColCss = "3", Required = true },
+
+
+            };
+
+            var DELETEGASMETERFields = new List<FieldConfig>
+            {
+
+                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "DELETEGASMETER" },
+                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
+                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
+                new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
+
+                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+
+
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+
+                // selection context
+                new FieldConfig { Name = rowIdField, Type = "hidden" },
+
+
+
+                // hidden p01 actually posted to SP
+                
+                new FieldConfig { Name = "p41", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
+                new FieldConfig { Name = "p01", Label = "BillsID", Type = "text" },
+                new FieldConfig { Name = "p05", Label = "MeterID", Type = "text", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p09", Label = "ReadID", Type = "text", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p10", Label = "CurrentRead", Type = "text", ColCss = "3", Required = true },
 
 
             };
@@ -588,8 +983,6 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 ["tableIndex"] = 0
             };
 
-
-
             var extraMeta_DependsOnSelect_MultiParams = new Dictionary<string, object?>
             {
                 ["useRowExtra"] = true,
@@ -602,6 +995,8 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 ["Sortable"] = false,        // أو false
                 ["showRowNumbers"] = false,
                 ["emptyText"] = "لا يوجد بيانات",
+                ["extraSlotKey"] = "m1",
+                ["extraTitle"] = "الجدول ب",
 
                 ["ctx"] = extraCtx,
                 ["extraRequest"] = extraRequestBase,
@@ -609,7 +1004,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 // يعتمد على اختيار
                 ["extraDependsOn"] = "p02",
                 ["extraLoadOnOpen"] = false,
-                ["extraEmptyTextBeforeSelect"] = "اختر أولاً لعرض الجدول",
+                ["extraEmptyTextBeforeSelect"] = "",
 
                 // ✅ جديد: خارطة باراميترات متعددة من فورم المودل
                 // p01 -> parameter_01
@@ -620,6 +1015,19 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     ["parameter_02"] = "p02",
                     ["parameter_03"] = "p03"
                 },
+                ["visibleFields"] = new List<string>
+                                {
+                                    "meterNo","CurrentRead","TotalPrice"
+                                },
+                ["headerMap"] = new Dictionary<string, string>
+                {
+                    ["meterID"] = "رقم العداد المرجعيٍ",
+                    ["meterNo"] = "رقم العداد",
+                    ["TotalPrice"] = "مبلغ الفاتورة السابقة",
+                    ["CurrentRead"] = "القراءة السابقة",
+                    ["periods_"] = "فترة الفاتورة السابقة",
+
+                },
 
                 // (اختياري) باراميترات ثابتة إضافية مع الخريطة
                 //["extraParams"] = new Dictionary<string, object?>
@@ -628,7 +1036,129 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 //    ["parameter_02"] = 1
                 //},
 
+
+            };
+
+            var extraCtx2 = new Dictionary<string, object?>
+            {
+                ["idaraID"] = IdaraId,
+                ["entrydata"] = usersId,
+                ["hostname"] = HostName
+            };
+
+            var extraRequestBase2 = new Dictionary<string, object?>
+            {
+                ["pageName_"] = PageName,          // ديناميك حسب الصفحة
+                ["ActionType"] = "MeterNewBill",// غيّره حسب احتياجك
+                ["tableIndex"] = 0
+            };
+
+            var extraMeta2 = new Dictionary<string, object?>
+            {
                 
+                
+                
+              
+                ["EnableSearch"] = false,   // أو true
+                ["ShowMeta"] = false,        // أو false
+                ["PageSize"] = 5,           // 5/10/20...
+                ["Sortable"] = false,        // أو false
+                ["showRowNumbers"] = false,
+
+                ["extraSlotKey"] = "m3",
+                ["extraTitle"] = "الجدول الثاني",
+                ["useRowExtra"] = true,
+                ["lazyExtra"] = true,
+                ["extraEndpoint"] = "/crud/extradataload",
+                ["allowNoSelection"] = true,
+
+                ["extraTriggerMode"] = "button",
+                ["extraTriggerField"] = "p03",
+                ["extraButtonText"] = "تحقق",
+
+                ["ctx"] = extraCtx2,
+                ["extraRequest"] = extraRequestBase2,
+
+                ["extraParamMap"] = new Dictionary<string, string>
+                {
+                    ["parameter_01"] = "p01",
+                    ["parameter_04"] = "p04",
+                    ["parameter_02"] = "p02"
+                },
+
+                ["visibleFields"] = new List<string>
+    {
+         "meterNo","LastRead","CurrentRead","ReadDiff","PRICE","PRICETAX","ServicePriceWithTAX","TotalPrice"
+    },
+
+                ["headerMap"] = new Dictionary<string, string>
+                {
+                    ["meterNo"] = "رقم العداد",
+                    ["LastRead"] = "القراءة السابقة",
+                    ["CurrentRead"] = "القراءة الحالية",
+                    ["ReadDiff"] = "فرق القراءة",
+                    ["PRICE"] = "المبلغ",
+                    ["PRICETAX"] = "الضريبة",
+                    ["ServicePriceWithTAX"] = "رسوم الخدمة",
+                    ["TotalPrice"] = "الاجمالي"
+                }
+            };
+
+            var extraEditCtx = new Dictionary<string, object?>
+            {
+                ["idaraID"] = IdaraId,
+                ["entrydata"] = usersId,
+                ["hostname"] = HostName
+            };
+
+            var extraEditRequestBase = new Dictionary<string, object?>
+            {
+                ["pageName_"] = PageName,
+                ["ActionType"] = "EditBill",
+                ["tableIndex"] = 0
+            };
+
+            var extraMetaAutoOpen = new Dictionary<string, object?>
+            {
+                ["extraSlotKey"] = "m1",
+                ["extraTitle"] = "بيانات إضافية",
+                ["useRowExtra"] = true,
+                ["lazyExtra"] = true,
+                ["extraEndpoint"] = "/crud/extradataload",
+                ["allowNoSelection"] = true,
+
+                // المهم
+                ["extraLoadOnOpen"] = true,
+
+                ["ctx"] = extraEditCtx,
+                ["extraRequest"] = extraEditRequestBase,
+
+                ["extraParamMap"] = new Dictionary<string, string>
+                {
+                    ["parameter_01"] = "p01"
+                    //,
+                    //["parameter_05"] = "p05"
+                },
+
+                ["EnableSearch"] = false,
+                ["ShowMeta"] = false,
+                ["PageSize"] = 10,
+                ["Sortable"] = false,
+                ["showRowNumbers"] = false,
+
+                ["visibleFields"] = new List<string>
+    {
+        "meterNo","LastRead", "CurrentRead","ReadDiff", "TotalPrice"
+    },
+
+                ["headerMap"] = new Dictionary<string, string>
+                {
+                    ["meterNo"] = "رقم العداد",
+                    ["LastRead"] = "القراءة السابقة",
+                    ["CurrentRead"] = "القراءة الحالية",
+                    ["ReadDiff"] = "فرق القراءة",
+                    ["TotalPrice"] = "الإجمالي"
+                }
             };
 
 
@@ -667,7 +1197,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     ShowExportExcel = false,
 
                     ShowAdd = canOPENMETERREADPERIOD && !MeterServiceTypeready,
-                    ShowAdd1 = canCLOSEMETERREADPERIOD && MeterServiceTypeready,
+                    ShowEdit1 = canCLOSEMETERREADPERIOD && MeterServiceTypeready,
                     
                     
                     ShowBulkDelete = false,
@@ -717,7 +1247,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             }
                         }
                     },
-                    Add1 = new TableAction
+                    Edit1 = new TableAction
                     {
                         Label = "اغلاق فترة قراءة عدادات",
                         Icon = "fa fa-plus",
@@ -730,7 +1260,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             Title = "بيانات اغلاق فترة قراءة عدادات",
                             Method = "post",
                             ActionUrl = "/crud/insert",
-                            Fields = OpenMetersReadPeriodFields,
+                            Fields = CLOSEMetersReadPeriodFields,
                             Buttons = new List<FormButtonConfig>
                             {
                                 new FormButtonConfig { Text = "حفظ",   Type = "submit", Color = "success" },
@@ -773,7 +1303,23 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 }
             };
 
-            var dsModelMeterRead = new SmartTableDsModel
+
+
+            var metaB = new Dictionary<string, object?>(extraMeta_DependsOnSelect_MultiParams)
+            {
+                ["extraSlotKey"] = "m2",
+                ["extraTitle"] = "بيانات الفاتورة السابقة"
+            };
+
+            var metaC = new Dictionary<string, object?>(extraMeta2)
+            {
+                ["extraSlotKey"] = "m3",
+                ["extraTitle"] = "الفاتورة الجديدة المتوقعه"
+            };
+
+
+
+            var dsModelELECTRICITYMETER = new SmartTableDsModel
             {
                 PageTitle = "قراءة العدادات الدورية",
                 Columns = dynamicColumnsbills,
@@ -805,8 +1351,9 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     ShowExportCsv = false,
                     ShowExportExcel = false,
 
-                    ShowAdd = canOPENMETERREADPERIOD,// && !MeterServiceTypeready,
-                    ShowAdd1 = canOPENMETERREADPERIOD,// && MeterServiceTypeready,
+                    ShowAdd = canREADELECTRICITYMETER,
+                    ShowEdit = canEDITELECTRICITYMETER,
+                    ShowDelete = canDELETEELECTRICITYMETER,
 
 
                     ShowBulkDelete = false,
@@ -854,54 +1401,61 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             },
                         },
 
+                   
+
                     Add = new TableAction
                     {
-                        Label = "اضافة قراءة عداد جديدة",
+                        Label = "اضافة قراءة عداد كهرباء جديدة",
                         Icon = "fa fa-plus",
                         Color = "success",
                         OpenModal = true,
-                        ModalTitle = "اضافة قراءة عداد جديدة",
+                        ModalTitle = "اضافة قراءة عداد كهرباء جديدة",
                         OpenForm = new FormConfig
                         {
                             FormId = "buildingClassInsertForm",
-                            Title = "بيانات قراءة عداد جديدة",
+                            Title = "بيانات قراءة عداد كهرباء جديدة",
                             Method = "post",
                             ActionUrl = "/crud/insert",
-                            Fields = OpenMetersReadPeriodFields,
+                            Fields = READELECTRICITYMETERFields,
                             Buttons = new List<FormButtonConfig>
                             {
                                 new FormButtonConfig { Text = "حفظ",   Type = "submit", Color = "success" },
                                 new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
                             }
                         },
-                        Meta = extraMeta_DependsOnSelect_MultiParams
+                        Meta = metaB
+                        ,
+                        Meta1 = metaC
                     },
 
 
-                    Add1 = new TableAction
+                    Edit = new TableAction
                     {
-                        Label = "تاكيد قراءة عداد",
-                        Icon = "fa fa-plus",
+                        Label = "تعديل قراءة عداد كهرباء",
+                        Icon = "fa-solid fa-edit",
                         Color = "warning",
                         OpenModal = true,
-                        ModalTitle = "تاكيد قراءة عداد ",
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1,
+
                         OpenForm = new FormConfig
                         {
-                            FormId = "buildingClassInsertForm",
-                            Title = "بيانات تاكيد قراءة عداد ",
+                            FormId = "ResidentActionInsert",
+                            Title = "إضافة إجراء",
                             Method = "post",
                             ActionUrl = "/crud/insert",
-                            Fields = OpenMetersReadPeriodFields,
+                            Fields = EDITELECTRICITYMETERFields,
                             Buttons = new List<FormButtonConfig>
-                            {
-                                new FormButtonConfig { Text = "حفظ",   Type = "submit", Color = "success" },
-                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
-                            }
-                        }
+        {
+            new() { Text="حفظ", Type="submit", Color="success" },
+            new() { Text="إلغاء", Type="button", Color="secondary",
+                    OnClickJs="this.closest('.sf-modal').__x.$data.closeModal();" }
+        }
+                        },
+
+                        Meta = extraMetaAutoOpen
                     },
-
-
-
 
 
 
@@ -913,11 +1467,579 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
             };
 
 
-          
+            var dsModelWATERMETER = new SmartTableDsModel
+            {
+                PageTitle = "قراءة العدادات الدورية",
+                Columns = dynamicColumnsbills,
+                Rows = rowsListbills,
+                RowIdField = rowbillsIdField,
+                PageSize = 10,
+                PageSizes = new List<int> { 10, 25, 50, 200, },
+                QuickSearchFields = dynamicColumnsbills.Select(c => c.Field).Take(4).ToList(),
+                Searchable = true,
+                AllowExport = true,
+                ShowPageSizeSelector = true,
+                PanelTitle = "قراءة العدادات الدورية",
+                //TabelLabel = "بيانات المستفيدين",
+                //TabelLabelIcon = "fa-solid fa-user-group",
+                EnableCellCopy = true,
+                ShowColumnVisibility = true,
+                ShowFilter = true,
+                FilterRow = true,
+                FilterDebounce = 250,
+                RenderAsToggle = true,
+                ToggleLabel = "قراءة العدادات",
+                ToggleIcon = "fa-solid fa-gauge",
+                ToggleDefaultOpen = true,
+                ShowToggleCount = false,
+                Toolbar = new TableToolbarConfig
+                {
+                    ShowRefresh = false,
+                    ShowColumns = true,
+                    ShowExportCsv = false,
+                    ShowExportExcel = false,
+
+                    ShowAdd = canREADWATERMETER,
+                    ShowEdit = canEDITWATERMETER,
+                    ShowDelete = canDELETEWATERMETER,
+
+
+                    ShowBulkDelete = false,
 
 
 
-            dsModelMeterRead.StyleRules = new List<TableStyleRule>
+                    ExportConfig = new TableExportConfig
+                    {
+                        EnablePdf = true,
+                        PdfEndpoint = "/exports/pdf/table",
+                        PdfTitle = " إمهال المستفيدين",
+                        PdfPaper = "A4",
+                        PdfOrientation = "landscape",
+                        PdfShowPageNumbers = true,
+                        Filename = "Residents",
+                        PdfShowGeneratedAt = true,
+                        PdfShowSerial = true,
+                        PdfSerialLabel = "م",
+                        RightHeaderLine1 = "المملكة العربية السعودية",
+                        RightHeaderLine2 = "وزارة الدفاع",
+                        RightHeaderLine3 = "القوات البرية الملكية السعودية",
+                        RightHeaderLine4 = "الإدارة الهندسية للتشغيل والصيانة",
+                        RightHeaderLine5 = "مدينة الملك فيصل العسكرية",
+                        PdfLogoUrl = "/img/ppng.png",
+
+
+                    },
+
+                    CustomActions = new List<TableAction>
+                            {
+ 
+                             //  details "       
+                            new TableAction
+                            {
+                                Label = "عرض التفاصيل",
+                                ModalTitle = "<i class='fa-solid fa-circle-info text-emerald-600 text-xl mr-2'></i> تفاصيل المستفيد",
+                                Icon = "fa-regular fa-file",
+                                //Show = true,  // ✅ أضف
+                                OpenModal = true,
+                                RequireSelection = true,
+                                MinSelection = 1,
+                                MaxSelection = 1,
+
+
+                            },
+                        },
+
+
+
+                    Add = new TableAction
+                    {
+                        Label = "اضافة قراءة عداد مياه جديدة",
+                        Icon = "fa fa-plus",
+                        Color = "success",
+                        OpenModal = true,
+                        ModalTitle = "اضافة قراءة عداد مياه جديدة",
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "buildingClassInsertForm",
+                            Title = "بيانات قراءة عداد مياه جديدة",
+                            Method = "post",
+                            ActionUrl = "/crud/insert",
+                            Fields = READWATERMETERFields,
+                            Buttons = new List<FormButtonConfig>
+                            {
+                                new FormButtonConfig { Text = "حفظ",   Type = "submit", Color = "success" },
+                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
+                            }
+                        },
+                        Meta = metaB
+                       ,
+                        Meta1 = metaC
+                    },
+
+
+                    Edit = new TableAction
+                    {
+                        Label = "تعديل قراءة عداد مياه",
+                        Icon = "fa-solid fa-edit",
+                        Color = "warning",
+                        OpenModal = true,
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1,
+
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "ResidentActionInsert",
+                            Title = "إضافة إجراء",
+                            Method = "post",
+                            ActionUrl = "/crud/insert",
+                            Fields = EDITWATERMETERFields,
+                            Buttons = new List<FormButtonConfig>
+        {
+            new() { Text="حفظ", Type="submit", Color="success" },
+            new() { Text="إلغاء", Type="button", Color="secondary",
+                    OnClickJs="this.closest('.sf-modal').__x.$data.closeModal();" }
+        }
+                        },
+
+                        Meta = extraMetaAutoOpen
+                    },
+
+
+
+
+
+
+
+                }
+            };
+
+
+            var dsModelGASMETER = new SmartTableDsModel
+            {
+                PageTitle = "قراءة العدادات الدورية",
+                Columns = dynamicColumnsbills,
+                Rows = rowsListbills,
+                RowIdField = rowbillsIdField,
+                PageSize = 10,
+                PageSizes = new List<int> { 10, 25, 50, 200, },
+                QuickSearchFields = dynamicColumnsbills.Select(c => c.Field).Take(4).ToList(),
+                Searchable = true,
+                AllowExport = true,
+                ShowPageSizeSelector = true,
+                PanelTitle = "قراءة العدادات الدورية",
+                //TabelLabel = "بيانات المستفيدين",
+                //TabelLabelIcon = "fa-solid fa-user-group",
+                EnableCellCopy = true,
+                ShowColumnVisibility = true,
+                ShowFilter = true,
+                FilterRow = true,
+                FilterDebounce = 250,
+                RenderAsToggle = true,
+                ToggleLabel = "قراءة العدادات",
+                ToggleIcon = "fa-solid fa-gauge",
+                ToggleDefaultOpen = true,
+                ShowToggleCount = false,
+                Toolbar = new TableToolbarConfig
+                {
+                    ShowRefresh = false,
+                    ShowColumns = true,
+                    ShowExportCsv = false,
+                    ShowExportExcel = false,
+
+                    ShowAdd = canREADGASMETER,
+                    ShowEdit = canEDITGASMETER,
+                    ShowDelete = canDELETEGASMETER,
+
+
+                    ShowBulkDelete = false,
+
+
+
+                    ExportConfig = new TableExportConfig
+                    {
+                        EnablePdf = true,
+                        PdfEndpoint = "/exports/pdf/table",
+                        PdfTitle = " إمهال المستفيدين",
+                        PdfPaper = "A4",
+                        PdfOrientation = "landscape",
+                        PdfShowPageNumbers = true,
+                        Filename = "Residents",
+                        PdfShowGeneratedAt = true,
+                        PdfShowSerial = true,
+                        PdfSerialLabel = "م",
+                        RightHeaderLine1 = "المملكة العربية السعودية",
+                        RightHeaderLine2 = "وزارة الدفاع",
+                        RightHeaderLine3 = "القوات البرية الملكية السعودية",
+                        RightHeaderLine4 = "الإدارة الهندسية للتشغيل والصيانة",
+                        RightHeaderLine5 = "مدينة الملك فيصل العسكرية",
+                        PdfLogoUrl = "/img/ppng.png",
+
+
+                    },
+
+                    CustomActions = new List<TableAction>
+                            {
+ 
+                             //  details "       
+                            new TableAction
+                            {
+                                Label = "عرض التفاصيل",
+                                ModalTitle = "<i class='fa-solid fa-circle-info text-emerald-600 text-xl mr-2'></i> تفاصيل المستفيد",
+                                Icon = "fa-regular fa-file",
+                                //Show = true,  // ✅ أضف
+                                OpenModal = true,
+                                RequireSelection = true,
+                                MinSelection = 1,
+                                MaxSelection = 1,
+
+
+                            },
+                        },
+
+
+
+                    Add = new TableAction
+                    {
+                        Label = "اضافة قراءة عداد غاز جديدة",
+                        Icon = "fa fa-plus",
+                        Color = "success",
+                        OpenModal = true,
+                        ModalTitle = "اضافة قراءة عداد غاز جديدة",
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "buildingClassInsertForm",
+                            Title = "بيانات قراءة عداد غاز جديدة",
+                            Method = "post",
+                            ActionUrl = "/crud/insert",
+                            Fields = READGASMETERFields,
+                            Buttons = new List<FormButtonConfig>
+                            {
+                                new FormButtonConfig { Text = "حفظ",   Type = "submit", Color = "success" },
+                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
+                            }
+                        },
+                        Meta = metaB
+                       ,
+                        Meta1 = metaC
+                    },
+
+
+                    Edit = new TableAction
+                    {
+                        Label = "تعديل قراءة عداد غاز",
+                        Icon = "fa-solid fa-edit",
+                        Color = "warning",
+                        OpenModal = true,
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1,
+
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "ResidentActionInsert",
+                            Title = "إضافة إجراء",
+                            Method = "post",
+                            ActionUrl = "/crud/insert",
+                            Fields = EDITGASMETERFields,
+                            Buttons = new List<FormButtonConfig>
+        {
+            new() { Text="حفظ", Type="submit", Color="success" },
+            new() { Text="إلغاء", Type="button", Color="secondary",
+                    OnClickJs="this.closest('.sf-modal').__x.$data.closeModal();" }
+        }
+                        },
+
+                        Meta = extraMetaAutoOpen
+                    },
+
+
+
+
+
+
+
+                }
+            };
+
+
+
+
+
+
+            dsModelELECTRICITYMETER.StyleRules = new List<TableStyleRule>
+                        {
+                             //new TableStyleRule
+                             //{
+
+                             //    Target = "row",
+                             //    Field = "avrageNo",
+                             //    Op = "eq",
+                             //    Value = "5",
+                             //    CssClass = "row-red",
+                             //    Priority = 1
+                             //},
+                             //new TableStyleRule
+                             //{
+
+                             //    Target = "row",
+                             //    Field = "avrageNo",
+                             //    Op = "eq",
+                             //    Value = "6",
+                             //    CssClass = "row-yellow",
+                             //    Priority = 1
+                             //},
+
+                            new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="5", Priority=1,
+                                PillEnabled=true,
+                                PillField="TotalPrice",
+                                PillTextField="TotalPrice",
+                                PillCssClass="pill pill-red",
+                                PillMode="replace"
+                            },
+                            new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="6", Priority=1,
+                                PillEnabled=true,
+                                PillField="TotalPrice",
+                                PillTextField="TotalPrice",
+                                PillCssClass="pill pill-yellow",
+                                PillMode="replace"
+                            },
+                            new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="5", Priority=1,
+                                PillEnabled=true,
+                                PillField="avrageMsg",
+                                PillTextField="avrageMsg",
+                                PillCssClass="pill pill-red",
+                                PillMode="replace"
+                            },
+                            new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="6", Priority=1,
+                                PillEnabled=true,
+                                PillField="avrageMsg",
+                                PillTextField="avrageMsg",
+                                PillCssClass="pill pill-yellow",
+                                PillMode="replace"
+                            },
+
+
+                             new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="0", Priority=1,
+                                PillEnabled=true,
+                                PillField="TotalPrice",
+                                PillTextField="TotalPrice",
+                                PillCssClass="pill pill-green",
+                                PillMode="replace"
+                            },
+                             new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="1", Priority=1,
+                                PillEnabled=true,
+                                PillField="TotalPrice",
+                                PillTextField="TotalPrice",
+                                PillCssClass="pill pill-red",
+                                PillMode="replace"
+                            },
+                              new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="2", Priority=1,
+                                PillEnabled=true,
+                                PillField="TotalPrice",
+                                PillTextField="TotalPrice",
+                                PillCssClass="pill pill-yellow",
+                                PillMode="replace"
+                            },
+                               new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="3", Priority=1,
+                                PillEnabled=true,
+                                PillField="TotalPrice",
+                                PillTextField="TotalPrice",
+                                PillCssClass="pill pill-green",
+                                PillMode="replace"
+                            },
+
+                                new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="0", Priority=1,
+                                PillEnabled=true,
+                                PillField="avrageMsg",
+                                PillTextField="avrageMsg",
+                                PillCssClass="pill pill-gray",
+                                PillMode="replace"
+                            },
+                                new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="1", Priority=1,
+                                PillEnabled=true,
+                                PillField="avrageMsg",
+                                PillTextField="avrageMsg",
+                                PillCssClass="pill pill-red",
+                                PillMode="replace"
+                            },
+                              new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="2", Priority=1,
+                                PillEnabled=true,
+                                PillField="avrageMsg",
+                                PillTextField="avrageMsg",
+                                PillCssClass="pill pill-yellow",
+                                PillMode="replace"
+                            },
+                               new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="3", Priority=1,
+                                PillEnabled=true,
+                                PillField="avrageMsg",
+                                PillTextField="avrageMsg",
+                                PillCssClass="pill pill-green",
+                                PillMode="replace"
+                            },
+
+                        };
+            dsModelWATERMETER.StyleRules = new List<TableStyleRule>
+                        {
+                             //new TableStyleRule
+                             //{
+
+                             //    Target = "row",
+                             //    Field = "avrageNo",
+                             //    Op = "eq",
+                             //    Value = "5",
+                             //    CssClass = "row-red",
+                             //    Priority = 1
+                             //},
+                             //new TableStyleRule
+                             //{
+
+                             //    Target = "row",
+                             //    Field = "avrageNo",
+                             //    Op = "eq",
+                             //    Value = "6",
+                             //    CssClass = "row-yellow",
+                             //    Priority = 1
+                             //},
+
+                            new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="5", Priority=1,
+                                PillEnabled=true,
+                                PillField="TotalPrice",
+                                PillTextField="TotalPrice",
+                                PillCssClass="pill pill-red",
+                                PillMode="replace"
+                            },
+                            new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="6", Priority=1,
+                                PillEnabled=true,
+                                PillField="TotalPrice",
+                                PillTextField="TotalPrice",
+                                PillCssClass="pill pill-yellow",
+                                PillMode="replace"
+                            },
+                            new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="5", Priority=1,
+                                PillEnabled=true,
+                                PillField="avrageMsg",
+                                PillTextField="avrageMsg",
+                                PillCssClass="pill pill-red",
+                                PillMode="replace"
+                            },
+                            new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="6", Priority=1,
+                                PillEnabled=true,
+                                PillField="avrageMsg",
+                                PillTextField="avrageMsg",
+                                PillCssClass="pill pill-yellow",
+                                PillMode="replace"
+                            },
+
+
+                             new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="0", Priority=1,
+                                PillEnabled=true,
+                                PillField="TotalPrice",
+                                PillTextField="TotalPrice",
+                                PillCssClass="pill pill-green",
+                                PillMode="replace"
+                            },
+                             new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="1", Priority=1,
+                                PillEnabled=true,
+                                PillField="TotalPrice",
+                                PillTextField="TotalPrice",
+                                PillCssClass="pill pill-red",
+                                PillMode="replace"
+                            },
+                              new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="2", Priority=1,
+                                PillEnabled=true,
+                                PillField="TotalPrice",
+                                PillTextField="TotalPrice",
+                                PillCssClass="pill pill-yellow",
+                                PillMode="replace"
+                            },
+                               new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="3", Priority=1,
+                                PillEnabled=true,
+                                PillField="TotalPrice",
+                                PillTextField="TotalPrice",
+                                PillCssClass="pill pill-green",
+                                PillMode="replace"
+                            },
+
+                                new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="0", Priority=1,
+                                PillEnabled=true,
+                                PillField="avrageMsg",
+                                PillTextField="avrageMsg",
+                                PillCssClass="pill pill-gray",
+                                PillMode="replace"
+                            },
+                                new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="1", Priority=1,
+                                PillEnabled=true,
+                                PillField="avrageMsg",
+                                PillTextField="avrageMsg",
+                                PillCssClass="pill pill-red",
+                                PillMode="replace"
+                            },
+                              new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="2", Priority=1,
+                                PillEnabled=true,
+                                PillField="avrageMsg",
+                                PillTextField="avrageMsg",
+                                PillCssClass="pill pill-yellow",
+                                PillMode="replace"
+                            },
+                               new TableStyleRule
+                            {
+                                Target="row", Field="avrageNo", Op="eq", Value="3", Priority=1,
+                                PillEnabled=true,
+                                PillField="avrageMsg",
+                                PillTextField="avrageMsg",
+                                PillCssClass="pill pill-green",
+                                PillMode="replace"
+                            },
+
+                        };
+            dsModelGASMETER.StyleRules = new List<TableStyleRule>
                         {
                              //new TableStyleRule
                              //{
@@ -1195,8 +2317,14 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 PanelIcon = "fa-home",
                 Form = form,
                 TableDS = ready ? dsModel : null,
-                TableDS1 = ready && MeterServiceTypeready ? dsModelMeterRead : null
-                
+                TableDS1 = (ready && MeterServiceTypeready) ? MeterServiceTypeID_ switch
+                {
+                    "1" => dsModelELECTRICITYMETER,
+                    "2" => dsModelWATERMETER,
+                    "3" => dsModelGASMETER,
+                    _ => null
+                } : null
+
             };
             return View("MeterRead/AllMeterRead", vm);
         }

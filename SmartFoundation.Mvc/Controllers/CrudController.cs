@@ -568,6 +568,68 @@ namespace SmartFoundation.Mvc.Controllers
         }
 
 
+
+        public sealed class DdlValuesRequest
+        {
+            public string? TextCol { get; set; }
+            public string? ValueCol { get; set; }
+            public int TableIndex { get; set; }
+
+            public string? PageName { get; set; }
+            public string? UsersId { get; set; }
+            public string? IdaraId { get; set; }
+            public string? HostName { get; set; }
+
+            // ✅ أهم شيء: باراميترات متعددة
+            public Dictionary<string, object?>? Parameters { get; set; }
+
+            public string? FirstOption { get; set; }
+        }
+
+        [HttpPost("GetDDLValues2")]
+        public async Task<IActionResult> GetDDLValues2([FromBody] DdlValuesRequest req)
+        {
+            // حمايات بسيطة
+            var textcol = (req.TextCol ?? "").Trim();
+            var valueCol = (req.ValueCol ?? "").Trim();
+
+            if (string.IsNullOrWhiteSpace(textcol) || string.IsNullOrWhiteSpace(valueCol))
+                return Json(new[] { new { Value = "-1", Text = "مدخلات غير صحيحة" } });
+
+            // ✅ هنا نحتاج DataSet حسب PageName ولكن مع Parameters
+            // لازم نمرر parameters للـ SP / DataEngine بدل تجاهلها
+            var ds = await _mastersServies.GetDataLoadDataSetAsync(
+                req.PageName, req.IdaraId, req.UsersId, req.HostName,
+                req.Parameters // ✅ جديد
+            );
+
+            var idx = req.TableIndex;
+            var table = (ds?.Tables?.Count ?? 0) > idx ? ds!.Tables[idx] : null;
+
+            var items = new List<object>();
+
+            if (!string.IsNullOrWhiteSpace(req.FirstOption))
+                items.Add(new { Value = "-1", Text = req.FirstOption });
+
+            if (table is not null && table.Rows.Count > 0)
+            {
+                foreach (DataRow row in table.Rows)
+                {
+                    var value = row[valueCol]?.ToString()?.Trim() ?? "";
+                    var text = row[textcol]?.ToString()?.Trim() ?? "";
+
+                    if (!string.IsNullOrEmpty(value))
+                        items.Add(new { Value = value, Text = text });
+                }
+            }
+
+            if (!items.Any())
+                items.Add(new { Value = "-1", Text = "لاتوجد خيارات" });
+
+            return Json(items);
+        }
+
+
         public sealed class ExtraDataLoadRequest
         {
             public string? pageName_ { get; set; }
