@@ -743,12 +743,13 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
                 // hidden p01 actually posted to SP
                 
-                new FieldConfig { Name = "p41", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
-                new FieldConfig { Name = "p01", Label = "BillsID", Type = "text" },
-                new FieldConfig { Name = "p05", Label = "MeterID", Type = "text", ColCss = "3", Required = true },
-                new FieldConfig { Name = "p09", Label = "ReadID", Type = "text", ColCss = "3", Required = true },
-                new FieldConfig { Name = "p10", Label = "CurrentRead", Type = "text", ColCss = "3", Required = true },
-               
+                   new FieldConfig { Name = "p41", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
+                new FieldConfig { Name = "p01", Label = "BillsID", Type = "hidden" },
+                new FieldConfig { Name = "p05", Label = "MeterID", Type = "hidden", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p09", Label = "ReadID", Type = "hidden", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p10", Label = "القراءة الحالية", Type = "hidden", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p39", Label = "PeriodID_", Type = "hidden", ColCss = "3", Required = true, Value = PeriodID_ },
+
 
             };
 
@@ -854,12 +855,12 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
 
                 // hidden p01 actually posted to SP
-                
-                new FieldConfig { Name = "p41", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
-                new FieldConfig { Name = "p01", Label = "BillsID", Type = "text" },
-                new FieldConfig { Name = "p05", Label = "MeterID", Type = "text", ColCss = "3", Required = true },
-                new FieldConfig { Name = "p09", Label = "ReadID", Type = "text", ColCss = "3", Required = true },
-                new FieldConfig { Name = "p10", Label = "CurrentRead", Type = "text", ColCss = "3", Required = true },
+                  new FieldConfig { Name = "p41", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
+                new FieldConfig { Name = "p01", Label = "BillsID", Type = "hidden" },
+                new FieldConfig { Name = "p05", Label = "MeterID", Type = "hidden", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p09", Label = "ReadID", Type = "hidden", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p10", Label = "القراءة الحالية", Type = "hidden", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p39", Label = "PeriodID_", Type = "hidden", ColCss = "3", Required = true, Value = PeriodID_ },
 
 
             };
@@ -966,11 +967,12 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
                 // hidden p01 actually posted to SP
                 
-                new FieldConfig { Name = "p41", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
-                new FieldConfig { Name = "p01", Label = "BillsID", Type = "text" },
-                new FieldConfig { Name = "p05", Label = "MeterID", Type = "text", ColCss = "3", Required = true },
-                new FieldConfig { Name = "p09", Label = "ReadID", Type = "text", ColCss = "3", Required = true },
-                new FieldConfig { Name = "p10", Label = "CurrentRead", Type = "text", ColCss = "3", Required = true },
+                  new FieldConfig { Name = "p41", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
+                new FieldConfig { Name = "p01", Label = "BillsID", Type = "hidden" },
+                new FieldConfig { Name = "p05", Label = "MeterID", Type = "hidden", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p09", Label = "ReadID", Type = "hidden", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p10", Label = "القراءة الحالية", Type = "hidden", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p39", Label = "PeriodID_", Type = "hidden", ColCss = "3", Required = true, Value = PeriodID_ },
 
 
             };
@@ -1163,7 +1165,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
             var extraMetaAutoOpen = new Dictionary<string, object?>
             {
                 ["extraSlotKey"] = "m1",
-                ["extraTitle"] = "بيانات إضافية",
+                ["extraTitle"] = "تفاصيل",
                 ["useRowExtra"] = true,
                 ["lazyExtra"] = true,
                 ["extraEndpoint"] = "/crud/extradataload",
@@ -1190,11 +1192,12 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
                 ["visibleFields"] = new List<string>
     {
-        "meterNo","LastRead", "CurrentRead","ReadDiff", "TotalPrice"
+        "meterServiceTypeName_A","meterNo","LastRead", "CurrentRead","ReadDiff", "TotalPrice"
     },
 
                 ["headerMap"] = new Dictionary<string, string>
                 {
+                    ["meterServiceTypeName_A"] = "نوع الخدمة",
                     ["meterNo"] = "رقم العداد",
                     ["LastRead"] = "القراءة السابقة",
                     ["CurrentRead"] = "القراءة الحالية",
@@ -1523,7 +1526,37 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                         Meta = extraMetaAutoOpen
                     },
 
+                    Delete = new TableAction
+                    {
+                        Label = "حذف قراءة عداد كهرباء",
+                        Icon = "fa-solid fa-trash",
+                        Color = "danger",
+                        OpenModal = true,
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1,
+                        ModalMessage = "هل انت متأكد من حذف القراءة ادناه ؟",
+                        ModalMessageClass = "bg-red-50 text-red-700",
+                        ModalMessageIcon = "fa-solid fa-triangle-exclamation",
 
+
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "ResidentActionInsert",
+                            Title = "حذف اجراء",
+                            Method = "post",
+                            ActionUrl = "/crud/delete",
+                            Fields = DELETEELECTRICITYMETERFields,
+                            Buttons = new List<FormButtonConfig>
+        {
+            new() { Text="حفظ", Type="submit", Color="success" },
+            new() { Text="إلغاء", Type="button", Color="secondary",
+                    OnClickJs="this.closest('.sf-modal').__x.$data.closeModal();" }
+        }
+                        },
+
+                        Meta = extraMetaAutoOpen
+                    },
 
 
 
@@ -1669,7 +1702,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             FormId = "ResidentActionInsert",
                             Title = "إضافة إجراء",
                             Method = "post",
-                            ActionUrl = "/crud/insert",
+                            ActionUrl = "/crud/update",
                             Fields = EDITWATERMETERFields,
                             Buttons = new List<FormButtonConfig>
         {
@@ -1682,6 +1715,37 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                         Meta = extraMetaAutoOpen
                     },
 
+                    Delete = new TableAction
+                    {
+                        Label = "حذف قراءة عداد مياه",
+                        Icon = "fa-solid fa-trash",
+                        Color = "danger",
+                        OpenModal = true,
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1,
+                        ModalMessage="هل انت متأكد من حذف القراءة ادناه ؟",
+                        ModalMessageClass = "bg-red-50 text-red-700",
+                        ModalMessageIcon = "fa-solid fa-triangle-exclamation",
+
+
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "ResidentActionInsert",
+                            Title = "حذف اجراء",
+                            Method = "post",
+                            ActionUrl = "/crud/delete",
+                            Fields = DELETEWATERMETERFields,
+                            Buttons = new List<FormButtonConfig>
+        {
+            new() { Text="حفظ", Type="submit", Color="success" },
+            new() { Text="إلغاء", Type="button", Color="secondary",
+                    OnClickJs="this.closest('.sf-modal').__x.$data.closeModal();" }
+        }
+                        },
+
+                        Meta = extraMetaAutoOpen
+                    },
 
 
 
@@ -1842,6 +1906,37 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                         Meta = extraMetaAutoOpen
                     },
 
+                    Delete = new TableAction
+                    {
+                        Label = "حذف قراءة عداد غاز",
+                        Icon = "fa-solid fa-trash",
+                        Color = "danger",
+                        OpenModal = true,
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1,
+                        ModalMessage = "هل انت متأكد من حذف القراءة ادناه ؟",
+                        ModalMessageClass = "bg-red-50 text-red-700",
+                        ModalMessageIcon = "fa-solid fa-triangle-exclamation",
+
+
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "ResidentActionInsert",
+                            Title = "حذف اجراء",
+                            Method = "post",
+                            ActionUrl = "/crud/delete",
+                            Fields = DELETEGASMETERFields,
+                            Buttons = new List<FormButtonConfig>
+        {
+            new() { Text="حفظ", Type="submit", Color="success" },
+            new() { Text="إلغاء", Type="button", Color="secondary",
+                    OnClickJs="this.closest('.sf-modal').__x.$data.closeModal();" }
+        }
+                        },
+
+                        Meta = extraMetaAutoOpen
+                    },
 
 
 
