@@ -523,7 +523,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                     Name = "p01",
                     Label = "الموزع",
                     Type = "select",
-                    
+                    Select2=true,
                     Options = distributorOptions,
                     ColCss = "3",
                     Required = true
@@ -589,6 +589,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                     Name = "p01",
                     Label = "الموزع",
                     Type = "select",
+                    Select2=true,
                     Options = distributorOptions,
                     ColCss = "3",
                     Required = true

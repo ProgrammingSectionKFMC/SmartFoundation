@@ -804,6 +804,18 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 Selectable = false,
                 ShowColumnVisibility = true,
 
+                RenderMode = SmartTableRenderMode.Tab,
+                RenderAsToggle = false,
+                RenderAsSection = false,
+                RenderAsTab = true,
+                TabGroupKey = "financial-audit-extend-evictions",
+                TabKey = "resident-info",
+                TabLabel = "بيانات المستفيد",
+                TabIcon = "fa-solid fa-user",
+                TabDefaultActive = true,
+                ShowTabCount = false,
+                TabOrder = 1,
+
                 Toolbar = new TableToolbarConfig
                 {
                     ShowRefresh = false,
@@ -875,12 +887,22 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 //TabelLabelIcon = "fa-solid fa-list",
                 ShowToolbar = true,
                 EnableCellCopy = false,
-                RenderAsToggle = true,
-                ToggleLabel = "التسوية المالية",
-                ToggleIcon = "fa-solid fa-file-signature",
-                ToggleDefaultOpen = true,
-                ShowToggleCount = false,
-
+                //RenderAsToggle = true,
+                //ToggleLabel = "التسوية المالية",
+                //ToggleIcon = "fa-solid fa-file-signature",
+                //ToggleDefaultOpen = true,
+                //ShowToggleCount = false,
+                RenderMode = SmartTableRenderMode.Tab,
+                RenderAsToggle = false,
+                RenderAsSection = false,
+                RenderAsTab = true,
+                TabGroupKey = "financial-audit-extend-evictions",
+                TabKey = "financial-settlement",
+                TabLabel = "التسوية المالية",
+                TabIcon = "fa-solid fa-file-invoice-dollar",
+                TabDefaultActive = false,
+                ShowTabCount = false,
+                TabOrder = 2,
 
                 Toolbar = new TableToolbarConfig
                 {

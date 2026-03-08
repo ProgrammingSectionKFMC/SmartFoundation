@@ -1419,11 +1419,30 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 FilterRow = true,
                 FilterDebounce = 250,
                 ShowColumnVisibility = true,
-                RenderAsToggle = true,
-                ToggleLabel = "ربط العدادات بالمباني",
-                ToggleIcon = "fa-solid fa-house-signal",
-                ToggleDefaultOpen = false,
-                ShowToggleCount = true,
+
+
+                //RenderMode = SmartTableRenderMode.Toggle,
+                //RenderAsToggle = true,
+                //ToggleLabel = "ربط العدادات بالمباني",
+                //ToggleIcon = "fa-solid fa-house-signal",
+                //ToggleDefaultOpen = false,
+                //ShowToggleCount = true,
+
+
+
+                RenderMode = SmartTableRenderMode.Tab,     // يحدد نمط العرض الأساسي للمكون (Tab / Section / Toggle / Default)
+                RenderAsToggle = false,                    // إجبار المكون أن يظهر كـ Toggle بغض النظر عن RenderMode
+                RenderAsSection = false,                   // إجبار المكون أن يظهر كـ Section قابل للطي
+                RenderAsTab = true,                        // إجبار المكون أن يظهر داخل Tab
+                TabGroupKey = "meters-page",               // اسم مجموعة التابات المشتركة بين الجداول
+                TabKey = "meter-links",                    // معرف فريد لهذا التاب داخل المجموعة
+                TabLabel = "ربط العدادات بالمباني",        // النص الظاهر في زر التاب
+                TabIcon = "fa-solid fa-house-signal",      // أيقونة التاب
+                TabDefaultActive = false,                   // هل هذا التاب هو الافتراضي عند فتح الصفحة
+                ShowTabCount = true,                      // إظهار عدد السجلات بجانب التاب
+                TabOrder = 1,                              // ترتيب التاب داخل المجموعة
+
+
 
                 Toolbar = new TableToolbarConfig
                 {
@@ -1533,11 +1552,24 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 FilterRow = true,
                 FilterDebounce = 250,
                 ShowColumnVisibility=true,
-                RenderAsToggle = true,
-                ToggleLabel = "ادارة العدادات",
-                ToggleIcon = "fa-solid fa-bolt",
-                ToggleDefaultOpen = false,
-                ShowToggleCount = true,
+                //RenderAsToggle = true,
+                //ToggleLabel = "ادارة العدادات",
+                //ToggleIcon = "fa-solid fa-bolt",
+                //ToggleDefaultOpen = false,
+                //ShowToggleCount = true,
+
+                RenderMode = SmartTableRenderMode.Tab,
+                RenderAsToggle = false,
+                RenderAsSection = false,
+                RenderAsTab = true,
+
+                TabGroupKey = "meters-page",
+                TabKey = "meters",
+                TabLabel = "إدارة العدادات",
+                TabIcon = "fa-solid fa-gauge-high",
+                TabDefaultActive = false,
+                ShowTabCount = true,
+                TabOrder = 2,
 
                 Toolbar = new TableToolbarConfig
                 {
@@ -1671,11 +1703,26 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 FilterRow = true,
                 FilterDebounce = 250,
                 ShowColumnVisibility = true,
-                RenderAsToggle = true,
-                ToggleLabel = "أنواع العدادات",
-                ToggleIcon = "fa-solid fa-toggle-on",
-                ToggleDefaultOpen = false,
-                ShowToggleCount = true,
+                //RenderAsToggle = true,
+                //ToggleLabel = "أنواع العدادات",
+                //ToggleIcon = "fa-solid fa-toggle-on",
+                //ToggleDefaultOpen = false,
+                //ShowToggleCount = true,
+
+
+
+                RenderMode = SmartTableRenderMode.Tab,
+                RenderAsToggle = false,
+                RenderAsSection = false,
+                RenderAsTab = true,
+
+                TabGroupKey = "meters-page",
+                TabKey = "meter-types",
+                TabLabel = "أنواع العدادات",
+                TabIcon = "fa-solid fa-toggle-on",
+                TabDefaultActive = false,
+                ShowTabCount = true,
+                TabOrder = 3,
 
                 Toolbar = new TableToolbarConfig
                 {

@@ -337,7 +337,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                  new FieldConfig { Name = "p03", Label = "الرقم العام",Type = "text",   Required = true, ColCss = "3", TextMode="number",MaxLength=10 },
                   new FieldConfig { Name = "p23", Label = "تاريخ الميلاد",Type = "date",   Required = true, ColCss = "3" },
                 new FieldConfig { Name = "p22", Label = "تاريخ اصدار الهوية",Type = "date",   Required = true, ColCss = "3" },
-               new FieldConfig { Name = "p17", Label = "الادارة",Type = "select",   Required = true, ColCss = "6", Options= IdaraOptions},
+               new FieldConfig { Name = "p17", Label = "الادارة",Type = "select",   Required = true, ColCss = "6", Options= IdaraOptions,Select2=true},
                 new FieldConfig
                 {
                     Name = "p36",
@@ -403,7 +403,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                  new FieldConfig { Name = "p03", Label = "الرقم العام",Type = "text",   Required = true, ColCss = "3", TextMode="number",MaxLength=10 },
                 new FieldConfig { Name = "p23", Label = "تاريخ الميلاد",Type = "date",   Required = true, ColCss = "3" },
                 new FieldConfig { Name = "p22", Label = "تاريخ اصدار الهوية",Type = "date",   Required = true, ColCss = "3" },
-                 new FieldConfig { Name = "p17", Label = "الادارة",Type = "select",   Required = true, ColCss = "6", Options= IdaraOptions, Value=IdaraId},
+                 new FieldConfig { Name = "p17", Label = "الادارة",Type = "select",Select2=true,   Required = true, ColCss = "6", Options= IdaraOptions, Value=IdaraId},
                 new FieldConfig
                 {
                     Name = "p36",
