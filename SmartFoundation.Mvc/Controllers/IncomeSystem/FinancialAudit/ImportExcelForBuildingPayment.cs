@@ -269,19 +269,14 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         var headerMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                         {
                             ["deductListID"] = "الرقم المرجعي",
-                            ["NationalID"] = "رقم الهوية",
-                            ["generalNo_FK"] = "الرقم العام",
-                            ["rankNameA"] = "الرتبة",
-                            ["militaryUnitName_A"] = "الوحدة",
-                            ["maritalStatusName_A"] = "الحالة الاجتماعية",
-                            ["dependinceCounter"] = "عدد التابعين",
-                            ["nationalityName_A"] = "الجنسية",
-                            ["genderName_A"] = "الجنس",
-                            ["FullName_A"] = "الاسم بالعربي",
-                            ["FullName_E"] = "الاسم بالانجليزي",
-                            ["birthdate"] = "تاريخ الميلاد",
-                            ["residentcontactDetails"] = "رقم الجوال",
-                            ["note"] = "ملاحظات"
+                            ["deductTypeName_A"] = "نوع المسير",
+                            ["BillChargeTypeName_A"] = "الخدمة",
+                            ["deductName"] = "وصف المسير",
+                            ["issueMonth"] = "الشهر",
+                            ["issueYear"] = "السنة",
+                            ["paymentNo"] = "رقم المسير",
+                            ["paymentDate"] = "تاريخ المسير",
+                            ["description"] = "ملاحظات"
                         };
 
 
@@ -299,32 +294,27 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                                      || t == typeof(float) || t == typeof(double) || t == typeof(decimal))
                                 colType = "number";
 
-                            bool isfirstName_A = c.ColumnName.Equals("firstName_A", StringComparison.OrdinalIgnoreCase);
-                            bool issecondName_A = c.ColumnName.Equals("secondName_A", StringComparison.OrdinalIgnoreCase);
-                            bool isthirdName_A = c.ColumnName.Equals("thirdName_A", StringComparison.OrdinalIgnoreCase);
-                            bool islastName_A = c.ColumnName.Equals("lastName_A", StringComparison.OrdinalIgnoreCase);
-                            bool isfirstName_E = c.ColumnName.Equals("firstName_E", StringComparison.OrdinalIgnoreCase);
-                            bool issecondName_E = c.ColumnName.Equals("secondName_E", StringComparison.OrdinalIgnoreCase);
-                            bool isthirdName_E = c.ColumnName.Equals("thirdName_E", StringComparison.OrdinalIgnoreCase);
-                            bool islastName_E = c.ColumnName.Equals("lastName_E", StringComparison.OrdinalIgnoreCase);
-
-                            bool isrankID_FK = c.ColumnName.Equals("rankID_FK", StringComparison.OrdinalIgnoreCase);
-                            bool ismilitaryUnitID_FK = c.ColumnName.Equals("militaryUnitID_FK", StringComparison.OrdinalIgnoreCase);
-                            bool ismartialStatusID_FK = c.ColumnName.Equals("martialStatusID_FK", StringComparison.OrdinalIgnoreCase);
-                            bool isnationalityID_FK = c.ColumnName.Equals("nationalityID_FK", StringComparison.OrdinalIgnoreCase);
-                            bool isgenderID_FK = c.ColumnName.Equals("genderID_FK", StringComparison.OrdinalIgnoreCase);
-
-                            bool isMilitaryUnitName = c.ColumnName.Equals("militaryUnitName_A", StringComparison.OrdinalIgnoreCase);
-                            bool isNote = c.ColumnName.Equals("note", StringComparison.OrdinalIgnoreCase);
+                            bool isHidden = c.ColumnName.Equals("deductTypeID_FK", StringComparison.OrdinalIgnoreCase)
+                                          || c.ColumnName.Equals("deductUID", StringComparison.OrdinalIgnoreCase)
+                                          || c.ColumnName.Equals("amountTypeID_FK", StringComparison.OrdinalIgnoreCase)
+                                          || c.ColumnName.Equals("paymentTypeID_FK", StringComparison.OrdinalIgnoreCase)
+                                          || c.ColumnName.Equals("BillChargeTypeID_FK", StringComparison.OrdinalIgnoreCase)
+                                          || c.ColumnName.Equals("DeductListStatusID_FK", StringComparison.OrdinalIgnoreCase)
+                                          || c.ColumnName.Equals("IdaraId_FK", StringComparison.OrdinalIgnoreCase)
+                                          || c.ColumnName.Equals("entryDate", StringComparison.OrdinalIgnoreCase)
+                                          || c.ColumnName.Equals("entryData", StringComparison.OrdinalIgnoreCase)
+                                          || c.ColumnName.Equals("hostName", StringComparison.OrdinalIgnoreCase)
+                                          || c.ColumnName.Equals("deductActive", StringComparison.OrdinalIgnoreCase);
+                           
 
                             //  فقط هذي الأعمدة نبي لها فلتر select
-                            bool isRankName = c.ColumnName.Equals("rankNameA", StringComparison.OrdinalIgnoreCase);
-                            bool isUnitName = c.ColumnName.Equals("militaryUnitName_A", StringComparison.OrdinalIgnoreCase);
-                            bool isNationalityName = c.ColumnName.Equals("nationalityName_A", StringComparison.OrdinalIgnoreCase);
+                            bool isdeductTypeName_A = c.ColumnName.Equals("deductTypeName_A", StringComparison.OrdinalIgnoreCase);
+                            bool isBillChargeTypeName_A = c.ColumnName.Equals("BillChargeTypeName_A", StringComparison.OrdinalIgnoreCase);
+                           
 
                             //  جهز خيارات الفلتر من نفس بيانات الجدول (عشان التطابق يكون صحيح)
                             List<OptionItem> filterOpts = new();
-                            if (isRankName || isUnitName || isNationalityName)
+                            if (isdeductTypeName_A || isBillChargeTypeName_A )
                             {
                                 var field = c.ColumnName;
 
@@ -347,14 +337,12 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                                 Type = colType,
                                 Sortable = true,
 
-                                Visible = !(isfirstName_A || isfirstName_E || issecondName_A || issecondName_E || isthirdName_A || isthirdName_E ||
-                                            islastName_A || islastName_E || isrankID_FK || ismilitaryUnitID_FK || ismartialStatusID_FK ||
-                                            isnationalityID_FK || isgenderID_FK),
+                                Visible = !(isHidden),
 
-                                truncate = isMilitaryUnitName || isNote,
+                                //truncate = isMilitaryUnitName || isNote,
 
                                 //  فلتر للرتبة + الوحدة + الجنسية
-                                Filter = (isRankName || isUnitName || isNationalityName)
+                                Filter = (isdeductTypeName_A || isBillChargeTypeName_A)
                                     ? new TableColumnFilter
                                     {
                                         Enabled = true,
@@ -389,33 +377,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                             //===============================================================================================
                             // تحديد رقم المستفيد الأساسي (RowId)
                             dict["p01"] = Get("deductListID") ?? Get("DeductListID");
-                            dict["p02"] = Get("NationalID");
-                            dict["p03"] = Get("generalNo_FK");
-                            dict["p04"] = Get("firstName_A");
-                            dict["p05"] = Get("secondName_A");
-                            dict["p06"] = Get("thirdName_A");
-                            dict["p07"] = Get("lastName_A");
-                            dict["p08"] = Get("firstName_E");
-                            dict["p09"] = Get("secondName_E");
-                            dict["p10"] = Get("thirdName_E");
-                            dict["p11"] = Get("lastName_E");
-                            dict["p12"] = Get("FullName_A");
-                            dict["p13"] = Get("FullName_E");
-                            dict["p14"] = Get("rankID_FK");
-                            dict["p15"] = Get("rankNameA");
-                            dict["p16"] = Get("militaryUnitID_FK");
-                            dict["p17"] = Get("militaryUnitName_A");
-                            dict["p18"] = Get("martialStatusID_FK");
-                            dict["p19"] = Get("maritalStatusName_A");
-                            dict["p20"] = Get("dependinceCounter");
-                            dict["p21"] = Get("nationalityID_FK");
-                            dict["p22"] = Get("nationalityName_A");
-                            dict["p23"] = Get("genderID_FK");
-                            dict["p24"] = Get("genderName_A");
-                            dict["p25"] = Get("birthdate");
-                            dict["p26"] = Get("residentcontactDetails");
-                            dict["p27"] = Get("note");
-
+                           
                             rowsList.Add(dict);
                         }
                     }
@@ -608,11 +570,23 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 FilterRow = true,
                 ShowColumnVisibility = true,
                 Selectable = false,
-                RenderAsToggle = true,
-                ToggleLabel = "استيراد Excel جديد",
-                ToggleIcon = "fa-solid fa-newspaper",
-                ToggleDefaultOpen = true,
-                ShowToggleCount = false,
+                //RenderAsToggle = true,
+                //ToggleLabel = "استيراد Excel جديد",
+                //ToggleIcon = "fa-solid fa-newspaper",
+                //ToggleDefaultOpen = true,
+                //ShowToggleCount = false,
+
+                RenderMode = SmartTableRenderMode.Tab,
+                RenderAsToggle = false,
+                RenderAsSection = false,
+                RenderAsTab = true,
+                TabGroupKey = "ImportExcelForBuildingPaymentpage",
+                TabKey = "deductListUpload",
+                TabLabel = "استيراد Excel جديد",
+                TabIcon = "fa-solid fa-upload",
+                TabDefaultActive = false,
+                ShowTabCount = false,
+                TabOrder = 2,
                 Toolbar = new TableToolbarConfig
                 {
                     ShowAdd = true,
@@ -724,7 +698,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
             var dsModelDeductListDetails = new SmartTableDsModel
             {
-                PageTitle = "قراءة العدادات الدورية",
+                PageTitle = "رفع ومعالجة المسيرات",
                 Columns = dynamicColumns,
                 Rows = rowsList,
                 RowIdField = rowIdField,
@@ -734,7 +708,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 Searchable = true,
                 AllowExport = true,
                 ShowPageSizeSelector = true,
-                PanelTitle = "قراءة العدادات الدورية",
+                PanelTitle = "رفع ومعالجة المسيرات",
                 //TabelLabel = "بيانات المستفيدين",
                 //TabelLabelIcon = "fa-solid fa-user-group",
                 EnableCellCopy = true,
@@ -742,11 +716,24 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 ShowFilter = true,
                 FilterRow = true,
                 FilterDebounce = 250,
-                RenderAsToggle = true,
-                ToggleLabel = "فترات القراءة",
-                ToggleIcon = "fa-solid fa-newspaper",
-                ToggleDefaultOpen = true,
-                ShowToggleCount = false,
+                //RenderAsToggle = true,
+                //ToggleLabel = "فترات القراءة",
+                //ToggleIcon = "fa-solid fa-newspaper",
+                //ToggleDefaultOpen = true,
+                //ShowToggleCount = false,
+
+                RenderMode = SmartTableRenderMode.Tab,
+                RenderAsToggle = false,
+                RenderAsSection = false,
+                RenderAsTab = true,
+                TabGroupKey = "ImportExcelForBuildingPaymentpage",
+                TabKey = "deductListView",
+                TabLabel = "استعراض المسيرات",
+                TabIcon = "fa-solid fa-newspaper",
+                TabDefaultActive = true,
+                ShowTabCount = true,
+                TabOrder = 1,
+
                 Toolbar = new TableToolbarConfig
                 {
                     ShowRefresh = false,
