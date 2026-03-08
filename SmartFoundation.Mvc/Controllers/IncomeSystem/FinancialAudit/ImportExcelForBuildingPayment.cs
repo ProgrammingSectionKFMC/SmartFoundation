@@ -673,11 +673,11 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                     //["parameter_05"] = "p05"
                 },
 
-                ["EnableSearch"] = false,
-                ["ShowMeta"] = false,
+                ["EnableSearch"] = true,
+                ["ShowMeta"] = true,
                 ["PageSize"] = 10,
-                ["Sortable"] = false,
-                ["showRowNumbers"] = false,
+                ["Sortable"] = true,
+                ["showRowNumbers"] = true,
 
                 ["visibleFields"] = new List<string>
     {

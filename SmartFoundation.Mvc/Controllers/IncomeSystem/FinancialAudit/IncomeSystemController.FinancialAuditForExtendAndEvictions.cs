@@ -441,6 +441,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                             bool isLastActionID = c.ColumnName.Equals("LastActionID", StringComparison.OrdinalIgnoreCase);
                             bool isLastActionTypeID = c.ColumnName.Equals("LastActionTypeID", StringComparison.OrdinalIgnoreCase);
                             bool isActionID = c.ColumnName.Equals("ActionID", StringComparison.OrdinalIgnoreCase);
+                            bool isBillsStatusID = c.ColumnName.Equals("BillsStatusID", StringComparison.OrdinalIgnoreCase);
 
 
                            
@@ -452,7 +453,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                                 Type = colType,
                                 Sortable = true
                                  ,
-                                Visible = !(isfirstName_A || isfirstName_E || issecondName_A || issecondName_E || isthirdName_A || isthirdName_E || islastName_A || islastName_E || isrankID_FK || ismilitaryUnitID_FK || ismartialStatusID_FK || isnationalityID_FK || isgenderID_FK || isFullName_E || isbirthdate || isnote || isIdaraID || isIdaraName || isbuildingDetailsID || isLastActionID || isLastActionTypeID || isActionID )
+                                Visible = !(isfirstName_A || isfirstName_E || issecondName_A || issecondName_E || isthirdName_A || isthirdName_E || islastName_A || islastName_E || isrankID_FK || ismilitaryUnitID_FK || ismartialStatusID_FK || isnationalityID_FK || isgenderID_FK || isFullName_E || isbirthdate || isnote || isIdaraID || isIdaraName || isbuildingDetailsID || isLastActionID || isLastActionTypeID || isActionID || isBillsStatusID)
                             });
                         }
 
@@ -529,16 +530,13 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         {
                             
 
-                            ["TotalRentBillsAmount"] = "اجمالي الايجارات",
-                            ["TotalRentBillsPaid"] = "المسدد من الايجار",
-                            ["RentBillsAmountresidual"] = "المتبقي",
-                            ["TotalElectrecityBillsAmount"] = "اجمالي فواتير الكهرباء",
-                            ["TotalElectrecityBillsPaid"] = "المسدد من كهرباء",
-                            ["ElectrecityBillsAmountresidual"] = "المتبقي",
-                            ["AllAmountresidual"] = "اجمالي المطالبات",
-                            ["RentBillsStatus"] = "حالة الايجار",
-                            ["buildingDetailsNo"] = "رقم المنزل",
-                            ["ElectrecityBillStatus"] = "حالة الكهرباء"
+                            ["BillChargeTypeID"] = "الرقم المرجعي",
+                            ["BillChargeTypeName_A"] = "النوع",
+                            ["TotalBillsAmount"] = "المسدد",
+                            ["TotalBillsPaid"] = "المدفوع",
+                            ["BillsAmountresidual"] = "المتبقي",
+                            ["BillsStatus"] = "الحالة"
+                            
 
 
 
@@ -744,43 +742,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             };
 
 
-            //var insuranceFields = new List<FieldConfig>
-            //{
-
-            //    new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-            //    new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "UpdateMeterRead" },
-            //    new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
-            //    new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
-            //    new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
-            //    new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
-            //    new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
-            //    new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
-            //    new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
-            //    // selection context
-            //    new FieldConfig { Name = rowIdField, Type = "hidden" },
-            //    // hidden p01 actually posted to SP
-            //     new FieldConfig { Name = "p01", Label = "Order_", Type = "hidden", ColCss = "3", Readonly = true },
-            //    new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true,Value=residentInfoIDvalue },
-            //    new FieldConfig { Name = "p30", Label = "مطالبات الايجار", Type = "text", ColCss = "3", Readonly = true,Value=RentAmount.ToString() },
-            //    new FieldConfig { Name = "p31", Label = "مطالبات الفواتير", Type = "text", ColCss = "3", Readonly = true,Value=ServiceAmount.ToString() },
-            //    new FieldConfig { Name = "p32", Label = "مبلغ التامين الاحترازي", Type = "text", ColCss = "3", Readonly = true,Value=insuranceRentAmount.ToString() },
-            //    new FieldConfig { Name = "p33", Label = "مبلغ التامين المطالب به", Type = "text", ColCss = "3", Readonly = true,Value=AllinsuranceRentAmount.ToString() },
-            //    new FieldConfig { Name = "p23", Label = "رقم المنزل", Type = "text", ColCss = "3", Readonly = true,Value=buildingDetailsNovalue },
-            //    new FieldConfig { Name = "p22", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsIDvalue },
-            //    new FieldConfig { Name = "p34", Label = "وسيلة الدفع", Type = "select", ColCss = "3", Required = true, Options= insuranceOptions },
-
-            //     new FieldConfig { Name = "p11", Label = "ملاحظات", Type = "text", ColCss = "6",Required = true,HelpText="يجب ان لاتتجاوز 1000 حرف*",MaxLength=1050 },
-
-            //    new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
-            //    new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
-            //    new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
-            //    new FieldConfig { Name = "p19", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true },
-            //    new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
-            //    new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true },
-
-
-            //};
-
+           
 
             var dsModel = new SmartTableDsModel
             {
@@ -804,10 +766,10 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 Selectable = false,
                 ShowColumnVisibility = true,
 
-                RenderMode = SmartTableRenderMode.Tab,
-                RenderAsToggle = false,
+                RenderMode = SmartTableRenderMode.Toggle,
+                RenderAsToggle = true,
                 RenderAsSection = false,
-                RenderAsTab = true,
+                RenderAsTab = false,
                 TabGroupKey = "financial-audit-extend-evictions",
                 TabKey = "resident-info",
                 TabLabel = "بيانات المستفيد",
@@ -815,6 +777,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 TabDefaultActive = true,
                 ShowTabCount = false,
                 TabOrder = 1,
+                ToggleDefaultOpen = true,
 
                 Toolbar = new TableToolbarConfig
                 {
@@ -892,10 +855,10 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 //ToggleIcon = "fa-solid fa-file-signature",
                 //ToggleDefaultOpen = true,
                 //ShowToggleCount = false,
-                RenderMode = SmartTableRenderMode.Tab,
-                RenderAsToggle = false,
+                RenderMode = SmartTableRenderMode.Toggle,
+                RenderAsToggle = true,
                 RenderAsSection = false,
-                RenderAsTab = true,
+                RenderAsTab = false,
                 TabGroupKey = "financial-audit-extend-evictions",
                 TabKey = "financial-settlement",
                 TabLabel = "التسوية المالية",
@@ -903,6 +866,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 TabDefaultActive = false,
                 ShowTabCount = false,
                 TabOrder = 2,
+                ToggleDefaultOpen = true,
 
                 Toolbar = new TableToolbarConfig
                 {
@@ -913,8 +877,9 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                     ShowAdd = true,
                     EnableAdd = true,
                     ShowAdd1 = true,
+                    ShowEdit = true,
+                    ShowEdit1 = true,
                     ShowEdit2 = true,
-                    ShowDelete2 = true,
                     ShowBulkDelete = false,
 
 
@@ -953,15 +918,15 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
                     
 
-                    Edit2 = new TableAction
+                    Edit = new TableAction
                     {
-                        Label = "سداد / اعادة مبالغ الايجار",
-                        Icon = "fa fa-home",
+                        Label = "استعراض المطالبات",
+                        Icon = "fa fa-list-alt",
                         Color = "info",
                         //Placement = TableActionPlacement.ActionsMenu, 
                         IsEdit = true,
                         OpenModal = true,
-                        ModalTitle = "سداد / اعادة مبالغ الايجار",
+                        ModalTitle = "استعراض المطالبات",
                         ModalMessage = msgrent,
                         ModalMessageIcon = "fa-solid fa-circle-info",
                         ModalMessageClass = colorrent,
@@ -969,7 +934,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         OpenForm = new FormConfig
                         {
                             FormId = "BuildingTypeEditForm",
-                            Title = "سداد / اعادة مبالغ الايجار",
+                            Title = "استعراض المطالبات",
                             Method = "post",
                             ActionUrl = "/crud/update",
                             SubmitText = "حفظ التعديلات",
@@ -988,15 +953,15 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                     },
 
 
-                    Delete2 = new TableAction
+                    Edit1 = new TableAction
                      {
-                         Label = "سداد / اعادة مبالغ فواتير الخدمات",
-                         Icon = "fa fa-money-bill-alt",
+                         Label = "استعراض السدادات",
+                         Icon = "fa fa-search",
                          Color = "info",
                          //Placement = TableActionPlacement.ActionsMenu, 
                          IsEdit = true,
                          OpenModal = true,
-                         ModalTitle = "سداد / اعادة مبالغ فواتير الخدمات",
+                         ModalTitle = "استعراض السدادات",
                          ModalMessage = msgservice,
                          ModalMessageIcon = "fa-solid fa-circle-info",
                          ModalMessageClass = colorservice,
@@ -1004,7 +969,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         OpenForm = new FormConfig
                          {
                              FormId = "BuildingTypeEditForm",
-                             Title = "سداد / اعادة مبالغ فواتير الخدمات",
+                             Title = "استعراض السدادات",
                              Method = "post",
                              ActionUrl = "/crud/update",
                              SubmitText = "حفظ التعديلات",
@@ -1016,11 +981,39 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                          MaxSelection = 1
                      },
 
+                    Edit2 = new TableAction
+                    {
+                        Label = "دفع المطالبات",
+                        Icon = "/img/Saudi_Riyal_Symbol.svg",
+                        Color = "success",
+                        
+                        //Placement = TableActionPlacement.ActionsMenu, 
+                        IsEdit = true,
+                        OpenModal = true,
+                        ModalTitle = "دفع المطالبات",
+                        ModalMessage = msgservice,
+                        ModalMessageIcon = "fa-solid fa-circle-info",
+                        ModalMessageClass = colorservice,
+                        Show = true,
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "BuildingTypeEditForm",
+                            Title = "دفع المطالبات",
+                            Method = "post",
+                            ActionUrl = "/crud/update",
+                            SubmitText = "حفظ التعديلات",
+                            CancelText = "إلغاء",
+                            Fields = ServiceBillPayFields
+                        },
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1
+                    },
+
+
                 }
 
             };
-
-         
 
 
             dsModel3.StyleRules = new List<TableStyleRule>
@@ -1146,15 +1139,6 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             };
 
 
-
-            //var page = new SmartPageViewModel
-            //{
-            //   PageTitle = dsModel.PageTitle,
-            //   PanelTitle = dsModel.PanelTitle,
-            //   PanelIcon = "fa-bolt",
-            //   Form = form,
-            //   TableDS = ready ? dsModel : null
-            //};
 
 
             if (pdf == 1)

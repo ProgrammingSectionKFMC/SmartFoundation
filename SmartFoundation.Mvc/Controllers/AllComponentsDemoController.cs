@@ -305,6 +305,9 @@ namespace SmartFoundation.Mvc.Controllers
                         HelpText="يمكنك إدخال وصف مختصر هنا"
                     },
 
+
+                    new FieldConfig { Name = "p03", Label = "المبلغ المطلوب", Type = "text", Required = true, Placeholder = "مثال: 1,234.56", Icon = "/img/Saudi_Riyal.svg", ColCss = "3", MaxLength = 20, TextMode = "money_sar" },
+
                     // ========= جدول للتجربة =========
                     
 new FieldConfig
