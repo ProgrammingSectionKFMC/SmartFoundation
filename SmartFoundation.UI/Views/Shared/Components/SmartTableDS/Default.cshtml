@@ -3,17 +3,18 @@
 @using SmartFoundation.UI.ViewModels.SmartTable
 @using SmartFoundation.UI.ViewModels.SmartForm
 
-
 @model SmartTableDsModel
+
 @{
     var webJson = new JsonSerializerOptions(JsonSerializerDefaults.Web);
     webJson.Converters.Add(new JsonStringEnumConverter());
+
     var tableConfig = new
     {
         clientSideMode = true,
         endpoint = "/smart/execute",
-        spName = Model.StoredProcedureName,         
-        operation = Model.Operation,                  
+        spName = Model.StoredProcedureName,
+        operation = Model.Operation,
         pageSize = Model.PageSize,
         pageSizes = Model.PageSizes,
         searchable = Model.Searchable,
@@ -35,14 +36,12 @@
         tabelLabel = Model.TabelLabel ?? "",
         showToolbar = Model.ShowToolbar,
         enableCellCopy = Model.EnableCellCopy,
-        // filtersEnabled = true,
-        // filtersRow = true,
-        // filtersDebounce = 250,
+
         filtersEnabled = Model.ShowFilter,
         filtersRow = Model.FilterRow,
         filtersDebounce = Model.FilterDebounce,
-        //Profile View config
-        viewMode = Model.ViewMode.ToString(), 
+
+        viewMode = Model.ViewMode.ToString(),
         profileTitleField = Model.ProfileTitleField,
         profileSubtitleField = Model.ProfileSubtitleField,
         profileFields = Model.ProfileFields ?? new List<string>(),
@@ -58,82 +57,62 @@
         profileBadges = Model.ProfileBadges ?? new List<ProfileBadge>(),
         showColumnVisibility = Model.ShowColumnVisibility,
 
+        renderMode = Model.RenderMode.ToString(),
+        renderAsToggle = Model.RenderAsToggle,
+        renderAsSection = Model.RenderAsSection,
+        renderAsTab = Model.RenderAsTab,
+
+        sectionLabel = Model.SectionLabel ?? "",
+        sectionIcon = Model.SectionIcon ?? "fa-solid fa-table-list",
+        sectionDescription = Model.SectionDescription ?? "",
+        sectionDefaultOpen = Model.SectionDefaultOpen,
+        showSectionCount = Model.ShowSectionCount,
+        sectionCount = Model.SectionCount,
+        sectionOrder = Model.SectionOrder,
+        sectionAccent = Model.SectionAccent ?? "",
+
+        tabGroupKey = Model.TabGroupKey ?? "default",
+        tabKey = Model.TabKey ?? "",
+        tabLabel = Model.TabLabel ?? "",
+        tabIcon = Model.TabIcon ?? "fa-solid fa-table",
+        tabDescription = Model.TabDescription ?? "",
+        tabDefaultActive = Model.TabDefaultActive,
+        showTabCount = Model.ShowTabCount,
+        tabCount = Model.TabCount,
+        tabOrder = Model.TabOrder
     };
 }
+
 @{
-    var useToggle = Model.RenderAsToggle;
+    var renderMode = Model.RenderMode;
+
+    var useToggle = renderMode == SmartTableRenderMode.Toggle || Model.RenderAsToggle;
+    var useSection = renderMode == SmartTableRenderMode.Section || Model.RenderAsSection;
+    var useTab = renderMode == SmartTableRenderMode.Tab || Model.RenderAsTab;
+
     var toggleLabel = Model.ToggleLabel ?? "عرض";
     var toggleIcon = Model.ToggleIcon ?? "fa-solid fa-table";
     var toggleOpen = Model.ToggleDefaultOpen;
+
+    var sectionLabel = Model.SectionLabel ?? Model.PanelTitle ?? "القسم";
+    var sectionIcon = Model.SectionIcon ?? "fa-solid fa-table-list";
+    var sectionDescription = Model.SectionDescription ?? "";
+    var sectionOpen = Model.SectionDefaultOpen;
+
+    var tabGroupKey = string.IsNullOrWhiteSpace(Model.TabGroupKey) ? "default" : Model.TabGroupKey;
+    var tabKey = string.IsNullOrWhiteSpace(Model.TabKey) ? Guid.NewGuid().ToString("N") : Model.TabKey;
+    var tabLabel = Model.TabLabel ?? Model.PanelTitle ?? "جدول";
+    var tabIcon = Model.TabIcon ?? "fa-solid fa-table";
+    var tabDescription = Model.TabDescription ?? "";
 }
 
-
-
-<div class="sf-toggle"
-     x-data="{ open: @(toggleOpen ? "true" : "false") }"
-     x-cloak>
-
-
-    @if (useToggle)
+@{
+    void RenderSmartTableBody()
     {
-        <button type="button"
-                class="sf-toggle__btn"
-                x-on:click="open = !open">
-            <span class="sf-toggle__left">
-                <i class="@toggleIcon sf-toggle__icon"></i>
-
-                <span class="sf-toggle__label">
-                    @toggleLabel
-                    @if (Model.ShowToggleCount)
-                    {
-                        <span class="ms-2">(@Model.ToggleCount)</span>
-                    }
-
-                </span>
-            </span>
-
-            <i class="fa-solid fa-chevron-down sf-toggle__chev"
-               :class="open ? 'is-open' : ''"></i>
-        </button>
-    }
-
-
-
-    <div class="@(useToggle ? "sf-toggle__content" : "mt-3")"
-         x-show="@(useToggle ? "open" : "true")"
-         x-transition>
-
-
-        <div x-data='sfTable(@Html.Raw(JsonSerializer.Serialize(tableConfig, webJson)))'
-             x-init="init()"
-             x-on:refresh-table.window="refresh()">
-
-
-
-    @* ================= LABEL ================= *@
-    @* @if (!string.IsNullOrWhiteSpace(Model.TabelLabel))
-    {
-        <div class="my-6 rounded-sm border border-gray-300 bg-gray-50 px-4 py-3 shadow-sm">
-            <div class="flex items-center gap-4">
-                <div class="h-px flex-1 bg-sky-200/60"></div>
-                <div class="flex items-center gap-2 text-lg font-semibold whitespace-nowrap text-green-700">
-                    @if (!string.IsNullOrWhiteSpace(Model.TabelLabelIcon))
-                    {
-                        <i class="@Model.TabelLabelIcon text-green-700"></i>
-                    }
-                    <span>@Model.TabelLabel</span>
-                </div>
-                <div class="h-px flex-1 bg-sky-200/60"></div>
-            </div>
-        </div>
-    } *@
-
-
+        <text>
             @if (!string.IsNullOrWhiteSpace(Model.TabelLabel))
             {
                 <div class="relative my-6 rounded-sm border border-gray-300 bg-gray-50 px-4 py-3 shadow-sm">
-
-                    <!-- خط يمين الحاوية -->
                     <div class="absolute top-0 right-0 h-full w-1 bg-green-700"></div>
 
                     <div class="flex items-center gap-4">
@@ -152,37 +131,31 @@
                 </div>
             }
 
+            @if (Model.ShowToolbar)
+            {
+                <div class="toolbar">
 
-    @* ================= TOOLBAR ================= *@
-    @if (Model.ShowToolbar)
-    {
-        <div class="toolbar">
-
-            @* البحث فقط يتبع searchable *@
-            <div class="toolbar-search" x-show="searchable">
-                @* <input type="text"
-                       class="sf-input search-input"
-                       x-model="q"
-                       x-on:input.debounce.500="debouncedSearch()"
-                       :placeholder="searchPlaceholder" /> *@
-                        <input type="text"
+                    <div class="toolbar-search" x-show="searchable">
+                        <input type="search"
                                class="sf-input search-input"
-                               name="tableSearch"
+                               name=""
                                x-model="q"
                                x-on:input.debounce.500="debouncedSearch()"
                                :placeholder="searchPlaceholder"
-                               aria-label="بحث" />
+                               aria-label="بحث"
+                               autocomplete="off"
+                               autocorrect="off"
+                               autocapitalize="off"
+                               spellcheck="false" />
 
-
-
-                <button type="button"
-                        class="btn btn-secondary"
-                        x-on:click="refresh()"
-                        x-show="toolbar.showRefresh">
-                    <i class="fa fa-rotate"></i>
-                    <span class="hidden-md">تحديث</span>
-                </button>
-            </div>
+                        <button type="button"
+                                class="btn btn-secondary"
+                                x-on:click="refresh()"
+                                x-show="toolbar.showRefresh">
+                            <i class="fa fa-rotate"></i>
+                            <span class="hidden-md">تحديث</span>
+                        </button>
+                    </div>
 
                     @if (Model.ShowFilter)
                     {
@@ -205,13 +178,9 @@
                         </button>
                     }
 
-
-
-                    <!--  Column Visibility -->
-                    @* <template x-if="toolbar.showColumns"> *@
                     <template x-if="showColumnVisibility && toolbar && (toolbar.showColumns !== false)">
                         <div class="sf-colvis" x-data="{ open:false }">
-                            
+
                             <button type="button"
                                     class="sf-filter-btn sf-colvis-btn"
                                     x-on:click="open = !open"
@@ -260,7 +229,6 @@
                                                    :checked="colVisIsShown(c)"
                                                    x-on:change="colVisToggle(c)" />
                                             <span class="sf-colvis__label" x-text="colVisLabel(c)"></span>
-
                                         </label>
                                     </template>
                                 </div>
@@ -275,48 +243,8 @@
                         </div>
                     </template>
 
-
-
-
-           
-            @* <div class="toolbar-actions">
-
-                <label class="label-sm">صف/صفحة</label>
-                <select class="sf-input select-sm"
-                        x-model.number="pageSize"
-                        x-on:change="page=1; load()">
-                    <template x-for="s in pageSizes" :key="s">
-                        <option x-text="s"></option>
-                    </template>
-                </select>
-                    <template x-if="enablePagination">
-                        <div class="inline-flex items-center gap-2">
-                            <label class="label-sm">صف/صفحة</label>
-                            <select class="sf-input select-sm"
-                                    x-model.number="pageSize"
-                                    x-on:change="page=1; load()">
-                                <template x-for="s in pageSizes" :key="s">
-                                    <option x-text="s"></option>
-                                </template>
-                            </select>
-                        </div>
-                    </template> *@
-                   
                     <div class="toolbar-actions">
 
-                        @* ✅ صف/صفحة (يتبع ShowPageSizeSelector) *@
-                        @* <template x-if="showPageSizeSelector">
-                            <div class="inline-flex items-center gap-2">
-                                <label class="label-sm">صف/صفحة</label>
-                                <select class="sf-input select-sm"
-                                        x-model.number="pageSize"
-                                        x-on:change="page=1; load()">
-                                    <template x-for="s in pageSizes" :key="s">
-                                        <option x-text="s"></option>
-                                    </template>
-                                </select>
-                            </div>
-                        </template> *@
                         <template x-if="showPageSizeSelector">
                             <div class="inline-flex items-center gap-2">
                                 <label class="label-sm" for="pageSizeSelect">صف/صفحة</label>
@@ -331,289 +259,229 @@
                             </div>
                         </template>
 
+                        <template x-for="(act, actIdx) in [
+                                  { action: toolbar.add, show: toolbar.showAdd, enable: toolbar.enableAdd ?? true, type: 'add' },
+                                  { action: toolbar.add1, show: toolbar.showAdd1, enable: toolbar.enableAdd1 ?? true, type: 'add1' },
+                                  { action: toolbar.add2, show: toolbar.showAdd2, enable: toolbar.enableAdd2 ?? true, type: 'add2' },
+                                  { action: toolbar.edit, show: toolbar.showEdit, enable: toolbar.enableEdit ?? true, type: 'edit' },
+                                  { action: toolbar.edit1, show: toolbar.showEdit1, enable: toolbar.enableEdit1 ?? true, type: 'edit1' },
+                                  { action: toolbar.edit2, show: toolbar.showEdit2, enable: toolbar.enableEdit2 ?? true, type: 'edit2' },
+                                  { action: toolbar.delete, show: toolbar.showDelete, enable: toolbar.enableDelete ?? true, type: 'delete' },
+                                  { action: toolbar.delete1, show: toolbar.showDelete1, enable: toolbar.enableDelete1 ?? true, type: 'delete1' },
+                                  { action: toolbar.delete2, show: toolbar.showDelete2, enable: toolbar.enableDelete2 ?? true, type: 'delete2' },
+                                  { action: toolbar.print, show: toolbar.showPrint, enable: true, type: 'print' },
+                                  { action: toolbar.print1, show: toolbar.showPrint1, enable: true, type: 'print1' },
+                                  ...(toolbar.customActions || []).map(a=>
+                            ({ action: a, show: true, enable: true, type: 'custom' }))
+                            ].filter(x => x.action && x.show !== false && (x.action.placement ?? 'Button') !== 'ActionsMenu')"
+                            :key="actIdx">
 
+                            <button type="button"
+                                    class="btn"
+                                    :class="[
+                                                              'btn-' + (act.action.color ?? 'secondary'),
+                                                              !act.enable || (act.action.requireSelection && selectedKeys.size !== 1) ? 'cursor-not-allowed opacity-50' : ''
+                                                            ]"
+                                    x-on:click="act.enable ? doAction(act.action, act.action.requireSelection ? getSingleSelection() : null) : toastr.warning('هذا الإجراء غير متاح حالياً')"
+                                    :disabled="!act.enable || (act.action.requireSelection && selectedKeys.size !== 1)">
+                                <i :class="act.action.icon"></i>
+                                <span x-text="act.action.label"></span>
+                            </button>
+                        </template>
 
-                @* ===== تصدير ===== *@
-                <!-- Excel -->
-                @* <template x-if="allowExport && toolbar.showExportExcel">
-                    <button type="button" class="btn btn-info" x-on:click="exportData('excel')">
-                        <i class="fa fa-file-excel"></i> Excel
-                    </button>
-                </template> *@
+                        <template x-if="[
+                                  { action: toolbar.add, show: toolbar.showAdd, enable: toolbar.enableAdd ?? true },
+                                  { action: toolbar.add1, show: toolbar.showAdd1, enable: toolbar.enableAdd1 ?? true },
+                                  { action: toolbar.add2, show: toolbar.showAdd2, enable: toolbar.enableAdd2 ?? true },
+                                  { action: toolbar.edit, show: toolbar.showEdit, enable: toolbar.enableEdit ?? true },
+                                  { action: toolbar.edit1, show: toolbar.showEdit1, enable: toolbar.enableEdit1 ?? true },
+                                  { action: toolbar.edit2, show: toolbar.showEdit2, enable: toolbar.enableEdit2 ?? true },
+                                  { action: toolbar.delete, show: toolbar.showDelete, enable: toolbar.enableDelete ?? true },
+                                  { action: toolbar.delete1, show: toolbar.showDelete1, enable: toolbar.enableDelete1 ?? true },
+                                  { action: toolbar.delete2, show: toolbar.showDelete2, enable: toolbar.enableDelete2 ?? true },
+                                  { action: toolbar.print, show: toolbar.showPrint, enable: true },
+                                  { action: toolbar.print1, show: toolbar.showPrint1, enable: true },
+                                  ...(toolbar.customActions || []).map(a=>
+                            ({ action: a, show: true, enable: true }))
+                            ].some(x => x.action && x.show !== false && x.action.placement === 'ActionsMenu')">
 
-                <!-- CSV -->
-                @* <template x-if="allowExport && toolbar.showExportCsv">
-                    <button type="button" class="btn btn-warning" x-on:click="exportData('csv')">
-                        <i class="fa fa-file-csv"></i> CSV
-                    </button>
-                </template> *@
+                            <div class="relative" x-data="{ open:false }">
+                                <button type="button"
+                                        class="btn btn-outline-secondary"
+                                        x-on:click="open = !open">
+                                    <i class="fa fa-ellipsis-v"></i>
+                                    الإجراءات
+                                </button>
 
-                <!-- PDF -->
-                @* <template x-if="allowExport && toolbar.showExportPdf">
-                    <button type="button" class="btn btn-danger" x-on:click="exportData('pdf')">
-                        <i class="fa fa-file-pdf"></i> PDF
-                    </button>
-                </template> *@
+                                <div x-show="open"
+                                     x-transition
+                                     x-on:click.outside="open=false"
+                                     class="absolute right-0 z-50 mt-2 w-56 rounded border bg-white shadow">
 
+                                    <template x-for="(act, actIdx) in [
+                                              { action: toolbar.add, show: toolbar.showAdd, enable: toolbar.enableAdd ?? true },
+                                              { action: toolbar.add1, show: toolbar.showAdd1, enable: toolbar.enableAdd1 ?? true },
+                                              { action: toolbar.add2, show: toolbar.showAdd2, enable: toolbar.enableAdd2 ?? true },
+                                              { action: toolbar.edit, show: toolbar.showEdit, enable: toolbar.enableEdit ?? true },
+                                              { action: toolbar.edit1, show: toolbar.showEdit1, enable: toolbar.enableEdit1 ?? true },
+                                              { action: toolbar.edit2, show: toolbar.showEdit2, enable: toolbar.enableEdit2 ?? true },
+                                              { action: toolbar.delete, show: toolbar.showDelete, enable: toolbar.enableDelete ?? true },
+                                              { action: toolbar.delete1, show: toolbar.showDelete1, enable: toolbar.enableDelete1 ?? true },
+                                              { action: toolbar.delete2, show: toolbar.showDelete2, enable: toolbar.enableDelete2 ?? true },
+                                              { action: toolbar.print, show: toolbar.showPrint, enable: true },
+                                              { action: toolbar.print1, show: toolbar.showPrint1, enable: true },
+                                              ...(toolbar.customActions || []).map(a=>
+                                        ({ action: a, show: true, enable: true }))
+                                        ].filter(x => x.action && x.show !== false && x.action.placement === 'ActionsMenu')"
+                                        :key="actIdx">
 
+                                        <span class="sf-tipwrap"
+                                              :data-tip="!act.enable ? 'هذا الإجراء غير متاح حالياً' : (act.action.requireSelection && selectedKeys.size !== 1) ? 'يتطلب اختيار صف' : null">
 
-                @* ===== أزرار مباشرة: Placement غير ActionsMenu ===== *@
-                <template x-for="(act, actIdx) in [
-  { action: toolbar.add,    show: toolbar.showAdd,    enable: toolbar.enableAdd ?? true,    type: 'add' },
-  { action: toolbar.add1,   show: toolbar.showAdd1,   enable: toolbar.enableAdd1 ?? true,   type: 'add1' },
-  { action: toolbar.add2,   show: toolbar.showAdd2,   enable: toolbar.enableAdd2 ?? true,   type: 'add2' },
-  { action: toolbar.edit,   show: toolbar.showEdit,   enable: toolbar.enableEdit ?? true,   type: 'edit' },
-  { action: toolbar.edit1,  show: toolbar.showEdit1,  enable: toolbar.enableEdit1 ?? true,  type: 'edit1' },
-  { action: toolbar.edit2,  show: toolbar.showEdit2,  enable: toolbar.enableEdit2 ?? true,  type: 'edit2' },
-  { action: toolbar.delete, show: toolbar.showDelete, enable: toolbar.enableDelete ?? true, type: 'delete' },
-  { action: toolbar.delete1, show: toolbar.showDelete1, enable: toolbar.enableDelete1 ?? true, type: 'delete1' },
-  { action: toolbar.delete2, show: toolbar.showDelete2, enable: toolbar.enableDelete2 ?? true, type: 'delete2' },
-  { action: toolbar.print,  show: toolbar.showPrint,  enable: true, type: 'print' },
-  { action: toolbar.print1, show: toolbar.showPrint1,  enable: true, type: 'print1' },
-  ...(toolbar.customActions || []).map(a => ({ action: a, show: true, enable: true, type: 'custom' }))
-].filter(x => x.action && x.show !== false && (x.action.placement ?? 'Button') !== 'ActionsMenu')"
-          :key="actIdx">
+                                            <button type="button"
+                                                    class="w-full px-3 py-2 text-right hover:bg-gray-100"
+                                                    :class="!act.enable ? 'cursor-not-allowed opacity-50' : ''"
+                                                    x-on:click="act.enable ? (doAction(act.action, act.action.requireSelection ? getSingleSelection() : null), open=false) : toastr.warning('هذا الإجراء غير متاح حالياً')"
+                                                    :disabled="!act.enable || (act.action.requireSelection && selectedKeys.size !== 1)">
+                                                <i :class="act.action.icon"></i>
+                                                <span x-text="act.action.label"></span>
+                                            </button>
 
-    <button type="button"
-            class="btn"
-            :class="[
-              'btn-' + (act.action.color ?? 'secondary'),
-              !act.enable || (act.action.requireSelection && selectedKeys.size !== 1) ? 'cursor-not-allowed opacity-50' : ''
-            ]"
-            x-on:click="act.enable ? doAction(act.action, act.action.requireSelection ? getSingleSelection() : null) : toastr.warning('هذا الإجراء غير متاح حالياً')"
-            :disabled="!act.enable || (act.action.requireSelection && selectedKeys.size !== 1)">
-        <i :class="act.action.icon"></i>
-        <span x-text="act.action.label"></span>
-    </button>
-</template>
-
-@* ===== زر الإجراءات: يظهر إذا فيه أي Action Placement=ActionsMenu ===== *@
-<template x-if="[
-  { action: toolbar.add,    show: toolbar.showAdd,    enable: toolbar.enableAdd ?? true },
-  { action: toolbar.add1,   show: toolbar.showAdd1,   enable: toolbar.enableAdd1 ?? true },
-  { action: toolbar.add2,   show: toolbar.showAdd2,   enable: toolbar.enableAdd2 ?? true },
-  { action: toolbar.edit,   show: toolbar.showEdit,   enable: toolbar.enableEdit ?? true },
-  { action: toolbar.edit1,  show: toolbar.showEdit1,  enable: toolbar.enableEdit1 ?? true },
-  { action: toolbar.edit2,  show: toolbar.showEdit2,  enable: toolbar.enableEdit2 ?? true },
-  { action: toolbar.delete, show: toolbar.showDelete, enable: toolbar.enableDelete ?? true },
-  { action: toolbar.delete1, show: toolbar.showDelete1, enable: toolbar.enableDelete1 ?? true },
-  { action: toolbar.delete2, show: toolbar.showDelete2, enable: toolbar.enableDelete2 ?? true },
-  { action: toolbar.print,  show: toolbar.showPrint,  enable: true },
-  { action: toolbar.print1, show: toolbar.showPrint1, enable: true },
-  ...(toolbar.customActions || []).map(a => ({ action: a, show: true, enable: true }))
-].some(x => x.action && x.show !== false && x.action.placement === 'ActionsMenu')">
-
-    <div class="relative" x-data="{ open:false }">
-        <button type="button"
-                class="btn btn-outline-secondary"
-                x-on:click="open = !open">
-            <i class="fa fa-ellipsis-v"></i>
-            الإجراءات
-        </button>
-
-        <div x-show="open"
-             x-transition
-             x-on:click.outside="open=false"
-             class="absolute right-0 z-50 mt-2 w-56 rounded border bg-white shadow">
-
-            <template x-for="(act, actIdx) in [
-              { action: toolbar.add,    show: toolbar.showAdd,    enable: toolbar.enableAdd ?? true },
-              { action: toolbar.add1,   show: toolbar.showAdd1,   enable: toolbar.enableAdd1 ?? true },
-              { action: toolbar.add2,   show: toolbar.showAdd2,   enable: toolbar.enableAdd2 ?? true },
-              { action: toolbar.edit,   show: toolbar.showEdit,   enable: toolbar.enableEdit ?? true },
-              { action: toolbar.edit1,  show: toolbar.showEdit1,  enable: toolbar.enableEdit1 ?? true },
-              { action: toolbar.edit2,  show: toolbar.showEdit2,  enable: toolbar.enableEdit2 ?? true },
-              { action: toolbar.delete, show: toolbar.showDelete, enable: toolbar.enableDelete ?? true },
-              { action: toolbar.delete1, show: toolbar.showDelete1, enable: toolbar.enableDelete1 ?? true },
-              { action: toolbar.delete2, show: toolbar.showDelete2, enable: toolbar.enableDelete2 ?? true },
-              { action: toolbar.print,  show: toolbar.showPrint,  enable: true },
-              { action: toolbar.print1, show: toolbar.showPrint1, enable: true },
-              ...(toolbar.customActions || []).map(a => ({ action: a, show: true, enable: true }))
-            ].filter(x => x.action && x.show !== false && x.action.placement === 'ActionsMenu')"
-                      :key="actIdx">
-
-                <span class="sf-tipwrap"
-                      :data-tip="!act.enable ? 'هذا الإجراء غير متاح حالياً' : (act.action.requireSelection && selectedKeys.size !== 1) ? 'يتطلب اختيار صف' : null">
-
-                    <button type="button"
-                            class="w-full px-3 py-2 text-right hover:bg-gray-100"
-                            :class="!act.enable ? 'cursor-not-allowed opacity-50' : ''"
-                            x-on:click="act.enable ? (doAction(act.action, act.action.requireSelection ? getSingleSelection() : null), open=false) : toastr.warning('هذا الإجراء غير متاح حالياً')"
-                            :disabled="!act.enable || (act.action.requireSelection && selectedKeys.size !== 1)">
-                        <i :class="act.action.icon"></i>
-                        <span x-text="act.action.label"></span>
-                    </button>
-
-                </span>
-            </template>
-        </div>
-    </div>
-</template>
-
-            </div>
-        </div>
-    }
-
-    @* ================= TABLE ================= *@
-    @* <div class="table-box"> *@
-    <div class="table-box" x-show="viewMode === 'Table'">
-
-
-        <table class="sf-table">
-            <thead x-show="showHeader" class="table-head">
-                <tr>
-                    <th x-show="selectable" class="th-cell"></th>
-
-                    <template x-for="col in visibleColumns()" :key="col.field">
-                        <th class="th-cell"
-                            :style="col.width ? `width:${col.width}` : ''"
-                            :class="col.sortable ? 'cursor-pointer' : ''"
-                            x-on:click="toggleSort(col)">
-                            <div class="th-inner flex items-center justify-center gap-1">
-                                <span x-text="col.label"></span>
-                                <template x-if="col.sortable && sort.field===col.field">
-                                    <i class="fas ml-1 text-xs text-gray-400"
-                                       :class="sort.dir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
-                                </template>
+                                        </span>
+                                    </template>
+                                </div>
                             </div>
-                        </th>
-                    </template>
-                </tr>
+                        </template>
+
+                    </div>
+                </div>
+            }
+
+            <div class="table-box" x-show="viewMode === 'Table'">
+                <table class="sf-table">
+                    <thead x-show="showHeader" class="table-head">
+                        <tr>
+                            <th x-show="selectable" class="th-cell"></th>
+
+                            <template x-for="col in visibleColumns()" :key="col.field">
+                                <th class="th-cell"
+                                    :style="col.width ? `width:${col.width}` : ''"
+                                    :class="col.sortable ? 'cursor-pointer' : ''"
+                                    x-on:click="toggleSort(col)">
+                                    <div class="th-inner flex items-center justify-center gap-1">
+                                        <span x-text="col.label"></span>
+                                        <template x-if="col.sortable && sort.field===col.field">
+                                            <i class="fas ml-1 text-xs text-gray-400"
+                                               :class="sort.dir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                                        </template>
+                                    </div>
+                                </th>
+                            </template>
+                        </tr>
 
                         <tr x-show="filtersEnabled && filtersRow && showFilters" class="sf-filter-row">
+                            <th x-show="selectable" class="th-cell sf-filter-cell"></th>
 
-    <th x-show="selectable" class="th-cell sf-filter-cell"></th>
+                            <template x-for="col in visibleColumns()" :key="'f-' + col.field">
+                                <th class="th-cell sf-filter-cell" :style="col.width ? `width:${col.width}` : ''">
 
-    <template x-for="col in visibleColumns()" :key="'f-' + col.field">
-        <th class="th-cell sf-filter-cell" :style="col.width ? `width:${col.width}` : ''">
+                                    <template x-if="isColFilterEnabled(col)">
+                                        <div class="sf-filter-wrap">
 
-            <template x-if="isColFilterEnabled(col)">
-                <div class="sf-filter-wrap">
+                                            <template x-if="getColFilterType(col) === 'text'">
+                                                <input type="text"
+                                                       class="sf-filter-input"
+                                                       :placeholder="getColFilterPlaceholder(col)"
+                                                       :aria-label="`فلتر: ${col.title ?? col.header ?? col.field}`"
+                                                       autocomplete="off"
+                                                       dir="auto"
+                                                       inputmode="text"
+                                                       x-model.trim="columnFilters[col.field]"
+                                                       x-on:input.debounce.350ms="onColumnFilterInput()"
+                                                       x-on:keydown.enter.prevent="onColumnFilterInput()" />
+                                            </template>
 
-                    <!-- Text -->
-                    <template x-if="getColFilterType(col) === 'text'">
-                        <input type="text"
-                               class="sf-filter-input"
-                               :placeholder="getColFilterPlaceholder(col)"
-                               :aria-label="`فلتر: ${col.title ?? col.header ?? col.field}`"
-                               autocomplete="off"
-                               dir="auto"
-                               inputmode="text"
-                               x-model.trim="columnFilters[col.field]"
-                               x-on:input.debounce.350ms="onColumnFilterInput()"
-                               x-on:keydown.enter.prevent="onColumnFilterInput()" />
-                    </template>
+                                            <template x-if="getColFilterType(col) === 'number'">
+                                                <input type="text"
+                                                       class="sf-filter-input"
+                                                       placeholder="مثال: >=10"
+                                                       :aria-label="`فلتر رقمي: ${col.title ?? col.header ?? col.field}`"
+                                                       autocomplete="off"
+                                                       dir="auto"
+                                                       inputmode="decimal"
+                                                       x-model.trim="columnFilters[col.field]"
+                                                       x-on:input.debounce.350ms="onColumnFilterInput()"
+                                                       x-on:keydown.enter.prevent="onColumnFilterInput()" />
+                                            </template>
 
-                    <!-- Number -->
-                    <template x-if="getColFilterType(col) === 'number'">
-                        <input type="text"
-                               class="sf-filter-input"
-                               placeholder="مثال: >=10"
-                               :aria-label="`فلتر رقمي: ${col.title ?? col.header ?? col.field}`"
-                               autocomplete="off"
-                               dir="auto"
-                               inputmode="decimal"
-                               x-model.trim="columnFilters[col.field]"
-                               x-on:input.debounce.350ms="onColumnFilterInput()"
-                               x-on:keydown.enter.prevent="onColumnFilterInput()" />
-                    </template>
+                                            <template x-if="getColFilterType(col) === 'date'">
+                                                <input type="text"
+                                                       class="sf-filter-input"
+                                                       placeholder="YYYY-MM-DD أو .."
+                                                       :aria-label="`فلتر تاريخ: ${col.title ?? col.header ?? col.field}`"
+                                                       autocomplete="off"
+                                                       dir="auto"
+                                                       inputmode="numeric"
+                                                       x-model.trim="columnFilters[col.field]"
+                                                       x-on:input.debounce.350ms="onColumnFilterInput()"
+                                                       x-on:keydown.enter.prevent="onColumnFilterInput()" />
+                                            </template>
 
-                    <!-- Date -->
-                    <template x-if="getColFilterType(col) === 'date'">
-                        <input type="text"
-                               class="sf-filter-input"
-                               placeholder="YYYY-MM-DD أو .."
-                               :aria-label="`فلتر تاريخ: ${col.title ?? col.header ?? col.field}`"
-                               autocomplete="off"
-                               dir="auto"
-                               inputmode="numeric"
-                               x-model.trim="columnFilters[col.field]"
-                               x-on:input.debounce.350ms="onColumnFilterInput()"
-                               x-on:keydown.enter.prevent="onColumnFilterInput()" />
-                    </template>
+                                            <template x-if="getColFilterType(col) === 'bool'">
+                                                <select class="sf-filter-input"
+                                                        :aria-label="`فلتر نعم/لا: ${col.title ?? col.header ?? col.field}`"
+                                                        x-model="columnFilters[col.field]"
+                                                        x-on:change="onColumnFilterInput()">
+                                                    <option value="">الكل</option>
+                                                    <option value="true">نعم</option>
+                                                    <option value="false">لا</option>
+                                                </select>
+                                            </template>
 
-                    <!-- Bool -->
-                    <template x-if="getColFilterType(col) === 'bool'">
-                        <select class="sf-filter-input"
-                                :aria-label="`فلتر نعم/لا: ${col.title ?? col.header ?? col.field}`"
-                                x-model="columnFilters[col.field]"
-                                x-on:change="onColumnFilterInput()">
-                            <option value="">الكل</option>
-                            <option value="true">نعم</option>
-                            <option value="false">لا</option>
-                        </select>
-                    </template>
+                                            <template x-if="getColFilterType(col) === 'select'">
+                                                <select class="sf-filter-input sf-filter-select2"
+                                                        :data-field="col.field"
+                                                        :aria-label="`فلتر قائمة: ${col.title ?? col.header ?? col.field}`"
+                                                        x-model="columnFilters[col.field]"
+                                                        x-on:change="onColumnFilterInput()">
+                                                    <option value="">الكل</option>
+                                                    <template x-for="opt in getColFilterOptions(col)"
+                                                              :key="String(opt.value ?? opt.Value ?? opt.text ?? opt.Text)">
+                                                        <option :value="String(opt.value ?? opt.Value ?? '')"
+                                                                x-text="String(opt.text ?? opt.Text ?? opt.value ?? opt.Value ?? '')">
+                                                        </option>
+                                                    </template>
+                                                </select>
+                                            </template>
 
-                    <!-- Select -->
-                    <template x-if="getColFilterType(col) === 'select'">
-                        <select class="sf-filter-input sf-filter-select2"
-                                :data-field="col.field"
-                                :aria-label="`فلتر قائمة: ${col.title ?? col.header ?? col.field}`"
-                                x-model="columnFilters[col.field]"
-                                x-on:change="onColumnFilterInput()">
-                            <option value="">الكل</option>
-                            <template x-for="opt in getColFilterOptions(col)"
-                                      :key="String(opt.value ?? opt.Value ?? opt.text ?? opt.Text)">
-                                <option :value="String(opt.value ?? opt.Value ?? '')"
-                                        x-text="String(opt.text ?? opt.Text ?? opt.value ?? opt.Value ?? '')">
-                                </option>
+                                        </div>
+                                    </template>
+
+                                </th>
                             </template>
-                        </select>
-                    </template>
+                        </tr>
+                    </thead>
 
-                </div>
-            </template>
+                    <tbody>
+                        <template x-if="loading">
+                            <tr>
+                                <td :colspan="visibleColumns().length + (selectable?1:0)" class="td-loading">
+                                    <i class="fa fa-spinner animate-spin"></i> جاري التحميل...
+                                </td>
+                            </tr>
+                        </template>
 
-        </th>
-    </template>
-</tr>
+                        <template x-if="!loading && error">
+                            <tr>
+                                <td :colspan="Math.max(1, visibleColumns().length + (selectable ? 1 : 0))"
+                                    class="td-empty">
+                                    <div class="flex items-center justify-center py-6">
+                                        <span x-text="error"></span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
 
-
-                            
-
-
-
-
-
-
-            </thead>
-
-            <tbody>
-                <template x-if="loading">
-                    <tr>
-                        <td :colspan="visibleColumns().length + (selectable?1:0)" class="td-loading">
-                            <i class="fa fa-spinner animate-spin"></i> جاري التحميل...
-                        </td>
-                    </tr>
-                </template>
-
-
-
-
-
-                <template x-if="!loading && error">
-                    <tr>
-                        <td :colspan="Math.max(1, visibleColumns().length + (selectable ? 1 : 0))"
-                            class="td-empty">
-                            <div class="flex items-center justify-center py-6">
-                                <span x-text="error"></span>
-                            </div>
-                        </td>
-                    </tr>
-                </template>
-
-
-
-
-
-
-                @* <template x-if="!loading && !error && rows.length===0">
-                    <tr>
-                        <td :colspan="visibleColumns().length + (selectable?1:0)" class="td-empty">
-                            لا توجد بيانات.
-                        </td>
-                    </tr>
-                </template> *@
                         <template x-if="!loading && !error && rows.length===0">
                             <tr>
                                 <td :colspan="visibleColumns().length + (selectable?1:0)"
@@ -623,199 +491,286 @@
                             </tr>
                         </template>
 
+                        <template x-for="(row, idx) in rows" :key="row[rowIdField] ?? idx">
+                            <tr class="tr-row"
+                                x-bind:class="[isSelected(row) ? 'tr-row-selected' : '', applyStyleRules(row, null, 'row')]"
+                                x-on:click="toggleRow(row)"
+                                style="cursor:pointer;">
+                                <td x-show="selectable" class="td-cell">
+                                    <input type="checkbox"
+                                           class="sf-checkbox"
+                                           :checked="isSelected(row)"
+                                           x-on:click.stop="toggleRow(row)" />
+                                </td>
 
-                <template x-for="(row, idx) in rows" :key="row[rowIdField] ?? idx">
-                    <tr class="tr-row"
-                        x-bind:class="[isSelected(row) ? 'tr-row-selected' : '', applyStyleRules(row, null, 'row')]"
-                        x-on:click="toggleRow(row)"
-                        style="cursor:pointer;">
-                        <td x-show="selectable" class="td-cell">
-                            <input type="checkbox"
-                                   class="sf-checkbox"
-                                   :checked="isSelected(row)"
-                                   x-on:click.stop="toggleRow(row)" />
-                        </td>
-
-                        <template x-for="col in visibleColumns()" :key="col.field">
-                            <td class="td-cell"
-                                x-bind:class="[col.align,col.truncate ? 'truncate-cell' : '',applyStyleRules(row, col, 'cell'),enableCellCopy ? 'sf-copy-cell' : '',enableCellCopy ? 'hover:bg-gray-50' : '']"
-                                x-on:dblclick.stop="enableCellCopy && copyCell(row, col, $event)"
-                                x-html="formatCell(row, col)">
-                            </td>
-
-
+                                <template x-for="col in visibleColumns()" :key="col.field">
+                                    <td class="td-cell"
+                                        x-bind:class="[col.align, col.truncate ? 'truncate-cell' : '', applyStyleRules(row, col, 'cell'), enableCellCopy ? 'sf-copy-cell' : '', enableCellCopy ? 'hover:bg-gray-50' : '']"
+                                        x-on:dblclick.stop="enableCellCopy && copyCell(row, col, $event)"
+                                        x-html="formatCell(row, col)">
+                                    </td>
+                                </template>
+                            </tr>
                         </template>
-                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="sf-profile" x-show="viewMode === 'Profile'">
+
+                <template x-if="loading">
+                    <div class="sf-profile__state sf-profile__state--loading">
+                        <i class="fa fa-spinner animate-spin"></i>
+                        <span>جاري التحميل...</span>
+                    </div>
                 </template>
-            </tbody>
-        </table>
-    </div>
 
+                <template x-if="!loading && error">
+                    <div class="sf-profile__state sf-profile__state--error">
+                        <span x-text="error"></span>
+                    </div>
+                </template>
 
+                <template x-if="!loading && !error && rows.length===0">
+                    <div class="sf-profile__state sf-profile__state--empty">
+                        لا توجد بيانات.
+                    </div>
+                </template>
 
-    @* ================= PROFILE VIEW (Dynamic) ================= *@
-    <div class="sf-profile" x-show="viewMode === 'Profile'">
+                <template x-if="!loading && !error && rows.length>0">
+                    <template x-for="(row, idx) in rows" :key="row[rowIdField] ?? idx">
 
-        <template x-if="loading">
-            <div class="sf-profile__state sf-profile__state--loading">
-                <i class="fa fa-spinner animate-spin"></i>
-                <span>جاري التحميل...</span>
-            </div>
-        </template>
+                        <section class="sf-profile__panel">
 
-        <template x-if="!loading && error">
-            <div class="sf-profile__state sf-profile__state--error">
-                <span x-text="error"></span>
-            </div>
-        </template>
+                            <header class="sf-profile__header">
+                                <div class="sf-profile__title">
+                                    <i class="sf-profile__titleIcon" :class="profileIcon"></i>
 
-        <template x-if="!loading && !error && rows.length===0">
-            <div class="sf-profile__state sf-profile__state--empty">
-                لا توجد بيانات.
-            </div>
-        </template>
+                                    <div class="sf-profile__titleText">
+                                        <template x-if="profileTitleText">
+                                            <div class="sf-profile__headingStatic" x-text="profileTitleText"></div>
+                                        </template>
 
-        <template x-if="!loading && !error && rows.length>0">
-            <template x-for="(row, idx) in rows" :key="row[rowIdField] ?? idx">
+                                        <template x-if="getProfileSubtitle(row)">
+                                            <div class="sf-profile__subheading" x-text="getProfileSubtitle(row)"></div>
+                                        </template>
 
-                <section class="sf-profile__panel">
-
-                    <header class="sf-profile__header">
-                        <div class="sf-profile__title">
-                            <i class="sf-profile__titleIcon" :class="profileIcon"></i>
-
-                            <div class="sf-profile__titleText">
-
-                               
-                                <template x-if="profileTitleText">
-                                    <div class="sf-profile__headingStatic" x-text="profileTitleText"></div>
-                                </template>
-
-                               
-                                @* <div class="sf-profile__headingName" x-text="getProfileTitle(row)"></div> *@
-
-                                <template x-if="getProfileSubtitle(row)">
-                                    <div class="sf-profile__subheading" x-text="getProfileSubtitle(row)"></div>
-                                </template>
-
-                         
-                                <template x-if="profileBadges && profileBadges.length">
-                                    <div class="sf-profile__badges">
-                                        <template x-for="b in profileBadges" :key="b.field">
-                                            <span class="sf-profile__pill">
-                                                <span class="sf-profile__pillLabel" x-text="b.label"></span>
-                                                <span class="sf-profile__pillValue" x-text="row?.[b.field] ?? '-'"></span>
-                                            </span>
+                                        <template x-if="profileBadges && profileBadges.length">
+                                            <div class="sf-profile__badges">
+                                                <template x-for="b in profileBadges" :key="b.field">
+                                                    <span class="sf-profile__pill">
+                                                        <span class="sf-profile__pillLabel" x-text="b.label"></span>
+                                                        <span class="sf-profile__pillValue" x-text="row?.[b.field] ?? '-'"></span>
+                                                    </span>
+                                                </template>
+                                            </div>
                                         </template>
                                     </div>
-                                </template>
-
-                            </div>
-                        </div>
-                    </header>
-
-                    <div class="sf-profile__body">
-                        <dl class="sf-profile__grid" :class="'sf-profile__grid--cols-' + (profileColumns || 2)">
-                            <template x-for="col in profileColumnsList()" :key="col.field">
-                                <div class="sf-profile__item">
-                                    <dt class="sf-profile__label" x-text="col.label"></dt>
-                                    <dd class="sf-profile__value" x-html="formatCell(row, col)"></dd>
                                 </div>
-                            </template>
-                           
-                            <template x-for="n in profilePlaceholderCount(profileColumnsList().length, (profileColumns || 2))" :key="'ph-' + n">
-                                <div class="sf-profile__item sf-profile__item--placeholder" aria-hidden="true"></div>
-                            </template>
-                        </dl>
-                        
-                    </div>
+                            </header>
 
-                </section>
+                            <div class="sf-profile__body">
+                                <dl class="sf-profile__grid" :class="'sf-profile__grid--cols-' + (profileColumns || 2)">
+                                    <template x-for="col in profileColumnsList()" :key="col.field">
+                                        <div class="sf-profile__item">
+                                            <dt class="sf-profile__label" x-text="col.label"></dt>
+                                            <dd class="sf-profile__value" x-html="formatCell(row, col)"></dd>
+                                        </div>
+                                    </template>
 
-            </template>
-        </template>
-    </div>
-
-
-
-    @* ================= PAGINATION ================= *@
-    @* <div class="pagination" x-show="showFooter"> *@
-        <div class="pagination" x-show="showFooter && enablePagination">
-        <div class="pagination-info">
-            <span class="pagination-range" x-text="rangeText()"></span>
-        </div>
-        <div class="pagination-nav">
-            <button class="btn btn-secondary" x-on:click="firstPage()" :disabled="page<=1">الأولى</button>
-            <button class="btn btn-secondary" x-on:click="prevPage()" :disabled="page<=1">السابق</button>
-            <span class="page-text">صفحة <span x-text="page"></span> من <span x-text="pages"></span></span>
-            <button class="btn btn-secondary" x-on:click="nextPage()" :disabled="page>=pages">التالي</button>
-            <button class="btn btn-secondary" x-on:click="lastPage()" :disabled="page>=pages">الأخيرة</button>
-        </div>
-    </div>
-
-
-    @* ================= MODAL ================= *@
-    <template x-teleport="body">
-        <template x-if="modal.open">
-            <div class="sf-modal-backdrop" x-transition.opacity>
-                <div class="sf-modal" role="dialog" aria-modal="true" x-transition>
-                    <div class="sf-modal-header">
-                        <h3 x-html="modal.title"></h3>
-                        <button type="button" class="sf-modal-close" x-on:click="closeModal()">✕</button>
-                    </div>
-
-                    <div class="sf-modal-body">
-
-                        <template x-if="modal.message">
-                            <div class="mb-7 flex items-center justify-center gap-2 rounded-sm px-4 py-2 text-center"
-                                 :class="modal.messageClass || 'border border-sky-200 bg-sky-50 text-sky-700'">
-
-                                <i x-show="modal.messageIcon"
-                                   :class="modal.messageIcon"
-                                   class="text-lg opacity-90"></i>
-
-                                <!-- ✅ نص عادي -->
-                                <span x-show="!modal.messageIsHtml" x-text="modal.message"></span>
-
-                                <!-- ✅ HTML -->
-                                <span x-show="modal.messageIsHtml" x-html="modal.message"></span>
+                                    <template x-for="n in profilePlaceholderCount(profileColumnsList().length, (profileColumns || 2))" :key="'ph-' + n">
+                                        <div class="sf-profile__item sf-profile__item--placeholder" aria-hidden="true"></div>
+                                    </template>
+                                </dl>
                             </div>
-                        </template>
 
+                        </section>
 
-                        @* <template x-if="modal.message">
-                            <div class="mb-7 flex items-center justify-center gap-2 rounded-sm px-4 py-2 text-center"
-                                 :class="modal.messageClass || 'border border-sky-200 bg-sky-50 text-sky-700'">
-                                <i x-show="modal.messageIcon"
-                                   :class="modal.messageIcon"
-                                   class="text-lg opacity-90"></i>
-                                <span x-text="modal.message"></span>
+                    </template>
+                </template>
+            </div>
+
+            <div class="pagination" x-show="showFooter && enablePagination">
+                <div class="pagination-info">
+                    <span class="pagination-range" x-text="rangeText()"></span>
+                </div>
+                <div class="pagination-nav">
+                    <button class="btn btn-secondary" x-on:click="firstPage()" :disabled="page<=1">الأولى</button>
+                    <button class="btn btn-secondary" x-on:click="prevPage()" :disabled="page<=1">السابق</button>
+                    <span class="page-text">صفحة <span x-text="page"></span> من <span x-text="pages"></span></span>
+                    <button class="btn btn-secondary" x-on:click="nextPage()" :disabled="page>=pages">التالي</button>
+                    <button class="btn btn-secondary" x-on:click="lastPage()" :disabled="page>=pages">الأخيرة</button>
+                </div>
+            </div>
+
+            <template x-teleport="body">
+                <template x-if="modal.open">
+                    <div class="sf-modal-backdrop" x-transition.opacity>
+                        <div class="sf-modal" role="dialog" aria-modal="true" x-transition>
+                            <div class="sf-modal-header">
+                                <h3 x-html="modal.title"></h3>
+                                <button type="button" class="sf-modal-close" x-on:click="closeModal()">✕</button>
                             </div>
-                        </template>
- *@
-                       
-                        @* <template x-if="modal.loading">
-                            <div class="td-loading">
-                                <i class="fa fa-spinner animate-spin"></i>
-                                جاري التحميل...
-                            </div>
-                        </template> *@
 
+                            <div class="sf-modal-body">
+                                <template x-if="modal.message">
+                                    <div class="mb-7 flex items-center justify-center gap-2 rounded-sm px-4 py-2 text-center"
+                                         :class="modal.messageClass || 'border border-sky-200 bg-sky-50 text-sky-700'">
 
+                                        <i x-show="modal.messageIcon"
+                                           :class="modal.messageIcon"
+                                           class="text-lg opacity-90"></i>
 
-                        @* <template x-if="!modal.lloading && !modal.error && modal.html">
-                            <div x-html="modal.html"></div>
-                        </template> *@
+                                        <span x-show="!modal.messageIsHtml" x-text="modal.message"></span>
+                                        <span x-show="modal.messageIsHtml" x-html="modal.message"></span>
+                                    </div>
+                                </template>
 
                                 <template x-if="!modal.loading && !modal.error && modal.html">
                                     <div x-html="modal.html"></div>
                                 </template>
-
+                            </div>
+                        </div>
                     </div>
+                </template>
+            </template>
+        </text>
+;
+    }
+}
+
+@if (useTab)
+{
+    <div class="sf-tab-mount"
+         data-tab-group="@tabGroupKey"
+         data-tab-key="@tabKey"
+         data-tab-default="@(Model.TabDefaultActive ? "true" : "false")"
+         data-tab-order="@Model.TabOrder">
+
+        <template data-role="tab-source">
+            <button type="button"
+                    class="sf-tab-panel__tab"
+                    data-role="tab-button"
+                    title="@tabLabel">
+                <span class="sf-tab-panel__tabMain">
+                    <i class="@tabIcon"></i>
+                    <span>@tabLabel</span>
+                </span>
+
+                @if (Model.ShowTabCount)
+                {
+                    <span class="sf-tab-panel__count">(@Model.TabCount)</span>
+                }
+            </button>
+
+            <div class="sf-tab-panel__content"
+                 data-role="tab-panel">
+                <div x-data='sfTable(@Html.Raw(JsonSerializer.Serialize(tableConfig, webJson)))'
+                     x-init="init()"
+                     x-on:refresh-table.window="refresh()">
+                    @{
+                        RenderSmartTableBody();
+                    }
                 </div>
             </div>
         </template>
-    </template>
-</div>
-</div>  
-</div>      
+    </div>
+    
+}
+else if (useSection)
+{
+    <section class="sf-section"
+             x-data="{ open: @(sectionOpen ? "true" : "false") }"
+             x-cloak>
+
+        <div class="sf-section__header">
+            <button type="button"
+                    class="sf-section__btn"
+                    x-on:click="open = !open">
+
+                <span class="sf-section__titleWrap">
+                    <i class="@sectionIcon sf-section__icon"></i>
+
+                    <span class="sf-section__textWrap">
+                        <span class="sf-section__title">@sectionLabel</span>
+
+                        @if (!string.IsNullOrWhiteSpace(sectionDescription))
+                        {
+                            <span class="sf-section__desc">@sectionDescription</span>
+                        }
+                    </span>
+                </span>
+
+                <span class="sf-section__meta">
+                    @if (Model.ShowSectionCount)
+                    {
+                        <span class="sf-section__count">(@Model.SectionCount)</span>
+                    }
+
+                    <i class="fa-solid fa-chevron-down sf-section__chev"
+                       :class="open ? 'is-open' : ''"></i>
+                </span>
+            </button>
+        </div>
+
+        <div class="sf-section__body" x-show="open" x-transition>
+            <div x-data='sfTable(@Html.Raw(JsonSerializer.Serialize(tableConfig, webJson)))'
+                 x-init="init()"
+                 x-on:refresh-table.window="refresh()">
+                @{
+                    RenderSmartTableBody();
+                }
+            </div>
+        </div>
+    </section>
+}
+else if (useToggle)
+{
+    <div class="sf-toggle"
+         x-data="{ open: @(toggleOpen ? "true" : "false") }"
+         x-cloak>
+
+        <button type="button"
+                class="sf-toggle__btn"
+                x-on:click="open = !open">
+
+            <span class="sf-toggle__left">
+                <i class="@toggleIcon sf-toggle__icon"></i>
+
+                <span class="sf-toggle__label">
+                    @toggleLabel
+
+                    @if (Model.ShowToggleCount)
+                    {
+                        <span class="ms-2">(@Model.ToggleCount)</span>
+                    }
+                </span>
+            </span>
+
+            <i class="fa-solid fa-chevron-down sf-toggle__chev"
+               :class="open ? 'is-open' : ''"></i>
+        </button>
+
+        <div class="sf-toggle__content" x-show="open" x-transition>
+            <div x-data='sfTable(@Html.Raw(JsonSerializer.Serialize(tableConfig, webJson)))'
+                 x-init="init()"
+                 x-on:refresh-table.window="refresh()">
+                @{
+                    RenderSmartTableBody();
+                }
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="mt-3">
+        <div x-data='sfTable(@Html.Raw(JsonSerializer.Serialize(tableConfig, webJson)))'
+             x-init="init()"
+             x-on:refresh-table.window="refresh()">
+            @{
+                RenderSmartTableBody();
+            }
+        </div>
+    </div>
+}

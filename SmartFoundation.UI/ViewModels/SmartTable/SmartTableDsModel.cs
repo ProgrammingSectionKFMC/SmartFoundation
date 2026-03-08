@@ -4,19 +4,25 @@ using System.Linq;
 
 namespace SmartFoundation.UI.ViewModels.SmartTable
 {
-
-
     public enum TableViewMode
     {
         Table,
         Profile,
-        
+    }
+
+    public enum SmartTableRenderMode
+    {
+        Plain,
+        Toggle,
+        Section,
+        Tab
     }
 
     public class SmartTableDsModel
     {
         public string? PageTitle { get; set; } = "النظام الموحد";
         public string? PanelTitle { get; set; } = "";
+
         // ===== بيانات الجدول من الـ DataSet =====
         public List<TableColumn> Columns { get; set; } = new();
         public List<Dictionary<string, object?>> Rows { get; set; } = new();
@@ -40,7 +46,6 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         public bool ShowFooter { get; set; } = true;
 
         public bool EnablePagination { get; set; } = true;
-
         public bool ShowPageSizeSelector { get; set; } = true;
 
         public bool Searchable { get; set; } = true;
@@ -96,11 +101,10 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
 
         public bool EnableCellCopy { get; set; } = true;
 
-        //  طريقة العرض (Table / Profile)
-        //  
+        // ===== طريقة عرض البيانات داخل الجدول =====
         public TableViewMode ViewMode { get; set; } = TableViewMode.Table;
 
-        // إعدادات Profile
+        // ===== إعدادات Profile =====
         public string? ProfileTitleField { get; set; } = null;
         public string? ProfileSubtitleField { get; set; } = null;
         public List<string> ProfileFields { get; set; } = new();
@@ -108,30 +112,52 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         public int ProfileColumns { get; set; } = 2;
         public bool ProfileShowHeader { get; set; } = true;
         public string? ProfileIcon { get; set; } = "fa-solid fa-id-card";
-        public string? ProfileTitleText { get; set; } = null; // اختياري: عنوان ثابت فوق
-        public List<object> ProfileMetaFields { get; set; } = new(); // chips أعلى البروفايل (اختياري)
+        public string? ProfileTitleText { get; set; } = null;
+        public List<object> ProfileMetaFields { get; set; } = new();
 
-        public bool RenderAsToggle { get; set; } = false;         // يفعّل وضع الزر
-        public string ToggleLabel { get; set; } = "عرض";          // نص الزر
+        // ===== Render Modes =====
+        public SmartTableRenderMode RenderMode { get; set; } = SmartTableRenderMode.Plain;
+
+        // ===== Toggle Mode =====
+        public bool RenderAsToggle { get; set; } = false;
+        public string ToggleLabel { get; set; } = "عرض";
         public string? ToggleIcon { get; set; } = "fa-solid fa-table";
-        public bool ToggleDefaultOpen { get; set; } = false;      // مفتوح افتراضياً؟
+        public bool ToggleDefaultOpen { get; set; } = false;
+        public bool ShowToggleCount { get; set; } = false;
+        public int ToggleCount => Rows?.Count() ?? 0;
 
-        public bool ShowToggleCount { get; set; } = false;   // عرض العداد؟
+        // ===== Section Mode =====
+        public bool RenderAsSection { get; set; } = false;
+        public string SectionLabel { get; set; } = "القسم";
+        public string? SectionIcon { get; set; } = "fa-solid fa-table-list";
+        public string? SectionDescription { get; set; } = null;
+        public bool SectionDefaultOpen { get; set; } = true;
+        public bool ShowSectionCount { get; set; } = true;
+        public int SectionCount => Rows?.Count() ?? 0;
+        public int SectionOrder { get; set; } = 0;
+        public string? SectionAccent { get; set; } = null;
 
-        public int ToggleCount => Rows?.Count() ?? 0;  // يحسب عدد الصفوف في الجدول ويظهر العداد في التوقل
+        // ===== Tab Mode =====
+        public bool RenderAsTab { get; set; } = false;
+        public string TabGroupKey { get; set; } = "default";
+        public string TabKey { get; set; } = "";
+        public string TabLabel { get; set; } = "جدول";
+        public string? TabIcon { get; set; } = "fa-solid fa-table";
+        public string? TabDescription { get; set; } = null;
+        public bool TabDefaultActive { get; set; } = false;
+        public bool ShowTabCount { get; set; } = true;
+        public int TabCount => Rows?.Count() ?? 0;
+        public int TabOrder { get; set; } = 0;
 
-
-        public bool ShowFilter { get; set; } = false;     // زر "فلترة" + صف الفلاتر
-        public bool FilterRow { get; set; } = true;       // صف الفلاتر تحت الهيدر
-        public int FilterDebounce { get; set; } = 250;    // تأخير الكتابة
+        // ===== Filters =====
+        public bool ShowFilter { get; set; } = false;
+        public bool FilterRow { get; set; } = true;
+        public int FilterDebounce { get; set; } = 250;
 
         public bool ShowColumnVisibility { get; set; } = false;
 
-
         public List<ProfileBadge> ProfileBadges { get; set; } = new();
-
         public List<TableStyleRule> StyleRules { get; set; } = new();
-
     }
 
     public class ProfileBadge
@@ -139,6 +165,4 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         public string Field { get; set; } = "";
         public string Label { get; set; } = "";
     }
-
-
 }

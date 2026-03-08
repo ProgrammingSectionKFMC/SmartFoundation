@@ -6914,3 +6914,205 @@ window.sfMoneySarOnInput = function (el) {
 
 
 
+
+//============ For tabs sections ============
+
+(function () {
+    function safeEsc(value) {
+        if (window.CSS && window.CSS.escape) return window.CSS.escape(value);
+        return String(value).replace(/"/g, '\\"');
+    }
+
+    function syncTabHost(host) {
+        if (!host) return;
+
+        var activeKey = host.dataset.activeTab || "";
+        var buttons = host.querySelectorAll('[data-role="tab-button"]');
+        var panels = host.querySelectorAll('[data-role="tab-panel"]');
+
+        buttons.forEach(function (btn) {
+            var isActive = btn.dataset.tabKey === activeKey;
+            btn.classList.toggle('is-active', isActive);
+            btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            btn.setAttribute('tabindex', isActive ? '0' : '-1');
+        });
+
+        panels.forEach(function (panel) {
+            var isActive = panel.dataset.tabKey === activeKey;
+            panel.style.display = isActive ? '' : 'none';
+            panel.classList.toggle('is-active', isActive);
+            panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+        });
+    }
+
+    function ensureTabHost(mount, groupKey) {
+        if (!mount || !mount.parentNode) return null;
+
+        var selector = '.sf-tab-panel[data-tab-group="' + safeEsc(groupKey) + '"]';
+        var parent = mount.parentNode;
+        var host = parent.querySelector(selector);
+
+        if (host) return host;
+
+        host = document.createElement('div');
+        host.className = 'sf-tab-panel';
+        host.setAttribute('data-tab-group', groupKey);
+        host.innerHTML =
+            '<div class="sf-tab-panel__header" data-role="tab-header"></div>' +
+            '<div class="sf-tab-panel__body" data-role="tab-body"></div>';
+
+        parent.insertBefore(host, mount);
+        return host;
+    }
+
+    function initAlpineTree(el) {
+        if (!el || !window.Alpine || typeof window.Alpine.initTree !== 'function') return;
+        window.Alpine.initTree(el);
+    }
+
+    function cloneTemplateContent(tpl) {
+        if (!tpl || !tpl.content) return null;
+        return tpl.content.cloneNode(true);
+    }
+
+    function sortChildren(container, roleName) {
+        Array.from(container.querySelectorAll('[data-role="' + roleName + '"]'))
+            .sort(function (a, b) {
+                return parseInt(a.dataset.tabOrder || '0', 10) - parseInt(b.dataset.tabOrder || '0', 10);
+            })
+            .forEach(function (el) {
+                container.appendChild(el);
+            });
+    }
+
+    function pickDefaultActive(host) {
+        if (!host) return;
+
+        var current = host.dataset.activeTab;
+        if (current) {
+            var exists = host.querySelector('[data-role="tab-button"][data-tab-key="' + safeEsc(current) + '"]');
+            if (exists) return;
+        }
+
+        var preferred =
+            host.querySelector('[data-role="tab-button"][data-tab-default="true"]') ||
+            host.querySelector('[data-role="tab-button"]');
+
+        if (preferred) {
+            host.dataset.activeTab = preferred.dataset.tabKey || "";
+        }
+    }
+
+    window.sfInitTabGroup = function (mount) {
+        if (!mount || mount.dataset.tabMounted === 'true') return;
+        if (!mount.isConnected) return;
+
+        var groupKey = mount.dataset.tabGroup || 'default';
+        var tabKey = mount.dataset.tabKey || ('tab_' + Math.random().toString(36).slice(2));
+        var isDefault = mount.dataset.tabDefault === 'true';
+        var tabOrder = parseInt(mount.dataset.tabOrder || '0', 10);
+
+        var sourceTpl = mount.querySelector('template[data-role="tab-source"]');
+        if (!sourceTpl) return;
+
+        var fragment = cloneTemplateContent(sourceTpl);
+        if (!fragment) return;
+
+        var button = fragment.querySelector('[data-role="tab-button"]');
+        var panel = fragment.querySelector('[data-role="tab-panel"]');
+        if (!button || !panel) return;
+
+        var host = ensureTabHost(mount, groupKey);
+        if (!host) return;
+
+        var header = host.querySelector('[data-role="tab-header"]');
+        var body = host.querySelector('[data-role="tab-body"]');
+
+        button.dataset.tabKey = tabKey;
+        button.dataset.tabOrder = String(tabOrder);
+        button.dataset.tabDefault = isDefault ? 'true' : 'false';
+
+        panel.dataset.tabKey = tabKey;
+        panel.dataset.tabOrder = String(tabOrder);
+
+        if (!header.querySelector('[data-role="tab-button"][data-tab-key="' + safeEsc(tabKey) + '"]')) {
+            header.appendChild(button);
+        }
+
+        if (!body.querySelector('[data-role="tab-panel"][data-tab-key="' + safeEsc(tabKey) + '"]')) {
+            body.appendChild(panel);
+            initAlpineTree(panel);
+        }
+
+        sortChildren(header, 'tab-button');
+        sortChildren(body, 'tab-panel');
+
+        var liveButton = header.querySelector('[data-role="tab-button"][data-tab-key="' + safeEsc(tabKey) + '"]');
+
+        if (liveButton && !liveButton.dataset.tabBound) {
+            liveButton.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                host.dataset.activeTab = tabKey;
+                syncTabHost(host);
+            });
+
+            liveButton.dataset.tabBound = 'true';
+        }
+
+        if (isDefault) {
+            host.dataset.activeTab = tabKey;
+        } else {
+            pickDefaultActive(host);
+        }
+
+        syncTabHost(host);
+
+        mount.dataset.tabMounted = 'true';
+        mount.style.display = 'none';
+    };
+
+    window.sfInitAllPendingTabMounts = function (root) {
+        (root || document).querySelectorAll('.sf-tab-mount:not([data-tab-mounted="true"])')
+            .forEach(function (mount) {
+                window.sfInitTabGroup(mount);
+            });
+    };
+
+    function bootTabs() {
+        window.sfInitAllPendingTabMounts(document);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bootTabs);
+    } else {
+        bootTabs();
+    }
+
+    window.addEventListener('load', bootTabs);
+    document.addEventListener('alpine:init', bootTabs);
+    document.addEventListener('alpine:initialized', bootTabs);
+
+    var observer = new MutationObserver(function (mutations) {
+        var shouldBoot = false;
+
+        for (var i = 0; i < mutations.length; i++) {
+            var m = mutations[i];
+
+            if (m.addedNodes && m.addedNodes.length) {
+                shouldBoot = true;
+                break;
+            }
+        }
+
+        if (shouldBoot) {
+            bootTabs();
+        }
+    });
+
+    observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true
+    });
+})();
+//============ End tabs sections ============
