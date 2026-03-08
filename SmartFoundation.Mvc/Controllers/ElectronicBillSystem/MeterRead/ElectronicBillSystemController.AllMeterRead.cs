@@ -710,12 +710,12 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
                 // hidden p01 actually posted to SP
                 
-                new FieldConfig { Name = "p41", Label = "MeterServiceTypeID_", Type = "text", Value=MeterServiceTypeID_ },
-                new FieldConfig { Name = "p01", Label = "BillsID", Type = "text" },
-                new FieldConfig { Name = "p05", Label = "MeterID", Type = "number", ColCss = "3", Required = true },
-                new FieldConfig { Name = "p09", Label = "ReadID", Type = "text", ColCss = "3", Required = true },
-                new FieldConfig { Name = "p10", Label = "CurrentRead", Type = "text", ColCss = "3", Required = true },
-                new FieldConfig { Name = "p39", Label = "PeriodID_", Type = "text", ColCss = "3", Required = true, Value = PeriodID_ },
+                new FieldConfig { Name = "p41", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
+                new FieldConfig { Name = "p01", Label = "BillsID", Type = "hidden" },
+                new FieldConfig { Name = "p05", Label = "MeterID", Type = "hidden", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p09", Label = "ReadID", Type = "hidden", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p10", Label = "القراءة الحالية", Type = "number", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p39", Label = "PeriodID_", Type = "hidden", ColCss = "3", Required = true, Value = PeriodID_ },
 
 
             };
@@ -822,12 +822,12 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
                 // hidden p01 actually posted to SP
                 
-                 new FieldConfig { Name = "p41", Label = "MeterServiceTypeID_", Type = "text", Value=MeterServiceTypeID_ },
-                new FieldConfig { Name = "p01", Label = "BillsID", Type = "text" },
-                new FieldConfig { Name = "p05", Label = "MeterID", Type = "number", ColCss = "3", Required = true },
-                new FieldConfig { Name = "p09", Label = "ReadID", Type = "text", ColCss = "3", Required = true },
-                new FieldConfig { Name = "p10", Label = "CurrentRead", Type = "text", ColCss = "3", Required = true },
-                new FieldConfig { Name = "p39", Label = "PeriodID_", Type = "text", ColCss = "3", Required = true, Value = PeriodID_ },
+                  new FieldConfig { Name = "p41", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
+                new FieldConfig { Name = "p01", Label = "BillsID", Type = "hidden" },
+                new FieldConfig { Name = "p05", Label = "MeterID", Type = "hidden", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p09", Label = "ReadID", Type = "hidden", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p10", Label = "القراءة الحالية", Type = "number", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p39", Label = "PeriodID_", Type = "hidden", ColCss = "3", Required = true, Value = PeriodID_ },
 
 
             };
@@ -933,12 +933,12 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
                 // hidden p01 actually posted to SP
                 
-                 new FieldConfig { Name = "p41", Label = "MeterServiceTypeID_", Type = "text", Value=MeterServiceTypeID_ },
-                new FieldConfig { Name = "p01", Label = "BillsID", Type = "text" },
-                new FieldConfig { Name = "p05", Label = "MeterID", Type = "number", ColCss = "3", Required = true },
-                new FieldConfig { Name = "p09", Label = "ReadID", Type = "text", ColCss = "3", Required = true },
-                new FieldConfig { Name = "p10", Label = "CurrentRead", Type = "text", ColCss = "3", Required = true },
-                new FieldConfig { Name = "p39", Label = "PeriodID_", Type = "text", ColCss = "3", Required = true, Value = PeriodID_ },
+                  new FieldConfig { Name = "p41", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
+                new FieldConfig { Name = "p01", Label = "BillsID", Type = "hidden" },
+                new FieldConfig { Name = "p05", Label = "MeterID", Type = "hidden", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p09", Label = "ReadID", Type = "hidden", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p10", Label = "القراءة الحالية", Type = "number", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p39", Label = "PeriodID_", Type = "hidden", ColCss = "3", Required = true, Value = PeriodID_ },
 
 
             };
