@@ -279,12 +279,20 @@
                             <button type="button"
                                     class="btn"
                                     :class="[
-                                                              'btn-' + (act.action.color ?? 'secondary'),
-                                                              !act.enable || (act.action.requireSelection && selectedKeys.size !== 1) ? 'cursor-not-allowed opacity-50' : ''
-                                                            ]"
+                        'btn-' + (act.action.color ?? 'secondary'),
+                        !act.enable || (act.action.requireSelection && selectedKeys.size !== 1) ? 'cursor-not-allowed opacity-50' : ''
+                    ]"
                                     x-on:click="act.enable ? doAction(act.action, act.action.requireSelection ? getSingleSelection() : null) : toastr.warning('هذا الإجراء غير متاح حالياً')"
                                     :disabled="!act.enable || (act.action.requireSelection && selectedKeys.size !== 1)">
-                                <i :class="act.action.icon"></i>
+
+                                <template x-if="act.action.icon && !(act.action.icon.startsWith('/') || act.action.icon.includes('.svg') || act.action.icon.includes('.png') || act.action.icon.includes('.jpg') || act.action.icon.includes('.jpeg') || act.action.icon.includes('.webp'))">
+                                    <i :class="act.action.icon"></i>
+                                </template>
+
+                                <template x-if="act.action.icon && (act.action.icon.startsWith('/') || act.action.icon.includes('.svg') || act.action.icon.includes('.png') || act.action.icon.includes('.jpg') || act.action.icon.includes('.jpeg') || act.action.icon.includes('.webp'))">
+                                    <img :src="act.action.icon" alt="" class="sf-action-icon-img" />
+                                </template>
+
                                 <span x-text="act.action.label"></span>
                             </button>
                         </template>
@@ -343,7 +351,15 @@
                                                     :class="!act.enable ? 'cursor-not-allowed opacity-50' : ''"
                                                     x-on:click="act.enable ? (doAction(act.action, act.action.requireSelection ? getSingleSelection() : null), open=false) : toastr.warning('هذا الإجراء غير متاح حالياً')"
                                                     :disabled="!act.enable || (act.action.requireSelection && selectedKeys.size !== 1)">
-                                                <i :class="act.action.icon"></i>
+
+                                                <template x-if="act.action.icon && !(act.action.icon.startsWith('/') || act.action.icon.includes('.svg') || act.action.icon.includes('.png') || act.action.icon.includes('.jpg') || act.action.icon.includes('.jpeg') || act.action.icon.includes('.webp'))">
+                                                    <i :class="act.action.icon"></i>
+                                                </template>
+
+                                                <template x-if="act.action.icon && (act.action.icon.startsWith('/') || act.action.icon.includes('.svg') || act.action.icon.includes('.png') || act.action.icon.includes('.jpg') || act.action.icon.includes('.jpeg') || act.action.icon.includes('.webp'))">
+                                                    <img :src="act.action.icon" alt="" class="sf-action-icon-img" />
+                                                </template>
+
                                                 <span x-text="act.action.label"></span>
                                             </button>
 
