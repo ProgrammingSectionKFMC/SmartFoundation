@@ -2423,6 +2423,109 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     return def;
                 };
 
+                const applyToggleFieldVisibility = (meta, rows = []) => {
+                    const modalRoot =
+                        document.querySelector(".sf-modal") ||
+                        this.$el?.querySelector?.(".sf-modal");
+
+                    if (!meta || !modalRoot) return;
+
+                    const toggleField = meta.toggleField ?? meta.ToggleField;
+                    if (!toggleField) return;
+
+                    const toggleDefaultHidden = (meta.toggleDefaultHidden ?? meta.ToggleDefaultHidden) === true;
+                    const toggleRequiredWhenShown = (meta.toggleRequiredWhenShown ?? meta.ToggleRequiredWhenShown) === true;
+
+                    const toggleColumn = meta.toggleColumn ?? meta.ToggleColumn;
+                    const toggleOperator = String(meta.toggleOperator ?? meta.ToggleOperator ?? "=").trim();
+                    const toggleValue = meta.toggleValue ?? meta.ToggleValue;
+                    const toggleCompareColumn = meta.toggleCompareColumn ?? meta.ToggleCompareColumn;
+
+                    const field = modalRoot.querySelector(`[name="${toggleField}"]`);
+                    if (!field) {
+                        console.warn("[ToggleField] field not found:", toggleField);
+                        return;
+                    }
+
+                    const wrapper = field.closest(".form-group");
+                    if (!wrapper) {
+                        console.warn("[ToggleField] wrapper not found for field:", toggleField);
+                        return;
+                    }
+
+                    // إذا ما فيه بيانات بعد، طبّق الحالة الافتراضية
+                    if (!rows || !rows.length || !toggleColumn) {
+                        wrapper.style.display = toggleDefaultHidden ? "none" : "";
+
+                        if (toggleRequiredWhenShown) {
+                            if (toggleDefaultHidden) field.removeAttribute("required");
+                            else field.setAttribute("required", "required");
+                        }
+
+                        if (toggleDefaultHidden) {
+                            if (field.type === "checkbox") field.checked = false;
+                            else field.value = "";
+                        }
+
+                        return;
+                    }
+
+                    const r = rows[0] || {};
+
+                    const leftRaw = r?.[toggleColumn];
+                    const rightRaw = toggleCompareColumn
+                        ? r?.[toggleCompareColumn]
+                        : toggleValue;
+
+                    const leftNum = Number(leftRaw);
+                    const rightNum = Number(rightRaw);
+
+                    const bothNumeric =
+                        !Number.isNaN(leftNum) && String(leftRaw ?? "").trim() !== "" &&
+                        !Number.isNaN(rightNum) && String(rightRaw ?? "").trim() !== "";
+
+                    const left = bothNumeric ? leftNum : String(leftRaw ?? "").trim();
+                    const right = bothNumeric ? rightNum : String(rightRaw ?? "").trim();
+
+                    let show = false;
+
+                    switch (toggleOperator) {
+                        case ">": show = left > right; break;
+                        case "<": show = left < right; break;
+                        case ">=": show = left >= right; break;
+                        case "<=": show = left <= right; break;
+                        case "!=":
+                        case "<>": show = left != right; break;
+                        case "=":
+                        case "==": show = left == right; break;
+                        default: show = false; break;
+                    }
+
+                    wrapper.style.display = show ? "" : "none";
+
+                    if (toggleRequiredWhenShown) {
+                        if (show) {
+                            field.setAttribute("required", "required");
+                        } else {
+                            field.removeAttribute("required");
+                            if (field.type === "checkbox") field.checked = false;
+                            else field.value = "";
+                        }
+                    }
+
+                    console.log("[ToggleField]", {
+                        toggleField,
+                        toggleColumn,
+                        toggleOperator,
+                        toggleValue,
+                        toggleCompareColumn,
+                        leftRaw,
+                        rightRaw,
+                        show
+                    });
+                };
+
+
                 const normalizeObjKeyLookup = (obj) => {
                     const map = {};
                     if (!obj || typeof obj !== "object") return map;
@@ -2677,18 +2780,70 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     const rowsHtml = pg.slice.map((r, idx) => {
                         const rowLower = normalizeObjKeyLookup(r);
 
+                        const rowColorColumn = meta.rowColorColumn ?? meta.RowColorColumn;
+                        const rowColorOperator = String(meta.rowColorOperator ?? meta.RowColorOperator ?? "=").trim();
+                        const rowColorValue = meta.rowColorValue ?? meta.RowColorValue;
+                        const rowColorCompareColumn = meta.rowColorCompareColumn ?? meta.RowColorCompareColumn;
+
+                        const rowColorTrueStyle = meta.rowColorTrueStyle ?? meta.RowColorTrueStyle ?? "";
+                        const rowColorFalseStyle = meta.rowColorFalseStyle ?? meta.RowColorFalseStyle ?? "";
+
+                        let rowClass = "sf-extra-tr";
+                        let rowStyle = "";
+
+                        if (rowColorColumn && (rowColorTrueStyle || rowColorFalseStyle)) {
+                            const leftRaw =
+                                r?.[rowColorColumn] ??
+                                rowLower?.[String(rowColorColumn).toLowerCase()] ??
+                                null;
+
+                            const rightRaw = rowColorCompareColumn
+                                ? (
+                                    r?.[rowColorCompareColumn] ??
+                                    rowLower?.[String(rowColorCompareColumn).toLowerCase()] ??
+                                    null
+                                )
+                                : rowColorValue;
+
+                            const leftNum = Number(leftRaw);
+                            const rightNum = Number(rightRaw);
+
+                            const bothNumeric =
+                                !Number.isNaN(leftNum) && String(leftRaw ?? "").trim() !== "" &&
+                                !Number.isNaN(rightNum) && String(rightRaw ?? "").trim() !== "";
+
+                            const left = bothNumeric ? leftNum : String(leftRaw ?? "").trim();
+                            const right = bothNumeric ? rightNum : String(rightRaw ?? "").trim();
+
+                            let ok = false;
+
+                            switch (rowColorOperator) {
+                                case ">": ok = left > right; break;
+                                case "<": ok = left < right; break;
+                                case ">=": ok = left >= right; break;
+                                case "<=": ok = left <= right; break;
+                                case "!=":
+                                case "<>": ok = left != right; break;
+                                case "=":
+                                case "==": ok = left == right; break;
+                                default: ok = false; break;
+                            }
+
+                            rowStyle = ok ? rowColorTrueStyle : rowColorFalseStyle;
+                        }
+
                         const tds = cols.map(k => {
                             const lk = String(k).toLowerCase();
                             const val = (r?.[k] ?? rowLower?.[lk] ?? "");
                             const text = (val == null || val === "") ? "—" : String(val);
-                            return `<td class="sf-extra-td" title="${esc(text)}">${esc(text)}</td>`;
+                            return `<td class="sf-extra-td" style="${esc(rowStyle || "")}" title="${esc(text)}">${esc(text)}</td>`;
                         }).join("");
 
                         const serial = showRowNumbers
-                            ? `<td class="sf-extra-td sf-extra-serial">${pg.startIndex + idx + 1}</td>`
+                            ? `<td class="sf-extra-td sf-extra-serial" style="${esc(rowStyle || "")}">${pg.startIndex + idx + 1}</td>`
                             : "";
 
-                        return `<tr class="sf-extra-tr">${serial}${tds}</tr>`;
+                        return `<tr class="${rowClass}" style="${esc(rowStyle || "")}">${serial}${tds}</tr>`;
                     }).join("");
 
                     const serialHead = showRowNumbers
@@ -3042,6 +3197,81 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                         // bind save spinner once
                         const form = modalEl.querySelector("form");
+
+                        const saveBtn =
+                            form?.querySelector(".sf-modal-btn-save") ||
+                            form?.querySelector('button[type="submit"]');
+
+                        const setSaveEnabled = (enabled) => {
+                            if (!saveBtn) return;
+                            saveBtn.disabled = !enabled;
+                            saveBtn.classList.toggle("opacity-60", !enabled);
+                            saveBtn.classList.toggle("pointer-events-none", !enabled);
+                        };
+
+                        try {
+                            const metas = resolveMetas();
+
+                            metas.forEach(meta => {
+                                const verifyFieldName = meta.verifyField ?? meta.VerifyField;
+                                const verifyResetFields = meta.verifyResetFields ?? meta.VerifyResetFields ?? [];
+                                const verifyRequiredMessage = meta.verifyRequiredMessage ?? meta.VerifyRequiredMessage ?? "يجب الضغط على زر التحقق أولاً قبل الحفظ";
+
+                                if (!verifyFieldName || !form) return;
+
+                                const verifyField = form.querySelector(`[name="${verifyFieldName}"]`);
+                                if (!verifyField) return;
+
+                                // القيمة الافتراضية عند فتح المودال
+                                verifyField.value = "0";
+                                setSaveEnabled(false);
+
+                                // إعادة الضبط عند تغيير الحقول المؤثرة
+                                (Array.isArray(verifyResetFields) ? verifyResetFields : []).forEach(fieldName => {
+                                    const el = form.querySelector(`[name="${fieldName}"]`);
+                                    if (!el || el.__verifyResetBound) return;
+
+                                    el.__verifyResetBound = true;
+
+                                    const resetVerify = () => {
+                                        verifyField.value = "0";
+                                        setSaveEnabled(false);
+                                    };
+
+                                    el.addEventListener("input", resetVerify);
+                                    el.addEventListener("change", resetVerify);
+                                });
+
+                                // منع الحفظ إذا لم يتم التحقق
+                                if (!form.__verifySubmitBound) {
+                                    form.__verifySubmitBound = true;
+
+                                    form.addEventListener("submit", (e) => {
+                                        const currentMetas = resolveMetas();
+
+                                        for (const m of currentMetas) {
+                                            const vfName = m.verifyField ?? m.VerifyField;
+                                            const msg = m.verifyRequiredMessage ?? m.VerifyRequiredMessage ?? "يجب الضغط على زر التحقق أولاً قبل الحفظ";
+                                            if (!vfName) continue;
+
+                                            const vf = form.querySelector(`[name="${vfName}"]`);
+                                            if (!vf) continue;
+
+                                            if (String(vf.value ?? "0") !== "1") {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                this.showToast?.(msg, "error");
+                                                return false;
+                                            }
+                                        }
+                                    }, true);
+                                }
+                            });
+                        } catch (e) {
+                            console.warn("[VerifyBeforeSave] init failed:", e);
+                        }
+
+
                         if (form && !form.__saveBound) {
                             form.__saveBound = true;
 
@@ -3139,6 +3369,12 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                         this.enableModalResize?.(modalEl);
                         this.initSelect2InModal?.(modalEl);
+                        try {
+                            const metas = resolveMetas();
+                            metas.forEach(m => applyToggleFieldVisibility(m, []));
+                        } catch (e) {
+                            console.warn("[ToggleField] init failed:", e);
+                        }
 
                      const extraBtns = modalEl.querySelectorAll("[data-extra-trigger='1']");
                     if (extraBtns.length) {
@@ -3236,71 +3472,28 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     // =====================
                     // Toggle field from meta
                     // =====================
+                                    const verifyFieldName = meta.verifyField ?? meta.VerifyField;
+                                    if (verifyFieldName) {
+                                        const verifyField = modalEl.querySelector(`[name="${verifyFieldName}"]`);
+                                        if (verifyField) {
+                                            verifyField.value = "1";
+                                            setSaveEnabled(true);
+                                        }
+                                    }
 
-                    const toggleField = meta.toggleField ?? meta.ToggleField;
-                    const toggleColumn = meta.toggleColumn ?? meta.ToggleColumn;
-                    const toggleOperator = meta.toggleOperator ?? meta.ToggleOperator;
 
-                    // ثابت
-                    const toggleValue = meta.toggleValue ?? meta.ToggleValue;
-
-                    // أو عمود آخر
-                    const toggleCompareColumn = meta.toggleCompareColumn ?? meta.ToggleCompareColumn;
-
-                    if (toggleField && toggleColumn && rows.length) {
-
-                        const r = rows[0];
-
-                        const leftRaw = r?.[toggleColumn];
-
-                        let rightRaw = null;
-
-                        // إذا فيه عمود مقارنة، استخدمه
-                        if (toggleCompareColumn) {
-                            rightRaw = r?.[toggleCompareColumn];
-                        } else {
-                            // وإلا استخدم القيمة الثابتة
-                            rightRaw = toggleValue;
-                        }
-
-                        const leftNum = Number(leftRaw);
-                        const rightNum = Number(rightRaw);
-
-                        const bothNumeric =
-                            !Number.isNaN(leftNum) && String(leftRaw ?? "").trim() !== "" &&
-                            !Number.isNaN(rightNum) && String(rightRaw ?? "").trim() !== "";
-
-                        const left = bothNumeric ? leftNum : String(leftRaw ?? "");
-                        const right = bothNumeric ? rightNum : String(rightRaw ?? "");
-
-                        let show = true;
-
-                        switch (toggleOperator) {
-                            case ">": show = left > right; break;
-                            case "<": show = left < right; break;
-                            case "=":
-                            case "==": show = left == right; break;
-                            case "!=": show = left != right; break;
-                            case ">=": show = left >= right; break;
-                            case "<=": show = left <= right; break;
-                            default: show = true; break;
-                        }
-
-                        const field = modalEl.querySelector(`[name="${toggleField}"]`);
-                        const wrapper = field?.closest(".form-group");
-
-                        if (wrapper) {
-                            wrapper.style.display = show ? "" : "none";
-                        }
-                    }
                                     const st = getState(slotKey);
                                     st.cache = rows;
                                     st.page = 1;
                                     st.query = "";
                                     st.sort = null;
 
+
+
                                     const html = renderExtraTable(rows, meta, st, slotKey);
                                     if (slotBody) slotBody.innerHTML = html;
+
+                                    applyToggleFieldVisibility(meta, rows);
 
                                     if (window.Alpine && typeof window.Alpine.initTree === "function") {
                                         window.Alpine.initTree(slotBody);
@@ -3613,6 +3806,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         console.log("[bindExtraDepends] rows:", rows.length);
 
                         renderRowsIntoModal(rows);
+                        applyToggleFieldVisibility(meta, rows);
                     };
 
                     // =========================
