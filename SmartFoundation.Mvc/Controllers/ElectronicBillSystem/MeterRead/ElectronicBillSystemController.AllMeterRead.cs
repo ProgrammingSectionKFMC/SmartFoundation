@@ -682,7 +682,8 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             ["SlotKey"] = "m3"
                         }
                     },
-
+                new FieldConfig { Name = "p50", Label = "النظام لاحظ وجود قراءة غير طبيعيه هل انت متأكد من ادراج القراءة وانها صحيحة؟", Type = "checkbox",Required = true,ColCss = "12" },
+                    new FieldConfig { Name = "p99", Type = "hidden", Value = "0" },
 
             };
 
@@ -792,8 +793,8 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             ["SlotKey"] = "m3"
                         }
                     },
-                    new FieldConfig { Name = "p50", Label = "هل انت متأكد", Type = "checkbox" },
-
+                    new FieldConfig { Name = "p50", Label = "النظام لاحظ وجود قراءة غير طبيعيه هل انت متأكد من ادراج القراءة وانها صحيحة؟", Type = "checkbox",Required = true,ColCss = "12" },
+                    new FieldConfig { Name = "p99", Type = "hidden", Value = "0" },
 
 
             };
@@ -904,7 +905,8 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             ["SlotKey"] = "m3"
                         }
                     },
-
+               new FieldConfig { Name = "p50", Label = "النظام لاحظ وجود قراءة غير طبيعيه هل انت متأكد من ادراج القراءة وانها صحيحة؟", Type = "checkbox",Required = true,ColCss = "12" },
+                    new FieldConfig { Name = "p99", Type = "hidden", Value = "0" },
 
             };
 
@@ -1075,8 +1077,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 ["extraEndpoint"] = "/crud/extradataload",
                 ["allowNoSelection"] = true,
 
-                ["extraTriggerMode"] = "button",
-                ["extraTriggerField"] = "p50",
+               
 
                 ["extraTriggerMode"] = "button",
                 ["extraTriggerField"] = "p03",
@@ -1091,6 +1092,26 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     ["parameter_04"] = "p04",
                     ["parameter_02"] = "p02"
                 },
+
+                ["verifyField"] = "p99",
+                ["verifyResetFields"] = new List<string> { "p02", "p04" },
+                ["verifyRequiredMessage"] = "يجب الضغط على زر التحقق أولاً قبل الحفظ",
+
+                ["rowColorColumn"] = "checks",
+                ["rowColorOperator"] = "=",
+                ["rowColorValue"] = "0",
+                ["rowColorTrueStyle"] = "background:#f74f53;color:#ffffff;",
+                ["rowColorFalseStyle"] = "",
+
+                //["rowColorTrueStyle"] = "background:#fef2f2;color:#991b1b;",
+                //["rowColorFalseStyle"] = "background:#f0fdf4;color:#166534;",
+
+                //["rowColorColumn"] = "TotalPrice",
+                //["rowColorOperator"] = ">",
+                //["rowColorCompareColumn"] = "ServicePriceWithTAX",
+                //["rowColorTrueClass"] = "bg-red-50 text-red-800",
+                //["rowColorFalseClass"] = "bg-green-50 text-green-800"
+
                 ["toggleField"] = "p50",
                 ["toggleColumn"] = "checks",
                 ["toggleOperator"] = "=",
@@ -1103,11 +1124,13 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 //["toggleColumn"] = "TotalPrice",
                 //["toggleOperator"] = "=",
                 //["toggleCompareColumn"] = "ServicePriceWithTAX",
+                //["toggleDefaultHidden"] = true,
+                //["toggleRequiredWhenShown"] = true,
 
 
                 ["visibleFields"] = new List<string>
     {
-         "meterNo","LastRead","CurrentRead","ReadDiff","PRICE","PRICETAX","ServicePriceWithTAX","TotalPrice","checks"
+         "meterNo","LastRead","CurrentRead","ReadDiff","PRICE","PRICETAX","ServicePriceWithTAX","TotalPrice"
     },
 
                 ["headerMap"] = new Dictionary<string, string>

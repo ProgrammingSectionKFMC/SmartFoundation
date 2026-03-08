@@ -598,7 +598,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         IsEdit = true,
                         OpenModal = true,
 
-                        ModalTitle = "",
+                        ModalTitle = "امهال مستفيد",
                         ModalMessage = "",
                         ModalMessageClass = "bg-red-50 text-red-700",
                         ModalMessageIcon = "fa-solid fa-triangle-exclamation",
@@ -666,7 +666,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         IsEdit = true,
                         OpenModal = true,
 
-                        ModalTitle = "",
+                        ModalTitle = "تعديل امهال",
                         ModalMessage = "",
                         ModalMessageClass = "bg-red-50 text-red-700",
                         ModalMessageIcon = "fa-solid fa-triangle-exclamation",
@@ -716,7 +716,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         IsEdit = true,
                         OpenModal = true,
 
-                        ModalTitle = "",
+                        ModalTitle = "الغاء امهال مستفيد",
                         ModalMessage = "",
                         ModalMessageClass = "bg-red-50 text-red-700",
                         ModalMessageIcon = "fa-solid fa-triangle-exclamation",
@@ -765,7 +765,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         IsEdit = true,
                         OpenModal = true,
 
-                        ModalTitle = "",
+                        ModalTitle = "ارسال للتدقيق المالي",
                         ModalMessage = "",
                         ModalMessageClass = "bg-red-50 text-red-700",
                         ModalMessageIcon = "fa-solid fa-triangle-exclamation",
@@ -837,7 +837,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         IsEdit = true,
                         OpenModal = true,
 
-                        ModalTitle = "",
+                        ModalTitle = "اعتماد الامهال",
                         ModalMessage = "",
                         ModalMessageClass = "bg-red-50 text-red-700",
                         ModalMessageIcon = "fa-solid fa-triangle-exclamation",
