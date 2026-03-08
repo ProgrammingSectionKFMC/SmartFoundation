@@ -1204,23 +1204,60 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 }
             },
 
+            //initSelect2InModal(modalEl) {
+            //    if (!window.jQuery || !jQuery.fn || !jQuery.fn.select2) return;
+
+            //    const $modal = jQuery(modalEl);
+
+            //    // 1) destroy أي تهيئة قديمة
+            //    $modal.find("select.js-select2").each(function () {
+            //        const $sel = jQuery(this);
+            //        if ($sel.hasClass("select2-hidden-accessible")) {
+            //            $sel.select2("destroy");
+            //        }
+            //    });
+            //    // 2) init
+            //    $modal.find("select.js-select2").each(function () {
+            //        const $sel = jQuery(this);
+
+            //        const minResults = $sel.data("s2-min-results"); // ممكن undefined
+            //        const ph =
+            //            $sel.data("s2-placeholder") ||
+            //            $sel.find('option[value=""]').text() ||
+            //            "الرجاء الاختيار";
+
+            //        $sel.select2({
+            //            width: "100%",
+            //            dir: "rtl",
+            //            dropdownParent: jQuery(document.body), //  يرسم dropdown فوق المودال
+            //            placeholder: ph,
+            //            allowClear: false,
+            //            minimumResultsForSearch:
+            //                (minResults === undefined || minResults === null) ? 0 : Number(minResults)
+            //        });
+
+            //    });
+            //},
+
+
             initSelect2InModal(modalEl) {
                 if (!window.jQuery || !jQuery.fn || !jQuery.fn.select2) return;
 
                 const $modal = jQuery(modalEl);
-
-                // 1) destroy أي تهيئة قديمة
                 $modal.find("select.js-select2").each(function () {
                     const $sel = jQuery(this);
+
+                    $sel.off(".sfS2Bridge");
+
                     if ($sel.hasClass("select2-hidden-accessible")) {
                         $sel.select2("destroy");
                     }
                 });
-                // 2) init
+
                 $modal.find("select.js-select2").each(function () {
                     const $sel = jQuery(this);
 
-                    const minResults = $sel.data("s2-min-results"); // ممكن undefined
+                    const minResults = $sel.data("s2-min-results");
                     const ph =
                         $sel.data("s2-placeholder") ||
                         $sel.find('option[value=""]').text() ||
@@ -1229,13 +1266,33 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     $sel.select2({
                         width: "100%",
                         dir: "rtl",
-                        dropdownParent: jQuery(document.body), //  يرسم dropdown فوق المودال
+                        dropdownParent: jQuery(document.body),
                         placeholder: ph,
                         allowClear: false,
                         minimumResultsForSearch:
                             (minResults === undefined || minResults === null) ? 0 : Number(minResults)
                     });
 
+                    $sel.on("select2:select.sfS2Bridge select2:clear.sfS2Bridge select2:unselect.sfS2Bridge", function (e) {
+                        const el = this;
+                        const value = $sel.val();
+
+                        queueMicrotask(() => {
+                            el.dispatchEvent(new Event("input", { bubbles: true }));
+                            el.dispatchEvent(new Event("change", { bubbles: true }));
+
+                            el.dispatchEvent(new CustomEvent("sf:field-change", {
+                                bubbles: true,
+                                detail: {
+                                    name: el.name || "",
+                                    value: value,
+                                    text: $sel.find("option:selected").text() || "",
+                                    select2: true,
+                                    originalEvent: e.type
+                                }
+                            }));
+                        });
+                    });
                 });
             },
 

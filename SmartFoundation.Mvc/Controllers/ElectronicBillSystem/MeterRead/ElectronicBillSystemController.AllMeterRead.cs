@@ -776,7 +776,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 // hidden p01 actually posted to SP
                 
                 new FieldConfig { Name = "p01", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
-                new FieldConfig { Name = "p02", Label = "رقم العداد", Type = "select", ColCss = "3", Required = true, Options= MeterOptions },
+                new FieldConfig { Name = "p02", Label = "رقم العداد", Type = "select", ColCss = "3", Required = true, Options= MeterOptions, Select2=true },
                 new FieldConfig { Name = "p03", Label = "PeriodID_", Type = "hidden", ColCss = "3", Required = true, Value = PeriodID_ },
                new FieldConfig
                     {
