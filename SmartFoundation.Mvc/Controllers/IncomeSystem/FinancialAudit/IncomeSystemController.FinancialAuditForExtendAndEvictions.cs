@@ -673,13 +673,11 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
             };
 
-
-
-            var ServiceBillPayFields = new List<FieldConfig>
+            var PaidFields = new List<FieldConfig>
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "UpdateMeterRead" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "MeterRead" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -690,30 +688,29 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 // selection context
                 new FieldConfig { Name = rowIdField, Type = "hidden" },
                 // hidden p01 actually posted to SP
-                 new FieldConfig { Name = "p01", Label = "Order_", Type = "hidden", ColCss = "3", Readonly = true },
+
+
+                new FieldConfig { Name = "p01", Label = "Order_", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p07", Label = "اجمالي مطالبات فواتير الخدمات", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p08", Label = "اجمالي المسدد من فواتير الخدمات", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p09", Label = "المتبقي من فواتير الخدمات", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p23", Label = "رقم المنزل", Type = "text", ColCss = "3", Readonly = true,Value=buildingDetailsNovalue },
-                new FieldConfig { Name = "p22", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsIDvalue },
-                new FieldConfig { Name = "p10", Label = "حالة مطالبات فواتير الخدمات", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p12", Label = "وسيلة الدفع", Type = "select", ColCss = "3", Required = true, Options= ServicebillPaymentTypeOptions },
+                new FieldConfig { Name = "p03", Label = "BillChargeTypeID", Type = "hidden", ColCss = "3", Readonly = true }, 
+                new FieldConfig { Name = "p04", Label = "BillChargeTypeName_A", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p05", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p06", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsNovalue },
+                new FieldConfig { Name = "p07", Label = "SumBillsTotalPrice", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsIDvalue },
+                new FieldConfig { Name = "p08", Label = "SumTotalPaidBills", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p09", Label = "Remaining", Type = "hidden", ColCss = "3", Required = true, Options= RentbillPaymentTypeOptions },
+                new FieldConfig { Name = "p10", Label = "BillsStatus", Type = "hidden", ColCss = "3", Required = true, Options= RentbillPaymentTypeOptions },
+                new FieldConfig { Name = "p11", Label = "BillsStatusID", Type = "hidden", ColCss = "3", Required = true, Options= RentbillPaymentTypeOptions },
 
-                 new FieldConfig { Name = "p11", Label = "ملاحظات", Type = "text", ColCss = "6",Required = true,HelpText="يجب ان لاتتجاوز 1000 حرف*",MaxLength=1050 },
 
-                new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p19", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true },
 
 
             };
 
-
-         
 
             var ApproveExtendFields = new List<FieldConfig>
             {
@@ -825,47 +822,41 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
 
 
-
-
-
-
-
-
-
                 }
             };
 
 
 
 
-            var extraEditCtx = new Dictionary<string, object?>
+            var extraBillsCtx = new Dictionary<string, object?>
             {
                 ["idaraID"] = IdaraId,
                 ["entrydata"] = usersId,
                 ["hostname"] = HostName
             };
 
-            var extraEditRequestBase = new Dictionary<string, object?>
+            var extraBillsRequestBase = new Dictionary<string, object?>
             {
                 ["pageName_"] = PageName,
                 ["ActionType"] = "GetBillsTotalPriceForResident",
                 ["tableIndex"] = 0
             };
 
-            var extraMetaAutoOpen = new Dictionary<string, object?>
+            var extraMetaBills = new Dictionary<string, object?>
             {
                 ["extraSlotKey"] = "m1",
-                ["extraTitle"] = "بيانات المسير",
+                ["extraTitle"] = "بيانات المطالبات",
                 ["useRowExtra"] = true,
                 ["lazyExtra"] = true,
                 ["extraEndpoint"] = "/crud/extradataload",
                 ["allowNoSelection"] = true,
+                ["emptyText"] = "لاتوجد مطالبات مسجلة",
 
                 // المهم
                 ["extraLoadOnOpen"] = true,
 
-                ["ctx"] = extraEditCtx,
-                ["extraRequest"] = extraEditRequestBase,
+                ["ctx"] = extraBillsCtx,
+                ["extraRequest"] = extraBillsRequestBase,
 
                 ["extraParamMap"] = new Dictionary<string, string>
                 {
@@ -896,6 +887,68 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                     ["TotalPrice"] = "المبلغ"
                 }
             };
+
+
+            var extraPaidCtx = new Dictionary<string, object?>
+            {
+                ["idaraID"] = IdaraId,
+                ["entrydata"] = usersId,
+                ["hostname"] = HostName
+            };
+
+            var extraPaidRequestBase = new Dictionary<string, object?>
+            {
+                ["pageName_"] = PageName,
+                ["ActionType"] = "GetBillsPaidByResident",
+                ["tableIndex"] = 0
+            };
+
+
+
+            var extraMetaPaid = new Dictionary<string, object?>
+            {
+                ["extraSlotKey"] = "m1",
+                ["extraTitle"] = "بيانات المدفوعات",
+                ["useRowExtra"] = true,
+                ["lazyExtra"] = true,
+                ["extraEndpoint"] = "/crud/extradataload",
+                ["allowNoSelection"] = true,
+                ["emptyText"] = "لاتوجد مدفوعات مسجلة",
+                // المهم
+                ["extraLoadOnOpen"] = true,
+
+                ["ctx"] = extraPaidCtx,
+                ["extraRequest"] = extraPaidRequestBase,
+
+                ["extraParamMap"] = new Dictionary<string, string>
+                {
+                    ["parameter_01"] = "p02"
+                    ,
+                    ["parameter_02"] = "p03"
+                    ,
+                    ["parameter_03"] = "p05"
+                },
+
+                ["EnableSearch"] = true,
+                ["ShowMeta"] = true,
+                ["PageSize"] = 10,
+                ["Sortable"] = true,
+                ["showRowNumbers"] = true,
+                ["visibleFields"] = new List<string>
+    {
+       "BillChargeTypeName_A","FullName_A","buildingDetailsNo","amount"
+    },
+               
+
+                ["headerMap"] = new Dictionary<string, string>
+                {
+                    ["FullName_A"] = "الاسم",
+                    ["buildingDetailsNo"] = "المبنى",
+                    ["BillChargeTypeName_A"] = "الخدمة",
+                    ["amount"] = "المبلغ"
+                }
+            };
+
 
 
             var dsModel3 = new SmartTableDsModel
@@ -999,10 +1052,10 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                             Buttons = new List<FormButtonConfig>
                             {
                                // new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "success" },
-                                new FormButtonConfig { Text = "انهاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
+                                new FormButtonConfig { Text = "انهاء", Type = "button", Color = "secondary", OnClickJs = "window.__sfTableActive?.closeModal();"  }
                             }
                         },
-                        Meta = extraMetaAutoOpen,
+                        Meta = extraMetaBills,
                         RequireSelection = true,
                         MinSelection = 1,
                         MaxSelection = 1
@@ -1013,15 +1066,15 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                     Edit1 = new TableAction
                      {
                          Label = "استعراض السدادات",
-                         Icon = "fa fa-search",
+                         Icon = "fa fa-money-bill",
                          Color = "info",
                          //Placement = TableActionPlacement.ActionsMenu, 
                          IsEdit = true,
                          OpenModal = true,
                          ModalTitle = "استعراض السدادات",
-                         ModalMessage = msgservice,
-                         ModalMessageIcon = "fa-solid fa-circle-info",
-                         ModalMessageClass = colorservice,
+                         //ModalMessage = msgservice,
+                         //ModalMessageIcon = "fa-solid fa-circle-info",
+                         //ModalMessageClass = colorservice,
                         Show = true,
                         OpenForm = new FormConfig
                          {
@@ -1031,9 +1084,15 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                              ActionUrl = "/crud/update",
                              SubmitText = "حفظ التعديلات",
                              CancelText = "إلغاء",
-                             Fields = ServiceBillPayFields
-                         },
-                         RequireSelection = true,
+                             Fields = PaidFields,
+                            Buttons = new List<FormButtonConfig>
+                            {
+                               // new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "success" },
+                                new FormButtonConfig { Text = "انهاء", Type = "button", Color = "secondary", OnClickJs = "window.__sfTableActive?.closeModal();"  }
+                            }
+                        },
+                        Meta = extraMetaPaid,
+                        RequireSelection = true,
                          MinSelection = 1,
                          MaxSelection = 1
                      },
@@ -1060,7 +1119,12 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                             ActionUrl = "/crud/update",
                             SubmitText = "حفظ التعديلات",
                             CancelText = "إلغاء",
-                            Fields = ServiceBillPayFields
+                            Fields = PaidFields,
+                            Buttons = new List<FormButtonConfig>
+                            {
+                               new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "success" },
+                                new FormButtonConfig { Text = "انهاء", Type = "button", Color = "secondary", OnClickJs = "window.__sfTableActive?.closeModal();"  }
+                            }
                         },
                         RequireSelection = true,
                         MinSelection = 1,
