@@ -520,21 +520,30 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                     if (dt3 != null && dt3.Columns.Count > 0)
                     {
                         // RowId
-                        rowIdField_dt3 = "Order_";
-                        var possibleIdNames3 = new[] { "Order_", "order_", "Id", "ID" };
-                        rowIdField_dt3 = possibleIdNames3.FirstOrDefault(n => dt3.Columns.Contains(n))
-                                     ?? dt3.Columns[0].ColumnName;
+                        rowIdField_dt3 =
+                                    dt3.Columns.Cast<DataColumn>()
+                                       .FirstOrDefault(c =>
+                                           c.ColumnName.Equals("RowId", StringComparison.OrdinalIgnoreCase) ||
+                                           c.ColumnName.Equals("order_", StringComparison.OrdinalIgnoreCase) ||
+                                           c.ColumnName.Equals("Order_", StringComparison.OrdinalIgnoreCase) ||
+                                           c.ColumnName.Equals("Id", StringComparison.OrdinalIgnoreCase) ||
+                                           c.ColumnName.Equals("ID", StringComparison.OrdinalIgnoreCase))
+                                       ?.ColumnName
+                                    ?? dt3.Columns[0].ColumnName;
 
                         // عناوين الأعمدة بالعربي
                         var headerMap3 = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                         {
                             
 
-                            ["BillChargeTypeID"] = "الرقم المرجعي",
+                           
+                            ["Order_"] = "م",
+                            ["residentInfoID"] = "الرقم المرجعي",
                             ["BillChargeTypeName_A"] = "النوع",
-                            ["TotalBillsAmount"] = "المسدد",
-                            ["TotalBillsPaid"] = "المدفوع",
-                            ["BillsAmountresidual"] = "المتبقي",
+                            ["buildingDetailsNo"] = "رقم المبنى",
+                            ["SumBillsTotalPrice"] = "المطلوب",
+                            ["SumTotalPaidBills"] = "المسدد",
+                            ["Remaining"] = "المتبقي",
                             ["BillsStatus"] = "الحالة"
                             
 
@@ -558,12 +567,9 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
                             bool isresidentInfoID = c.ColumnName.Equals("residentInfoID", StringComparison.OrdinalIgnoreCase);
 
-                            bool isOrder_ = c.ColumnName.Equals("Order_", StringComparison.OrdinalIgnoreCase);
-                            bool isRentBillsStatusID = c.ColumnName.Equals("RentBillsStatusID", StringComparison.OrdinalIgnoreCase);
-                            bool isElectrecityBillStatusID = c.ColumnName.Equals("ElectrecityBillStatusID", StringComparison.OrdinalIgnoreCase);
-                            bool isIdaraID = c.ColumnName.Equals("IdaraID", StringComparison.OrdinalIgnoreCase);
-                            bool isElectrecityBillStatus = c.ColumnName.Equals("ElectrecityBillStatus", StringComparison.OrdinalIgnoreCase);
-                            bool isRentBillsStatus = c.ColumnName.Equals("RentBillsStatus", StringComparison.OrdinalIgnoreCase);
+                            bool isHidden =  c.ColumnName.Equals("BillChargeTypeID", StringComparison.OrdinalIgnoreCase)
+                                           || c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase)
+                                           || c.ColumnName.Equals("BillsStatusID", StringComparison.OrdinalIgnoreCase);
                            
 
 
@@ -574,7 +580,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                                 Type = colType,
                                 Sortable = true
                                  ,
-                                Visible = !( isresidentInfoID  || isOrder_|| isRentBillsStatusID || isElectrecityBillStatusID || isIdaraID || isRentBillsStatus || isElectrecityBillStatus)
+                                Visible = !(isHidden)
                             });
                         }
 
@@ -601,16 +607,17 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                                 return value?.ToString() ?? "0";
                             }
 
-                            dict3["p01"] = Get("Order_");
+                            dict3["p01"] = Get("order_");
                             dict3["p02"] = Get("residentInfoID");
-                            dict3["p03"] = GetNumeric("TotalRentBillsAmount");
-                            dict3["p04"] = GetNumeric("TotalRentBillsPaid");
-                            dict3["p05"] = GetNumeric("RentBillsAmountresidual");
-                            dict3["p06"] = Get("RentBillsStatus");
-                            dict3["p07"] = GetNumeric("TotalServiceBillsAmount");
-                            dict3["p08"] = GetNumeric("TotalServiceBillsPaid");
-                            dict3["p09"] = GetNumeric("ServiceBillsAmountresidual");
-                            dict3["p10"] = Get("ServiceBillStatus");
+                            dict3["p03"] = GetNumeric("BillChargeTypeID");
+                            dict3["p04"] = GetNumeric("BillChargeTypeName_A");
+                            dict3["p05"] = GetNumeric("buildingDetailsID");
+                            dict3["p06"] = Get("buildingDetailsNo");
+                            dict3["p07"] = GetNumeric("SumBillsTotalPrice");
+                            dict3["p08"] = GetNumeric("SumTotalPaidBills");
+                            dict3["p09"] = GetNumeric("Remaining");
+                            dict3["p10"] = Get("BillsStatus");
+                            dict3["p11"] = Get("BillsStatusID");
 
                             rowsList_dt3.Add(dict3);
                         }
@@ -628,7 +635,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
 
             // UPDATE fields
-            var RentBillPayFields = new List<FieldConfig>
+            var BillsFields = new List<FieldConfig>
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
@@ -645,21 +652,19 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 // hidden p01 actually posted to SP
 
 
-                
-
                 new FieldConfig { Name = "p01", Label = "Order_", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p03", Label = "اجمالي مطالبات الايجار", Type = "text", ColCss = "3", Readonly = true }, 
-                new FieldConfig { Name = "p04", Label = "اجمالي المسدد من الايجار", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p05", Label = "المتبقي من الايجار", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p23", Label = "رقم المنزل", Type = "text", ColCss = "3", Readonly = true,Value=buildingDetailsNovalue },
-                new FieldConfig { Name = "p22", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsIDvalue },
-                new FieldConfig { Name = "p06", Label = "حالة مطالبات الايجار", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p12", Label = "وسيلة الدفع", Type = "select", ColCss = "3", Required = true, Options= RentbillPaymentTypeOptions },
+                new FieldConfig { Name = "p03", Label = "BillChargeTypeID", Type = "hidden", ColCss = "3", Readonly = true }, 
+                new FieldConfig { Name = "p04", Label = "BillChargeTypeName_A", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p05", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p06", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsNovalue },
+                new FieldConfig { Name = "p07", Label = "SumBillsTotalPrice", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsIDvalue },
+                new FieldConfig { Name = "p08", Label = "SumTotalPaidBills", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p09", Label = "Remaining", Type = "hidden", ColCss = "3", Required = true, Options= RentbillPaymentTypeOptions },
+                new FieldConfig { Name = "p10", Label = "BillsStatus", Type = "hidden", ColCss = "3", Required = true, Options= RentbillPaymentTypeOptions },
+                new FieldConfig { Name = "p11", Label = "BillsStatusID", Type = "hidden", ColCss = "3", Required = true, Options= RentbillPaymentTypeOptions },
 
-                 new FieldConfig { Name = "p11", Label = "ملاحظات", Type = "text", ColCss = "6",Required = true,HelpText="يجب ان لاتتجاوز 1000 حرف*",MaxLength=1050 },
 
-                new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
@@ -831,6 +836,68 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             };
 
 
+
+
+            var extraEditCtx = new Dictionary<string, object?>
+            {
+                ["idaraID"] = IdaraId,
+                ["entrydata"] = usersId,
+                ["hostname"] = HostName
+            };
+
+            var extraEditRequestBase = new Dictionary<string, object?>
+            {
+                ["pageName_"] = PageName,
+                ["ActionType"] = "GetBillsTotalPriceForResident",
+                ["tableIndex"] = 0
+            };
+
+            var extraMetaAutoOpen = new Dictionary<string, object?>
+            {
+                ["extraSlotKey"] = "m1",
+                ["extraTitle"] = "بيانات المسير",
+                ["useRowExtra"] = true,
+                ["lazyExtra"] = true,
+                ["extraEndpoint"] = "/crud/extradataload",
+                ["allowNoSelection"] = true,
+
+                // المهم
+                ["extraLoadOnOpen"] = true,
+
+                ["ctx"] = extraEditCtx,
+                ["extraRequest"] = extraEditRequestBase,
+
+                ["extraParamMap"] = new Dictionary<string, string>
+                {
+                    ["parameter_01"] = "p02"
+                    ,
+                    ["parameter_02"] = "p03"
+                    ,
+                    ["parameter_03"] = "p05"
+                },
+
+                ["EnableSearch"] = true,
+                ["ShowMeta"] = true,
+                ["PageSize"] = 10,
+                ["Sortable"] = true,
+                ["showRowNumbers"] = true,
+
+                ["visibleFields"] = new List<string>
+    {
+        "BillsID","BillNumber","BillChargeTypeName_A", "buildingDetailsNo","TotalPrice"
+    },
+
+                ["headerMap"] = new Dictionary<string, string>
+                {
+                    ["BillsID"] = "الرقم المرجعي",
+                    ["BillNumber"] = "رقم الفاتورة",
+                    ["BillChargeTypeName_A"] = "الخدمة",
+                    ["buildingDetailsNo"] = "رقم المبنى",
+                    ["TotalPrice"] = "المبلغ"
+                }
+            };
+
+
             var dsModel3 = new SmartTableDsModel
             {
                 PageTitle = "التدقيق المالي لحالات الامهال والاخلاء",
@@ -850,23 +917,12 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 //TabelLabelIcon = "fa-solid fa-list",
                 ShowToolbar = true,
                 EnableCellCopy = false,
-                //RenderAsToggle = true,
-                //ToggleLabel = "التسوية المالية",
-                //ToggleIcon = "fa-solid fa-file-signature",
-                //ToggleDefaultOpen = true,
-                //ShowToggleCount = false,
-                RenderMode = SmartTableRenderMode.Toggle,
                 RenderAsToggle = true,
-                RenderAsSection = false,
-                RenderAsTab = false,
-                TabGroupKey = "financial-audit-extend-evictions",
-                TabKey = "financial-settlement",
-                TabLabel = "التسوية المالية",
-                TabIcon = "fa-solid fa-file-invoice-dollar",
-                TabDefaultActive = false,
-                ShowTabCount = false,
-                TabOrder = 2,
+                ToggleLabel = "التسوية المالية",
+                ToggleIcon = "fa-solid fa-file-signature",
                 ToggleDefaultOpen = true,
+                ShowToggleCount = false,
+                Selectable = true,
 
                 Toolbar = new TableToolbarConfig
                 {
@@ -927,9 +983,9 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         IsEdit = true,
                         OpenModal = true,
                         ModalTitle = "استعراض المطالبات",
-                        ModalMessage = msgrent,
-                        ModalMessageIcon = "fa-solid fa-circle-info",
-                        ModalMessageClass = colorrent,
+                        //ModalMessage = msgrent,
+                        //ModalMessageIcon = "fa-solid fa-circle-info",
+                        //ModalMessageClass = colorrent,
                         Show = true,
                         OpenForm = new FormConfig
                         {
@@ -939,13 +995,14 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                             ActionUrl = "/crud/update",
                             SubmitText = "حفظ التعديلات",
                             CancelText = "إلغاء",
-                            Fields = RentBillPayFields,
+                            Fields = BillsFields,
                             Buttons = new List<FormButtonConfig>
                             {
-                                new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "success" },
-                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
+                               // new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "success" },
+                                new FormButtonConfig { Text = "انهاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
                             }
                         },
+                        Meta = extraMetaAutoOpen,
                         RequireSelection = true,
                         MinSelection = 1,
                         MaxSelection = 1
