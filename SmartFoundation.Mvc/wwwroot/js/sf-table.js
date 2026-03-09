@@ -6918,9 +6918,32 @@ window.sfMoneySarOnInput = function (el) {
 //============ For tabs sections ============
 
 (function () {
+    var TAB_STORE_PREFIX = 'sf:activeTab:';
+
     function safeEsc(value) {
         if (window.CSS && window.CSS.escape) return window.CSS.escape(value);
         return String(value).replace(/"/g, '\\"');
+    }
+
+    function getTabStorageKey(groupKey) {
+        var pageKey = window.location.pathname + window.location.search;
+        return TAB_STORE_PREFIX + pageKey + ':' + groupKey;
+    }
+
+    function saveActiveTab(groupKey, tabKey) {
+        if (!groupKey) return;
+        try {
+            sessionStorage.setItem(getTabStorageKey(groupKey), tabKey || '');
+        } catch (e) { }
+    }
+
+    function loadActiveTab(groupKey) {
+        if (!groupKey) return '';
+        try {
+            return sessionStorage.getItem(getTabStorageKey(groupKey)) || '';
+        } catch (e) {
+            return '';
+        }
     }
 
     function syncTabHost(host) {
@@ -6943,6 +6966,10 @@ window.sfMoneySarOnInput = function (el) {
             panel.classList.toggle('is-active', isActive);
             panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
         });
+
+        if (host.dataset.tabGroup) {
+            saveActiveTab(host.dataset.tabGroup, activeKey);
+        }
     }
 
     function ensureTabHost(mount, groupKey) {
@@ -6988,6 +7015,18 @@ window.sfMoneySarOnInput = function (el) {
     function pickDefaultActive(host) {
         if (!host) return;
 
+        var groupKey = host.dataset.tabGroup || '';
+        var saved = loadActiveTab(groupKey);
+
+        if (saved) {
+            var savedBtn = host.querySelector('[data-role="tab-button"][data-tab-key="' + safeEsc(saved) + '"]');
+            if (savedBtn) {
+                host.dataset.activeTab = saved;
+                return;
+            }
+            return;
+        }
+
         var current = host.dataset.activeTab;
         if (current) {
             var exists = host.querySelector('[data-role="tab-button"][data-tab-key="' + safeEsc(current) + '"]');
@@ -7002,6 +7041,19 @@ window.sfMoneySarOnInput = function (el) {
             host.dataset.activeTab = preferred.dataset.tabKey || "";
         }
     }
+
+    window.sfSetActiveTab = function (groupKey, tabKey) {
+        if (!groupKey || !tabKey) return;
+
+        var host = document.querySelector('.sf-tab-panel[data-tab-group="' + safeEsc(groupKey) + '"]');
+        if (!host) {
+            saveActiveTab(groupKey, tabKey);
+            return;
+        }
+
+        host.dataset.activeTab = tabKey;
+        syncTabHost(host);
+    };
 
     window.sfInitTabGroup = function (mount) {
         if (!mount || mount.dataset.tabMounted === 'true') return;
@@ -7024,6 +7076,8 @@ window.sfMoneySarOnInput = function (el) {
 
         var host = ensureTabHost(mount, groupKey);
         if (!host) return;
+
+        host.dataset.tabGroup = groupKey;
 
         var header = host.querySelector('[data-role="tab-header"]');
         var body = host.querySelector('[data-role="tab-body"]');
@@ -7060,13 +7114,9 @@ window.sfMoneySarOnInput = function (el) {
             liveButton.dataset.tabBound = 'true';
         }
 
-        if (isDefault) {
+        if (!loadActiveTab(groupKey) && isDefault && !host.dataset.activeTab) {
             host.dataset.activeTab = tabKey;
-        } else {
-            pickDefaultActive(host);
         }
-
-        syncTabHost(host);
 
         mount.dataset.tabMounted = 'true';
         mount.style.display = 'none';
@@ -7081,6 +7131,14 @@ window.sfMoneySarOnInput = function (el) {
 
     function bootTabs() {
         window.sfInitAllPendingTabMounts(document);
+
+        document.querySelectorAll('.sf-tab-panel[data-tab-group]').forEach(function (host) {
+            pickDefaultActive(host);
+
+            if (host.dataset.activeTab) {
+                syncTabHost(host);
+            }
+        });
     }
 
     if (document.readyState === 'loading') {
@@ -7115,4 +7173,5 @@ window.sfMoneySarOnInput = function (el) {
         subtree: true
     });
 })();
+
 //============ End tabs sections ============
