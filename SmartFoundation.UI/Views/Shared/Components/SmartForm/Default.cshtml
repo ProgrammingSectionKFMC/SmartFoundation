@@ -45,29 +45,26 @@
     @foreach (var field in Model.Fields.Where(f => !f.IsHidden && !f.Type.Equals("hidden", StringComparison.OrdinalIgnoreCase)))
     {
         if (!string.IsNullOrWhiteSpace(field.SectionTitle) && field.SectionTitle != currentSection)
-        {
-            // اقفل أي سكشن مفتوح
-            if (sectionOpen)
-            {
-                @:</div>
-                @:</fieldset>
-                sectionOpen = false;
-            }
-
-            
-            if (defaultRowOpen)
-            {
-                @:</div>
-                defaultRowOpen = false;
-            }
-
-            // افتح سكشن جديد باستخدام fieldset
-            currentSection = field.SectionTitle;
-            @:<fieldset class="section-box col-span-12 mb-2">
-                @:<legend class="section-legend">@currentSection</legend>
-                @:<div class="form-row grid grid-cols-12 gap-6 sm:gap-8">
-            sectionOpen = true;
-        }
+{
+    if (sectionOpen)
+    {
+        @:</div>
+        @:</div>
+        sectionOpen = false;
+    }
+    if (defaultRowOpen)
+    {
+        @:</div>
+        defaultRowOpen = false;
+    }
+    currentSection = field.SectionTitle;
+    @:<div class="section-box col-span-12 mb-4">
+        @:<div class="section-legend">
+            @:<span class="section-legend__text">@currentSection</span>
+        @:</div>
+        @:<div class="form-row grid grid-cols-12 gap-8 sm:gap-8">
+    sectionOpen = true;
+}
         else
         {
             

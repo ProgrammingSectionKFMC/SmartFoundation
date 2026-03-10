@@ -147,227 +147,227 @@
                                autocorrect="off"
                                autocapitalize="off"
                                spellcheck="false" />
-
-                        <button type="button"
-                                class="btn btn-secondary"
-                                x-on:click="refresh()"
-                                x-show="toolbar.showRefresh">
-                            <i class="fa fa-rotate"></i>
-                            <span class="hidden-md">تحديث</span>
-                        </button>
                     </div>
-
-                    @if (Model.ShowFilter)
-                    {
-                        <button type="button"
-                                class="sf-filter-btn"
-                                x-on:click="toggleFilters()"
-                                :aria-pressed="String(!!showFilters)"
-                                title="إظهار/إخفاء صف الفلاتر">
-                            <i class="fa fa-filter"></i>
-                            فلترة
-                        </button>
-
-                        <button type="button"
-                                class="sf-filter-clear"
-                                x-show="hasActiveColumnFilters()"
-                                x-on:click="clearFiltersUI()"
-                                title="مسح جميع الفلاتر">
-                            <i class="fa fa-eraser"></i>
-                            مسح الفلاتر
-                        </button>
-                    }
-
-                    <template x-if="showColumnVisibility && toolbar && (toolbar.showColumns !== false)">
-                        <div class="sf-colvis" x-data="{ open:false }">
-
-                            <button type="button"
-                                    class="sf-filter-btn sf-colvis-btn"
-                                    x-on:click="open = !open"
-                                    :aria-expanded="String(open)"
-                                    title="إظهار/إخفاء الأعمدة">
-                                <i class="fa fa-columns"></i>
-                                الأعمدة
-                            </button>
-
-                            <div x-show="open"
-                                 x-transition
-                                 x-on:click.outside="open=false"
-                                 class="sf-colvis__panel">
-
-                                <div class="sf-colvis__head">
-                                    <div class="sf-colvis__title">
-                                        <i class="fa fa-table-columns"></i>
-                                        تخصيص الأعمدة
-                                    </div>
-
-                                    <button type="button" class="sf-colvis__close" x-on:click="open=false">✕</button>
-                                </div>
-
-                                <div class="sf-colvis__search">
-                                    <input type="text"
-                                           class="sf-input"
-                                           placeholder="بحث في الأعمدة…"
-                                           x-model.trim="colVisSearch" />
-                                </div>
-
-                                <div class="sf-colvis__actions">
-                                    <button type="button" class="btn btn-sm btn-light" x-on:click="colVisShowAll()">
-                                        إظهار الكل
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-light" x-on:click="colVisReset()">
-                                        إعادة ضبط
-                                    </button>
-                                </div>
-
-                                <div class="sf-colvis__list">
-                                    <template x-for="c in colVisFilteredColumns()" :key="c.field">
-                                        <label class="sf-colvis__item" :class="colVisIsLocked(c) ? 'is-locked' : ''">
-                                            <input type="checkbox"
-                                                   class="sf-checkbox"
-                                                   :disabled="colVisIsLocked(c)"
-                                                   :checked="colVisIsShown(c)"
-                                                   x-on:change="colVisToggle(c)" />
-                                            <span class="sf-colvis__label" x-text="colVisLabel(c)"></span>
-                                        </label>
-                                    </template>
-                                </div>
-
-                                <div class="sf-colvis__foot">
-                                    <button type="button" class="btn btn-success btn-sm" x-on:click="colVisApply(); open=false">
-                                        تطبيق
-                                    </button>
-                                </div>
-
-                            </div>
-                        </div>
-                    </template>
 
                     <div class="toolbar-actions">
 
-                        <template x-if="showPageSizeSelector">
-                            <div class="inline-flex items-center gap-2">
-                                <label class="label-sm" for="pageSizeSelect">صف/صفحة</label>
-                                <select id="pageSizeSelect"
-                                        class="sf-input select-sm"
-                                        x-model.number="pageSize"
-                                        x-on:change="page=1; load()">
-                                    <template x-for="s in pageSizes" :key="s">
-                                        <option x-text="s"></option>
-                                    </template>
-                                </select>
-                            </div>
-                        </template>
+                        <div class="inline-flex flex-wrap items-center gap-2">
 
-                        <template x-for="(act, actIdx) in [
-                                  { action: toolbar.add, show: toolbar.showAdd, enable: toolbar.enableAdd ?? true, type: 'add' },
-                                  { action: toolbar.add1, show: toolbar.showAdd1, enable: toolbar.enableAdd1 ?? true, type: 'add1' },
-                                  { action: toolbar.add2, show: toolbar.showAdd2, enable: toolbar.enableAdd2 ?? true, type: 'add2' },
-                                  { action: toolbar.edit, show: toolbar.showEdit, enable: toolbar.enableEdit ?? true, type: 'edit' },
-                                  { action: toolbar.edit1, show: toolbar.showEdit1, enable: toolbar.enableEdit1 ?? true, type: 'edit1' },
-                                  { action: toolbar.edit2, show: toolbar.showEdit2, enable: toolbar.enableEdit2 ?? true, type: 'edit2' },
-                                  { action: toolbar.delete, show: toolbar.showDelete, enable: toolbar.enableDelete ?? true, type: 'delete' },
-                                  { action: toolbar.delete1, show: toolbar.showDelete1, enable: toolbar.enableDelete1 ?? true, type: 'delete1' },
-                                  { action: toolbar.delete2, show: toolbar.showDelete2, enable: toolbar.enableDelete2 ?? true, type: 'delete2' },
-                                  { action: toolbar.print, show: toolbar.showPrint, enable: true, type: 'print' },
-                                  { action: toolbar.print1, show: toolbar.showPrint1, enable: true, type: 'print1' },
-                                  ...(toolbar.customActions || []).map(a=>
-                            ({ action: a, show: true, enable: true, type: 'custom' }))
-                            ].filter(x => x.action && x.show !== false && (x.action.placement ?? 'Button') !== 'ActionsMenu')"
-                            :key="actIdx">
-
-                            <button type="button"
-                                    class="btn"
-                                    :class="[
-                        'btn-' + (act.action.color ?? 'secondary'),
-                        !act.enable || (act.action.requireSelection && selectedKeys.size !== 1) ? 'cursor-not-allowed opacity-50' : ''
-                    ]"
-                                    x-on:click="act.enable ? doAction(act.action, act.action.requireSelection ? getSingleSelection() : null) : toastr.warning('هذا الإجراء غير متاح حالياً')"
-                                    :disabled="!act.enable || (act.action.requireSelection && selectedKeys.size !== 1)">
-
-                                <template x-if="act.action.icon && !(act.action.icon.startsWith('/') || act.action.icon.includes('.svg') || act.action.icon.includes('.png') || act.action.icon.includes('.jpg') || act.action.icon.includes('.jpeg') || act.action.icon.includes('.webp'))">
-                                    <i :class="act.action.icon"></i>
-                                </template>
-
-                                <template x-if="act.action.icon && (act.action.icon.startsWith('/') || act.action.icon.includes('.svg') || act.action.icon.includes('.png') || act.action.icon.includes('.jpg') || act.action.icon.includes('.jpeg') || act.action.icon.includes('.webp'))">
-                                    <img :src="act.action.icon" alt="" class="sf-action-icon-img" />
-                                </template>
-
-                                <span x-text="act.action.label"></span>
-                            </button>
-                        </template>
-
-                        <template x-if="[
-                                  { action: toolbar.add, show: toolbar.showAdd, enable: toolbar.enableAdd ?? true },
-                                  { action: toolbar.add1, show: toolbar.showAdd1, enable: toolbar.enableAdd1 ?? true },
-                                  { action: toolbar.add2, show: toolbar.showAdd2, enable: toolbar.enableAdd2 ?? true },
-                                  { action: toolbar.edit, show: toolbar.showEdit, enable: toolbar.enableEdit ?? true },
-                                  { action: toolbar.edit1, show: toolbar.showEdit1, enable: toolbar.enableEdit1 ?? true },
-                                  { action: toolbar.edit2, show: toolbar.showEdit2, enable: toolbar.enableEdit2 ?? true },
-                                  { action: toolbar.delete, show: toolbar.showDelete, enable: toolbar.enableDelete ?? true },
-                                  { action: toolbar.delete1, show: toolbar.showDelete1, enable: toolbar.enableDelete1 ?? true },
-                                  { action: toolbar.delete2, show: toolbar.showDelete2, enable: toolbar.enableDelete2 ?? true },
-                                  { action: toolbar.print, show: toolbar.showPrint, enable: true },
-                                  { action: toolbar.print1, show: toolbar.showPrint1, enable: true },
-                                  ...(toolbar.customActions || []).map(a=>
-                            ({ action: a, show: true, enable: true }))
-                            ].some(x => x.action && x.show !== false && x.action.placement === 'ActionsMenu')">
-
-                            <div class="relative" x-data="{ open:false }">
+                            @if (Model.ShowFilter)
+                            {
                                 <button type="button"
-                                        class="btn btn-outline-secondary"
-                                        x-on:click="open = !open">
-                                    <i class="fa fa-ellipsis-v"></i>
-                                    الإجراءات
+                                        class="sf-filter-btn"
+                                        x-on:click="toggleFilters()"
+                                        :aria-pressed="String(!!showFilters)"
+                                        title="إظهار/إخفاء صف الفلاتر">
+                                    <i class="fa fa-filter"></i>
+                                    فلترة
                                 </button>
 
-                                <div x-show="open"
-                                     x-transition
-                                     x-on:click.outside="open=false"
-                                     class="absolute right-0 z-50 mt-2 w-56 rounded border bg-white shadow">
+                                <button type="button"
+                                        class="sf-filter-clear"
+                                        x-show="hasActiveColumnFilters()"
+                                        x-on:click="clearFiltersUI()"
+                                        title="مسح جميع الفلاتر">
+                                    <i class="fa fa-eraser"></i>
+                                    مسح الفلاتر
+                                </button>
+                            }
 
-                                    <template x-for="(act, actIdx) in [
-                                              { action: toolbar.add, show: toolbar.showAdd, enable: toolbar.enableAdd ?? true },
-                                              { action: toolbar.add1, show: toolbar.showAdd1, enable: toolbar.enableAdd1 ?? true },
-                                              { action: toolbar.add2, show: toolbar.showAdd2, enable: toolbar.enableAdd2 ?? true },
-                                              { action: toolbar.edit, show: toolbar.showEdit, enable: toolbar.enableEdit ?? true },
-                                              { action: toolbar.edit1, show: toolbar.showEdit1, enable: toolbar.enableEdit1 ?? true },
-                                              { action: toolbar.edit2, show: toolbar.showEdit2, enable: toolbar.enableEdit2 ?? true },
-                                              { action: toolbar.delete, show: toolbar.showDelete, enable: toolbar.enableDelete ?? true },
-                                              { action: toolbar.delete1, show: toolbar.showDelete1, enable: toolbar.enableDelete1 ?? true },
-                                              { action: toolbar.delete2, show: toolbar.showDelete2, enable: toolbar.enableDelete2 ?? true },
-                                              { action: toolbar.print, show: toolbar.showPrint, enable: true },
-                                              { action: toolbar.print1, show: toolbar.showPrint1, enable: true },
-                                              ...(toolbar.customActions || []).map(a=>
-                                        ({ action: a, show: true, enable: true }))
-                                        ].filter(x => x.action && x.show !== false && x.action.placement === 'ActionsMenu')"
-                                        :key="actIdx">
+                            <template x-if="showColumnVisibility && toolbar && (toolbar.showColumns !== false)">
+                                <div class="sf-colvis" x-data="{ open:false }">
 
-                                        <span class="sf-tipwrap"
-                                              :data-tip="!act.enable ? 'هذا الإجراء غير متاح حالياً' : (act.action.requireSelection && selectedKeys.size !== 1) ? 'يتطلب اختيار صف' : null">
+                                    <button type="button"
+                                            class="sf-filter-btn sf-colvis-btn"
+                                            x-on:click="open = !open"
+                                            :aria-expanded="String(open)"
+                                            title="إظهار/إخفاء الأعمدة">
+                                        <i class="fa fa-columns"></i>
+                                        الأعمدة
+                                    </button>
 
-                                            <button type="button"
-                                                    class="w-full px-3 py-2 text-right hover:bg-gray-100"
-                                                    :class="!act.enable ? 'cursor-not-allowed opacity-50' : ''"
-                                                    x-on:click="act.enable ? (doAction(act.action, act.action.requireSelection ? getSingleSelection() : null), open=false) : toastr.warning('هذا الإجراء غير متاح حالياً')"
-                                                    :disabled="!act.enable || (act.action.requireSelection && selectedKeys.size !== 1)">
+                                    <div x-show="open"
+                                         x-transition
+                                         x-on:click.outside="open=false"
+                                         class="sf-colvis__panel">
 
-                                                <template x-if="act.action.icon && !(act.action.icon.startsWith('/') || act.action.icon.includes('.svg') || act.action.icon.includes('.png') || act.action.icon.includes('.jpg') || act.action.icon.includes('.jpeg') || act.action.icon.includes('.webp'))">
-                                                    <i :class="act.action.icon"></i>
-                                                </template>
+                                        <div class="sf-colvis__head">
+                                            <div class="sf-colvis__title">
+                                                <i class="fa fa-table-columns"></i>
+                                                تخصيص الأعمدة
+                                            </div>
 
-                                                <template x-if="act.action.icon && (act.action.icon.startsWith('/') || act.action.icon.includes('.svg') || act.action.icon.includes('.png') || act.action.icon.includes('.jpg') || act.action.icon.includes('.jpeg') || act.action.icon.includes('.webp'))">
-                                                    <img :src="act.action.icon" alt="" class="sf-action-icon-img" />
-                                                </template>
+                                            <button type="button" class="sf-colvis__close" x-on:click="open=false">✕</button>
+                                        </div>
 
-                                                <span x-text="act.action.label"></span>
+                                        <div class="sf-colvis__search">
+                                            <input type="text"
+                                                   class="sf-input"
+                                                   placeholder="بحث في الأعمدة…"
+                                                   x-model.trim="colVisSearch" />
+                                        </div>
+
+                                        <div class="sf-colvis__actions">
+                                            <button type="button" class="btn btn-sm btn-light" x-on:click="colVisShowAll()">
+                                                إظهار الكل
                                             </button>
+                                            <button type="button" class="btn btn-sm btn-light" x-on:click="colVisReset()">
+                                                إعادة ضبط
+                                            </button>
+                                        </div>
 
-                                        </span>
-                                    </template>
+                                        <div class="sf-colvis__list">
+                                            <template x-for="c in colVisFilteredColumns()" :key="c.field">
+                                                <label class="sf-colvis__item" :class="colVisIsLocked(c) ? 'is-locked' : ''">
+                                                    <input type="checkbox"
+                                                           class="sf-checkbox"
+                                                           :disabled="colVisIsLocked(c)"
+                                                           :checked="colVisIsShown(c)"
+                                                           x-on:change="colVisToggle(c)" />
+                                                    <span class="sf-colvis__label" x-text="colVisLabel(c)"></span>
+                                                </label>
+                                            </template>
+                                        </div>
+
+                                        <div class="sf-colvis__foot">
+                                            <button type="button" class="btn btn-success btn-sm" x-on:click="colVisApply(); open=false">
+                                                تطبيق
+                                            </button>
+                                        </div>
+
+                                    </div>
                                 </div>
-                            </div>
-                        </template>
+                            </template>
+
+                            <template x-if="showPageSizeSelector">
+                                <div class="inline-flex items-center gap-2">
+                                    <label class="label-sm whitespace-nowrap" for="pageSizeSelect">عرض</label>
+                                    <select id="pageSizeSelect"
+                                            class="sf-input select-sm"
+                                            x-model.number="pageSize"
+                                            x-on:change="page=1; load()">
+                                        <template x-for="s in pageSizes" :key="s">
+                                            <option x-text="s"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </template>
+
+                        </div>
+
+                        <div class="actions-list">
+
+                            <template x-for="(act, actIdx) in [
+                                      { action: toolbar.add, show: toolbar.showAdd, enable: toolbar.enableAdd ?? true, type: 'add' },
+                                      { action: toolbar.add1, show: toolbar.showAdd1, enable: toolbar.enableAdd1 ?? true, type: 'add1' },
+                                      { action: toolbar.add2, show: toolbar.showAdd2, enable: toolbar.enableAdd2 ?? true, type: 'add2' },
+                                      { action: toolbar.edit, show: toolbar.showEdit, enable: toolbar.enableEdit ?? true, type: 'edit' },
+                                      { action: toolbar.edit1, show: toolbar.showEdit1, enable: toolbar.enableEdit1 ?? true, type: 'edit1' },
+                                      { action: toolbar.edit2, show: toolbar.showEdit2, enable: toolbar.enableEdit2 ?? true, type: 'edit2' },
+                                      { action: toolbar.delete, show: toolbar.showDelete, enable: toolbar.enableDelete ?? true, type: 'delete' },
+                                      { action: toolbar.delete1, show: toolbar.showDelete1, enable: toolbar.enableDelete1 ?? true, type: 'delete1' },
+                                      { action: toolbar.delete2, show: toolbar.showDelete2, enable: toolbar.enableDelete2 ?? true, type: 'delete2' },
+                                      { action: toolbar.print, show: toolbar.showPrint, enable: true, type: 'print' },
+                                      { action: toolbar.print1, show: toolbar.showPrint1, enable: true, type: 'print1' },
+                                      ...(toolbar.customActions || []).map(a=>
+                                ({ action: a, show: true, enable: true, type: 'custom' }))
+                                ].filter(x => x.action && x.show !== false && (x.action.placement ?? 'Button') !== 'ActionsMenu')"
+                                :key="actIdx">
+
+                                <button type="button"
+                                        class="btn"
+                                        :class="[
+                                            'btn-' + (act.action.color ?? 'secondary'),
+                                            !act.enable || (act.action.requireSelection && selectedKeys.size !== 1) ? 'cursor-not-allowed opacity-50' : ''
+                                        ]"
+                                        x-on:click="act.enable ? doAction(act.action, act.action.requireSelection ? getSingleSelection() : null) : toastr.warning('هذا الإجراء غير متاح حالياً')"
+                                        :disabled="!act.enable || (act.action.requireSelection && selectedKeys.size !== 1)">
+
+                                    <template x-if="act.action.icon && !(act.action.icon.startsWith('/') || act.action.icon.includes('.svg') || act.action.icon.includes('.png') || act.action.icon.includes('.jpg') || act.action.icon.includes('.jpeg') || act.action.icon.includes('.webp'))">
+                                        <i :class="act.action.icon"></i>
+                                    </template>
+
+                                    <template x-if="act.action.icon && (act.action.icon.startsWith('/') || act.action.icon.includes('.svg') || act.action.icon.includes('.png') || act.action.icon.includes('.jpg') || act.action.icon.includes('.jpeg') || act.action.icon.includes('.webp'))">
+                                        <img :src="act.action.icon" alt="" class="sf-action-icon-img" />
+                                    </template>
+
+                                    <span x-text="act.action.label"></span>
+                                </button>
+                            </template>
+
+                            <template x-if="[
+                                      { action: toolbar.add, show: toolbar.showAdd, enable: toolbar.enableAdd ?? true },
+                                      { action: toolbar.add1, show: toolbar.showAdd1, enable: toolbar.enableAdd1 ?? true },
+                                      { action: toolbar.add2, show: toolbar.showAdd2, enable: toolbar.enableAdd2 ?? true },
+                                      { action: toolbar.edit, show: toolbar.showEdit, enable: toolbar.enableEdit ?? true },
+                                      { action: toolbar.edit1, show: toolbar.showEdit1, enable: toolbar.enableEdit1 ?? true },
+                                      { action: toolbar.edit2, show: toolbar.showEdit2, enable: toolbar.enableEdit2 ?? true },
+                                      { action: toolbar.delete, show: toolbar.showDelete, enable: toolbar.enableDelete ?? true },
+                                      { action: toolbar.delete1, show: toolbar.showDelete1, enable: toolbar.enableDelete1 ?? true },
+                                      { action: toolbar.delete2, show: toolbar.showDelete2, enable: toolbar.enableDelete2 ?? true },
+                                      { action: toolbar.print, show: toolbar.showPrint, enable: true },
+                                      { action: toolbar.print1, show: toolbar.showPrint1, enable: true },
+                                      ...(toolbar.customActions || []).map(a=>
+                                ({ action: a, show: true, enable: true }))
+                                ].some(x => x.action && x.show !== false && x.action.placement === 'ActionsMenu')">
+
+                                <div class="relative" x-data="{ open:false }">
+                                    <button type="button"
+                                            class="btn btn-outline-secondary"
+                                            x-on:click="open = !open">
+                                        <i class="fa fa-ellipsis-v"></i>
+                                        الإجراءات
+                                    </button>
+
+                                    <div x-show="open"
+                                         x-transition
+                                         x-on:click.outside="open=false"
+                                         class="absolute right-0 z-50 mt-2 w-56 rounded border bg-white shadow">
+
+                                        <template x-for="(act, actIdx) in [
+                                                  { action: toolbar.add, show: toolbar.showAdd, enable: toolbar.enableAdd ?? true },
+                                                  { action: toolbar.add1, show: toolbar.showAdd1, enable: toolbar.enableAdd1 ?? true },
+                                                  { action: toolbar.add2, show: toolbar.showAdd2, enable: toolbar.enableAdd2 ?? true },
+                                                  { action: toolbar.edit, show: toolbar.showEdit, enable: toolbar.enableEdit ?? true },
+                                                  { action: toolbar.edit1, show: toolbar.showEdit1, enable: toolbar.enableEdit1 ?? true },
+                                                  { action: toolbar.edit2, show: toolbar.showEdit2, enable: toolbar.enableEdit2 ?? true },
+                                                  { action: toolbar.delete, show: toolbar.showDelete, enable: toolbar.enableDelete ?? true },
+                                                  { action: toolbar.delete1, show: toolbar.showDelete1, enable: toolbar.enableDelete1 ?? true },
+                                                  { action: toolbar.delete2, show: toolbar.showDelete2, enable: toolbar.enableDelete2 ?? true },
+                                                  { action: toolbar.print, show: toolbar.showPrint, enable: true },
+                                                  { action: toolbar.print1, show: toolbar.showPrint1, enable: true },
+                                                  ...(toolbar.customActions || []).map(a=>
+                                            ({ action: a, show: true, enable: true }))
+                                            ].filter(x => x.action && x.show !== false && x.action.placement === 'ActionsMenu')"
+                                            :key="actIdx">
+
+                                            <span class="sf-tipwrap"
+                                                  :data-tip="!act.enable ? 'هذا الإجراء غير متاح حالياً' : (act.action.requireSelection && selectedKeys.size !== 1) ? 'يتطلب اختيار صف' : null">
+
+                                                <button type="button"
+                                                        class="w-full px-3 py-2 text-right hover:bg-gray-100"
+                                                        :class="!act.enable ? 'cursor-not-allowed opacity-50' : ''"
+                                                        x-on:click="act.enable ? (doAction(act.action, act.action.requireSelection ? getSingleSelection() : null), open=false) : toastr.warning('هذا الإجراء غير متاح حالياً')"
+                                                        :disabled="!act.enable || (act.action.requireSelection && selectedKeys.size !== 1)">
+
+                                                    <template x-if="act.action.icon && !(act.action.icon.startsWith('/') || act.action.icon.includes('.svg') || act.action.icon.includes('.png') || act.action.icon.includes('.jpg') || act.action.icon.includes('.jpeg') || act.action.icon.includes('.webp'))">
+                                                        <i :class="act.action.icon"></i>
+                                                    </template>
+
+                                                    <template x-if="act.action.icon && (act.action.icon.startsWith('/') || act.action.icon.includes('.svg') || act.action.icon.includes('.png') || act.action.icon.includes('.jpg') || act.action.icon.includes('.jpeg') || act.action.icon.includes('.webp'))">
+                                                        <img :src="act.action.icon" alt="" class="sf-action-icon-img" />
+                                                    </template>
+
+                                                    <span x-text="act.action.label"></span>
+                                                </button>
+
+                                            </span>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+
+                        </div>
 
                     </div>
                 </div>
@@ -532,6 +532,26 @@
                 </table>
             </div>
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             <div class="sf-profile" x-show="viewMode === 'Profile'">
 
                 <template x-if="loading">
@@ -610,12 +630,50 @@
                 <div class="pagination-info">
                     <span class="pagination-range" x-text="rangeText()"></span>
                 </div>
-                <div class="pagination-nav">
-                    <button class="btn btn-secondary" x-on:click="firstPage()" :disabled="page<=1">الأولى</button>
-                    <button class="btn btn-secondary" x-on:click="prevPage()" :disabled="page<=1">السابق</button>
-                    <span class="page-text">صفحة <span x-text="page"></span> من <span x-text="pages"></span></span>
-                    <button class="btn btn-secondary" x-on:click="nextPage()" :disabled="page>=pages">التالي</button>
-                    <button class="btn btn-secondary" x-on:click="lastPage()" :disabled="page>=pages">الأخيرة</button>
+
+                <div class="pagination-nav" aria-label="ترقيم الصفحات">
+                    <button type="button"
+                            class="page-btn page-btn--edge"
+                            x-on:click="firstPage()"
+                            :disabled="page <= 1"
+                            aria-label="الصفحة الأولى">
+                        الأولى
+                    </button>
+
+                    <button type="button"
+                            class="page-btn page-btn--edge"
+                            x-on:click="prevPage()"
+                            :disabled="page <= 1"
+                            aria-label="الصفحة السابقة">
+                        السابق
+                    </button>
+
+                    <template x-for="p in visiblePageNumbers()" :key="'p-' + p">
+                        <button type="button"
+                                class="page-btn page-btn--num"
+                                :class="{ 'active': p === page }"
+                                x-text="p"
+                                x-on:click="goToPage(p)"
+                                :aria-current="p === page ? 'page' : null"
+                                :aria-label="'الصفحة ' + p">
+                        </button>
+                    </template>
+
+                    <button type="button"
+                            class="page-btn page-btn--edge"
+                            x-on:click="nextPage()"
+                            :disabled="page >= pages"
+                            aria-label="الصفحة التالية">
+                        التالي
+                    </button>
+
+                    <button type="button"
+                            class="page-btn page-btn--edge"
+                            x-on:click="lastPage()"
+                            :disabled="page >= pages"
+                            aria-label="الصفحة الأخيرة">
+                        الأخيرة
+                    </button>
                 </div>
             </div>
 

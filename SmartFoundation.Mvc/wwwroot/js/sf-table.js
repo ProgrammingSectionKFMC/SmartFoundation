@@ -585,6 +585,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             // ===========================
             // Column Visibility (Alpine)
             // ===========================
+            
+
             colVisSearch: "",
             colVisMap: {},
             colVisLoaded: true, // ✅ نعتبره "محمل" من البداية عشان لا يحاول يقرأ من التخزين
@@ -665,6 +667,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 return String(col?.label ?? col?.title ?? col?.header ?? col?.field ?? "").trim();
             },
 
+           
             colVisBaseColumns() {
                 return (this.columns || []).filter(c => {
                     const hasHeader = !!(c.label || c.title || c.header);
@@ -5593,10 +5596,30 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             firstPage() {
                 this.goToPage(1);
             },
+
             lastPage() {
                 this.goToPage(this.pages || 1);
             },
 
+            visiblePageNumbers() {
+                const total = Number(this.pages || 1);
+                const current = Number(this.page || 1);
+                const maxButtons = 5;
+
+                if (total <= maxButtons) {
+                    return Array.from({ length: total }, (_, i) => i + 1);
+                }
+
+                let start = Math.max(1, current - 2);
+                let end = start + maxButtons - 1;
+
+                if (end > total) {
+                    end = total;
+                    start = end - maxButtons + 1;
+                }
+
+                return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+            },
 
             rangeText() {
                 if (this.total === 0) return "0 من 0";
@@ -7175,3 +7198,31 @@ window.sfMoneySarOnInput = function (el) {
 })();
 
 //============ End tabs sections ============
+
+
+/* =========================================================
+   SmartTable Scroll 
+   ========================================================= */
+(function () {
+    function scrollTableBoxesToRight() {
+        document.querySelectorAll('.table-box').forEach(function (box) {
+            box.scrollLeft = box.scrollWidth;
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', scrollTableBoxesToRight);
+    } else {
+        scrollTableBoxesToRight();
+    }
+
+    window.addEventListener('load', scrollTableBoxesToRight);
+
+    requestAnimationFrame(scrollTableBoxesToRight);
+    setTimeout(scrollTableBoxesToRight, 0);
+    setTimeout(scrollTableBoxesToRight, 120);
+    setTimeout(scrollTableBoxesToRight, 300);
+})();
+/* =========================================================
+   SmartTable Scroll End
+   ========================================================= */
