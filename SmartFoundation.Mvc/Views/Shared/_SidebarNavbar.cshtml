@@ -63,11 +63,10 @@
             <div class="flex items-center gap-0">
                 <!-- روابط سريعة -->
                 <nav class="me-4 flex flex-none items-center gap-0.5" dir="rtl" aria-label="روابط سريعة">
-                    <a href="/Home" class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-slate-200">
-                        <i class="fa-solid fa-house text-[16px]"></i>
+                    <a href="/Home" class="sf-header-action-btn">
+                        <i class="fa-solid fa-house"></i>
                         <span>الصفحة الرئيسية</span>
                     </a>
-                
                 </nav>
 
                 <!-- روابط سريعة -->
@@ -75,8 +74,8 @@
                     <button type="button"
                             data-modal-target="change-password-modal"
                             data-modal-toggle="change-password-modal"
-                            class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-700 transition-colors">
-                        <i class="fa-solid fa-key text-[16px]"></i>
+                            class="sf-header-action-btn">
+                        <i class="fa-solid fa-key"></i>
                         <span>تغيير كلمة المرور</span>
                     </button>
                 </nav>
@@ -92,9 +91,9 @@
                        
 
                         <button type="button"
-                                class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-slate-200"
+                                class="sf-header-action-btn"
                                 id="user-menu-button" aria-expanded="false" data-dropdown-toggle="user-dropdown">
-                            <i class="fa-solid fa-gear text-[16px]"></i>
+                            <i class="fa-solid fa-gear"></i>
                             <span>الإعدادات</span>
                         </button>
 
@@ -258,8 +257,12 @@
                                         (sessionAdminTypeID == "1" || sessionAdminTypeID == "2"))
                     {
                         
-                        <div class="border-white-300 mt-2 rounded-md border bg-red-700 px-3 py-1.5 text-center text-sm font-medium text-white shadow-sm">
+                        @* <div class="border-white-300 mt-2 rounded-md border bg-red-700 px-3 py-1.5 text-center text-sm font-medium text-white shadow-sm">
                             @(" أنت " + sessionAdminTypeName ?? "غير معروف")
+                        </div> *@
+                        <div class="sf-admin-badge">
+                            <i class="fa-solid fa-shield-halved"></i>
+                            @("أنت " + (sessionAdminTypeName ?? "غير معروف"))
                         </div>
                     }
                 </div>

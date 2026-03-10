@@ -28,25 +28,14 @@
 {
     <div x-data="{ open:true }" class="sf-panel mt-6">
         <div class="sf-panel-header">
-            <h3 class="sf-panel-title flex items-center gap-2">
-                <i class="fa-solid @(Model.PanelIcon ?? "fa-layer-group") text-sm text-emerald-600"></i>
-                @(Model.PanelTitle ?? Model.PageTitle)
+            <h3 class="sf-panel-title">
+                <span class="sf-panel-title__icon">
+                    <i class="fa-solid @(Model.PanelIcon ?? "fa-layer-group")"></i>
+                </span>
+                <span class="sf-panel-title__text">
+                    @(Model.PanelTitle ?? Model.PageTitle)
+                </span>
             </h3>
-
-            @* <div class="sf-panel-actions">
-                <button type="button" x-on:click="open = !open" class="sf-panel-btn" title="تصغير/توسيع">
-                    <i class="fa-solid" x-bind:class="open ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
-                </button>
-
-                <button type="button"
-                        x-on:click="$el.closest('.sf-panel').remove()"
-                        class="sf-panel-btn sf-panel-btn-close"
-                        title="إغلاق">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div> *@
         </div>
 
         <div class="sf-panel-body" x-show="open">

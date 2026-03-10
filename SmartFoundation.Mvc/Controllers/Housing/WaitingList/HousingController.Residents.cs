@@ -653,7 +653,6 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 Toolbar = new TableToolbarConfig
                 {
                     ShowRefresh = false,
-
                     ShowColumns = true,
                     ShowExportCsv = false,
                     ShowExportExcel = false,
@@ -730,6 +729,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 Label = "عرض التفاصيل",
                                 ModalTitle = "<i class='fa-solid fa-circle-info text-emerald-600 text-xl mr-2'></i> تفاصيل المستفيد",
                                 Icon = "fa-regular fa-file",
+                                Placement = TableActionPlacement.ActionsMenu,
                                 OpenModal = true,
                                 RequireSelection = true,
                                 MinSelection = 1,
@@ -744,7 +744,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             Icon = "fa-solid fa-database",
                             Color = "secondary",
                             OpenModal = true,
-                        
+                            Placement = TableActionPlacement.ActionsMenu,
+
                             RequireSelection = false,
                             MinSelection = 0,
                             MaxSelection = 0,
