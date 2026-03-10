@@ -1,0 +1,51 @@
+﻿CREATE TABLE [dbo].[UsersDetails] (
+    [usersDetailsID]                BIGINT         IDENTITY (1, 1) NOT NULL,
+    [usersID_FK]                    BIGINT         NOT NULL,
+    [GeneralNo]                     BIGINT         NULL,
+    [userTypeID_FK]                 INT            NULL,
+    [firstName_A]                   NVARCHAR (50)  NULL,
+    [secondName_A]                  NVARCHAR (20)  NULL,
+    [thirdName_A]                   NVARCHAR (20)  NULL,
+    [forthName_A]                   NVARCHAR (20)  NULL,
+    [lastName_A]                    NVARCHAR (20)  NULL,
+    [firstName_E]                   NVARCHAR (20)  NULL,
+    [secondName_E]                  NVARCHAR (20)  NULL,
+    [thirdName_E]                   NVARCHAR (20)  NULL,
+    [forthName_E]                   NVARCHAR (20)  NULL,
+    [lastName_E]                    NVARCHAR (20)  NULL,
+    [nationalIDIssueDate]           DATETIME       NULL,
+    [nationalIDExpiryDate]          DATETIME       NULL,
+    [nationalIDIssuePlaceCityID_FK] INT            NULL,
+    [dateOfBirth]                   DATETIME       NULL,
+    [birthPlaceCityID_FK]           INT            NULL,
+    [genderID_FK]                   INT            NULL,
+    [nationalityID_FK]              INT            NULL,
+    [religionID_FK]                 INT            NULL,
+    [bloodID_FK]                    INT            NULL,
+    [maritalStatusID_FK]            INT            NULL,
+    [educationID_FK]                INT            NULL,
+    [userActive]                    BIT            NULL,
+    [userNote]                      NVARCHAR (400) NULL,
+    [usersAuthTypeID_FK]            INT            CONSTRAINT [DF_UsersDetails_IsAdmin] DEFAULT ((0)) NULL,
+    [IdaraID]                       INT            NULL,
+    [entryDate]                     DATETIME       CONSTRAINT [DF_UsersDetails_entryDate] DEFAULT (getdate()) NULL,
+    [entryData]                     NVARCHAR (20)  NULL,
+    [hostName]                      NVARCHAR (200) CONSTRAINT [DF_UsersDetails_hostName] DEFAULT (host_name()) NULL,
+    CONSTRAINT [PK_UsersDetails] PRIMARY KEY CLUSTERED ([usersDetailsID] ASC),
+    CONSTRAINT [FK_UsersDetails_Blood] FOREIGN KEY ([bloodID_FK]) REFERENCES [dbo].[Blood] ([bloodID]),
+    CONSTRAINT [FK_UsersDetails_City] FOREIGN KEY ([birthPlaceCityID_FK]) REFERENCES [dbo].[City] ([cityID]),
+    CONSTRAINT [FK_UsersDetails_City1] FOREIGN KEY ([nationalIDIssuePlaceCityID_FK]) REFERENCES [dbo].[City] ([cityID]),
+    CONSTRAINT [FK_UsersDetails_Education] FOREIGN KEY ([educationID_FK]) REFERENCES [dbo].[Education] ([educationID]),
+    CONSTRAINT [FK_UsersDetails_Gender] FOREIGN KEY ([genderID_FK]) REFERENCES [dbo].[Gender] ([genderID]),
+    CONSTRAINT [FK_UsersDetails_MaritalStatus] FOREIGN KEY ([maritalStatusID_FK]) REFERENCES [dbo].[MaritalStatus] ([maritalStatusID]),
+    CONSTRAINT [FK_UsersDetails_Nationality] FOREIGN KEY ([nationalityID_FK]) REFERENCES [dbo].[Nationality] ([nationalityID]),
+    CONSTRAINT [FK_UsersDetails_Religion] FOREIGN KEY ([religionID_FK]) REFERENCES [dbo].[Religion] ([religionID]),
+    CONSTRAINT [FK_UsersDetails_Users] FOREIGN KEY ([usersID_FK]) REFERENCES [dbo].[Users] ([usersID]),
+    CONSTRAINT [FK_UsersDetails_UserType] FOREIGN KEY ([userTypeID_FK]) REFERENCES [dbo].[UserType] ([userTypeID])
+);
+
+
+GO
+CREATE UNIQUE NONCLUSTERED INDEX [UX_UsersDetails_OnlyOneActive]
+    ON [dbo].[UsersDetails]([usersID_FK] ASC) WHERE ([userActive]=(1));
+

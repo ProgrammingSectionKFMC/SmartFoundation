@@ -1,0 +1,468 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <Name>SmartFoundation.Database</Name>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectVersion>4.1</ProjectVersion>
+    <ProjectGuid>{ea604c2d-8b62-42e8-b03c-9fffca900e11}</ProjectGuid>
+    <DSP>Microsoft.Data.Tools.Schema.Sql.Sql170DatabaseSchemaProvider</DSP>
+    <OutputType>Database</OutputType>
+    <RootPath>
+    </RootPath>
+    <RootNamespace>SmartFoundation.Database</RootNamespace>
+    <AssemblyName>SmartFoundation.Database</AssemblyName>
+    <ModelCollation>1033,CI</ModelCollation>
+    <DefaultFileStructure>BySchemaAndSchemaType</DefaultFileStructure>
+    <DeployToDatabase>True</DeployToDatabase>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <TargetLanguage>CS</TargetLanguage>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <SqlServerVerification>False</SqlServerVerification>
+    <IncludeCompositeObjects>True</IncludeCompositeObjects>
+    <TargetDatabaseSet>True</TargetDatabaseSet>
+    <DefaultCollation>SQL_Latin1_General_CP1_CI_AS</DefaultCollation>
+    <DefaultFilegroup>PRIMARY</DefaultFilegroup>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <OutputPath>bin\Release\</OutputPath>
+    <BuildScriptName>$(MSBuildProjectName).sql</BuildScriptName>
+    <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineDebug>false</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <OutputPath>bin\Debug\</OutputPath>
+    <BuildScriptName>$(MSBuildProjectName).sql</BuildScriptName>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineDebug>true</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">11.0</VisualStudioVersion>
+    <!-- Default to the v11.0 targets path if the targets file for the current VS version is not found -->
+    <SSDTExists Condition="Exists('$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets')">True</SSDTExists>
+    <VisualStudioVersion Condition="'$(SSDTExists)' == ''">11.0</VisualStudioVersion>
+  </PropertyGroup>
+  <Import Condition="'$(SQLDBExtensionsRefPath)' != ''" Project="$(SQLDBExtensionsRefPath)\Microsoft.Data.Tools.Schema.SqlTasks.targets" />
+  <Import Condition="'$(SQLDBExtensionsRefPath)' == ''" Project="$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets" />
+  <ItemGroup>
+    <Folder Include="Properties" />
+    <Folder Include="Housing\" />
+    <Folder Include="Housing\Tables\" />
+    <Folder Include="dbo\" />
+    <Folder Include="dbo\Tables\" />
+    <Folder Include="Demo\" />
+    <Folder Include="Demo\Tables\" />
+    <Folder Include="Housing\Views\" />
+    <Folder Include="dbo\Views\" />
+    <Folder Include="Security\" />
+    <Folder Include="Housing\Functions\" />
+    <Folder Include="dbo\Functions\" />
+    <Folder Include="Housing\Stored Procedures\" />
+    <Folder Include="dbo\Stored Procedures\" />
+    <Folder Include="Demo\Stored Procedures\" />
+    <Folder Include="Housing\User Defined Types\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Build Include="Housing\Tables\RentBillsAdjustment.sql" />
+    <Build Include="Housing\Tables\BillType.sql" />
+    <Build Include="dbo\Tables\_GregorianHijriDate.sql" />
+    <Build Include="dbo\Tables\Country.sql" />
+    <Build Include="Housing\Tables\BillOldelectricbillPayment.sql" />
+    <Build Include="Housing\Tables\BuildingAssignCount.sql" />
+    <Build Include="Housing\Tables\BillsDeductListDetails.sql" />
+    <Build Include="dbo\Tables\DecisionForSolider.sql" />
+    <Build Include="dbo\Tables\DecisionTypeForSolider.sql" />
+    <Build Include="Housing\Tables\BuildingRentType.sql" />
+    <Build Include="Housing\Tables\billPayment_.sql" />
+    <Build Include="dbo\Tables\Section.sql" />
+    <Build Include="dbo\Tables\zzzzzzz.sql" />
+    <Build Include="Housing\Tables\BillDeductType.sql" />
+    <Build Include="Housing\Tables\RentBills.sql" />
+    <Build Include="dbo\Tables\Divison.sql" />
+    <Build Include="Housing\Tables\BuildingActionField.sql" />
+    <Build Include="dbo\Tables\DistributorType.sql" />
+    <Build Include="Housing\Tables\BuildingAssignStatus.sql" />
+    <Build Include="dbo\Tables\AiChatHistory.sql" />
+    <Build Include="dbo\Tables\ChartList.sql" />
+    <Build Include="Housing\Tables\BuildingActionSource.sql" />
+    <Build Include="Housing\Tables\DeductList.sql" />
+    <Build Include="dbo\Tables\PriorityType.sql" />
+    <Build Include="dbo\Tables\UsersPhoto.sql" />
+    <Build Include="dbo\Tables\AiChatCitations.sql" />
+    <Build Include="dbo\Tables\Department.sql" />
+    <Build Include="Housing\Tables\ResidentDetails.sql" />
+    <Build Include="Housing\Tables\MeterRead.sql" />
+    <Build Include="dbo\Tables\SecurityType.sql" />
+    <Build Include="dbo\Tables\DocumentState.sql" />
+    <Build Include="dbo\Tables\AiFrequentQuestions.sql" />
+    <Build Include="dbo\Tables\DocumentPermission.sql" />
+    <Build Include="dbo\Tables\TransactionType.sql" />
+    <Build Include="dbo\Tables\DocumentCategory.sql" />
+    <Build Include="dbo\Tables\ChartListUsers.sql" />
+    <Build Include="dbo\Tables\DocumentFields.sql" />
+    <Build Include="dbo\Tables\Continents.sql" />
+    <Build Include="dbo\Tables\Education.sql" />
+    <Build Include="dbo\Tables\AuditLog.sql" />
+    <Build Include="Housing\Tables\Bills.sql" />
+    <Build Include="dbo\Tables\Transactions.sql" />
+    <Build Include="dbo\Tables\Countries.sql" />
+    <Build Include="Housing\Tables\BuildingPayment.sql" />
+    <Build Include="Housing\Tables\MeterReadType.sql" />
+    <Build Include="dbo\Tables\UserDistributor.sql" />
+    <Build Include="dbo\Tables\MvcThame.sql" />
+    <Build Include="Housing\Tables\RankClass.sql" />
+    <Build Include="Housing\Tables\BuildingStatus.sql" />
+    <Build Include="dbo\Tables\Document.sql" />
+    <Build Include="dbo\Tables\AdministrativeRegions.sql" />
+    <Build Include="dbo\Tables\Distributor.sql" />
+    <Build Include="dbo\Tables\MainCities.sql" />
+    <Build Include="dbo\Tables\UsersPassword.sql" />
+    <Build Include="Housing\Tables\MilitaryArea.sql" />
+    <Build Include="dbo\Tables\UserSignature.sql" />
+    <Build Include="dbo\Tables\LocalAdministrations.sql" />
+    <Build Include="Housing\Tables\MilitaryAreaCity.sql" />
+    <Build Include="Housing\Tables\MeterServiceType.sql" />
+    <Build Include="dbo\Tables\DocumentType.sql" />
+    <Build Include="dbo\Tables\DecisionDigitalSignture.sql" />
+    <Build Include="Housing\Tables\BuildingType.sql" />
+    <Build Include="dbo\Tables\MainBranches.sql" />
+    <Build Include="dbo\Tables\Gender.sql" />
+    <Build Include="dbo\Tables\UserSignatureType.sql" />
+    <Build Include="dbo\Tables\MvcThameUser.sql" />
+    <Build Include="dbo\Tables\Users.sql" />
+    <Build Include="Housing\Tables\ResidentStatus.sql" />
+    <Build Include="Housing\Tables\ResidentContactType.sql" />
+    <Build Include="Housing\Tables\BuildingAssign.sql" />
+    <Build Include="dbo\Tables\State.sql" />
+    <Build Include="dbo\Tables\MaritalStatus.sql" />
+    <Build Include="dbo\Tables\NationalIDType.sql" />
+    <Build Include="Housing\Tables\BuildingActionType.sql" />
+    <Build Include="dbo\Tables\City.sql" />
+    <Build Include="dbo\Tables\oldmeter.sql" />
+    <Build Include="dbo\Tables\NewMeter.sql" />
+    <Build Include="dbo\Tables\HomeControl.sql" />
+    <Build Include="dbo\Tables\Nationality.sql" />
+    <Build Include="dbo\Tables\PhoneBook.sql" />
+    <Build Include="dbo\Tables\DocumentTypeForDDL.sql" />
+    <Build Include="Housing\Tables\MeterServiceTypeFixedAmount.sql" />
+    <Build Include="dbo\Tables\PhoneType.sql" />
+    <Build Include="dbo\Tables\DepartmentPhone.sql" />
+    <Build Include="Demo\Tables\Demo_Pie3D_UnitDistribution.sql" />
+    <Build Include="Housing\Tables\BuildingPayment_.sql" />
+    <Build Include="Housing\Tables\BuildingPaymentDestaination.sql" />
+    <Build Include="dbo\Tables\TSK_Task_TaskLabel.sql" />
+    <Build Include="dbo\Tables\PermissionType.sql" />
+    <Build Include="Housing\Tables\MeterServiceTypeLinkedWithIdara.sql" />
+    <Build Include="Housing\Tables\BillDeductAction.sql" />
+    <Build Include="Housing\Tables\BuildingClass.sql" />
+    <Build Include="Housing\Tables\DeductType.sql" />
+    <Build Include="dbo\Tables\Religion.sql" />
+    <Build Include="dbo\Tables\TSK_TaskComponent.sql" />
+    <Build Include="Housing\Tables\BuildingPaymentType.sql" />
+    <Build Include="dbo\Tables\MilitaryUnit.sql" />
+    <Build Include="Housing\Tables\OccupantCustodyAction.sql" />
+    <Build Include="dbo\Tables\DistributorPermissionType.sql" />
+    <Build Include="dbo\Tables\TSK_TaskLabel.sql" />
+    <Build Include="Housing\Tables\BuildingPaymentTemp11.sql" />
+    <Build Include="dbo\Tables\contactType.sql" />
+    <Build Include="dbo\Tables\TableChanges.sql" />
+    <Build Include="dbo\Tables\TSK_TaskLabelType.sql" />
+    <Build Include="dbo\Tables\Territory.sql" />
+    <Build Include="dbo\Tables\TSK_TaskStep.sql" />
+    <Build Include="Housing\Tables\AssignPeriod.sql" />
+    <Build Include="Housing\Tables\ExtendReasonType.sql" />
+    <Build Include="dbo\Tables\permissionAuthLvl.sql" />
+    <Build Include="dbo\Tables\Tax.sql" />
+    <Build Include="dbo\Tables\UserPhoto.sql" />
+    <Build Include="dbo\Tables\Rank.sql" />
+    <Build Include="Housing\Tables\CustodyPaymentType.sql" />
+    <Build Include="Housing\Tables\BuildingAction.sql" />
+    <Build Include="dbo\Tables\TSK_Task.sql" />
+    <Build Include="Housing\Tables\ResidentInfo.sql" />
+    <Build Include="Housing\Tables\MeterServicePrice.sql" />
+    <Build Include="dbo\Tables\TSK_Task_Employee.sql" />
+    <Build Include="Housing\Tables\BuildingUtilityType.sql" />
+    <Build Include="dbo\Tables\KFMCReportsHeader.sql" />
+    <Build Include="dbo\Tables\UserType.sql" />
+    <Build Include="Housing\Tables\MeterSlide.sql" />
+    <Build Include="dbo\Tables\UsersAuthType.sql" />
+    <Build Include="Housing\Tables\BillDeductList.sql" />
+    <Build Include="dbo\Tables\Organization.sql" />
+    <Build Include="dbo\Tables\TSK_TaskComponentPermission.sql" />
+    <Build Include="Housing\Tables\ResidentInfoTemp_.sql" />
+    <Build Include="dbo\Tables\Servers.sql" />
+    <Build Include="Housing\Tables\WaitingClass.sql" />
+    <Build Include="Housing\Tables\billPaymentType.sql" />
+    <Build Include="dbo\Tables\TSK_TaskDuration.sql" />
+    <Build Include="Housing\Tables\BillDeductListStatus.sql" />
+    <Build Include="dbo\Tables\KFMCReportsType.sql" />
+    <Build Include="dbo\Tables\DeptSecDiv.sql" />
+    <Build Include="Housing\Tables\WaitingOrderType.sql" />
+    <Build Include="dbo\Tables\contactInfo.sql" />
+    <Build Include="Housing\Tables\BuildingUtilityTypeLinkToBillDeductType.sql" />
+    <Build Include="dbo\Tables\TSK_TaskProject.sql" />
+    <Build Include="dbo\Tables\DBChangeLog.sql" />
+    <Build Include="dbo\Tables\TSK_TaskProjectPermission.sql" />
+    <Build Include="Housing\Tables\CustodyActionType.sql" />
+    <Build Include="Housing\Tables\BillPeriod.sql" />
+    <Build Include="Housing\Tables\ResidentContactInfo.sql" />
+    <Build Include="dbo\Tables\KFMCReports.sql" />
+    <Build Include="dbo\Tables\TSK_TaskSubComponent.sql" />
+    <Build Include="Housing\Tables\CustodyItems.sql" />
+    <Build Include="Housing\Tables\billPayment.sql" />
+    <Build Include="Housing\Tables\DeductListStatus.sql" />
+    <Build Include="dbo\Tables\TSK_UserList.sql" />
+    <Build Include="Housing\Tables\CustodyOrDamageType.sql" />
+    <Build Include="dbo\Tables\Idara.sql" />
+    <Build Include="Housing\Tables\OldRent.sql" />
+    <Build Include="Housing\Tables\MeterType.sql" />
+    <Build Include="dbo\Tables\Role.sql" />
+    <Build Include="Housing\Tables\CustodyStatus.sql" />
+    <Build Include="dbo\Tables\Permission.sql" />
+    <Build Include="Housing\Tables\BuildingDetails.sql" />
+    <Build Include="Housing\Tables\batest.sql" />
+    <Build Include="dbo\Tables\Menu.sql" />
+    <Build Include="dbo\Tables\ThameColorType.sql" />
+    <Build Include="Housing\Tables\BuildingRentActualPayment.sql" />
+    <Build Include="Housing\Tables\billDeductListDestaination.sql" />
+    <Build Include="dbo\Tables\_paymentTemp.sql" />
+    <Build Include="dbo\Tables\ThameColorUser.sql" />
+    <Build Include="Housing\Tables\UploadExcelImportLog.sql" />
+    <Build Include="Housing\Tables\BuildingAssignType.sql" />
+    <Build Include="Housing\Tables\Meter.sql" />
+    <Build Include="dbo\Tables\daily_job.sql" />
+    <Build Include="dbo\Tables\UsersDetails.sql" />
+    <Build Include="dbo\Tables\ErrorLog.sql" />
+    <Build Include="Housing\Tables\UploadExcel.sql" />
+    <Build Include="dbo\Tables\Notifications.sql" />
+    <Build Include="dbo\Tables\UserTemp.sql" />
+    <Build Include="Housing\Tables\BuildingRent.sql" />
+    <Build Include="Housing\Tables\MerchantBusinessCategory.sql" />
+    <Build Include="dbo\Tables\UserDevice.sql" />
+    <Build Include="Housing\Tables\BillsPaidDeductListType.sql" />
+    <Build Include="dbo\Tables\UserNotifications.sql" />
+    <Build Include="Housing\Tables\MilitaryLocation.sql" />
+    <Build Include="dbo\Tables\Program.sql" />
+    <Build Include="Housing\Tables\BillChargeType.sql" />
+    <Build Include="Housing\Tables\MeterForBuilding.sql" />
+    <Build Include="Housing\Tables\BillPeriodType.sql" />
+    <Build Include="Housing\Tables\elecrtecityCuting.sql" />
+    <Build Include="dbo\Tables\ProgramDistributor.sql" />
+    <Build Include="dbo\Tables\OperatingSystem.sql" />
+    <Build Include="Housing\Tables\BuildingActionPermission.sql" />
+    <Build Include="dbo\Tables\JSONData.sql" />
+    <Build Include="Housing\Tables\ResidentRentExemptionType.sql" />
+    <Build Include="dbo\Tables\MangerVisitorApp.sql" />
+    <Build Include="dbo\Tables\MenuDistributor.sql" />
+    <Build Include="dbo\Tables\AiChatLog.sql" />
+    <Build Include="Housing\Tables\ResidentRentExemption.sql" />
+    <Build Include="dbo\Tables\Attachment.sql" />
+    <Build Include="dbo\Tables\Blood.sql" />
+    <Build Include="dbo\Tables\AiChatFeedback.sql" />
+    <Build Include="Housing\Views\V_GetGeneralListActionForResident.sql" />
+    <Build Include="Housing\Views\V_LastActionForResident.sql" />
+    <Build Include="Housing\Views\V_LastActionForBuilding.sql" />
+    <Build Include="Housing\Views\V_GetListMeterSlidesPrice.sql" />
+    <Build Include="dbo\Views\View_getDSDForUsers.sql" />
+    <Build Include="Housing\Views\V_GetGeneralListForBuildingWithRent.sql" />
+    <Build Include="dbo\Views\View_Countries.sql" />
+    <Build Include="dbo\Views\View_AdministrativeRegions.sql" />
+    <Build Include="dbo\Views\View_MainCities.sql" />
+    <Build Include="Housing\Views\V_AssignList.sql" />
+    <Build Include="Housing\Views\V_WaitingListWithLetters.sql" />
+    <Build Include="dbo\Views\View_LocalAdministrations.sql" />
+    <Build Include="Housing\Views\V_Occupant.sql" />
+    <Build Include="Housing\Views\V_SumBillsTotalPriceForResident.sql" />
+    <Build Include="dbo\Views\V_GetListUserPermission.sql" />
+    <Build Include="dbo\Views\View_MainBranches.sql" />
+    <Build Include="Housing\Views\V_SumBillsTotalPaidByResident.sql" />
+    <Build Include="dbo\Views\V_MenuTree.sql" />
+    <Build Include="Housing\Views\V_buildingWithRent.sql" />
+    <Build Include="Housing\Views\V_SumBillsTotalPriceAndTotalPaidForResident.sql" />
+    <Build Include="Housing\Views\V_GetFullResidentDetails.sql" />
+    <Build Include="Housing\Views\V_MetersDetails.sql" />
+    <Build Include="Housing\Views\V_ResidentServiceAverageBills.sql" />
+    <Build Include="Housing\Views\V_ResidentBillsFinancialSummary.sql" />
+    <Build Include="dbo\Views\V_KFMCReportsHeader.sql" />
+    <Build Include="dbo\Views\V_DSD.sql" />
+    <Build Include="Housing\Views\V_MoveWaitingList.sql" />
+    <Build Include="Housing\Views\V_Occupant_2026_02_04.sql" />
+    <Build Include="Housing\Views\V_OccupantExtend.sql" />
+    <Build Include="Housing\Views\V_WaitingList.sql" />
+    <Build Include="Housing\Views\V_WaitingListByLetter.sql" />
+    <Build Include="Housing\Views\V_ResidentFinancialSummary.sql" />
+    <Build Include="Housing\Views\V_FirstMeterReadForAllMeter.sql" />
+    <Build Include="Housing\Views\V_LastMeterRead_Type1.sql" />
+    <Build Include="Housing\Views\V_AllResidentsWithMoreThanOneSera.sql" />
+    <Build Include="Housing\Views\V_GetListMetersLinkedWithBuildings_2026_02_28.sql" />
+    <Build Include="Housing\Views\V_ResidentPreviosBill.sql" />
+    <Build Include="Housing\Views\V_GetListAllMetersLastRead.sql" />
+    <Build Include="Housing\Views\V_ResidentLastBill.sql" />
+    <Build Include="dbo\Views\V_GetListIdara.sql" />
+    <Build Include="dbo\Views\V_GetFullSystemUsersDetails.sql" />
+    <Build Include="dbo\Views\V_GetListOrganization.sql" />
+    <Build Include="Housing\Views\V_WaitingList_Ids.sql" />
+    <Build Include="dbo\Views\_VIEW_TSK_Task_TaskLabel.sql" />
+    <Build Include="dbo\Views\_VIEW_TSK_TasksInfo.sql" />
+    <Build Include="dbo\Views\_VIEW_TSK_TaskParents.sql" />
+    <Build Include="dbo\Views\TSK_VIEW_FinishedTasks.sql" />
+    <Build Include="dbo\Views\V_MVCProgramMenuTree.sql" />
+    <Build Include="dbo\Views\V_MVCProgramMenuTree_MenuDistributor.sql" />
+    <Build Include="dbo\Views\V_GetFullPermissionDetails.sql" />
+    <Build Include="dbo\Views\V_GetNullsDSDID.sql" />
+    <Build Include="Housing\Views\V_MeterLastBill.sql" />
+    <Build Include="dbo\Views\V_GetListDepartment.sql" />
+    <Build Include="dbo\Views\V_GetListSection.sql" />
+    <Build Include="dbo\Views\_VIEW_TSK_UsersTasksAndFinishedBy.sql" />
+    <Build Include="dbo\Views\V_GetListDivison.sql" />
+    <Build Include="dbo\Views\V_GetFullStructureForDSD.sql" />
+    <Build Include="dbo\Views\V_GetListUsersInDSD.sql" />
+    <Build Include="Housing\Views\V_GetGeneralListForResident.sql" />
+    <Build Include="dbo\Views\V_AiChat_Kpi_30Days.sql" />
+    <Build Include="Housing\Views\V_GetGeneralListForBuilding.sql" />
+    <Build Include="Housing\Views\V_moreOneActionforType1.sql" />
+    <Build Include="Housing\Views\V_GetListMetersLinkedWithBuildings.sql" />
+    <Build Include="Security\KFMCMODA_60014016.sql" />
+    <Build Include="Security\PC1-08-60014016_samia.sql" />
+    <Build Include="Security\BUILTIN_Users.sql" />
+    <Build Include="Security\BUILTIN_Users_1.sql" />
+    <Build Include="Security\KFMCMODA_60014020.sql" />
+    <Build Include="Security\NT AUTHORITY_NETWORK.sql" />
+    <Build Include="Security\KFMCMODA_AppsAdmin.sql" />
+    <Build Include="Security\KFMCMODA_Administrator.sql" />
+    <Build Include="Security\KFMCMODA_60014017.sql" />
+    <Build Include="Security\KFMCMODA_WWW_.sql" />
+    <Build Include="Security\RoleMemberships.sql" />
+    <Build Include="Housing\Functions\GetCountForHousingWithPrivteConditions.sql" />
+    <Build Include="Housing\Functions\GetCountBuildingForActionTypeWithClassID.sql" />
+    <Build Include="Housing\Functions\GetResdintGeneralNumberByBuildingNo.sql" />
+    <Build Include="Housing\Functions\GetBuildingNoByResidentGeneralNo.sql" />
+    <Build Include="dbo\Functions\funcGetDepartmentDistID.sql" />
+    <Build Include="Housing\Functions\GeneralNumberIsExist.sql" />
+    <Build Include="Housing\Functions\BuildingNoIsExist.sql" />
+    <Build Include="Housing\Functions\GetRentForBuilding.sql" />
+    <Build Include="Housing\Functions\fn_GetResidentID.sql" />
+    <Build Include="dbo\Functions\fungetRank_.sql" />
+    <Build Include="dbo\Functions\GetCountUserFromDSD.sql" />
+    <Build Include="Housing\Functions\GetCountAllMeter.sql" />
+    <Build Include="Housing\Functions\GetActionDateForBuildingExit.sql" />
+    <Build Include="Housing\Functions\FirstLineInHousingnDashBoard.sql" />
+    <Build Include="Housing\Functions\GetCountAllResident.sql" />
+    <Build Include="dbo\Functions\minutesToHours.sql" />
+    <Build Include="Housing\Functions\GetCountBuildingFromUtilityType.sql" />
+    <Build Include="Housing\Functions\GetCountBuildingWithClass.sql" />
+    <Build Include="Housing\Functions\GetCountBuildingWithType.sql" />
+    <Build Include="Housing\Functions\GetCountMeterForUtilityType.sql" />
+    <Build Include="Housing\Functions\GetCountRentType.sql" />
+    <Build Include="Housing\Functions\GetCountBuildingForActionTypeID.sql" />
+    <Build Include="Housing\Functions\GetLastActionForBuilding.sql" />
+    <Build Include="Housing\Functions\GetLastActionForResident.sql" />
+    <Build Include="dbo\Functions\MergeDates.sql" />
+    <Build Include="Housing\Functions\GetCountForActionTypeByDates.sql" />
+    <Build Include="dbo\Functions\GetRank.sql" />
+    <Build Include="dbo\Functions\GetCountAllUsers.sql" />
+    <Build Include="dbo\Functions\GetUserTypeID.sql" />
+    <Build Include="dbo\Functions\genderID.sql" />
+    <Build Include="dbo\Functions\CountFridaysBetweenTwoDates.sql" />
+    <Build Include="Housing\Functions\GetLastMeterReadFromOldSystem.sql" />
+    <Build Include="Housing\Functions\GetGeneralListActionForResident.sql" />
+    <Build Include="Housing\Functions\fn_CalcMonthlyBuildingRent_ByBuildingDetailsID.sql" />
+    <Build Include="Housing\Functions\fn_BuildingRent_ForMonth.sql" />
+    <Build Include="Housing\Functions\fn_CalcBuildingRent_ForOneMonth.sql" />
+    <Build Include="Housing\Functions\fn_BuildingAction_ChainToRoot.sql" />
+    <Build Include="dbo\Functions\ft_UserPagePermissions.sql" />
+    <Build Include="Housing\Functions\FN_EligibleMeters.sql" />
+    <Build Include="Housing\Functions\CalculteElectrictyBills_ByNewReadValue.sql" />
+    <Build Include="Housing\Functions\CalculteElectrictyBills_ByNewReadValue_ForInsert.sql" />
+    <Build Include="Housing\Functions\CalculteElectrictyBills_ByLastActiveRead_PeriodSource.sql" />
+    <Build Include="Housing\Functions\GetListMeterSlidesPrice.sql" />
+    <Build Include="Housing\Functions\GetListAllMetersReadByPeriodID.sql" />
+    <Build Include="Housing\Stored Procedures\BuildingDetailsSP.sql" />
+    <Build Include="Housing\Stored Procedures\MilitaryLocationDL.sql" />
+    <Build Include="Housing\Stored Procedures\ResidentsDL.sql" />
+    <Build Include="Housing\Stored Procedures\AssignSP.sql" />
+    <Build Include="dbo\Stored Procedures\SetUserPassword.sql" />
+    <Build Include="Housing\Stored Procedures\MetersDL.sql" />
+    <Build Include="Housing\Stored Procedures\MetersSP.sql" />
+    <Build Include="Housing\Stored Procedures\WaitingListByResidentDL.sql" />
+    <Build Include="Housing\Stored Procedures\WaitingListMoveListDL.sql" />
+    <Build Include="dbo\Stored Procedures\Notifications_CRUD.sql" />
+    <Build Include="Housing\Stored Procedures\BuildingClassSP.sql" />
+    <Build Include="dbo\Stored Procedures\_BackupDatabase.sql" />
+    <Build Include="Housing\Stored Procedures\AssignDL.sql" />
+    <Build Include="Housing\Stored Procedures\AssignStatusDL.sql" />
+    <Build Include="Housing\Stored Procedures\ImportExcelForBuildingPayment.sql" />
+    <Build Include="Housing\Stored Procedures\AllMeterReadDL.sql" />
+    <Build Include="dbo\Stored Procedures\sp_AiChat_UpdateFrequentQuestions.sql" />
+    <Build Include="dbo\Stored Procedures\sp_AiChat_SaveFeedback.sql" />
+    <Build Include="dbo\Stored Procedures\sp_AiChat_GetQuestionsNeedingImprovement.sql" />
+    <Build Include="Housing\Stored Procedures\BuildingRentForOneMonth.sql" />
+    <Build Include="dbo\Stored Procedures\sp_AiChat_GetStatistics.sql" />
+    <Build Include="dbo\Stored Procedures\GetUserMenuTree.sql" />
+    <Build Include="Housing\Stored Procedures\HousingResidentDL.sql" />
+    <Build Include="dbo\Stored Procedures\sp_AiChat_SaveHistory.sql" />
+    <Build Include="dbo\Stored Procedures\PermissionSP.sql" />
+    <Build Include="Housing\Stored Procedures\MeterReadForOccubentAndExitDL.sql" />
+    <Build Include="Housing\Stored Procedures\HousingExtendDL.sql" />
+    <Build Include="Housing\Stored Procedures\FinancialAuditForExtendAndEvictionsDL.sql" />
+    <Build Include="dbo\Stored Procedures\_BackupDatabaseSami.sql" />
+    <Build Include="Housing\Stored Procedures\WaitingListDL.sql" />
+    <Build Include="Demo\Stored Procedures\usp_Demo_Pie3D_Units.sql" />
+    <Build Include="dbo\Stored Procedures\_searchInSPsOrViews.sql" />
+    <Build Include="Housing\Stored Procedures\BuildingUtilityTypeSP.sql" />
+    <Build Include="dbo\Stored Procedures\ReSetUserPassword.sql" />
+    <Build Include="Housing\Stored Procedures\HousingExtendSP.sql" />
+    <Build Include="Housing\Stored Procedures\AssignStatusSP.sql" />
+    <Build Include="Housing\Stored Procedures\HousingExitDL.sql" />
+    <Build Include="Housing\Stored Procedures\WaitingListMoveListSP.sql" />
+    <Build Include="Housing\Stored Procedures\AllMeterReadSP.sql" />
+    <Build Include="Housing\Stored Procedures\WaitingListByResidentSP.sql" />
+    <Build Include="Housing\Stored Procedures\FinancialAuditForExtendAndEvictionsSP.sql" />
+    <Build Include="Housing\Stored Procedures\ResidentsSP.sql" />
+    <Build Include="dbo\Stored Procedures\Masters_ExtraDataLoad.sql" />
+    <Build Include="dbo\Stored Procedures\GetSessionInfoForMVC.sql" />
+    <Build Include="Housing\Stored Procedures\HousingResidentSP.sql" />
+    <Build Include="Housing\Stored Procedures\MeterReadForOccubentAndExitSP.sql" />
+    <Build Include="dbo\Stored Procedures\Masters_CRUD.sql" />
+    <Build Include="Housing\Stored Procedures\BuildingTypeSP.sql" />
+    <Build Include="Housing\Stored Procedures\HousingExitSP.sql" />
+    <Build Include="dbo\Stored Procedures\UsersSP.sql" />
+    <Build Include="dbo\Stored Procedures\Notifications_Create.sql" />
+    <Build Include="dbo\Stored Procedures\Masters_DataLoad.sql" />
+    <Build Include="Housing\Stored Procedures\UploadExcel_ImportSelected3Cols.sql" />
+    <Build Include="dbo\Stored Procedures\sp_AiChat_SaveCitation.sql" />
+    <Build Include="Housing\Stored Procedures\BuildingTypeDL.sql" />
+    <Build Include="Housing\Stored Procedures\BuildingDetailsDL.sql" />
+    <Build Include="dbo\Stored Procedures\sp_AiChat_Dashboard.sql" />
+    <Build Include="Housing\Stored Procedures\BuildingClassDL.sql" />
+    <Build Include="Housing\Stored Procedures\buildingUtilityTypeDL.sql" />
+    <Build Include="Housing\Stored Procedures\MilitaryLocationSP.sql" />
+    <Build Include="Housing\Stored Procedures\ImportExcelForBuildingPaymentDL.sql" />
+    <Build Include="dbo\Stored Procedures\PagesManagmentSP.sql" />
+    <Build Include="Housing\Stored Procedures\WaitingListSP.sql" />
+    <Build Include="Housing\User Defined Types\UploadExcelRowType.sql" />
+    <Build Include="Housing\User Defined Types\ImportExcelForBuildingPaymentRowType.sql" />
+    <Build Include="Security\Demo.sql" />
+    <Build Include="Security\Housing.sql" />
+    <Build Include="Security\MVCHousing.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\170\SqlSchemas\master.dacpac">
+      <HintPath>$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\170\SqlSchemas\master.dacpac</HintPath>
+      <SuppressMissingDependenciesErrors>False</SuppressMissingDependenciesErrors>
+      <DatabaseVariableLiteralValue>master</DatabaseVariableLiteralValue>
+    </ArtifactReference>
+  </ItemGroup>
+</Project>

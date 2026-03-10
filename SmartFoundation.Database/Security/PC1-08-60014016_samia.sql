@@ -1,0 +1,2 @@
+﻿CREATE USER [PC1-08-60014016\samia];
+

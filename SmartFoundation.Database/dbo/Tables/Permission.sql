@@ -1,0 +1,26 @@
+﻿CREATE TABLE [dbo].[Permission] (
+    [permissionID]                   BIGINT          IDENTITY (1, 1) NOT NULL,
+    [DistributorPermissionTypeID_FK] BIGINT          NULL,
+    [UsersID_FK]                     BIGINT          NULL,
+    [RoleID_FK]                      BIGINT          NULL,
+    [distributorID_FK]               BIGINT          NULL,
+    [IdaraID_FK]                     BIGINT          NULL,
+    [DSDID_FK]                       BIGINT          NULL,
+    [permissionStartDate]            DATETIME        NULL,
+    [permissionEndDate]              DATETIME        NULL,
+    [permissionActive]               BIT             NULL,
+    [permissionNote]                 NVARCHAR (2000) NULL,
+    [InIdaraID]                      INT             NULL,
+    [entryDate]                      DATETIME        CONSTRAINT [DF_permission_entryDate] DEFAULT (getdate()) NULL,
+    [entryData]                      NVARCHAR (20)   NULL,
+    [hostName]                       NVARCHAR (200)  NULL,
+    CONSTRAINT [PK_permission] PRIMARY KEY CLUSTERED ([permissionID] ASC),
+    CONSTRAINT [FK_Permission_DeptSecDiv] FOREIGN KEY ([DSDID_FK]) REFERENCES [dbo].[DeptSecDiv] ([DSDID]),
+    CONSTRAINT [FK_Permission_Distributor] FOREIGN KEY ([distributorID_FK]) REFERENCES [dbo].[Distributor] ([distributorID]),
+    CONSTRAINT [FK_Permission_Distributor1] FOREIGN KEY ([distributorID_FK]) REFERENCES [dbo].[Distributor] ([distributorID]),
+    CONSTRAINT [FK_Permission_DistributorPermissionType] FOREIGN KEY ([DistributorPermissionTypeID_FK]) REFERENCES [dbo].[DistributorPermissionType] ([distributorPermissionTypeID]),
+    CONSTRAINT [FK_Permission_Role] FOREIGN KEY ([RoleID_FK]) REFERENCES [dbo].[Role] ([roleID]),
+    CONSTRAINT [FK_Permission_Role1] FOREIGN KEY ([RoleID_FK]) REFERENCES [dbo].[Role] ([roleID]),
+    CONSTRAINT [FK_Permission_Users] FOREIGN KEY ([UsersID_FK]) REFERENCES [dbo].[Users] ([usersID])
+);
+

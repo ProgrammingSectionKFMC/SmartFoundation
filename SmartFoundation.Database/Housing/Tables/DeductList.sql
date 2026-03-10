@@ -1,0 +1,25 @@
+﻿CREATE TABLE [Housing].[DeductList] (
+    [deductListID]          INT              IDENTITY (1, 1) NOT NULL,
+    [deductTypeID_FK]       INT              NULL,
+    [DeductListStatusID_FK] INT              NULL,
+    [deductUID]             UNIQUEIDENTIFIER CONSTRAINT [DF_Table_1_PaymentUID] DEFAULT (newid()) NOT NULL,
+    [deductName]            NVARCHAR (2000)  NULL,
+    [amountTypeID_FK]       INT              NULL,
+    [paymentTypeID_FK]      INT              NULL,
+    [issueMonth]            INT              NULL,
+    [issueYear]             INT              NULL,
+    [paymentNo]             NVARCHAR (50)    NULL,
+    [paymentDate]           DATE             NULL,
+    [description]           NVARCHAR (1500)  NULL,
+    [deductActive]          BIT              NULL,
+    [BillChargeTypeID_FK]   BIGINT           NULL,
+    [IdaraId_FK]            BIGINT           NULL,
+    [entryDate]             DATETIME         CONSTRAINT [DF_deductList_entryDate] DEFAULT (getdate()) NULL,
+    [entryData]             NVARCHAR (20)    NULL,
+    [hostName]              NVARCHAR (200)   NULL,
+    CONSTRAINT [PK_deductList] PRIMARY KEY CLUSTERED ([deductListID] ASC),
+    CONSTRAINT [FK_DeductList_BuildingPaymentType] FOREIGN KEY ([paymentTypeID_FK]) REFERENCES [Housing].[BuildingPaymentType] ([buildingPaymentTypeID]),
+    CONSTRAINT [FK_DeductList_DeductListStatus] FOREIGN KEY ([DeductListStatusID_FK]) REFERENCES [Housing].[DeductListStatus] ([DeductListStatusID]),
+    CONSTRAINT [FK_DeductList_DeductType] FOREIGN KEY ([deductTypeID_FK]) REFERENCES [Housing].[DeductType] ([deductTypeID])
+);
+

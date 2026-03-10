@@ -1,0 +1,3 @@
+﻿CREATE SCHEMA [MVCHousing]
+    AUTHORIZATION [dbo];
+

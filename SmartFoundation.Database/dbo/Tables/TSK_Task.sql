@@ -1,0 +1,26 @@
+﻿CREATE TABLE [dbo].[TSK_Task] (
+    [taskID]              INT             IDENTITY (1, 1) NOT NULL,
+    [taskName]            NVARCHAR (1000) NULL,
+    [taskComponentID_FK]  INT             NULL,
+    [taskStepID_FK]       INT             NULL,
+    [parentID_FK]         INT             NULL,
+    [weightMinutes]       INT             NULL,
+    [initiatorID_FK]      DECIMAL (10)    NULL,
+    [description]         NVARCHAR (MAX)  NULL,
+    [isActive]            BIT             NULL,
+    [componentName]       NVARCHAR (1000) NULL,
+    [subComponentName]    NVARCHAR (1000) NULL,
+    [subComponentID_FK]   INT             NULL,
+    [taskProjectID_FK]    INT             NULL,
+    [attachmentBookID_FK] BIGINT          NULL,
+    [taskDurationID_FK]   INT             NULL,
+    [initiationDateTime]  DATETIME        NULL,
+    [estimateDueDate]     DATE            NULL,
+    CONSTRAINT [PK_TSK_Task] PRIMARY KEY CLUSTERED ([taskID] ASC),
+    CONSTRAINT [FK_TSK_Task_TSK_Task] FOREIGN KEY ([parentID_FK]) REFERENCES [dbo].[TSK_Task] ([taskID]),
+    CONSTRAINT [FK_TSK_Task_TSK_TaskComponent] FOREIGN KEY ([taskComponentID_FK]) REFERENCES [dbo].[TSK_TaskComponent] ([taskComponentID]),
+    CONSTRAINT [FK_TSK_Task_TSK_TaskDuration] FOREIGN KEY ([taskDurationID_FK]) REFERENCES [dbo].[TSK_TaskDuration] ([taskDurationID]),
+    CONSTRAINT [FK_TSK_Task_TSK_TaskProject] FOREIGN KEY ([taskProjectID_FK]) REFERENCES [dbo].[TSK_TaskProject] ([taskProjectID]),
+    CONSTRAINT [FK_TSK_Task_TSK_TaskSubComponent] FOREIGN KEY ([subComponentID_FK]) REFERENCES [dbo].[TSK_TaskSubComponent] ([taskSubComponentID])
+);
+
