@@ -30,6 +30,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             residentInfoID_ = string.IsNullOrWhiteSpace(residentInfoID_) ? null : residentInfoID_.Trim();
 
             bool ready = false;
+            bool readyToSend = false;
 
             ready = !string.IsNullOrWhiteSpace(residentInfoID_);
 
@@ -48,39 +49,34 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
             var rowsList = new List<Dictionary<string, object?>>();
             var rowsList_dt3 = new List<Dictionary<string, object?>>();
+            var rowsList_dt10 = new List<Dictionary<string, object?>>();
             var dynamicColumns = new List<TableColumn>();
             var dynamicColumns_dt3 = new List<TableColumn>();
+            var dynamicColumns_dt10 = new List<TableColumn>();
 
             DataSet ds = await _mastersServies.GetDataLoadDataSetAsync(spParameters);
 
             //  تقسيم الداتا سيت للجدول الأول + جداول أخرى
             SplitDataSet(ds);
 
-            List<OptionItem> ExtendTypeOptions = new();
+           
 
+           
 
-            // ---------------------- DDLValues ----------------------
-
-            JsonResult? result;
-            string json;
-
-            //// ---------------------- rankOptions ----------------------
-            result = await _CrudController.GetDDLValues(
-                "ExtendReasonTypeName_A", "ExtendReasonTypeID", "9", nameof(FinancialAuditForExtendAndEvictions), usersId, IdaraId, HostName
-           ) as JsonResult;
-
-
-            json = JsonSerializer.Serialize(result!.Value);
-
-            ExtendTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-
-
-            //// ---------------------- END DDL ----------------------
 
 
             decimal AllAmount = 0m;
             decimal RentAmount = 0m;
-            decimal ServiceAmount = 0m;
+            decimal RentRemaining = 0m;
+            decimal ElectrictyAmount = 0m;
+            decimal ElectrictyRemaining = 0m;
+            decimal WatarAmount = 0m;
+            decimal WatarRemaining = 0m;
+            decimal GasAmount = 0m;
+            decimal GasRemaining = 0m;
+            decimal PeneltyAmount = 0m;
+            decimal PeneltyRemaining = 0m;
+            decimal AllRemaining = 0m;
 
 
             string residentInfoIDvalue = "";
@@ -97,6 +93,9 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             decimal buildingRentAmount = 0m;
 
             decimal AllinsuranceRentAmount = 0m;
+
+
+            decimal readyToSendAmount = 0m;
 
 
             if (dt1 != null && dt1.Rows.Count > 0)
@@ -139,26 +138,34 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             {
                 DataRow row = dt4.Rows[0];
 
-                if (dt4.Columns.Contains("AllAmountresidual") && row["AllAmountresidual"] != DBNull.Value)
-                    AllAmount = Convert.ToDecimal(row["AllAmountresidual"]);
+                if (dt4.Columns.Contains("AllRemaining") && row["AllRemaining"] != DBNull.Value)
+                    AllRemaining = Convert.ToDecimal(row["AllRemaining"]);
 
-                if (dt4.Columns.Contains("RentBillsAmountresidual") && row["RentBillsAmountresidual"] != DBNull.Value)
-                    RentAmount = Convert.ToDecimal(row["RentBillsAmountresidual"]);
+                if (dt4.Columns.Contains("RentRemaining") && row["RentRemaining"] != DBNull.Value)
+                    RentRemaining = Convert.ToDecimal(row["RentRemaining"]);
 
-                if (dt4.Columns.Contains("ServiceBillsAmountresidual") && row["ServiceBillsAmountresidual"] != DBNull.Value)
-                    ServiceAmount = Convert.ToDecimal(row["ServiceBillsAmountresidual"]);
+                if (dt4.Columns.Contains("WatarRemaining") && row["WatarRemaining"] != DBNull.Value)
+                    WatarRemaining = Convert.ToDecimal(row["WatarRemaining"]);
+
+              
+                if (dt4.Columns.Contains("GasRemaining") && row["GasRemaining"] != DBNull.Value)
+                    GasRemaining = Convert.ToDecimal(row["GasRemaining"]);
+
+              
+                if (dt4.Columns.Contains("PeneltyRemaining") && row["PeneltyRemaining"] != DBNull.Value)
+                    PeneltyRemaining = Convert.ToDecimal(row["PeneltyRemaining"]);
 
               
 
 
-                if (AllAmount > 0)
-                    TempData["Foridara"] = $"متبقي على المستفيد مطالبات بقيمة {AllAmount} ⃁ قم بالتحقق منها الان";
+                //if (AllAmount > 0)
+                //    TempData["Foridara"] = $"متبقي على المستفيد مطالبات بقيمة {AllAmount} ⃁ قم بالتحقق منها الان";
 
-                if (AllAmount < 0)
-                    TempData["ForResident"] = $"متبقي للمستفيد مبالغ زائدة بقيمة {AllAmount} ⃁ قم بالتحقق منها الان";
+                //if (AllAmount < 0)
+                //    TempData["ForResident"] = $"متبقي للمستفيد مبالغ زائدة بقيمة {AllAmount} ⃁ قم بالتحقق منها الان";
 
-                if (AllAmount == 0)
-                    TempData["countZero"] = $"لايوجد مطالبات على المستفيد";
+                //if (AllAmount == 0)
+                //    TempData["countZero"] = $"لايوجد مطالبات على المستفيد";
               
 
             }
@@ -174,6 +181,25 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                     buildingRentAmount = Convert.ToDecimal(rowss["buildingRentAmount"]);
             }
 
+
+            if (dt10 != null && dt10.Rows.Count > 0)
+            {
+                DataRow rowsss = dt10.Rows[0];
+                if (dt10.Columns.Contains("BillsStatusID") && rowsss["BillsStatusID"] != DBNull.Value)
+                    readyToSendAmount = Convert.ToDecimal(rowsss["BillsStatusID"]);
+            }
+
+
+            if(LastActionTypeIDvalue == "51")
+            {
+                readyToSend = true;
+            }
+
+            if (LastActionTypeIDvalue == "57" && readyToSendAmount == 0)
+            {
+                readyToSend = true;
+            }
+
             AllinsuranceRentAmount = insuranceRentAmount + AllAmount;
 
             string msgrent = "";
@@ -181,37 +207,37 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             string colorrent = "";
             string colorservice = "";
 
-            if (RentAmount > 0)
-                msgrent = $"مبالغ الايجار المطالب بها تبلغ {RentAmount} قم بتحصيلها من المستفيد بالكامل";
-            if (RentAmount > 0)
-                colorrent = $"mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800";
+            //if (RentAmount > 0)
+            //    msgrent = $"مبالغ الايجار المطالب بها تبلغ {RentAmount} قم بتحصيلها من المستفيد بالكامل";
+            //if (RentAmount > 0)
+            //    colorrent = $"mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800";
 
-            if (RentAmount < 0)
-                msgrent = $"مبالغ الايجار الزائدة تبلغ {RentAmount} قم باعادتها للمستفيد بالكامل";
-            if (RentAmount < 0)
-                colorrent = $"mb-4 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-800";
+            //if (RentAmount < 0)
+            //    msgrent = $"مبالغ الايجار الزائدة تبلغ {RentAmount} قم باعادتها للمستفيد بالكامل";
+            //if (RentAmount < 0)
+            //    colorrent = $"mb-4 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-800";
 
-            if (RentAmount == 0)
-                msgrent = $"لايوجد مبالغ مطالب بها المستفيد";
-            if (RentAmount == 0)
-                colorrent = $"mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-green-800";
-
-
-            if (ServiceAmount > 0)
-                msgservice = $"مبالغ فواتير الخدمات المطالب بها تبلغ {ServiceAmount} قم بتحصيلها من المستفيد بالكامل";
-            if (ServiceAmount > 0)
-                colorservice = $"mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800";
+            //if (RentAmount == 0)
+            //    msgrent = $"لايوجد مبالغ مطالب بها المستفيد";
+            //if (RentAmount == 0)
+            //    colorrent = $"mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-green-800";
 
 
-            if (ServiceAmount < 0)
-                msgservice = $"مبالغ فواتير الخدمات الزائدة تبلغ {ServiceAmount} قم باعادتها للمستفيد بالكامل";
-            if (ServiceAmount < 0)
-                colorservice = $"mb-4 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-800";
+            //if (ServiceAmount > 0)
+            //    msgservice = $"مبالغ فواتير الخدمات المطالب بها تبلغ {ServiceAmount} قم بتحصيلها من المستفيد بالكامل";
+            //if (ServiceAmount > 0)
+            //    colorservice = $"mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800";
 
-            if (ServiceAmount == 0)
-                msgservice = $"لايوجد مبالغ مطالب بها المستفيد";
-            if (ServiceAmount == 0)
-                colorservice = $"mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-green-800";
+
+            //if (ServiceAmount < 0)
+            //    msgservice = $"مبالغ فواتير الخدمات الزائدة تبلغ {ServiceAmount} قم باعادتها للمستفيد بالكامل";
+            //if (ServiceAmount < 0)
+            //    colorservice = $"mb-4 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-800";
+
+            //if (ServiceAmount == 0)
+            //    msgservice = $"لايوجد مبالغ مطالب بها المستفيد";
+            //if (ServiceAmount == 0)
+            //    colorservice = $"mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-green-800";
 
 
 
@@ -227,22 +253,30 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
             string rowIdField = "";
             string rowIdField_dt3 = "";
+            string rowIdField_dt10 = "";
             bool canFINANCIALAUDITFOREXTENDANDEVICTIONS = false;
+            bool canFINANCIALSETTLEMENT = false;
+            bool canREVIEWCLAIMSANDPAYMENTS = false;
             
            
 
 
             List<OptionItem> ResidentDetailsOptions = new();
-            List<OptionItem> RentbillPaymentTypeOptions = new();
-            List<OptionItem> ServicebillPaymentTypeOptions = new();
+            List<OptionItem> PayPaymentTypeOptions = new();
+            List<OptionItem> RefundPaymentTypeOptions = new();
             List<OptionItem> insuranceOptions = new();
+            List<OptionItem> billPaymentTypeOptions = new();
+            List<OptionItem> SETTLEMENTOptions = new();
 
 
-            // ---------------------- DDLValues ----------------------
+            JsonResult? result;
+            string json;
 
-            
+         
 
-          
+
+
+
 
             FormConfig form = new();
 
@@ -261,34 +295,25 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
 
                 //// ---------------------- RentbillPaymentTypeOptions ----------------------
-                if (RentAmount >= 0)
+               
                     result = await _CrudController.GetDDLValues(
                          "billPaymentTypeName_A", "billPaymentTypeID", "5", PageName, usersId, IdaraId, HostName
                     ) as JsonResult;
 
-                if (RentAmount < 0)
-                    result = await _CrudController.GetDDLValues(
-                          "billPaymentTypeName_A", "billPaymentTypeID", "6", PageName, usersId, IdaraId, HostName
-                     ) as JsonResult;
 
                 json = JsonSerializer.Serialize(result!.Value);
 
-                RentbillPaymentTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+                RefundPaymentTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
                 //// ---------------------- ServicebillPaymentTypeOptions ----------------------
-                if (ServiceAmount >= 0)
-                    result = await _CrudController.GetDDLValues(
-                         "billPaymentTypeName_A", "billPaymentTypeID", "5", PageName, usersId, IdaraId, HostName
-                    ) as JsonResult;
-
-                if (ServiceAmount < 0)
+               
                     result = await _CrudController.GetDDLValues(
                           "billPaymentTypeName_A", "billPaymentTypeID", "6", PageName, usersId, IdaraId, HostName
                      ) as JsonResult;
 
                 json = JsonSerializer.Serialize(result!.Value);
 
-                ServicebillPaymentTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+                 PayPaymentTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
                 //// ---------------------- insuranceOptions ----------------------
                 
@@ -299,6 +324,26 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 json = JsonSerializer.Serialize(result!.Value);
 
                 insuranceOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+
+                //// ---------------------- rankOptions ----------------------
+                result = await _CrudController.GetDDLValues(
+                    "billPaymentTypeName_A", "billPaymentTypeID", "9", nameof(FinancialAuditForExtendAndEvictions), usersId, IdaraId, HostName
+               ) as JsonResult;
+
+
+                json = JsonSerializer.Serialize(result!.Value);
+
+                billPaymentTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+
+                //// ---------------------- SETTLEMENTOptions ----------------------
+                result = await _CrudController.GetDDLValues(
+                    "billPaymentTypeName_A", "billPaymentTypeID", "11", nameof(FinancialAuditForExtendAndEvictions), usersId, IdaraId, HostName
+               ) as JsonResult;
+
+
+                json = JsonSerializer.Serialize(result!.Value);
+
+                SETTLEMENTOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
 
                 //// ---------------------- END DDL ----------------------
@@ -368,6 +413,14 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         if (permissionName.Equals("FINANCIALAUDITFOREXTENDANDEVICTIONS", StringComparison.OrdinalIgnoreCase))
                         {
                             canFINANCIALAUDITFOREXTENDANDEVICTIONS = true;
+                        }
+                        if (permissionName.Equals("FINANCIALSETTLEMENT", StringComparison.OrdinalIgnoreCase))
+                        {
+                            canFINANCIALSETTLEMENT = true;
+                        }
+                        if (permissionName.Equals("REVIEWCLAIMSANDPAYMENTS", StringComparison.OrdinalIgnoreCase))
+                        {
+                            canREVIEWCLAIMSANDPAYMENTS = true;
                         }
 
                         
@@ -442,6 +495,8 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                             bool isLastActionTypeID = c.ColumnName.Equals("LastActionTypeID", StringComparison.OrdinalIgnoreCase);
                             bool isActionID = c.ColumnName.Equals("ActionID", StringComparison.OrdinalIgnoreCase);
                             bool isBillsStatusID = c.ColumnName.Equals("BillsStatusID", StringComparison.OrdinalIgnoreCase);
+                            bool isLastActionExtendReasonTypeID = c.ColumnName.Equals("LastActionExtendReasonTypeID", StringComparison.OrdinalIgnoreCase);
+                            bool isLastActionDate = c.ColumnName.Equals("LastActionDate", StringComparison.OrdinalIgnoreCase);
 
 
                            
@@ -453,7 +508,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                                 Type = colType,
                                 Sortable = true
                                  ,
-                                Visible = !(isfirstName_A || isfirstName_E || issecondName_A || issecondName_E || isthirdName_A || isthirdName_E || islastName_A || islastName_E || isrankID_FK || ismilitaryUnitID_FK || ismartialStatusID_FK || isnationalityID_FK || isgenderID_FK || isFullName_E || isbirthdate || isnote || isIdaraID || isIdaraName || isbuildingDetailsID || isLastActionID || isLastActionTypeID || isActionID || isBillsStatusID)
+                                Visible = !(isfirstName_A || isfirstName_E || issecondName_A || issecondName_E || isthirdName_A || isthirdName_E || islastName_A || islastName_E || isrankID_FK || ismilitaryUnitID_FK || ismartialStatusID_FK || isnationalityID_FK || isgenderID_FK || isFullName_E || isbirthdate || isnote || isIdaraID || isIdaraName || isbuildingDetailsID || isLastActionID || isLastActionTypeID || isActionID || isBillsStatusID || isLastActionID || isLastActionExtendReasonTypeID || isLastActionDate)
                             });
                         }
 
@@ -569,7 +624,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
                             bool isHidden =  c.ColumnName.Equals("BillChargeTypeID", StringComparison.OrdinalIgnoreCase)
                                            || c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase)
-                                           || c.ColumnName.Equals("BillsStatusID", StringComparison.OrdinalIgnoreCase);
+                                           ;
                            
 
 
@@ -622,6 +677,97 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                             rowsList_dt3.Add(dict3);
                         }
                     }
+
+
+                    if (dt10 != null && dt10.Columns.Count > 0)
+                    {
+                        // RowId
+                        rowIdField_dt10 =
+                                    dt10.Columns.Cast<DataColumn>()
+                                       .FirstOrDefault(c =>
+                                           c.ColumnName.Equals("residentInfoID", StringComparison.OrdinalIgnoreCase) ||
+                                           c.ColumnName.Equals("ResidentInfoID", StringComparison.OrdinalIgnoreCase))
+                                       ?.ColumnName
+                                    ?? dt10.Columns[0].ColumnName;
+
+                        // عناوين الأعمدة بالعربي
+                        var headerMap10 = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                        {
+                            
+
+                           
+                            ["residentInfoID"] = "الرقم المرجعي",
+                            ["Remaining"] = "المبلغ المتبقي",
+                            ["SumBillsTotalPrice"] = "المطالبات",
+                            ["SumTotalPaidBills"] = "المدفوعات",
+                            ["BillsStatus"] = "الحالة"
+                            
+
+                        };
+
+                        // الأعمدة
+                        foreach (DataColumn c in dt10.Columns)
+                        {
+                            string colType = "text";
+                            var t = c.DataType;
+                            if (t == typeof(bool)) colType = "bool";
+                            else if (t == typeof(DateTime)) colType = "date";
+                            else if (t == typeof(byte) || t == typeof(short) || t == typeof(int) || t == typeof(long)
+                                     || t == typeof(float) || t == typeof(double) || t == typeof(decimal))
+                                colType = "number";
+
+
+                            bool isHidden =  c.ColumnName.Equals("BillChargeTypeID", StringComparison.OrdinalIgnoreCase)
+                                           || c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase)
+                                           || c.ColumnName.Equals("BillsStatusID", StringComparison.OrdinalIgnoreCase);
+
+
+
+                            dynamicColumns_dt10.Add(new TableColumn
+                            {
+                                Field = c.ColumnName,
+                                Label = headerMap10.TryGetValue(c.ColumnName, out var label) ? label : c.ColumnName,
+                                Type = colType,
+                                Sortable = true
+                                 ,
+                                Visible = !(isHidden)
+                            });
+                        }
+
+                        // الصفوف
+                        foreach (DataRow r in dt10.Rows)
+                        {
+                            var dict10 = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+                            foreach (DataColumn c in dt10.Columns)
+                            {
+                                var val = r[c];
+                                dict10[c.ColumnName] = val == DBNull.Value ? null : val;
+                            }
+
+                            // p01..p05
+                            object? Get(string key) => dict10.TryGetValue(key, out var v) ? v : null;
+
+                            // Helper to ensure 0 values are displayed as "0" for decimal/numeric fields
+                            object? GetNumeric(string key)
+                            {
+                                var value = Get(key);
+                                
+                                if (value is decimal d) return d.ToString("0.00");
+                                if (value is int i) return i.ToString();
+                                return value?.ToString() ?? "0";
+                            }
+
+                            dict10["p01"] = Get("residentInfoID");
+                            dict10["p02"] = Get("SumBillsTotalPrice");
+                            dict10["p03"] = GetNumeric("SumTotalPaidBills");
+                            dict10["p04"] = GetNumeric("Remaining");
+                            dict10["p05"] = GetNumeric("BillsStatus");
+                            dict10["p06"] = Get("BillsStatusID");
+                          
+
+                            rowsList_dt10.Add(dict10);
+                        }
+                    }
                 }
             }
             catch (Exception ex)
@@ -633,6 +779,36 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
             var currentUrl = Request.Path;
 
+            var ApproveExtendOrExitFields = new List<FieldConfig>
+            {
+
+                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "FINANCIALAUDITFOREXTENDANDEVICTIONS" },
+                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
+                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
+                new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
+                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+                // selection context
+                new FieldConfig { Name = rowIdField, Type = "hidden" },
+                // hidden p01 actually posted to SP
+                 new FieldConfig { Name = "p01", Label = "Order_", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true,Value=residentInfoIDvalue },
+                new FieldConfig { Name = "p03", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsIDvalue },
+                new FieldConfig { Name = "p11", Label = "ملاحظات", Type = "textarea", ColCss = "6",Required = true,HelpText="يجب ان لاتتجاوز 4000 حرف*",MaxLength=3900 },
+                new FieldConfig { Name = "p30", Label = "ملاحظات", Type = "text", ColCss = "6",Value = LastActionDatevalue },
+                new FieldConfig { Name = "p40", Label = "سبب الامهال", Type = "hidden", ColCss = "4",Required = true,HelpText="المتقاعد والمفصول مطلوب تأمين احترازي يرجى الاختيار بدقة*",Options=billPaymentTypeOptions,Value=LastActionExtendReasonTypeIDvalue},
+                new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true,Value = LastActionTypeIDvalue },
+                new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p19", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true,Value = buildingDetailsNovalue },
+                new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true,Value=LastActionIDvalue },
+                new FieldConfig { Name = "p22", Label = "ActionID", Type = "hidden", ColCss = "3", Readonly = true,Value=ActionIDvalue },
+
+
+            };
 
             // UPDATE fields
             var BillsFields = new List<FieldConfig>
@@ -660,9 +836,9 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 new FieldConfig { Name = "p06", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsNovalue },
                 new FieldConfig { Name = "p07", Label = "SumBillsTotalPrice", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsIDvalue },
                 new FieldConfig { Name = "p08", Label = "SumTotalPaidBills", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p09", Label = "Remaining", Type = "hidden", ColCss = "3", Required = true, Options= RentbillPaymentTypeOptions },
-                new FieldConfig { Name = "p10", Label = "BillsStatus", Type = "hidden", ColCss = "3", Required = true, Options= RentbillPaymentTypeOptions },
-                new FieldConfig { Name = "p11", Label = "BillsStatusID", Type = "hidden", ColCss = "3", Required = true, Options= RentbillPaymentTypeOptions },
+                new FieldConfig { Name = "p09", Label = "Remaining", Type = "hidden", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p10", Label = "BillsStatus", Type = "hidden", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p11", Label = "BillsStatusID", Type = "hidden", ColCss = "3", Required = true},
 
 
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
@@ -698,9 +874,9 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 new FieldConfig { Name = "p06", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsNovalue },
                 new FieldConfig { Name = "p07", Label = "SumBillsTotalPrice", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsIDvalue },
                 new FieldConfig { Name = "p08", Label = "SumTotalPaidBills", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p09", Label = "Remaining", Type = "hidden", ColCss = "3", Required = true, Options= RentbillPaymentTypeOptions },
-                new FieldConfig { Name = "p10", Label = "BillsStatus", Type = "hidden", ColCss = "3", Required = true, Options= RentbillPaymentTypeOptions },
-                new FieldConfig { Name = "p11", Label = "BillsStatusID", Type = "hidden", ColCss = "3", Required = true, Options= RentbillPaymentTypeOptions },
+                new FieldConfig { Name = "p09", Label = "Remaining", Type = "hidden", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p10", Label = "BillsStatus", Type = "hidden", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p11", Label = "BillsStatusID", Type = "hidden", ColCss = "3", Required = true },
 
 
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
@@ -712,11 +888,13 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             };
 
 
-            var ApproveExtendFields = new List<FieldConfig>
+
+
+            var PayMoneyFields = new List<FieldConfig>
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "FINANCIALAUDITFOREXTENDANDEVICTIONS" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "MeterRead" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -727,103 +905,69 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 // selection context
                 new FieldConfig { Name = rowIdField, Type = "hidden" },
                 // hidden p01 actually posted to SP
-                 new FieldConfig { Name = "p01", Label = "Order_", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true,Value=residentInfoIDvalue },
-                new FieldConfig { Name = "p03", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsIDvalue },
-                new FieldConfig { Name = "p11", Label = "ملاحظات", Type = "textarea", ColCss = "6",Required = true,HelpText="يجب ان لاتتجاوز 4000 حرف*",MaxLength=3900 },
-                new FieldConfig { Name = "p30", Label = "ملاحظات", Type = "text", ColCss = "6",Value = LastActionDatevalue },
-                new FieldConfig { Name = "p40", Label = "سبب الامهال", Type = "hidden", ColCss = "4",Required = true,HelpText="المتقاعد والمفصول مطلوب تأمين احترازي يرجى الاختيار بدقة*",Options=ExtendTypeOptions,Value=LastActionExtendReasonTypeIDvalue},
-                new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true,Value = LastActionTypeIDvalue },
-                new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p19", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true,Value = buildingDetailsNovalue },
-                new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true,Value=LastActionIDvalue },
-                new FieldConfig { Name = "p22", Label = "ActionID", Type = "hidden", ColCss = "3", Readonly = true,Value=ActionIDvalue },
+
+
+                new FieldConfig { Name = "p01", Label = "Order_", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p03", Label = "BillChargeTypeID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p04", Label = "BillChargeTypeName_A", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p05", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p06", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsNovalue },
+                new FieldConfig { Name = "p07", Label = "SumBillsTotalPrice", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsIDvalue },
+                new FieldConfig { Name = "p08", Label = "SumTotalPaidBills", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p10", Label = "BillsStatus", Type = "hidden", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p11", Label = "BillsStatusID", Type = "hidden", ColCss = "3", Required = true},
+
+
+                new FieldConfig { Name = "p12", Label = "billPaymentType", Type = "select", ColCss = "4", Required = true, Options= PayPaymentTypeOptions },
+                new FieldConfig { Name = "p09", Label = "المبلغ", Type = "text",TextMode="money_sar",Icon = "/img/Saudi_Riyal_Symbol.svg", ColCss = "4", Required = true },
+
 
 
             };
+
+
+            var RefundMoneyFields = new List<FieldConfig>
+            {
+
+                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "MeterRead" },
+                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
+                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
+                new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
+                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+                // selection context
+                new FieldConfig { Name = rowIdField, Type = "hidden" },
+                // hidden p01 actually posted to SP
+
+
+               new FieldConfig { Name = "p01", Label = "Order_", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p03", Label = "BillChargeTypeID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p04", Label = "BillChargeTypeName_A", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p05", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p06", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsNovalue },
+                new FieldConfig { Name = "p07", Label = "SumBillsTotalPrice", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsIDvalue },
+                new FieldConfig { Name = "p08", Label = "SumTotalPaidBills", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p10", Label = "BillsStatus", Type = "hidden", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p11", Label = "BillsStatusID", Type = "hidden", ColCss = "3", Required = true},
+
+
+                  new FieldConfig { Name = "p12", Label = "billPaymentType", Type = "select", ColCss = "4", Required = true, Options= RefundPaymentTypeOptions },
+                  new FieldConfig { Name = "p09", Label = "المبلغ", Type = "text",TextMode="money_sar",Icon = "/img/Saudi_Riyal_Symbol.svg", ColCss = "4", Required = true },
+
+
+
+
+            };
+
 
 
            
 
-            var dsModel = new SmartTableDsModel
-            {
-
-                Columns = dynamicColumns,
-                Rows = rowsList,
-                RowIdField = rowIdField,
-                PageSize = 10,
-                PageSizes = new List<int> { 10, 25, 50, 100 },
-                QuickSearchFields = dynamicColumns.Select(c => c.Field).Take(4).ToList(),
-                Searchable = false,
-                AllowExport = true,
-                PageTitle = "قراءة عدادات التسكين والاخلاء",
-                PanelTitle = "قراءة عدادات التسكين والاخلاء",
-                EnableCellCopy = true,
-                ViewMode = TableViewMode.Table,
-                ShowPageSizeSelector = false,
-                ShowRowBorders = false,
-                EnablePagination = false,
-                ShowToolbar = true,
-                Selectable = false,
-                ShowColumnVisibility = true,
-
-                RenderMode = SmartTableRenderMode.Toggle,
-                RenderAsToggle = true,
-                RenderAsSection = false,
-                RenderAsTab = false,
-                TabGroupKey = "financial-audit-extend-evictions",
-                TabKey = "resident-info",
-                TabLabel = "بيانات المستفيد",
-                TabIcon = "fa-solid fa-user",
-                TabDefaultActive = true,
-                ShowTabCount = false,
-                TabOrder = 1,
-                ToggleDefaultOpen = true,
-
-                Toolbar = new TableToolbarConfig
-                {
-                    ShowRefresh = false,
-                    ShowColumns = true,
-                    ShowExportCsv = false,
-                    ShowExportExcel = false,
-                    ShowAdd = canFINANCIALAUDITFOREXTENDANDEVICTIONS,
-                    EnableAdd = true,//AllAmount == 0,
-                    ShowBulkDelete = false,
-                    ShowExportPdf = false,
-
-
-                    Add = new TableAction
-                    {
-                        Label = "اعتماد التدقيق المالي وارساله لقسم الاسكان",
-                        Icon = "fa fa-check",
-                        Color = "success",
-                        IsEdit = false,
-                        OpenModal = true,
-                        ModalTitle = "اعتماد الامهال",
-                        ModalMessage = "لايمكن التراجع بعد اعتماد التدقيق المالي وارساله لقسم الاسكان",
-                        ModalMessageClass = "bg-red-50 text-red-700",
-                        ModalMessageIcon = "fa-solid fa-triangle-exclamation",
-                        OpenForm = new FormConfig
-                        {
-                            FormId = "employeeDeleteForm",
-                            Title = "تأكيد اعتماد التدقيق المالي وارساله لقسم الاسكان",
-                            Method = "post",
-                            ActionUrl = "/crud/delete",
-                            Buttons = new List<FormButtonConfig>
-                            {
-                                new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "success", Icon = "fa fa-check" },
-                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
-                            },
-                            Fields = ApproveExtendFields
-                        },
-
-                    },
-
-
-
-                }
-            };
 
 
 
@@ -950,6 +1094,39 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             };
 
 
+            var dsModel = new SmartTableDsModel
+            {
+
+                Columns = dynamicColumns,
+                Rows = rowsList,
+                RowIdField = rowIdField,
+                PageTitle = "التدقيق المالي لحالات الامهال والاخلاء",
+                PageSize = 10,
+                PageSizes = new List<int> { 10, 25, 50, 200, },
+                QuickSearchFields = dynamicColumns_dt3.Select(c => c.Field).Take(4).ToList(),
+                Searchable = false,
+                AllowExport = false,
+                ShowRowBorders = false,
+                EnablePagination = false, // جديد
+                ShowPageSizeSelector = false, // جديد
+                PanelTitle = "التدقيق المالي لحالات الامهال والاخلاء",
+                //TabelLabel = "خطابات التسكين",
+                //TabelLabelIcon = "fa-solid fa-list",
+                ShowToolbar = true,
+                EnableCellCopy = false,
+                RenderAsToggle = false,
+                ToggleLabel = "بيانات المستفيد",
+                ToggleIcon = "fa-solid fa-newspaper",
+                ToggleDefaultOpen = true,
+                ShowToggleCount = false,
+                Selectable = false,
+                
+                
+
+              
+            };
+
+            var selectedFields = AllRemaining < 0 ? PayMoneyFields : RefundMoneyFields;
 
             var dsModel3 = new SmartTableDsModel
             {
@@ -983,12 +1160,10 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                     ShowColumns = true,
                     ShowExportCsv = false,
                     ShowExportExcel = false,
-                    ShowAdd = true,
-                    EnableAdd = true,
-                    ShowAdd1 = true,
-                    ShowEdit = true,
-                    ShowEdit1 = true,
-                    ShowEdit2 = true,
+                    ShowEdit = canREVIEWCLAIMSANDPAYMENTS,
+                    ShowEdit1 = canREVIEWCLAIMSANDPAYMENTS,
+                    ShowEdit2 = canFINANCIALSETTLEMENT,
+                    ShowDelete = canFINANCIALSETTLEMENT,
                     ShowBulkDelete = false,
 
 
@@ -1058,7 +1233,26 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         Meta = extraMetaBills,
                         RequireSelection = true,
                         MinSelection = 1,
-                        MaxSelection = 1
+                        MaxSelection = 1,
+
+                        Guards = new TableActionGuards
+                        {
+                            AppliesTo = "any",
+                            DisableWhenAny = new List<TableActionRule>
+                                {
+
+                                      new TableActionRule
+                                    {
+                                        Field = "SumBillsTotalPrice",
+                                        Op = "eq",
+                                        Value = "0",
+                                        Message = "لايوجد مطالبات للاستعراض",
+                                        Priority = 3
+                                    },
+
+
+                                  }
+                        }
 
                     },
 
@@ -1094,19 +1288,39 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         Meta = extraMetaPaid,
                         RequireSelection = true,
                          MinSelection = 1,
-                         MaxSelection = 1
-                     },
+                         MaxSelection = 1,
+                        Guards = new TableActionGuards
+                        {
+                            AppliesTo = "any",
+                            DisableWhenAny = new List<TableActionRule>
+                                {
+
+                                      new TableActionRule
+                                    {
+                                        Field = "SumTotalPaidBills",
+                                        Op = "eq",
+                                        Value = "0",
+                                        Message = "لايوجد مدفوعات للاستعراض",
+                                        Priority = 3
+                                    },
+
+
+                                  }
+                        }
+                    },
+
+
 
                     Edit2 = new TableAction
                     {
-                        Label = "دفع المطالبات",
+                        Label = "دفع المطالبات / اعادة مبالغ",
                         Icon = "/img/Saudi_Riyal_Symbol.svg",
                         Color = "success",
                         
                         //Placement = TableActionPlacement.ActionsMenu, 
                         IsEdit = true,
                         OpenModal = true,
-                        ModalTitle = "دفع المطالبات",
+                        ModalTitle = "دفع المطالبات / اعادة مبالغ",
                         ModalMessage = msgservice,
                         ModalMessageIcon = "fa-solid fa-circle-info",
                         ModalMessageClass = colorservice,
@@ -1114,12 +1328,86 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         OpenForm = new FormConfig
                         {
                             FormId = "BuildingTypeEditForm",
-                            Title = "دفع المطالبات",
+                            Title = "دفع المطالبات / اعادة مبالغ",
                             Method = "post",
                             ActionUrl = "/crud/update",
                             SubmitText = "حفظ التعديلات",
                             CancelText = "إلغاء",
-                            Fields = PaidFields,
+                           // Fields = PayMoneyFields,
+                            Buttons = new List<FormButtonConfig>
+                            {
+                               new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "success" },
+                                new FormButtonConfig { Text = "انهاء", Type = "button", Color = "secondary", OnClickJs = "window.__sfTableActive?.closeModal();"  }
+                            }
+                        },
+
+                        Meta = new Dictionary<string, object?>
+                        {
+                            ["dynamicFieldsByRow"] = true,
+                            ["dynamicFieldsField"] = "p11",
+
+                            ["dynamicFieldsMap"] = new Dictionary<string, object?>
+                            {
+                                ["0"] = PayMoneyFields,
+                                ["1"] = RefundMoneyFields
+                                //,
+                                //["2"] = ApproveExtendOrExitFields
+                            },
+
+                            ["dynamicFieldsDefault"] = PayMoneyFields
+                        },
+
+
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1,
+                        Guards = new TableActionGuards
+                        {
+                            AppliesTo = "any",
+                            DisableWhenAny = new List<TableActionRule>
+                                {
+
+                                      new TableActionRule
+                                    {
+                                        Field = "BillsStatusID",
+                                        Op = "eq",
+                                        Value = "2",
+                                        Message = "لايوجد مطالبات ولامدفوعات للمعالجة",
+                                        Priority = 3
+                                    },
+
+
+                                  }
+                        }
+                    },
+
+
+
+                    Delete = new TableAction
+                    {
+                        Label = "التسوية المالية",
+                        Icon = "fa fa-exchange-alt",
+                        Color = "warning",
+                        
+                        //Placement = TableActionPlacement.ActionsMenu, 
+                        IsEdit = true,
+                        OpenModal = true,
+                        ModalTitle = "التسوية المالية",
+                        ModalMessage = msgservice,
+                        ModalMessageIcon = "fa-solid fa-circle-info",
+                        ModalMessageClass = colorservice,
+                        Show = true,
+
+
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "BuildingTypeEditForm",
+                            Title = "التسوية المالية",
+                            Method = "post",
+                            ActionUrl = "/crud/update",
+                            SubmitText = "حفظ التعديلات",
+                            CancelText = "إلغاء",
+                            Fields = PayMoneyFields,
                             Buttons = new List<FormButtonConfig>
                             {
                                new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "success" },
@@ -1128,9 +1416,98 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         },
                         RequireSelection = true,
                         MinSelection = 1,
-                        MaxSelection = 1
+                        MaxSelection = 1,
+
+                         Guards = new TableActionGuards
+                         {
+                             AppliesTo = "any",
+                             DisableWhenAny = new List<TableActionRule>
+                                {
+
+                                      new TableActionRule
+                                    {
+                                        Field = "BillsStatusID",
+                                        Op = "neq",
+                                        Value = "1",
+                                        Message = "لايوجد مبالغ للتسوية",
+                                        Priority = 3
+                                    },
+                                       
+
+                                  }
+                         }
                     },
 
+
+                }
+
+            };
+            
+            
+            var dsModel10 = new SmartTableDsModel
+            {
+                PageTitle = "التدقيق المالي لحالات الامهال والاخلاء",
+                Columns = dynamicColumns_dt10,
+                Rows = rowsList_dt10,
+                RowIdField = rowIdField_dt10,
+                PageSize = 10,
+                PageSizes = new List<int> { 10, 25, 50, 200, },
+                QuickSearchFields = dynamicColumns_dt10.Select(c => c.Field).Take(4).ToList(),
+                Searchable = false,
+                AllowExport = false,
+                ShowRowBorders = false,
+                EnablePagination = false, // جديد
+                ShowPageSizeSelector = false, // جديد
+                PanelTitle = "التدقيق المالي لحالات الامهال والاخلاء",
+                //TabelLabel = "خطابات التسكين",
+                //TabelLabelIcon = "fa-solid fa-list",
+                ShowToolbar = true,
+                EnableCellCopy = false,
+                RenderAsToggle = true,
+                ToggleLabel = "اجمالي المطالبات",
+                ToggleIcon = "fa-solid fa-file-signature",
+                ToggleDefaultOpen = true,
+                ShowToggleCount = false,
+                Selectable = false,
+
+                Toolbar = new TableToolbarConfig
+                {
+                    ShowRefresh = false,
+                    ShowColumns = true,
+                    ShowExportCsv = false,
+                    ShowExportExcel = false,
+                    ShowAdd = canFINANCIALAUDITFOREXTENDANDEVICTIONS ,
+                    EnableAdd = readyToSend && canFINANCIALAUDITFOREXTENDANDEVICTIONS ,
+                    
+                    ShowBulkDelete = false,
+
+
+                    Add = new TableAction
+                    {
+                        Label = "اعتماد التدقيق المالي وارساله لقسم الاسكان",
+                        Icon = "fa fa-check",
+                        Color = "success",
+                        IsEdit = false,
+                        OpenModal = true,
+                        ModalTitle = "اعتماد الامهال",
+                        ModalMessage = "لايمكن التراجع بعد اعتماد التدقيق المالي وارساله لقسم الاسكان",
+                        ModalMessageClass = "bg-red-50 text-red-700",
+                        ModalMessageIcon = "fa-solid fa-triangle-exclamation",
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "employeeDeleteForm",
+                            Title = "تأكيد اعتماد التدقيق المالي وارساله لقسم الاسكان",
+                            Method = "post",
+                            ActionUrl = "/crud/delete",
+                            Buttons = new List<FormButtonConfig>
+                            {
+                                new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "success", Icon = "fa fa-check" },
+                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
+                            },
+                            Fields = ApproveExtendOrExitFields
+                        },
+
+                    },
 
                 }
 
@@ -1232,12 +1609,110 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         },
 
                     };
+          
+            dsModel10.StyleRules = new List<TableStyleRule>
+                    {
+
+                         new TableStyleRule
+                        {
+                            Target = "row",
+                            Field = "BillsStatusID",
+                            Op = "eq",
+                            Value = "0",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "Remaining",
+                            PillTextField = "Remaining",
+                            PillCssClass = "pill pill-red",
+                            PillMode = "replace"
+                        },
+                        new TableStyleRule
+                        {
+                            Target = "row",
+                            Field = "BillsStatusID",
+                            Op = "eq",
+                            Value = "1",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "Remaining",
+                            PillTextField = "Remaining",
+                            PillCssClass = "pill pill-yellow",
+                            PillMode = "replace"
+                        },
+
+                        new TableStyleRule
+                        {
+
+                            Target = "row",
+                            Field = "BillsStatusID",
+                            Op = "eq",
+                            Value = "2",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "Remaining",
+                            PillTextField = "Remaining",
+                            PillCssClass = "pill pill-green",
+                            PillMode = "replace"
+                        },
+
+
+                          new TableStyleRule
+                        {
+                            Target = "row",
+                            Field = "BillsStatusID",
+                            Op = "eq",
+                            Value = "0",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "BillsStatus",
+                            PillTextField = "BillsStatus",
+                            PillCssClass = "pill pill-red",
+                            PillMode = "replace"
+                        },
+
+                           new TableStyleRule
+                        {
+                            Target = "row",
+                            Field = "BillsStatusID",
+                            Op = "eq",
+                            Value = "1",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "BillsStatus",
+                            PillTextField = "BillsStatus",
+                            PillCssClass = "pill pill-yellow",
+                            PillMode = "replace"
+                        },
+
+                            new TableStyleRule
+                        {
+                            Target = "row",
+                            Field = "BillsStatusID",
+                            Op = "eq",
+                            Value = "2",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "BillsStatus",
+                            PillTextField = "BillsStatus",
+                            PillCssClass = "pill pill-green",
+                            PillMode = "replace"
+                        },
+
+                    };
 
 
 
             bool dsModelHasRows = dt1 != null && dt1.Rows.Count > 0;
 
             bool dsModel3HasRows = dt3 != null && dt3.Rows.Count > 0;
+
+            bool dsModel10HasRows = dt10 != null && dt10.Rows.Count > 0;
 
 
 
@@ -1255,7 +1730,8 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
                 Form = form,
                 TableDS = dsModelHasRows ? dsModel : null,
-                TableDS1 = dsModel3HasRows ? dsModel3 : null
+                TableDS1 = dsModel10HasRows ? dsModel10 : null,
+                TableDS2 = dsModel3HasRows ? dsModel3 : null
 
             };
 

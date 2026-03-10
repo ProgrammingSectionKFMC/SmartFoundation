@@ -2582,6 +2582,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     });
                 };
 
+                this.applyToggleFieldVisibility = applyToggleFieldVisibility;
+
 
                 const normalizeObjKeyLookup = (obj) => {
                     const map = {};
@@ -2597,6 +2599,18 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 };
 
                 const resolveMetas = () => {
+                    const isExtraMeta = (m) => {
+                        if (!m || typeof m !== "object") return false;
+
+                        return !!(
+                            m.extraEndpoint ?? m.ExtraEndpoint ??
+                            m.extraRequest ?? m.ExtraRequest ??
+                            m.useRowExtra ?? m.UseRowExtra ??
+                            m.lazyExtra ?? m.LazyExtra ??
+                            m.extraSlotKey ?? m.ExtraSlotKey
+                        );
+                    };
+
                     const list = [
                         action.meta ?? action.Meta,
                         action.meta1 ?? action.Meta1,
@@ -2604,7 +2618,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         action.meta3 ?? action.Meta3,
                         action.meta4 ?? action.Meta4,
                         action.meta5 ?? action.Meta5
-                    ].filter(m => m && typeof m === "object");
+                    ].filter(isExtraMeta);
 
                     list.forEach((m, i) => {
                         if (!m.extraSlotKey && !m.ExtraSlotKey) m.extraSlotKey = `m${i + 1}`;
@@ -3137,8 +3151,75 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     // -------- (D) openForm --------
                     else if (action.openForm ?? action.OpenForm) {
                         console.log("[openModal] openForm branch fired", action.openForm ?? action.OpenForm);
-                        this.modal.html = this.generateFormHtml(action.openForm ?? action.OpenForm, row);
-                        console.log("[openModal] generated html length =", (this.modal.html || "").length);
+
+                        const baseForm = action.openForm ?? action.OpenForm;
+                        const meta = action.meta ?? action.Meta ?? {};
+
+                        console.log("[DynamicFieldsByRow][meta-check]", {
+                            action,
+                            meta,
+                            dynamicFieldsByRow: meta.dynamicFieldsByRow ?? meta.DynamicFieldsByRow,
+                            dynamicFieldsField: meta.dynamicFieldsField ?? meta.DynamicFieldsField,
+                            dynamicFieldsMap: meta.dynamicFieldsMap ?? meta.DynamicFieldsMap,
+                            row
+                        });
+
+                        // ننسخ الفورم حتى لا نعدل الأصل
+                        const formToRender = JSON.parse(JSON.stringify(baseForm));
+
+                        // ✅ إذا ما فيه تفعيل للميزة، استخدم السلوك القديم كما هو
+                        const isDynamicFields = (meta.dynamicFieldsByRow ?? meta.DynamicFieldsByRow) === true;
+
+                        if (!isDynamicFields || !row) {
+                            this.modal.html = this.generateFormHtml(formToRender, row);
+                            console.log("[openModal] generated html length =", (this.modal.html || "").length);
+                        } else {
+                            const targetField = String(meta.dynamicFieldsField ?? meta.DynamicFieldsField ?? "").trim();
+                            const rawMap = meta.dynamicFieldsMap ?? meta.DynamicFieldsMap ?? null;
+                            const defaultFields = meta.dynamicFieldsDefault ?? meta.DynamicFieldsDefault ?? null;
+
+                            const rowValueRaw =
+                                row?.[targetField] ??
+                                row?.[String(targetField).toLowerCase()] ??
+                                "";
+
+                            const rowValueNormalized = String(rowValueRaw ?? "").trim().toLowerCase();
+
+                            let selectedFields = null;
+
+                            if (rawMap && typeof rawMap === "object") {
+                                const normalizedMap = {};
+
+                                Object.keys(rawMap).forEach(k => {
+                                    normalizedMap[String(k).trim().toLowerCase()] = rawMap[k];
+                                });
+
+                                selectedFields = normalizedMap[rowValueNormalized] ?? null;
+                            }
+
+                            if (Array.isArray(selectedFields)) {
+                                formToRender.fields = selectedFields;
+                                formToRender.Fields = selectedFields;
+                            } else if (Array.isArray(defaultFields)) {
+                                formToRender.fields = defaultFields;
+                                formToRender.Fields = defaultFields;
+                            }
+
+                            console.log("[DynamicFieldsByRow]", {
+                                targetField,
+                                rowValueRaw,
+                                rowValueNormalized,
+                                selectedFieldsCount: Array.isArray(formToRender.fields ?? formToRender.Fields)
+                                    ? (formToRender.fields ?? formToRender.Fields).length
+                                    : 0,
+                                selectedFieldNames: Array.isArray(formToRender.fields ?? formToRender.Fields)
+                                    ? (formToRender.fields ?? formToRender.Fields).map(f => f?.name ?? f?.Name ?? "(no-name)")
+                                    : []
+                            });
+
+                            this.modal.html = this.generateFormHtml(formToRender, row);
+                            console.log("[openModal] generated html length =", (this.modal.html || "").length);
+                        }
                     }
 
                     // -------- (E) row details --------
@@ -3249,8 +3330,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         }
 
 
-                        console.log("[openModal] modal html now =", this.modal.html);
-                        console.log("[openModal] form exists =", !!modalEl.querySelector("form"));
+                        //console.log("[openModal] modal html now =", this.modal.html);
+                        //console.log("[openModal] form exists =", !!modalEl.querySelector("form"));
 
                         // bind save spinner once
                         const form = modalEl.querySelector("form");
@@ -3428,7 +3509,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         this.initSelect2InModal?.(modalEl);
                         try {
                             const metas = resolveMetas();
-                            metas.forEach(m => applyToggleFieldVisibility(m, []));
+                            metas.forEach(m => this.applyToggleFieldVisibility?.(m, []));
                         } catch (e) {
                             console.warn("[ToggleField] init failed:", e);
                         }
@@ -3550,7 +3631,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                     const html = renderExtraTable(rows, meta, st, slotKey);
                                     if (slotBody) slotBody.innerHTML = html;
 
-                                    applyToggleFieldVisibility(meta, rows);
+                                    this.applyToggleFieldVisibility?.(meta, rows);
 
                                     if (window.Alpine && typeof window.Alpine.initTree === "function") {
                                         window.Alpine.initTree(slotBody);
@@ -3863,7 +3944,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         console.log("[bindExtraDepends] rows:", rows.length);
 
                         renderRowsIntoModal(rows);
-                        applyToggleFieldVisibility(meta, rows);
+                        this.applyToggleFieldVisibility?.(meta, rows);
                     };
 
                     // =========================
@@ -4287,7 +4368,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                     case "money_sar":
                         oninput = `oninput="sfMoneySarOnInput(this)"`;
-                        pattern = 'pattern="^\\d{1,3}(,\\d{3})*(\\.\\d{0,2})?$"';
+                        pattern = 'pattern="^\\d+(\\.\\d{0,2})?$"';
                         break;
 
                     case "custom":
@@ -6806,21 +6887,47 @@ window.sfRouteEditForm = function (table, act, row) {
 
 
 
-// money_sar 
+// money_sar
+
 window.sfMoneySarOnInput = function (el) {
     let v = (el.value || "");
-    v = v.replace(/[^\d.,]/g, "");
-    v = v.replace(/,/g, "");
+
+    // يسمح فقط بالأرقام والنقطة
+    v = v.replace(/[^\d.]/g, "");
+
+    // إزالة أي نقطة إضافية
     const firstDot = v.indexOf(".");
     if (firstDot !== -1) {
         v = v.slice(0, firstDot + 1) + v.slice(firstDot + 1).replace(/\./g, "");
     }
+
     let [intPart, decPart] = v.split(".");
-    intPart = (intPart || "").replace(/^0+(?=\d)/, ""); 
+
+    // إزالة الأصفار الزائدة في البداية
+    intPart = (intPart || "").replace(/^0+(?=\d)/, "");
+
+    // السماح بمنزلتين عشريتين فقط
     if (decPart != null) decPart = decPart.slice(0, 2);
-    intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+    // بدون فواصل آلاف
     el.value = decPart != null ? `${intPart}.${decPart}` : intPart;
 };
+
+
+//window.sfMoneySarOnInput = function (el) {
+//    let v = (el.value || "");
+//    v = v.replace(/[^\d.,]/g, "");
+//    v = v.replace(/,/g, "");
+//    const firstDot = v.indexOf(".");
+//    if (firstDot !== -1) {
+//        v = v.slice(0, firstDot + 1) + v.slice(firstDot + 1).replace(/\./g, "");
+//    }
+//    let [intPart, decPart] = v.split(".");
+//    intPart = (intPart || "").replace(/^0+(?=\d)/, ""); 
+//    if (decPart != null) decPart = decPart.slice(0, 2);
+//    intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+//    el.value = decPart != null ? `${intPart}.${decPart}` : intPart;
+//};
 
 
 
