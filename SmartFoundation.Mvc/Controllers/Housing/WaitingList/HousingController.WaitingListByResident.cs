@@ -1377,11 +1377,19 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 //TabelLabelIcon = "fa-solid fa-list",
                 ShowToolbar = residentInfoIdaraID == IdaraId,
                 EnableCellCopy = false,
-                RenderAsToggle = true,
-                ToggleLabel = "طلبات نقل سجلات الانتظار من ادارتك",
-                ToggleIcon = "fa-solid fa-file-signature",
-                ToggleDefaultOpen = residentInfoIdaraID == IdaraId,
-                ShowToggleCount = true,
+
+                RenderMode = SmartTableRenderMode.Tab,
+                RenderAsToggle = false,
+                RenderAsSection = false,
+                RenderAsTab = true,
+                TabGroupKey = "waiting-list-by-resident",
+                TabKey = "occupant-MoveWaitingList",
+                TabLabel = "طلبات نقل سجلات الانتظار من ادارتك",
+                TabIcon = "fa-solid fa-file-signature",
+                TabDefaultActive = false,
+                ShowTabCount = true,
+                TabOrder = 4,
+
                 Toolbar = new TableToolbarConfig
                 {
                     ShowRefresh = false,

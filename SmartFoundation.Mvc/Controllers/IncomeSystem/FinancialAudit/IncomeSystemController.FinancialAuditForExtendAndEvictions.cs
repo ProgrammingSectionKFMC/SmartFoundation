@@ -598,7 +598,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                             ["buildingDetailsNo"] = "رقم المبنى",
                             ["SumBillsTotalPrice"] = "المطلوب",
                             ["SumTotalPaidBills"] = "المسدد",
-                            ["Remaining"] = "المتبقي",
+                            ["Remaining"] = "المتبقي / الفائض",
                             ["BillsStatus"] = "الحالة"
                             
 
@@ -697,9 +697,9 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
                            
                             ["residentInfoID"] = "الرقم المرجعي",
-                            ["Remaining"] = "المبلغ المتبقي",
-                            ["SumBillsTotalPrice"] = "المطالبات",
-                            ["SumTotalPaidBills"] = "المدفوعات",
+                            ["Remaining"] = "اجمالي المتبقي او الفائض",
+                            ["SumBillsTotalPrice"] = "اجمالي المطالبات",
+                            ["SumTotalPaidBills"] = "اجمالي المدفوعات",
                             ["BillsStatus"] = "الحالة"
                             
 
