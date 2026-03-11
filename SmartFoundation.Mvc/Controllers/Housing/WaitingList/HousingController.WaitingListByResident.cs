@@ -1388,7 +1388,6 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 TabIcon = "fa-solid fa-file-signature",
                 TabDefaultActive = false,
                 ShowTabCount = true,
-                TabOrder = 4,
 
                 Toolbar = new TableToolbarConfig
                 {
