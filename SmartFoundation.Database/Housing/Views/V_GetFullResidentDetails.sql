@@ -1,7 +1,9 @@
 ﻿
-CREATE VIEW Housing.V_GetFullResidentDetails
+
+CREATE VIEW [Housing].[V_GetFullResidentDetails]
 AS
 SELECT
+    rd.residentDetailsID              AS residentDetailsID,
     ri.residentInfoID                 AS residentInfoID,
     ri.NationalID                     AS NationalID,
 
@@ -338,6 +340,8 @@ EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane2', @value = N'
    End
 End
 ', @level0type = N'SCHEMA', @level0name = N'Housing', @level1type = N'VIEW', @level1name = N'V_GetFullResidentDetails';
+
+
 
 
 GO

@@ -1524,6 +1524,65 @@ BEGIN
         END
 
 
+         ----------------------------------------------------------------
+        -- WaitingList
+        ----------------------------------------------------------------
+        ELSE IF @pageName_ = 'OtherWaitingList'
+        BEGIN
+            IF (
+                SELECT COUNT(*)
+                FROM  dbo.V_GetListUserPermission v
+                WHERE v.userID = @entrydata
+                  AND v.menuName_E = @pageName_
+                  AND v.permissionTypeName_E = @ActionType
+            ) <= 0
+            BEGIN
+                SET @ok = 0;
+                SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+                GOTO Finish;
+            END
+
+            DELETE FROM @Result;
+                             
+
+
+              IF @ActionType = 'MOVETOOCCUPENTPROCEDURES'
+            BEGIN
+                INSERT INTO @Result(IsSuccessful, Message_)
+                EXEC [Housing].[OtherWaitingListSP]
+                    @Action                       = @ActionType
+                  , @ActionID                     = @parameter_01
+                  , @residentInfoID_FK            = @parameter_02
+                  , @residentName                 = @parameter_15
+                  , @NationalID                   = @parameter_03
+                  , @GeneralNo                    = @parameter_04
+                  , @buildingActionDecisionNo     = @parameter_05
+                  , @buildingActionDecisionDate   = @parameter_06
+                  , @WaitingClassID               = @parameter_07
+                  , @WaitingClassName             = @parameter_08
+                  , @WaitingOrderTypeID           = @parameter_09
+                  , @WaitingOrderTypeName         = @parameter_10
+                  , @buildingDetailsID            = @parameter_20
+                  , @Notes                        = @parameter_12
+                  , @idaraID_FK                   = @idaraID
+                  , @entryData                    = @entrydata
+                  , @hostName                     = @hostName;
+                  
+               
+            END
+
+            ELSE
+            BEGIN
+                SET @ok = 0;
+                SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+                GOTO Finish;
+            END
+
+            SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+            GOTO Finish;
+        END
+
+
 
          ----------------------------------------------------------------
         -- Assign
@@ -2371,6 +2430,53 @@ BEGIN
 
             END
 
+              ELSE IF @ActionType = 'PAYMENTANDREFUNDFOREXTENDANDEXIT'
+            BEGIN
+                        INSERT INTO @Result(IsSuccessful, Message_)
+                EXEC [Housing].[FinancialAuditForExtendAndEvictionsSP]
+                    @Action                             = @ActionType
+                  , @ActionID                           = @parameter_22
+                  , @residentInfoID                     = @parameter_02
+                  , @Notes                              = null
+                  , @buildingDetailsID                  = @parameter_05
+                  , @LastActionID                       = @parameter_21
+                  , @PaymentType                        = @parameter_12
+                  , @PaymentNo                          = @parameter_13
+                  , @PaymentDate                        = @parameter_14
+                  , @Amount                             = @parameter_09
+                  , @BillChargeTypeID_FK                = @parameter_03
+                  --, @FromBillChargeTypeID_FK            = @parameter_
+                  , @description                        = @parameter_27
+                  , @idaraID_FK                         = @idaraID
+                  , @entryData                          = @entrydata
+                  , @hostName                           = @hostName;
+
+            END
+
+
+             ELSE IF @ActionType = 'FINANCIALSETTLEMENT'
+            BEGIN
+                        INSERT INTO @Result(IsSuccessful, Message_)
+                EXEC [Housing].[FinancialAuditForExtendAndEvictionsSP]
+                    @Action                             = @ActionType
+                  , @ActionID                           = @parameter_22
+                  , @residentInfoID                     = @parameter_02
+                  , @Notes                              = null
+                  , @buildingDetailsID                  = @parameter_05
+                  , @LastActionID                       = @parameter_21
+                  , @PaymentType                        = @parameter_12
+                  --, @PaymentNo                          = @parameter_13
+                  --, @PaymentDate                        = @parameter_14
+                  , @Amount                             = @parameter_39
+                  , @FullRemining                       = @parameter_09
+                  , @BillChargeTypeID_FK                = @parameter_03
+                  , @ToBillChargeTypeID_FK              = @parameter_30
+                  , @description                        = @parameter_27
+                  , @idaraID_FK                         = @idaraID
+                  , @entryData                          = @entrydata
+                  , @hostName                           = @hostName;
+
+            END
 
 
            

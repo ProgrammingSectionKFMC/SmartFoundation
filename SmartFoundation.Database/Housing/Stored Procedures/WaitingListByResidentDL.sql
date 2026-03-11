@@ -95,6 +95,7 @@ BEGIN
             where w.NationalID = @NationalID
             AND w.IdaraId = @idaraID
             AND rd.IdaraID = @idaraID
+            AND w.ActionTypeID = 1
             --AND (w.LastActionID is null or w.LastActionTypeID in (34,35))
 
              --Get Letter Waiting List By Resident Nationl ID
@@ -116,11 +117,12 @@ BEGIN
             rd.FullName_A FullName_A,
             isnull(w.LastActionTypeID,0) LastActionTypeID,
             isnull(w.LastActionTypeName,N'لايوجد اجراء') LastActionTypeName
-            FROM Housing.V_WaitingListByLetter w 
+            FROM Housing.V_WaitingList w 
             inner join Housing.V_GetFullResidentDetails rd on w.residentInfoID = rd.residentInfoID 
             where w.NationalID = @NationalID
             AND w.IdaraId = @idaraID
             AND rd.IdaraID = @idaraID
+            AND w.ActionTypeID = 7
 
             -- Request Move To Other Idara List
 

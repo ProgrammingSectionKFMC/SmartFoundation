@@ -226,13 +226,13 @@ BEGIN
         FROM #Clean AS c
         LEFT JOIN Housing.V_GetFullResidentDetails r
             ON c.generalNo_FK = r.generalNo_FK
-        LEFT JOIN Housing.V_Occupant o
+        LEFT JOIN Housing.V_WaitingList o
             ON o.residentInfoID = r.residentInfoID
             LEFT JOIN (
                         SELECT
                             residentInfoID,
                             COUNT(*) AS cnt
-                        FROM Housing.V_Occupant
+                        FROM Housing.V_WaitingList
                         GROUP BY residentInfoID
                     ) oc
                         ON oc.residentInfoID = r.residentInfoID;

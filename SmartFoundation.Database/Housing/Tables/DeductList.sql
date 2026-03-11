@@ -13,6 +13,7 @@
     [description]           NVARCHAR (1500)  NULL,
     [deductActive]          BIT              NULL,
     [BillChargeTypeID_FK]   BIGINT           NULL,
+    [ToBillChargeTypeID_FK] BIGINT           NULL,
     [IdaraId_FK]            BIGINT           NULL,
     [entryDate]             DATETIME         CONSTRAINT [DF_deductList_entryDate] DEFAULT (getdate()) NULL,
     [entryData]             NVARCHAR (20)    NULL,

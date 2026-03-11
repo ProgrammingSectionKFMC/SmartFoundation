@@ -1124,6 +1124,26 @@ END
         END
 
 
+    -------------------------------------------------------------------
+    --                     PAGE: OtherWaitingList
+    -------------------------------------------------------------------
+        ELSE IF @pageName_ = 'OtherWaitingList'
+        BEGIN
+
+			
+                      EXEC [Housing].[OtherWaitingListDL]
+                      @pageName_                      = @pageName_
+                    , @idaraID                        = @idaraID
+                    , @entryData                      = @entrydata
+                    , @hostName                       = @hostName
+                    , @WaitingClassID_nvar            = @parameter_01
+
+                    
+
+
+        END
+
+
 
    
     -------------------------------------------------------------------

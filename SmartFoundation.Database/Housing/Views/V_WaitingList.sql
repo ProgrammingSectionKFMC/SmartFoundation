@@ -3,6 +3,7 @@
 
 
 
+
 CREATE VIEW [Housing].[V_WaitingList]
 AS
 WITH d AS
@@ -17,7 +18,7 @@ WITH d AS
     FROM Housing.BuildingAction b
     INNER JOIN Housing.BuildingAction x
         ON x.buildingActionParentID = b.buildingActionID
-    WHERE b.buildingActionTypeID_FK = 1
+    WHERE b.buildingActionTypeID_FK in(1,7)
       AND b.buildingActionActive = 1
 
     UNION ALL
@@ -145,7 +146,7 @@ LEFT JOIN dbo.Idara it
     ON l.IdaraId_FK = it.idaraID
 LEFT JOIN dbo.Idara toidara
     ON la.buildingActionExtraInt1 = toidara.idaraID
-WHERE b.buildingActionTypeID_FK = 1
+WHERE b.buildingActionTypeID_FK in(1,7)
   AND b.buildingActionActive = 1;
 
 GO

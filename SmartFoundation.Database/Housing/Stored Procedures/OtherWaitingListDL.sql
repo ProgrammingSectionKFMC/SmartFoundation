@@ -3,7 +3,7 @@
 -- Create date: <Create Date,,>
 -- Description:	<Description,,>
 -- =============================================
-CREATE PROCEDURE [Housing].[WaitingListDL] 
+CREATE PROCEDURE [Housing].[OtherWaitingListDL] 
 	-- Add the parameters for the stored procedure here
 	    @pageName_      NVARCHAR(400)
     , @idaraID        INT
@@ -51,7 +51,7 @@ FROM Housing.V_WaitingList w
       AND 
       w.IdaraId = @idaraID
       AND  (w.LastActionTypeID is null or w.LastActionTypeID in (34,35))
-      AND (w.WaitingClassID in(1,2,3,4,11))  
+      AND (w.WaitingClassID not in(1,2,3,4,11))  
       AND (w.IdaraId = @idaraID)
 
 
@@ -59,12 +59,16 @@ FROM Housing.V_WaitingList w
      -- WaitingClass DDL
             SELECT c.waitingClassID,c.waitingClassName_A
             FROM [DATACORE].[Housing].[WaitingClass] c
-            where (c.WaitingClassID in(1,2,3,4,11)) and (c.idara_FK is null)
+            where (c.WaitingClassID not in(1,2,3,4,11)) and (c.idara_FK = @idaraID)
             order by c.waitingClassSequence asc
 
 
 
-
+       -- Houses DDL
+            SELECT c.buildingDetailsID,c.buildingDetailsNo
+            FROM [DATACORE].[Housing].[V_GetGeneralListForBuilding] c
+            where c.BuildingIdaraID = 1 and c.buildingDetailsActive = 1 
+            and (c.LastActionTypeID in(5,39,41) or c.LastActionTypeID is null )
   
             
 

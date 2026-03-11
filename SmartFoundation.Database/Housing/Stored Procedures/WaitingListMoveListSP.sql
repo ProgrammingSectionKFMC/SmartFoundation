@@ -27,6 +27,12 @@ BEGIN
 
     -- تحويلات رقمية آمنة
     DECLARE @IdaraID_INT INT = TRY_CONVERT(INT, NULLIF(@idaraID_FK, ''));
+    DECLARE @IdaraID_Old INT  
+    set @IdaraID_Old =(select top(1) f.IdaraID 
+    from Housing.V_GetFullResidentDetails f 
+    where f.residentInfoID = @residentInfoID_FK 
+    order by f.residentDetailsID desc);
+
 
     BEGIN TRY
         -- Transaction-safe
@@ -299,7 +305,11 @@ BEGIN
             
             from Housing.V_WaitingList w
             where w.residentInfoID = @residentInfoID_FK
-            and w.LastActionTypeID is null
+            and (w.LastActionTypeID is null 
+            or w.LastActionTypeID = 3 
+            or w.LastActionTypeID = 36
+            or w.LastActionTypeID = 42
+            )
             and w.WaitingClassID in (1,2,3,4,11)
 
              IF @@ROWCOUNT = 0
@@ -307,6 +317,13 @@ BEGIN
                 ;THROW 50002, N'حصل خطأ في قبول الطلب ونقل السجلات 1', 1; -- برمجي
             END
 
+             if(select Count(*) from Housing.V_WaitingList w
+            where w.residentInfoID = @residentInfoID_FK
+            AND (w.LastActionTypeID IN (3,36,42) OR w.LastActionTypeID IS NULL)
+            and w.WaitingClassID not in (1,2,3,4,11)
+            ) > 0
+
+            BEGIN
 
               INSERT INTO  Housing.BuildingAction
             (
@@ -335,13 +352,13 @@ BEGIN
             1,
             @Notes,
             w.ActionID,
-            @idaraID_FK,
+            w.IdaraId,
             @entryData,
             @hostName
             
             from Housing.V_WaitingList w
             where w.residentInfoID = @residentInfoID_FK
-            and w.LastActionTypeID is null
+            AND (w.LastActionTypeID IN (3,36,42) OR w.LastActionTypeID IS NULL)
             and w.WaitingClassID not in (1,2,3,4,11)
 
 
@@ -350,12 +367,11 @@ BEGIN
             BEGIN
                 ;THROW 50002, N'حصل خطأ في قبول الطلب ونقل السجلات 2', 1; -- برمجي
             END
-
-            if(select Count(*) FROM Housing.V_WaitingListByLetter wl 
-            inner join Housing.V_GetFullResidentDetails rd on wl.residentInfoID = rd.residentInfoID 
-            where wl.residentInfoID = @residentInfoID_FK
+            END
+            if(select Count(*) FROM Housing.V_WaitingList wl 
+            where wl.residentInfoID = @residentInfoID_FK and wl.ActionTypeID = 7 
             ) > 0
-            Begin
+            BEGIN
              INSERT INTO  Housing.BuildingAction
             (
                   buildingActionTypeID_FK
@@ -380,9 +396,8 @@ BEGIN
             @hostName
             
 
-            FROM Housing.V_WaitingListByLetter wl 
-            inner join Housing.V_GetFullResidentDetails rd on wl.residentInfoID = rd.residentInfoID 
-            where wl.residentInfoID = @residentInfoID_FK
+            FROM Housing.V_WaitingList wl 
+            where wl.residentInfoID = @residentInfoID_FK and wl.ActionTypeID = 7 
             
 
 
@@ -470,9 +485,15 @@ BEGIN
                 ;THROW 50002, N' 5 حصل خطأ في قبول الطلب ونقل السجلات', 1; -- برمجي
             END
 
-   
+            update Housing.BuildingAction  
+            set buildingActionActive = 0
+            where residentInfoID_FK = @residentInfoID_FK
+            and IdaraId_FK = @IdaraID_Old
 
-
+             IF @@ROWCOUNT = 0
+            BEGIN
+                ;THROW 50002, N' 6 حصل خطأ في قبول الطلب ونقل السجلات', 1; -- برمجي
+            END
             
             IF @NewID IS NULL OR @NewID <= 0
             BEGIN

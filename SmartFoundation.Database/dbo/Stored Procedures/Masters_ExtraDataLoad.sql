@@ -208,7 +208,6 @@ BEGIN
                         ,[deductListID_FK]
                         ,[buildingPayementActive]
                         ,[BillChargeTypeID_FK]
-                        ,[ParentIDpaymentID_FK]
                         ,[IdaraId_FK]
                         ,[entryDate]
                         ,[entryData]

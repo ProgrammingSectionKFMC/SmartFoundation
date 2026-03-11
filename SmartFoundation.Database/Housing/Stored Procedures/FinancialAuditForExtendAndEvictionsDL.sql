@@ -125,7 +125,11 @@ SELECT
       ,ISNULL(b.buildingDetailsNo, N'لايوجد') AS buildingDetailsNo 
       ,ISNULL(s.[SumBillsTotalPrice], 0) AS SumBillsTotalPrice
       ,ISNULL(s.[SumTotalPaidBills], 0) AS SumTotalPaidBills
-      ,ISNULL(s.[Remaining], 0) AS Remaining
+      --,ISNULL(s.[Remaining], 0) AS Remaining
+      ,case
+        when ISNULL(s.[Remaining], 0) < 0 then ISNULL(s.[Remaining], 0) * -1
+        else ISNULL(s.[Remaining], 0)
+        end as Remaining
       ,CASE
           WHEN ISNULL(s.[Remaining], 0) > 0 THEN N'فواتير ' + bt.BillChargeTypeName_A + N' مستحقة للادارة'
           WHEN ISNULL(s.[Remaining], 0) < 0 THEN N'فواتير ' + bt.BillChargeTypeName_A + N' زائدة للمستفيد'
@@ -192,18 +196,26 @@ END
         t.billPaymentTypeID,
         t.billPaymentTypeName_A
         from Housing.billPaymentType t 
-        where t.billPaymentTypeID in(1,2)
+        where t.billPaymentTypeID in(1,2,5)
 
         ---------------------------------8-------------------------------------------------------------------------------------------------------------------
-     select r.buildingRentAmount * 40 insuranceRentAmount,r.buildingRentAmount
+    Select e.BillChargeTypeID,e.BillChargeTypeName_A 
+      from Housing.BillChargeType e
+      where e.BillChargeTypeActive  = 1
 
-     FROM [DATACORE].[Housing].V_WaitingList w
-        inner join [DATACORE].[Housing].V_GetFullResidentDetails fr on fr.residentInfoID = w.residentInfoID
-        inner join [DATACORE].[Housing].[V_ResidentFinancialSummary] s on fr.residentInfoID = s.residentInfoID
-        inner join Housing.V_buildingWithRent r on w.buildingDetailsID = r.buildingDetailsID
-        where s.residentInfoID = @residentInfoID
-        AND  w.LastActionTypeID in (51,57)
-        and fr.IdaraID = @idaraID
+    
+    
+    --select r.buildingRentAmount * 40 insuranceRentAmount,r.buildingRentAmount
+
+     --FROM [DATACORE].[Housing].V_WaitingList w
+     --   inner join [DATACORE].[Housing].V_GetFullResidentDetails fr on fr.residentInfoID = w.residentInfoID
+     --   inner join [DATACORE].[Housing].[V_ResidentFinancialSummary] s on fr.residentInfoID = s.residentInfoID
+     --   inner join Housing.V_buildingWithRent r on w.buildingDetailsID = r.buildingDetailsID
+     --   where s.residentInfoID = @residentInfoID
+     --   AND  w.LastActionTypeID in (51,57)
+     --   and fr.IdaraID = @idaraID
+
+
 
 
         ----------------------------------9------------------------------------------------------------------------------------------------------------------
@@ -211,12 +223,17 @@ END
       from Housing.ExtendReasonType e
       where e.Active = 1
 
+       
         ----------------------------------10------------------------------------------------------------------------------------------------------------------
       SELECT 
     e.residentInfoID,
     SUM(e.SumBillsTotalPrice) AS SumBillsTotalPrice,
     SUM(e.SumTotalPaidBills) AS SumTotalPaidBills,
-    SUM(e.Remaining) AS Remaining,
+    case
+        when SUM(e.Remaining) < 0 then SUM(e.Remaining) * -1
+        else SUM(e.Remaining)
+    end as Remaining,
+    --SUM(e.Remaining) AS Remaining,
     CASE 
         WHEN SUM(e.Remaining) > 0 THEN N'مطالب بمبالغ للادارة'
         WHEN SUM(e.Remaining) < 0 THEN N'يوجد مبالغ زائدة للمستفيد'
@@ -232,6 +249,10 @@ WHERE e.residentInfoID = @residentInfoID
 AND (e.buildingDetailsID = @buildingDetailsID OR e.buildingDetailsID IS NULL)
 GROUP BY e.residentInfoID;
      
+
+
+     
+
 
 
 END

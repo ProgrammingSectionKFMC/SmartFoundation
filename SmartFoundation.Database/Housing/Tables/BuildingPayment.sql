@@ -13,13 +13,14 @@
     [deductListID_FK]          INT              NULL,
     [buildingPayementActive]   BIT              NULL,
     [BillChargeTypeID_FK]      BIGINT           NULL,
-    [ParentIDpaymentID_FK]     BIGINT           NULL,
     [IdaraId_FK]               INT              NULL,
     [entryDate]                DATETIME         CONSTRAINT [DF_BuildingPayment_entryDate] DEFAULT (getdate()) NULL,
     [entryData]                NVARCHAR (2000)  NULL,
     [hostName]                 NVARCHAR (2000)  NULL,
     CONSTRAINT [PK_BuildingPayment] PRIMARY KEY CLUSTERED ([paymentID] ASC)
 );
+
+
 
 
 GO
