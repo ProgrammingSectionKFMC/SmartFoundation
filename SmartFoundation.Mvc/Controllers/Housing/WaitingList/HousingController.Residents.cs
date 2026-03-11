@@ -661,7 +661,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowEdit = canUpdate,
                     ShowDelete = canDelete,
                     ShowDelete1 = canDelete,
-                    ShowPrint1 = false,
+                    ShowPrint1 = true,
                     ShowBulkDelete = false,
                     Print1 = new TableAction
                     {
@@ -677,27 +677,27 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                               "
                     },
 
-                    //ExportConfig = new TableExportConfig
-                    //{
-                    //    EnablePdf = true,
-                    //    PdfEndpoint = "/exports/pdf/table",
-                    //    PdfTitle = "المستفيدين",
-                    //    PdfPaper = "A4",
-                    //    PdfOrientation = "landscape",
-                    //    PdfShowPageNumbers = true,
-                    //    Filename = "Residents",
-                    //    PdfShowGeneratedAt = true,
-                    //    PdfShowSerial = true,
-                    //    PdfSerialLabel = "م",
-                    //    RightHeaderLine1 = "المملكة العربية السعودية",
-                    //    RightHeaderLine2 = "وزارة الدفاع",
-                    //    RightHeaderLine3 = "القوات البرية الملكية السعودية",
-                    //    RightHeaderLine4 = "الإدارة الهندسية للتشغيل والصيانة",
-                    //    RightHeaderLine5 = "مدينة الملك فيصل العسكرية",
-                    //    PdfLogoUrl = "/img/ppng.png",
+                    ExportConfig = new TableExportConfig
+                    {
+                        EnablePdf = true,
+                        PdfEndpoint = "/exports/pdf/table",
+                        PdfTitle = "المستفيدين",
+                        PdfPaper = "A4",
+                        PdfOrientation = "landscape",
+                        PdfShowPageNumbers = true,
+                        Filename = "Residents",
+                        PdfShowGeneratedAt = true,
+                        PdfShowSerial = true,
+                        PdfSerialLabel = "م",
+                        RightHeaderLine1 = "المملكة العربية السعودية",
+                        RightHeaderLine2 = "وزارة الدفاع",
+                        RightHeaderLine3 = "القوات البرية الملكية السعودية",
+                        RightHeaderLine4 = "الإدارة الهندسية للتشغيل والصيانة",
+                        RightHeaderLine5 = "مدينة الملك فيصل العسكرية",
+                        PdfLogoUrl = "/img/ppng.png",
 
 
-                    //},
+                    },
 
                     CustomActions = new List<TableAction>
                             {

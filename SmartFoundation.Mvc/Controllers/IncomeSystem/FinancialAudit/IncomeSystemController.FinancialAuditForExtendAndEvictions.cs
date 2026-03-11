@@ -629,7 +629,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
                             bool isHidden =  c.ColumnName.Equals("BillChargeTypeID", StringComparison.OrdinalIgnoreCase)
                                            || c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase)
-                                           || c.ColumnName.Equals("order_", StringComparison.OrdinalIgnoreCase)
+                                           //|| c.ColumnName.Equals("order_", StringComparison.OrdinalIgnoreCase)
                                            || c.ColumnName.Equals("residentInfoID", StringComparison.OrdinalIgnoreCase)
                                            || c.ColumnName.Equals("BillsStatusID", StringComparison.OrdinalIgnoreCase)
                                            ;
