@@ -14,7 +14,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Controllers\Housing\WaitingList\NewFolder\" />
     <Folder Include="wwwroot\lib\fontawesome\" />
     <Folder Include="wwwroot\uploads\excel\" />
   </ItemGroup>
@@ -62,12 +61,16 @@
 
   <ItemGroup>
     <Compile Remove="Controllers\ElectronicBillSystem\MeterRead\NewFolder\**" />
+    <Compile Remove="Controllers\Housing\WaitingList\NewFolder\**" />
     <Compile Remove="wwwroot\uploads\lab\**" />
     <Content Remove="Controllers\ElectronicBillSystem\MeterRead\NewFolder\**" />
+    <Content Remove="Controllers\Housing\WaitingList\NewFolder\**" />
     <Content Remove="wwwroot\uploads\lab\**" />
     <EmbeddedResource Remove="Controllers\ElectronicBillSystem\MeterRead\NewFolder\**" />
+    <EmbeddedResource Remove="Controllers\Housing\WaitingList\NewFolder\**" />
     <EmbeddedResource Remove="wwwroot\uploads\lab\**" />
     <None Remove="Controllers\ElectronicBillSystem\MeterRead\NewFolder\**" />
+    <None Remove="Controllers\Housing\WaitingList\NewFolder\**" />
     <None Remove="wwwroot\uploads\lab\**" />
   </ItemGroup>
 
