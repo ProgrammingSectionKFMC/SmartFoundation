@@ -257,6 +257,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             bool canFINANCIALAUDITFOREXTENDANDEVICTIONS = false;
             bool canFINANCIALSETTLEMENT = false;
             bool canREVIEWCLAIMSANDPAYMENTS = false;
+            bool canPAYMENTANDREFUNDFOREXTENDANDEXIT = false;
             
            
 
@@ -264,7 +265,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             List<OptionItem> ResidentDetailsOptions = new();
             List<OptionItem> PayPaymentTypeOptions = new();
             List<OptionItem> RefundPaymentTypeOptions = new();
-            List<OptionItem> insuranceOptions = new();
+            List<OptionItem> BillChargeTypeOptions = new();
             List<OptionItem> billPaymentTypeOptions = new();
             List<OptionItem> SETTLEMENTOptions = new();
 
@@ -315,15 +316,15 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
                  PayPaymentTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
-                //// ---------------------- insuranceOptions ----------------------
-                
-                    result = await _CrudController.GetDDLValues(
-                         "billPaymentTypeName_A", "billPaymentTypeID", "7", PageName, usersId, IdaraId, HostName
+                //// ---------------------- BillChargeTypeOptions ----------------------
+
+                result = await _CrudController.GetDDLValues(
+                         "BillChargeTypeName_A", "BillChargeTypeID", "7", PageName, usersId, IdaraId, HostName
                     ) as JsonResult;
 
                 json = JsonSerializer.Serialize(result!.Value);
 
-                insuranceOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+                BillChargeTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
                 //// ---------------------- rankOptions ----------------------
                 result = await _CrudController.GetDDLValues(
@@ -421,6 +422,10 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         if (permissionName.Equals("REVIEWCLAIMSANDPAYMENTS", StringComparison.OrdinalIgnoreCase))
                         {
                             canREVIEWCLAIMSANDPAYMENTS = true;
+                        }
+                        if (permissionName.Equals("PAYMENTANDREFUNDFOREXTENDANDEXIT", StringComparison.OrdinalIgnoreCase))
+                        {
+                            canPAYMENTANDREFUNDFOREXTENDANDEXIT = true;
                         }
 
                         
@@ -598,7 +603,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                             ["buildingDetailsNo"] = "رقم المبنى",
                             ["SumBillsTotalPrice"] = "المطلوب",
                             ["SumTotalPaidBills"] = "المسدد",
-                            ["Remaining"] = "المتبقي",
+                            ["Remaining"] = "المتبقي / الفائض",
                             ["BillsStatus"] = "الحالة"
                             
 
@@ -624,6 +629,9 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
                             bool isHidden =  c.ColumnName.Equals("BillChargeTypeID", StringComparison.OrdinalIgnoreCase)
                                            || c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase)
+                                           || c.ColumnName.Equals("order_", StringComparison.OrdinalIgnoreCase)
+                                           || c.ColumnName.Equals("residentInfoID", StringComparison.OrdinalIgnoreCase)
+                                           || c.ColumnName.Equals("BillsStatusID", StringComparison.OrdinalIgnoreCase)
                                            ;
                            
 
@@ -697,9 +705,9 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
                            
                             ["residentInfoID"] = "الرقم المرجعي",
-                            ["Remaining"] = "المبلغ المتبقي",
-                            ["SumBillsTotalPrice"] = "المطالبات",
-                            ["SumTotalPaidBills"] = "المدفوعات",
+                            ["Remaining"] = "اجمالي المتبقي او الفائض",
+                            ["SumBillsTotalPrice"] = "اجمالي المطالبات",
+                            ["SumTotalPaidBills"] = "اجمالي المدفوعات",
                             ["BillsStatus"] = "الحالة"
                             
 
@@ -777,7 +785,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
 
 
-            var currentUrl = Request.Path;
+            var currentUrl = Request.Path + Request.QueryString;
 
             var ApproveExtendOrExitFields = new List<FieldConfig>
             {
@@ -799,7 +807,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 new FieldConfig { Name = "p03", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsIDvalue },
                 new FieldConfig { Name = "p11", Label = "ملاحظات", Type = "textarea", ColCss = "6",Required = true,HelpText="يجب ان لاتتجاوز 4000 حرف*",MaxLength=3900 },
                 new FieldConfig { Name = "p30", Label = "ملاحظات", Type = "text", ColCss = "6",Value = LastActionDatevalue },
-                new FieldConfig { Name = "p40", Label = "سبب الامهال", Type = "hidden", ColCss = "4",Required = true,HelpText="المتقاعد والمفصول مطلوب تأمين احترازي يرجى الاختيار بدقة*",Options=billPaymentTypeOptions,Value=LastActionExtendReasonTypeIDvalue},
+                //new FieldConfig { Name = "p40", Label = "سبب الامهال", Type = "select", ColCss = "4",Required = true,HelpText="المتقاعد والمفصول مطلوب تأمين احترازي يرجى الاختيار بدقة*",Options=billPaymentTypeOptions,Value=LastActionExtendReasonTypeIDvalue},
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true,Value = LastActionTypeIDvalue },
                 new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p19", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true,Value = buildingDetailsNovalue },
@@ -894,7 +902,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "MeterRead" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "PAYMENTANDREFUNDFOREXTENDANDEXIT" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -919,10 +927,15 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 new FieldConfig { Name = "p11", Label = "BillsStatusID", Type = "hidden", ColCss = "3", Required = true},
 
 
-                new FieldConfig { Name = "p12", Label = "billPaymentType", Type = "select", ColCss = "4", Required = true, Options= PayPaymentTypeOptions },
-                new FieldConfig { Name = "p09", Label = "المبلغ", Type = "text",TextMode="money_sar",Icon = "/img/Saudi_Riyal_Symbol.svg", ColCss = "4", Required = true },
+                new FieldConfig { Name = "p12", Label = "نوع العملية", Type = "select", ColCss = "3", Required = true, Options= PayPaymentTypeOptions },
+                new FieldConfig { Name = "p13", Label = "رقم العملية", Type = "text", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p14", Label = "تاريخ العملية", Type = "date", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p09", Label = "المبلغ", Type = "text",TextMode="money_sar",Icon = "/img/Saudi_Riyal_Symbol.svg", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p27", Label = "ملاحظات", Type = "textarea", ColCss = "6", Required = true },
 
-
+                new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true,Value = LastActionTypeIDvalue },
+                new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true,Value=LastActionIDvalue },
+                new FieldConfig { Name = "p22", Label = "ActionID", Type = "hidden", ColCss = "3", Readonly = true,Value=ActionIDvalue },
 
             };
 
@@ -931,7 +944,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "MeterRead" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "PAYMENTANDREFUNDFOREXTENDANDEXIT" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -956,17 +969,64 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 new FieldConfig { Name = "p11", Label = "BillsStatusID", Type = "hidden", ColCss = "3", Required = true},
 
 
-                  new FieldConfig { Name = "p12", Label = "billPaymentType", Type = "select", ColCss = "4", Required = true, Options= RefundPaymentTypeOptions },
-                  new FieldConfig { Name = "p09", Label = "المبلغ", Type = "text",TextMode="money_sar",Icon = "/img/Saudi_Riyal_Symbol.svg", ColCss = "4", Required = true },
+                new FieldConfig { Name = "p12", Label = "نوع العملية", Type = "select", ColCss = "3", Required = true, Options= RefundPaymentTypeOptions },
+                new FieldConfig { Name = "p13", Label = "رقم العملية", Type = "text", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p14", Label = "تاريخ العملية", Type = "date", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p09", Label = "المبلغ", Type = "text",TextMode="money_sar",Icon = "/img/Saudi_Riyal_Symbol.svg", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p27", Label = "ملاحظات", Type = "textarea", ColCss = "6", Required = true },
 
-
-
+                new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true,Value = LastActionTypeIDvalue },
+                new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true,Value=LastActionIDvalue },
+                new FieldConfig { Name = "p22", Label = "ActionID", Type = "hidden", ColCss = "3", Readonly = true,Value=ActionIDvalue },
 
             };
 
 
 
-           
+            var SattlmentFields = new List<FieldConfig>
+            {
+
+                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "FINANCIALSETTLEMENT" },
+                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
+                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
+                new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
+                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+                // selection context
+                new FieldConfig { Name = rowIdField, Type = "hidden" },
+                // hidden p01 actually posted to SP
+
+
+               new FieldConfig { Name = "p01", Label = "Order_", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p03", Label = "BillChargeTypeID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p04", Label = "الرصيد المسحوب منه", Type = "text", ColCss = "4", Readonly = true, },
+                new FieldConfig { Name = "p30", Label = "الرصيد المسحوب اليه", Type = "select", ColCss = "4", Readonly = true,Required = true,Options = BillChargeTypeOptions },
+                new FieldConfig { Name = "p05", Label = "buildingDetailsID", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p06", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsNovalue },
+                new FieldConfig { Name = "p07", Label = "SumBillsTotalPrice", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsIDvalue },
+                new FieldConfig { Name = "p08", Label = "SumTotalPaidBills", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p09", Label = "Remining", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p10", Label = "BillsStatus", Type = "hidden", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p11", Label = "BillsStatusID", Type = "hidden", ColCss = "3", Required = true},
+
+
+                new FieldConfig { Name = "p12", Label = "نوع العملية", Type = "hidden", ColCss = "3", Required = true, Value="6" },
+                new FieldConfig { Name = "p13", Label = "رقم العملية", Type = "hidden", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p14", Label = "تاريخ العملية", Type = "hidden", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p39", Label = "المبلغ", Type = "text",TextMode="money_sar",Icon = "/img/Saudi_Riyal_Symbol.svg", ColCss = "4", Required = true },
+                new FieldConfig { Name = "p27", Label = "ملاحظات", Type = "textarea", ColCss = "6", Required = true },
+
+                new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true,Value = LastActionTypeIDvalue },
+                new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true,Value=LastActionIDvalue },
+                new FieldConfig { Name = "p22", Label = "ActionID", Type = "hidden", ColCss = "3", Readonly = true,Value=ActionIDvalue },
+
+            };
+
+
 
 
 
@@ -1162,7 +1222,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                     ShowExportExcel = false,
                     ShowEdit = canREVIEWCLAIMSANDPAYMENTS,
                     ShowEdit1 = canREVIEWCLAIMSANDPAYMENTS,
-                    ShowEdit2 = canFINANCIALSETTLEMENT,
+                    ShowEdit2 = canPAYMENTANDREFUNDFOREXTENDANDEXIT,
                     ShowDelete = canFINANCIALSETTLEMENT,
                     ShowBulkDelete = false,
 
@@ -1407,7 +1467,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                             ActionUrl = "/crud/update",
                             SubmitText = "حفظ التعديلات",
                             CancelText = "إلغاء",
-                            Fields = PayMoneyFields,
+                            Fields = SattlmentFields,
                             Buttons = new List<FormButtonConfig>
                             {
                                new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "success" },
@@ -1572,8 +1632,8 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                             Priority = 1,
 
                             PillEnabled = true,
-                            PillField = "BillsAmountresidual",
-                            PillTextField = "BillsAmountresidual",
+                            PillField = "Remaining",
+                            PillTextField = "Remaining",
                             PillCssClass = "pill pill-red",
                             PillMode = "replace"
                         },
@@ -1587,8 +1647,8 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                             Priority = 1,
 
                             PillEnabled = true,
-                            PillField = "BillsAmountresidual",
-                            PillTextField = "BillsAmountresidual",
+                            PillField = "Remaining",
+                            PillTextField = "Remaining",
                             PillCssClass = "pill pill-yellow",
                             PillMode = "replace"
                         },
@@ -1602,8 +1662,8 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                             Priority = 1,
 
                             PillEnabled = true,
-                            PillField = "BillsAmountresidual",
-                            PillTextField = "BillsAmountresidual",
+                            PillField = "Remaining",
+                            PillTextField = "Remaining",
                             PillCssClass = "pill pill-green",
                             PillMode = "replace"
                         },

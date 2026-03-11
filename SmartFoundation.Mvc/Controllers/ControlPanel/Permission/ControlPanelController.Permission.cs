@@ -525,7 +525,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                     Type = "select",
                     Select2=true,
                     Options = distributorOptions,
-                    ColCss = "3",
+                    ColCss = "6",
                     Required = true
                 },
 
@@ -536,7 +536,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                     Type = "select",
                     Select2 = true,
                     Options = new List<OptionItem> { new OptionItem { Value = "-1", Text = "اختر الموزع أولاً"     } }, //       Initial empty state
-                    ColCss = "3",
+                    ColCss = "6",
                     Required = true,
                     DependsOn = "p01",
                     DependsUrl = "/crud/DDLFiltered?FK=distributorID_FK&textcol=permissionTypeName_A&ValueCol=distributorPermissionTypeID&PageName=Permission&TableIndex=4"
@@ -591,7 +591,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                     Type = "select",
                     Select2=true,
                     Options = distributorOptions,
-                    ColCss = "3",
+                    ColCss = "6",
                     Required = true
                 },
 
