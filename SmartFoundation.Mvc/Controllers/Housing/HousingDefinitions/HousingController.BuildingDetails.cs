@@ -35,7 +35,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             // Sessions 
 
-            ControllerName = nameof(ControlPanel);
+            ControllerName = nameof(Housing);
             PageName = nameof(BuildingDetails);
 
             var spParameters = new object?[] { "BuildingDetails", IdaraId, usersId, HostName, UtilityTypeID_ };

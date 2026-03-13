@@ -569,6 +569,69 @@ namespace SmartFoundation.Mvc.Controllers
 
 
 
+        public async Task<IActionResult> GetDDLValuesWithExtraParams(
+            string? textcol,
+            string? ValueCol,
+            string? TableIndex,
+            string? PageName,
+            string? usersId,
+            string? IdaraId,
+            string? HostName,
+            string? FilterColumn = null,
+            string? FilterValue = null,
+            string? FirstOption = null,
+            params object?[] extraParams)
+        {
+            int tableIndexInt = 0;
+            if (!string.IsNullOrWhiteSpace(TableIndex))
+                int.TryParse(TableIndex, out tableIndexInt);
+
+            var allArgs = new List<object?> { PageName, IdaraId, usersId, HostName };
+            allArgs.AddRange(extraParams ?? Array.Empty<object?>());
+
+            var ds = await _mastersServies.GetDataLoadDataSetAsync(allArgs.ToArray());
+            var table = (ds?.Tables?.Count ?? 0) > tableIndexInt ? ds.Tables[tableIndexInt] : null;
+
+            if (string.IsNullOrWhiteSpace(textcol) || string.IsNullOrWhiteSpace(ValueCol))
+                return Json(new[] { new { Value = "-1", Text = "لاتوجد خيارات" } });
+
+            if (table is null || !table.Columns.Contains(textcol) || !table.Columns.Contains(ValueCol))
+                return Json(new[] { new { Value = "-1", Text = "لاتوجد خيارات" } });
+
+            var items = new List<object>();
+
+            if (!string.IsNullOrEmpty(FirstOption))
+                items.Add(new { Value = "-1", Text = FirstOption });
+
+            bool shouldFilter = !string.IsNullOrWhiteSpace(FilterColumn)
+                             && !string.IsNullOrWhiteSpace(FilterValue)
+                             && table.Columns.Contains(FilterColumn);
+
+            foreach (DataRow row in table.Rows)
+            {
+                if (shouldFilter)
+                {
+                    var filterColumnValue = row[FilterColumn!]?.ToString()?.Trim() ?? "";
+                    if (filterColumnValue != (FilterValue?.Trim() ?? ""))
+                        continue;
+                }
+
+                var value = row[ValueCol]?.ToString()?.Trim() ?? "";
+                var text = row[textcol]?.ToString()?.Trim() ?? "";
+
+                if (!string.IsNullOrEmpty(value))
+                    items.Add(new { Value = value, Text = text });
+            }
+
+            if (!items.Any())
+                items.Add(new { Value = "-1", Text = "لاتوجد خيارات" });
+
+            return Json(items);
+        }
+
+
+
+
         public sealed class DdlValuesRequest
         {
             public string? TextCol { get; set; }
