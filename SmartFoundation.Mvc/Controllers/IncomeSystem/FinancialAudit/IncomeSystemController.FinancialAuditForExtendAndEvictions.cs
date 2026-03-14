@@ -1096,7 +1096,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             var extraMetaBills = new Dictionary<string, object?>
             {
                 ["extraSlotKey"] = "m1",
-                ["extraTitle"] = "بيانات المطالبات",
+                //["extraTitle"] = "بيانات المطالبات",
                 ["useRowExtra"] = true,
                 ["lazyExtra"] = true,
                 ["extraEndpoint"] = "/crud/extradataload",

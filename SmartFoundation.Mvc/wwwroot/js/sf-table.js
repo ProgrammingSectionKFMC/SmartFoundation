@@ -2861,7 +2861,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                     list.forEach((m, i) => {
                         if (!m.extraSlotKey && !m.ExtraSlotKey) m.extraSlotKey = `m${i + 1}`;
-                        if (!m.extraTitle && !m.ExtraTitle) m.extraTitle = `جدول ${i + 1}`;
+                        /*if (!m.extraTitle && !m.ExtraTitle) m.extraTitle = `جدول ${i + 1}`;*/
+                        if (!m.extraTitle && !m.ExtraTitle) m.extraTitle = ``;
                     });
 
                     return list;
@@ -3300,8 +3301,12 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         sec.className = "sf-extra-section";
                         sec.setAttribute("data-slot", slotKey);
 
+//                        sec.innerHTML = `
+//  <div class="sf-extra-section-title" style="margin:8px 0;font-weight:500;text-align:center;">${esc(title)}</div>
+//  <div class="sf-extra-section-body" id="sf-extra-${esc(slotKey)}"></div>
+//`;
                         sec.innerHTML = `
-  <div class="sf-extra-section-title" style="margin:8px 0;font-weight:500;text-align:center;">${esc(title)}</div>
+  ${title ? `<div class="sf-extra-section-title" style="margin:8px 0;font-weight:500;text-align:center;">${esc(title)}</div>` : ""}
   <div class="sf-extra-section-body" id="sf-extra-${esc(slotKey)}"></div>
 `;
 
