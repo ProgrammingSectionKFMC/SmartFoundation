@@ -4141,7 +4141,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     const setPlaceholderText = (text) => {
                         ensurePlaceholder();
                         const ph = slotBody.querySelector(`[data-extra-placeholder="${slotKey}"]`);
-                        if (ph) ph.innerHTML = esc(text);
+                        /*if (ph) ph.innerHTML = esc(text);*/
+                        if (ph) ph.innerHTML = `<div style="text-align:center">${esc(text)}</div>`;
                     };
 
                     // =========================
