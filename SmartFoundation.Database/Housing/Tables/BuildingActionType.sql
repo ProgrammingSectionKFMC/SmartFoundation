@@ -1,6 +1,7 @@
 ﻿CREATE TABLE [Housing].[BuildingActionType] (
     [buildingActionTypeID]            INT             IDENTITY (1, 1) NOT NULL,
     [buildingActionTypeOrder]         INT             NULL,
+    [buildingStatusID_FK]             INT             NULL,
     [buildingActionTypeName_A]        NVARCHAR (100)  NULL,
     [buildingActionTypeName_E]        NVARCHAR (100)  NULL,
     [buildingActionTypeDescriptoin]   NVARCHAR (1000) NULL,
@@ -16,6 +17,8 @@
     [hostName]                        NVARCHAR (200)  NULL,
     CONSTRAINT [PK_BuildingActionType] PRIMARY KEY CLUSTERED ([buildingActionTypeID] ASC)
 );
+
+
 
 
 GO

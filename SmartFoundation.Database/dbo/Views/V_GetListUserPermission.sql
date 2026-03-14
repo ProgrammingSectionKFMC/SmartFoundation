@@ -1,8 +1,9 @@
-﻿CREATE VIEW dbo.V_GetListUserPermission
+﻿
+CREATE VIEW [dbo].[V_GetListUserPermission]
 AS
 SELECT        p.UsersID_FK AS userID, m.menuName_A, m.menuName_E, pt.permissionTypeName_A, pt.permissionTypeName_E, m.menuID, md.menuDistributorID, d.distributorID, dpt.distributorPermissionTypeID, p.permissionID, 
-                         p.DistributorPermissionTypeID_FK, pt.permissionTypeID, p.permissionStartDate, p.permissionEndDate, p.permissionActive, p.entryDate, p.entryData, p.hostName, dpt.distributorPermissionTypeStartDate, 
-                         dpt.distributorPermissionTypeEndDate, dpt.distributorPermissionTypeActive, p.permissionNote, p.RoleID_FK, p.distributorID_FK, p.DSDID_FK, p.IdaraID_FK, DE.deptName_A, SE.secName_A, DI.divName_A, DI.divID, SE.secID, 
+                         p.DistributorPermissionTypeID_FK, pt.permissionTypeID,pt.RoleID_FK AS permissionTypeRoleID, p.permissionStartDate, p.permissionEndDate, p.permissionActive, p.entryDate, p.entryData, p.hostName, dpt.distributorPermissionTypeStartDate, 
+                         dpt.distributorPermissionTypeEndDate, dpt.distributorPermissionTypeActive, p.permissionNote, p.RoleID_FK AS PermissionRoleID, p.distributorID_FK, p.DSDID_FK, p.IdaraID_FK, DE.deptName_A, SE.secName_A, DI.divName_A, DI.divID, SE.secID, 
                          DE.deptID
 FROM            dbo.Menu AS m INNER JOIN
                          dbo.MenuDistributor AS md ON md.menuID_FK = m.menuID INNER JOIN

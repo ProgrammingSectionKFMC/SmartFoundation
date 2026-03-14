@@ -1,2 +1,2 @@
-﻿CREATE USER [KFMCMODA\Administrator];
+﻿CREATE USER [KFMCMODA\Administrator] FOR LOGIN [KFMCMODA\Administrator];
 

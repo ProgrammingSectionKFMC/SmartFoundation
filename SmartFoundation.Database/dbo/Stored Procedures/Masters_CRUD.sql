@@ -2496,6 +2496,112 @@ BEGIN
 
 
 
+            ----------------------------------------------------------------
+        -- FinancialAuditForUser
+        ----------------------------------------------------------------
+        ELSE IF @pageName_ = 'FinancialAuditForUser'
+        BEGIN
+            IF (
+                SELECT COUNT(*)
+                FROM  dbo.V_GetListUserPermission v
+                WHERE v.userID = @entrydata
+                  AND v.menuName_E = @pageName_
+                  AND v.permissionTypeName_E = @ActionType
+            ) <= 0
+            BEGIN
+                SET @ok = 0;
+                SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+                GOTO Finish;
+            END
+
+            DELETE FROM @Result;
+                             
+
+
+              IF @ActionType = 'FinancialAuditForUser'
+            BEGIN
+                      INSERT INTO @Result(IsSuccessful, Message_)
+                EXEC [Housing].[FinancialAuditForUserSP]
+                    @Action                             = @ActionType
+                  , @ActionID                           = @parameter_22
+                  , @residentInfoID                     = @parameter_02
+                  , @Notes                              = @parameter_11
+                  , @buildingDetailsID                  = @parameter_03
+                  , @LastActionID                       = @parameter_21
+                  , @LastActionTypeID                   = @parameter_16
+                  , @ExitDate                           = @parameter_30
+                  , @LastActionExtendReasonTypeID       = @parameter_40
+                  , @idaraID_FK                         = @idaraID
+                  , @entryData                          = @entrydata
+                  , @hostName                           = @hostName;
+
+            END
+
+              ELSE IF @ActionType = 'PAYMENTANDREFUNDFORUSER'
+            BEGIN
+                        INSERT INTO @Result(IsSuccessful, Message_)
+                EXEC [Housing].[FinancialAuditForUserSP]
+                    @Action                             = @ActionType
+                  , @ActionID                           = @parameter_22
+                  , @residentInfoID                     = @parameter_02
+                  , @Notes                              = null
+                  , @buildingDetailsID                  = @parameter_05
+                  , @LastActionID                       = @parameter_21
+                  , @PaymentType                        = @parameter_12
+                  , @PaymentNo                          = @parameter_13
+                  , @PaymentDate                        = @parameter_14
+                  , @Amount                             = @parameter_09
+                  , @BillChargeTypeID_FK                = @parameter_03
+                  --, @FromBillChargeTypeID_FK            = @parameter_
+                  , @description                        = @parameter_27
+                  , @idaraID_FK                         = @idaraID
+                  , @entryData                          = @entrydata
+                  , @hostName                           = @hostName;
+
+            END
+
+
+             ELSE IF @ActionType = 'FINANCIALSETTLEMENTFORUSER'
+            BEGIN
+                        INSERT INTO @Result(IsSuccessful, Message_)
+                EXEC [Housing].[FinancialAuditForUserSP]
+                    @Action                             = @ActionType
+                  , @ActionID                           = @parameter_22
+                  , @residentInfoID                     = @parameter_02
+                  , @Notes                              = null
+                  , @buildingDetailsID                  = @parameter_05
+                  , @LastActionID                       = @parameter_21
+                  , @PaymentType                        = @parameter_12
+                  --, @PaymentNo                          = @parameter_13
+                  --, @PaymentDate                        = @parameter_14
+                  , @Amount                             = @parameter_39
+                  , @FullRemining                       = @parameter_09
+                  , @BillChargeTypeID_FK                = @parameter_03
+                  , @ToBillChargeTypeID_FK              = @parameter_30
+                  , @description                        = @parameter_27
+                  , @idaraID_FK                         = @idaraID
+                  , @entryData                          = @entrydata
+                  , @hostName                           = @hostName;
+
+            END
+
+
+           
+
+            
+
+            ELSE
+            BEGIN
+                SET @ok = 0;
+                SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+                GOTO Finish;
+            END
+
+            SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+            GOTO Finish;
+        END
+
+
 
 
 
@@ -2852,95 +2958,6 @@ BEGIN
 
 
 
-
-               ELSE IF @ActionType = 'EDITNEWMETER'
-            BEGIN 
-            
-                     INSERT INTO @Result(IsSuccessful, Message_)
-                EXEC [Housing].[MetersSP]
-                     @Action                               = @ActionType
-                    ,@meterID                              = @parameter_01
-                    ,@meterTypeID_FK                       = @parameter_02
-                    ,@meterNo                              = @parameter_03
-                    ,@meterName_A                          = @parameter_04
-                    ,@meterName_E                          = @parameter_05
-                    ,@meterDescription                     = @parameter_06
-                    ,@meterStartDate                       = @parameter_07
-                    --,@meterEndDate                         = null
-                    ,@meterServiceTypeID                   = @parameter_40
-                    ,@meterTypeName_A                      = null
-                    ,@meterTypeName_E                      = null
-                    ,@meterTypeConversionFactor            = null
-                    ,@meterMaxRead                         = null
-                    --,@meterTypeStartDate                   = null
-                    --,@meterTypeEndDate                     = null
-                    ,@meterServicePrice                    = null
-                    ,@meterTypeDescription                 = null
-                    ,@MeterNote                            = null
-                    ,@Notes                                = null
-                    ,@meterReadValue                       = @parameter_24
-                    ,@IdaraId_FK                           = @idaraID
-                    ,@entryData                            = @entrydata
-                    ,@hostName                             = @hostName;
-                                                           
-
-            END
-
-
-                ELSE IF @ActionType = 'DELETENEWMETER'
-            BEGIN 
-            
-                     INSERT INTO @Result(IsSuccessful, Message_)
-                EXEC [Housing].[MetersSP]
-                     @Action                               = @ActionType
-                    ,@meterID                              = @parameter_01
-                    ,@Notes                                = @parameter_45
-                    ,@IdaraId_FK                           = @idaraID
-                    ,@entryData                            = @entrydata
-                    ,@hostName                             = @hostName;
-                                                           
-
-            END
-
-            
-                ELSE IF @ActionType = 'LINKMETERTOBUILDINGS'
-            BEGIN 
-            
-                     INSERT INTO @Result(IsSuccessful, Message_)
-                EXEC [Housing].[MetersSP]
-                     @Action                               = @ActionType
-                    ,@meterID                              = @parameter_04
-                    ,@buildingDetailsID_FK                 = @parameter_03
-                    ,@Notes                                = @parameter_45
-                    ,@meterReadValue                       = @parameter_24
-                    ,@IdaraId_FK                           = @idaraID
-                    ,@entryData                            = @entrydata
-                    ,@hostName                             = @hostName;
-                                                           
-
-            END
-
-              ELSE IF @ActionType = 'UNLINKMETERTOBUILDINGS'
-            BEGIN 
-            
-                     INSERT INTO @Result(IsSuccessful, Message_)
-                EXEC [Housing].[MetersSP]
-                     @Action                               = @ActionType
-                    ,@meterForBuildingID                   = @parameter_01
-                    ,@Notes                                = @parameter_45
-                    ,@meterID                              = @parameter_02
-                    ,@buildingDetailsID_FK                 = @parameter_03
-                    ,@meterReadValue                       = @parameter_24
-                    ,@buildingDetailsNo1                   = @parameter_10
-                    ,@IdaraId_FK                           = @idaraID
-                    ,@entryData                            = @entrydata
-                    ,@hostName                             = @hostName;
-                                                           
-
-            END
-
-            
-
             ELSE
             BEGIN
                 SET @ok = 0;
@@ -2955,6 +2972,57 @@ BEGIN
 
 
 
+
+
+        ----------------------------------------------------------------
+        -- MeterReadForOccubentAndExit
+        ----------------------------------------------------------------
+        ELSE IF @pageName_ = 'HousingHandover'
+        BEGIN
+            IF (
+                SELECT COUNT(*)
+                FROM  dbo.V_GetListUserPermission v
+                WHERE v.userID = @entrydata
+                  AND v.menuName_E = @pageName_
+                  --AND v.permissionTypeName_E = @ActionType
+            ) <= 0
+            BEGIN
+                SET @ok = 0;
+                SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+                GOTO Finish;
+            END
+
+            DELETE FROM @Result;
+                             
+
+
+              IF @ActionType = 'HousingHandoverAction'
+            BEGIN
+                      INSERT INTO @Result(IsSuccessful, Message_)
+                EXEC [Housing].[HousingHandoverSP]
+                    @Action                       = @ActionType
+                  , @buildingDetailsID            = @parameter_01
+                  , @buildingDetailsNo            = @parameter_02
+                  , @LastActionTypeID             = @parameter_10
+                  , @NextActionTypeID             = @parameter_07
+                  , @LastActionID                 = @parameter_12
+                  , @Notes                        = @parameter_11
+                  , @idaraID_FK                   = @idaraID
+                  , @entryData                    = @entrydata
+                  , @hostName                     = @hostName;
+
+            END
+
+            ELSE
+            BEGIN
+                SET @ok = 0;
+                SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType1';
+                GOTO Finish;
+            END
+
+            SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+            GOTO Finish;
+        END
 
 
 

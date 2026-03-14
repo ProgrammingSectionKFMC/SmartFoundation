@@ -51,6 +51,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             bool canCANCELHOUSINGEXTEND = false;
             bool canSENDHOUSINGEXTENDTOFINANCE = false;
             bool canAPPROVEEXTEND = false;
+            bool canEXTENDINSURANCE = false;
            
 
 
@@ -89,6 +90,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         if (permissionName == "CANCELHOUSINGEXTEND") canCANCELHOUSINGEXTEND = true;
                         if (permissionName == "SENDHOUSINGEXTENDTOFINANCE") canSENDHOUSINGEXTENDTOFINANCE = true;
                         if (permissionName == "APPROVEEXTEND") canAPPROVEEXTEND = true;
+                        if (permissionName == "EXTENDINSURANCE") canEXTENDINSURANCE = true;
 
 
                     }
@@ -232,6 +234,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             dict["p24"] = Get("ExtendFromDate");
                             dict["p25"] = Get("ExtendToDate");
                             dict["p27"] = Get("LastActionExtendReasonTypeID");
+                            dict["p28"] = Get("Remaining");
+                            dict["p29"] = Get("buildingRentAmount");
+                            dict["p30"] = Get("InsuranceAmount");
+                            dict["p31"] = Get("InsuranceAmountWithRemaining");
+                            dict["p32"] = Get("ExtendReasonTypeName_A");
+                            
 
 
                             rowsList.Add(dict);
@@ -485,6 +493,62 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             };
 
+            var ExtendInsuranceFields = new List<FieldConfig>
+            {
+
+                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "ApproveExtend" },
+                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
+                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
+                new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
+                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+                // selection context
+                new FieldConfig { Name = rowIdField, Type = "hidden" },
+                // hidden p01 actually posted to SP
+                new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "ActionID" },
+                new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p14", Label = "الترتيب", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p15", Label = "الاسم", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p07", Label = "WaitingClassID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
+               
+
+              
+
+                new FieldConfig { Name = "p22", Label = "تاريخ خطاب موافقة الامهال", Type = "date", ColCss = "3",Required = true, Readonly = true },
+                new FieldConfig { Name = "p23", Label = "رقم خطاب موافقة الامهال", Type = "text", ColCss = "3",Required = true, Readonly = true },
+                new FieldConfig { Name = "p24", Label = "تاريخ بداية الامهال", Type = "date", ColCss = "3",Required = true, Readonly = true },
+                new FieldConfig { Name = "p25", Label = "تاريخ نهاية الامهال", Type = "date", ColCss = "3",Required = true, Readonly = true },
+
+                new FieldConfig { Name = "p27", Label = "ExtendReasonTypeID", Type = "hidden", ColCss = "4",Required = true,Options=ExtendTypeOptions , Readonly = true},
+
+                new FieldConfig { Name = "p32", Label = "ExtendReasonTypeName_A", Type = "text", ColCss = "3", Readonly = true,HelpText="المتقاعد والمفصول مطلوب تأمين احترازي يرجى الاختيار بدقة*" },
+                 new FieldConfig { Name = "p28", Label = "Remaining", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p29", Label = "buildingRentAmount", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p30", Label = "InsuranceAmount", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p31", Label = "InsuranceAmountWithRemaining", Type = "text", ColCss = "3", Readonly = true },
+
+
+                new FieldConfig { Name = "p26", Label = "ملاحظات", Type = "textarea", ColCss = "6",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
+
+                new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p19", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true },
+
+
+            };
+
 
 
             //  UPDATE fields (Form Default / Form 46+)  تجريبي نرجع نمسحه او نعدل عليه
@@ -518,10 +582,14 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                     ShowEdit = canHOUSINGEXTEND,
                     ShowEdit1 = canEDITHOUSINGEXTEND,
-                    ShowDelete = canCANCELHOUSINGEXTEND,
-                    ShowDelete1 = canSENDHOUSINGEXTENDTOFINANCE,
+
+                    ShowEdit2 = canCANCELHOUSINGEXTEND,
+                    ShowDelete = canSENDHOUSINGEXTENDTOFINANCE,
+                    ShowDelete1 = canEXTENDINSURANCE,
                     ShowDelete2 = canAPPROVEEXTEND,
-                    
+
+
+
                     ShowBulkDelete = false,
                     
                    
@@ -707,7 +775,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     },
 
 
-                    Delete = new TableAction
+
+
+                    Edit2 = new TableAction
                     {
                         Label = "الغاء امهال مستفيد",
                         Icon = "fa-solid fa-close",
@@ -756,7 +826,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         }
                     },
 
-                    Delete1 = new TableAction
+                    Delete = new TableAction
                     {
                         Label = "ارسال للتدقيق المالي",
                         Icon = "fa-solid fa-money-bill-wave",
@@ -828,6 +898,55 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         }
                     },
 
+                    Delete1 = new TableAction  // ✅ لازم تحدد Edit1 بدل Delete1!
+                    {
+                        Label = "التأمين الاحترازي",
+                        Icon = "fa-solid fa-money-bill-wave",
+                        Color = "info",
+                        //Show = true,  // ✅ أضف
+                        IsEdit = true,
+                        OpenModal = true,
+
+                        ModalTitle = "التأمين الاحترازي",
+                        ModalMessage = "",
+                        ModalMessageClass = "bg-red-50 text-red-700",
+                        ModalMessageIcon = "fa-solid fa-triangle-exclamation",
+
+                        OnBeforeOpenJs = "sfRouteEditForm(table, act);",
+
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "BuildingTypeEditForm",
+                            Title = "",
+                            Method = "post",
+                            ActionUrl = "/crud/update",
+                            SubmitText = "حفظ التعديلات",
+                            CancelText = "إلغاء",
+                            Fields = ExtendInsuranceFields
+                        },
+
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1,
+
+                        Guards = new TableActionGuards
+                        {
+                            AppliesTo = "any",
+                            DisableWhenAny = new List<TableActionRule>
+                        {
+
+                              new TableActionRule
+                            {
+                                Field = "LastActionTypeID",
+                                Op = "neq",
+                                Value = "48",
+                                Message = "لايمكن تعديل الطلب",
+                                Priority = 3
+                            },
+                          }
+                        }
+                    },
+
                     Delete2 = new TableAction  // ✅ لازم تحدد Edit1 بدل Delete1!
                     {
                         Label = "اعتماد الامهال",
@@ -876,6 +995,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                           }
                         }
                     },
+
+
 
                 }
             };

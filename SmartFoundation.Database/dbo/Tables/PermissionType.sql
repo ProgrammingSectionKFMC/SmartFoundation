@@ -3,6 +3,8 @@
     [permissionTypeName_A] NVARCHAR (500) NULL,
     [permissionTypeName_E] NVARCHAR (500) NULL,
     [permissionTypeActive] BIT            NULL,
-    CONSTRAINT [PK_PermissionType_1] PRIMARY KEY CLUSTERED ([permissionTypeID] ASC)
+    [RoleID_FK]            BIGINT         NULL,
+    CONSTRAINT [PK_PermissionType_1] PRIMARY KEY CLUSTERED ([permissionTypeID] ASC),
+    CONSTRAINT [FK_PermissionType_Role] FOREIGN KEY ([RoleID_FK]) REFERENCES [dbo].[Role] ([roleID])
 );
 

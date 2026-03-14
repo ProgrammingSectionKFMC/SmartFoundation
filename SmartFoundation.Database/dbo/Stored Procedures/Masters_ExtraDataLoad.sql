@@ -242,12 +242,89 @@ BEGIN
 
 
 
-               -------------------------------------------------------------------
-    --                  ImportExcelForBuildingPayment
+     -------------------------------------------------------------------
+    --                  FinancialAuditForExtendAndEvictions
     -------------------------------------------------------------------
 
 
          ELSE IF @pageName_ = 'FinancialAuditForExtendAndEvictions'
+        BEGIN
+         IF @ActionType = 'GetBillsTotalPriceForResident'
+            BEGIN
+
+                   
+        SELECT 
+        r.BillsID,
+        r.BillNumber,
+        r.TotalPrice,
+        r.residentInfoID_FK AS residentInfoID,
+        r.BillChargeTypeID_FK AS BillChargeTypeID,
+        bct.BillChargeTypeName_A, r.buildingDetailsID,
+        b.buildingDetailsNo,
+        r.idaraID_FK AS idaraID,
+        vgrd.FullName_A
+        FROM   Housing.Bills AS r 
+        INNER JOIN Housing.BillChargeType AS bct ON r.BillChargeTypeID_FK = bct.BillChargeTypeID
+        LEFT JOIN  Housing.V_GetGeneralListForBuilding b on r.buildingDetailsID = b.buildingDetailsID
+        LEFT JOIN Housing.V_GetFullResidentDetails AS vgrd ON r.residentInfoID_FK = vgrd.residentInfoID
+
+
+        WHERE (r.BillActive = 1) 
+        and (r.residentInfoID_FK = @parameter_01) 
+        and (r.BillChargeTypeID_FK = @parameter_02) 
+        and (r.buildingDetailsID = @parameter_03 or r.buildingDetailsID is null) 
+        and (r.idaraID_FK = @idaraID)
+
+                
+            END
+                ELSE  IF @ActionType = 'GetBillsPaidByResident'
+            BEGIN
+
+
+            SELECT 
+            bp.amount ,
+            bp.residentInfoID_FK AS residentInfoID,
+            bp.BillChargeTypeID_FK AS BillChargeTypeID,
+            t.BillChargeTypeName_A,
+            bp.buildingDetailsID_FK AS buildingDetailsID,
+            bd.buildingDetailsNo,
+            vgrd.FullName_A
+            FROM   Housing.BuildingPayment AS bp INNER JOIN
+                         Housing.DeductList AS d ON bp.deductListID_FK = d.deductListID INNER JOIN
+                         Housing.BillChargeType AS t ON bp.BillChargeTypeID_FK = t.BillChargeTypeID INNER JOIN
+                         Housing.BuildingDetails AS bd ON bp.buildingDetailsID_FK = bd.buildingDetailsID LEFT JOIN
+                         Housing.V_GetFullResidentDetails AS vgrd ON bp.residentInfoID_FK = vgrd.residentInfoID
+            WHERE 
+            (d.deductActive = 1) 
+            AND (bp.buildingPayementActive = 1) 
+            AND(bp.residentInfoID_FK = @parameter_01) 
+            AND (bp.BillChargeTypeID_FK = @parameter_02) 
+            AND (bp.IdaraId_FK = 1) 
+            AND (bp.buildingDetailsID_FK = @parameter_03 or bp.buildingDetailsID_FK is null)
+
+
+            END
+
+
+            ELSE  IF @ActionType = 'EDITBILL'
+            BEGIN
+
+
+            select b.BillsID,b.meterNo,b.CurrentRead,b.LastRead,b.CurrentPeriodID,b.ReadDiff, b.TotalPrice
+            FROM Housing.Bills b
+            where b.BillsID = @parameter_01
+            END
+
+
+        END
+
+
+    -------------------------------------------------------------------
+    --                  FinancialAuditForExtendAndEvictions
+    -------------------------------------------------------------------
+
+
+         ELSE IF @pageName_ = 'FinancialAuditForUser'
         BEGIN
          IF @ActionType = 'GetBillsTotalPriceForResident'
             BEGIN

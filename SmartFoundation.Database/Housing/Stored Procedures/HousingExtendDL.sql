@@ -51,10 +51,15 @@ BEGIN
             w.buildingDetailsNo,
             w.LastActionExtendReasonTypeID,
             ert.ExtendReasonTypeName_A,
+            ert.ExtendReasonTypeID,
              w.LastActionEntryDate,
             isnull(w.LastActionNote,w.ActionNote) ActionNote,
             w.IdaraId
-           
+            ,
+            isnull(sum_.Remaining,0.00) Remaining
+            , br.buildingRentAmount
+            ,(br.buildingRentAmount * 40.00) InsuranceAmount
+            ,(br.buildingRentAmount * 40.00) +isnull(sum_.Remaining,0.00) InsuranceAmountWithRemaining
             
             
     FROM Housing.V_WaitingList w 
@@ -62,6 +67,31 @@ BEGIN
         ON w.residentInfoID = rd.residentInfoID
         Inner Join Housing.BuildingActionType ba on w.LastActionTypeID = ba.buildingActionTypeID
         left join Housing.ExtendReasonType ert on w.LastActionExtendReasonTypeID = ert.ExtendReasonTypeID
+        left join Housing.V_buildingWithRent br on w.buildingDetailsID = br.buildingDetailsID
+         LEFT JOIN 
+        (
+         SELECT 
+    e.residentInfoID,e.buildingDetailsID,
+    SUM(e.SumBillsTotalPrice) AS SumBillsTotalPrice,
+    SUM(e.SumTotalPaidBills) AS SumTotalPaidBills,
+    case
+        when SUM(e.Remaining) < 0 then SUM(e.Remaining) * -1
+        else SUM(e.Remaining)
+    end as Remaining,
+    --SUM(e.Remaining) AS Remaining,
+    CASE 
+        WHEN SUM(e.Remaining) > 0 THEN N'مطالب بمبالغ للادارة'
+        WHEN SUM(e.Remaining) < 0 THEN N'يوجد مبالغ زائدة للمستفيد'
+        ELSE N'لايوجد مطالبات'
+    END AS BillsStatus,
+    CASE 
+        WHEN SUM(e.Remaining) > 0 THEN 0
+        WHEN SUM(e.Remaining) < 0 THEN 1
+        ELSE 2
+    END AS BillsStatusID
+FROM Housing.V_SumBillsTotalPriceAndTotalPaidForResident e
+GROUP BY e.residentInfoID,e.buildingDetailsID
+        ) sum_ on w.residentInfoID = sum_.residentInfoID and w.buildingDetailsID = sum_.buildingDetailsID
     WHERE w.IdaraId = @idaraID
       AND  w.LastActionTypeID in (2,48,49,50,51,52,24)
       order by w.LastActionEntryDate desc

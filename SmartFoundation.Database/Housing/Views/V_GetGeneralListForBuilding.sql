@@ -4,6 +4,11 @@
 
 
 
+
+
+
+
+
 CREATE VIEW [Housing].[V_GetGeneralListForBuilding]
 AS
 
@@ -41,6 +46,9 @@ SELECT
       ,lb.buildingActionID  as LastActionID
       ,lb.buildingActionTypeID_FK as LastActionTypeID
       ,bat.buildingActionTypeName_A  as LastActionTypeName
+      ,bat.buildingActionTypeBuildingAlias as LastActionTypeBuildingAlias
+      ,lb.LastActionEntryDate
+      ,lb.LastActionNote
 FROM  Housing.BuildingDetails bd
 INNER JOIN Housing.BuildingType bt 
     ON bd.buildingTypeID_FK = bt.buildingTypeID
@@ -55,9 +63,14 @@ INNER JOIN Housing.MilitaryArea ma
 INNER JOIN Housing.BuildingClass bc 
     ON bd.buildingClassID_FK = bc.buildingClassID
 OUTER APPLY (
-    SELECT TOP (1) ba.buildingActionID, ba.buildingActionTypeID_FK
+    SELECT TOP (1)
+        ba.buildingActionID,
+        ba.buildingActionTypeID_FK,
+        ba.entryDate as LastActionEntryDate,
+        ba.buildingActionNote as LastActionNote
     FROM Housing.BuildingAction ba
     WHERE ba.buildingDetailsID_FK = bd.buildingDetailsID
+      AND ba.buildingActionActive = 1
     ORDER BY ba.buildingActionID DESC
 ) lb
 left JOIN Housing.BuildingActionType bat   -- ✅ بدل INNER JOIN

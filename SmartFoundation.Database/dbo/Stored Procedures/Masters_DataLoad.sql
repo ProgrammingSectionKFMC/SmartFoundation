@@ -64,7 +64,7 @@ BEGIN
                   p.permissionID
                 , p.userID
                 ,p.distributorID_FK
-                ,p.RoleID_FK
+                ,p.PermissionRoleID
                 ,p.IdaraID_FK
                 ,p.DSDID_FK
                 ,P.deptID
@@ -79,7 +79,7 @@ BEGIN
            
             WHERE p.userID = @parameter_02
               AND p.distributorID_FK is null
-              AND p.RoleID_FK is null
+              AND p.PermissionRoleID is null
               AND p.IdaraID_FK is null
               AND p.DSDID_FK is null
               --AND p.IdaraID_FK = @idaraID
@@ -94,7 +94,7 @@ BEGIN
                   p.permissionID
                 , p.userID
                 ,p.distributorID_FK
-                ,p.RoleID_FK
+                ,p.PermissionRoleID
                 ,p.IdaraID_FK
                 ,p.DSDID_FK
                 ,P.deptID
@@ -108,7 +108,7 @@ BEGIN
             FROM  dbo.V_GetListUserPermission p
             WHERE  p.distributorID_FK = @parameter_03
                AND p.userID  is null
-              AND p.RoleID_FK is null
+              AND p.PermissionRoleID is null
               AND p.IdaraID_FK is null
               AND p.DSDID_FK is null
               --AND p.IdaraID_FK = @idaraID
@@ -122,7 +122,7 @@ BEGIN
                  p.permissionID
                 , p.userID
                 ,p.distributorID_FK
-                ,p.RoleID_FK
+                ,p.PermissionRoleID
                 ,p.IdaraID_FK
                 ,p.DSDID_FK
                 ,P.deptID
@@ -136,7 +136,7 @@ BEGIN
             FROM  dbo.V_GetListUserPermission p
             WHERE p.userID is null
               AND p.distributorID_FK is null
-              AND p.RoleID_FK = @parameter_04
+              AND p.PermissionRoleID = @parameter_04
               AND p.IdaraID_FK is null
               AND p.DSDID_FK is null
               --AND p.IdaraID_FK = @idaraID
@@ -150,7 +150,7 @@ BEGIN
                  p.permissionID
                 , p.userID
                 ,p.distributorID_FK
-                ,p.RoleID_FK
+                ,p.PermissionRoleID
                 ,p.IdaraID_FK
                 ,p.DSDID_FK
                 ,P.deptID
@@ -164,7 +164,7 @@ BEGIN
             FROM  dbo.V_GetListUserPermission p
             WHERE p.userID is null
               AND p.distributorID_FK is null
-              AND p.RoleID_FK is null
+              AND p.PermissionRoleID is null
               AND p.IdaraID_FK = @parameter_05
               AND p.DSDID_FK is null
               --AND p.IdaraID_FK = @idaraID
@@ -179,7 +179,7 @@ BEGIN
                  p.permissionID
                 , p.userID
                 ,p.distributorID_FK
-                ,p.RoleID_FK
+                ,p.PermissionRoleID
                 ,p.IdaraID_FK
                 ,p.DSDID_FK
                 ,P.deptID
@@ -193,7 +193,7 @@ BEGIN
             FROM  dbo.V_GetListUserPermission p
             WHERE p.userID is null
               AND p.distributorID_FK is null
-              AND p.RoleID_FK is null
+              AND p.PermissionRoleID is null
               AND p.IdaraID_FK is null
               AND p.DSDID_FK = @DsdID
               --AND p.IdaraID_FK = @idaraID
@@ -209,7 +209,7 @@ BEGIN
                  p.permissionID
                 , p.userID
                 ,p.distributorID_FK
-                ,p.RoleID_FK
+                ,p.PermissionRoleID
                 ,p.IdaraID_FK
                 ,p.DSDID_FK
                 ,P.deptID
@@ -223,7 +223,7 @@ BEGIN
             FROM  dbo.V_GetListUserPermission p
             WHERE p.userID is null
               AND p.distributorID_FK is null
-              AND p.RoleID_FK is null
+              AND p.PermissionRoleID is null
               AND p.IdaraID_FK is null
               AND p.DSDID_FK = @DsdID
               --AND p.IdaraID_FK = @idaraID
@@ -238,7 +238,7 @@ BEGIN
                  p.permissionID
                 , p.userID
                 ,p.distributorID_FK
-                ,p.RoleID_FK
+                ,p.PermissionRoleID
                 ,p.IdaraID_FK
                 ,p.DSDID_FK
                 ,P.deptID
@@ -252,7 +252,7 @@ BEGIN
             FROM  dbo.V_GetListUserPermission p
             WHERE p.userID is null
               AND p.distributorID_FK is null
-              AND p.RoleID_FK is null
+              AND p.PermissionRoleID is null
               AND p.IdaraID_FK is null
               AND p.DSDID_FK = @DsdID
               --AND p.IdaraID_FK = @idaraID
@@ -1271,6 +1271,26 @@ END
 
 
     -------------------------------------------------------------------
+    --                     PAGE: FinancialAuditForUser
+    -------------------------------------------------------------------
+        ELSE IF @pageName_ = 'FinancialAuditForUser'
+        BEGIN
+
+
+
+      EXEC [Housing].[FinancialAuditForUserDL]
+                      @pageName_                      = @pageName_
+                    , @idaraID                        = @idaraID
+                    , @entryData                      = @entrydata
+                    , @hostName                       = @hostName
+                    , @NationalID                     = @parameter_01
+
+
+        END
+
+
+
+    -------------------------------------------------------------------
     --                     PAGE: FinancialAuditForExtendAndEvictions
     -------------------------------------------------------------------
         ELSE IF @pageName_ = 'FinancialAuditForExtendAndEvictions'
@@ -1357,6 +1377,26 @@ END
 
         END
 
+
+
+          -------------------------------------------------------------------
+    --                     PAGE: AllMeterRead
+    -------------------------------------------------------------------
+        ELSE IF @pageName_ = 'HousingHandover'
+        BEGIN
+
+         EXEC [Housing].[HousingHandoverDL]
+                      @pageName_                      = @pageName_
+                    , @idaraID                        = @idaraID
+                    , @entryData                      = @entrydata
+                    , @hostName                       = @hostName
+                    , @LastActionTypeID                 = @parameter_01
+                   
+
+     
+
+
+        END
 
 
 

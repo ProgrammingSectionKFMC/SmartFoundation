@@ -195,7 +195,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 readyToSend = true;
             }
 
-            if (LastActionTypeIDvalue == "57" && readyToSendAmount == 0)
+            if (LastActionTypeIDvalue == "57" && readyToSendAmount == 2)
             {
                 readyToSend = true;
             }

@@ -459,6 +459,13 @@
     <Build Include="Security\MVCHousing.sql" />
     <Build Include="Housing\Stored Procedures\OtherWaitingListSP.sql" />
     <Build Include="Housing\Stored Procedures\OtherWaitingListDL.sql" />
+    <Build Include="Housing\Tables\ExtendInsurance.sql" />
+    <Build Include="Housing\Tables\BuildingHandover.sql" />
+    <Build Include="Housing\Views\V_LastActionTypeForBuilding.sql" />
+    <Build Include="Housing\Stored Procedures\HousingHandoverSP.sql" />
+    <Build Include="Housing\Stored Procedures\HousingHandoverDL.sql" />
+    <Build Include="Housing\Stored Procedures\FinancialAuditForUserSP.sql" />
+    <Build Include="Housing\Stored Procedures\FinancialAuditForUserDL.sql" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Condition="'$(NetCoreBuild)' == 'true'">
