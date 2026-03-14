@@ -2588,6 +2588,242 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 this.applyToggleFieldVisibility = applyToggleFieldVisibility;
 
 
+
+
+                // ============== Print Modal button =================
+                this.__printExtraTable = (slotKey = "m1") => {
+                    slotKey = String(slotKey || "m1");
+
+                    const meta = this.__metaBySlot?.[slotKey] || {};
+                    const st = this.modal.__extraStateMap?.[slotKey];
+                    const rows = Array.isArray(st?.cache) ? st.cache : [];
+
+                    if (!rows.length) {
+                        this.showToast?.("لا توجد بيانات للطباعة", "error");
+                        return;
+                    }
+
+                    const printFieldsRaw =
+                        meta.printFields ??
+                        meta.PrintFields ??
+                        meta.visibleFields ??
+                        meta.VisibleFields ??
+                        [];
+
+                    const printFields = Array.isArray(printFieldsRaw)
+                        ? printFieldsRaw.map(x => String(x))
+                        : [];
+
+                    if (!printFields.length) {
+                        this.showToast?.("لم يتم تعريف printFields في الميتا", "error");
+                        return;
+                    }
+
+                    const headerMap =
+                        meta.printHeaderMap ??
+                        meta.PrintHeaderMap ??
+                        meta.headerMap ??
+                        meta.HeaderMap ??
+                        {};
+
+                    const title =
+                        meta.printTitle ??
+                        meta.PrintTitle ??
+                        meta.extraTitle ??
+                        meta.ExtraTitle ??
+                        "طباعة البيانات";
+
+                    const printOrientation = String(
+                        meta.printOrientation ?? meta.PrintOrientation ?? "portrait"
+                    ).trim().toLowerCase();
+
+                    const orientation =
+                        (printOrientation === "landscape" || printOrientation === "عرض")
+                            ? "landscape"
+                            : "portrait";
+
+                    const showPageNumbers = (() => {
+                        const v = meta.showPageNumbers ?? meta.ShowPageNumbers ?? false;
+                        if (v === true || v === false) return v;
+                        const s = String(v ?? "").trim().toLowerCase();
+                        return ["1", "true", "yes", "on"].includes(s);
+                    })();
+
+                    const showPrintSerial = (() => {
+                        const v = meta.showPrintSerial ?? meta.ShowPrintSerial ?? false;
+                        if (v === true || v === false) return v;
+                        const s = String(v ?? "").trim().toLowerCase();
+                        return ["1", "true", "yes", "on"].includes(s);
+                    })();
+
+                    const serialLabel = String(
+                        meta.printSerialLabel ?? meta.PrintSerialLabel ?? "م"
+                    );
+
+                    const cssHref = String(
+                        meta.printCssHref ?? meta.PrintCssHref ?? "/css/site.css"
+                    ).trim();
+
+                    const escHtml = (v) => {
+                        if (v == null) return "";
+                        return String(v)
+                            .replaceAll("&", "&amp;")
+                            .replaceAll("<", "&lt;")
+                            .replaceAll(">", "&gt;")
+                            .replaceAll('"', "&quot;")
+                            .replaceAll("'", "&#39;");
+                    };
+
+                    const formatValue = (val) => {
+                        if (val == null || val === "") return "—";
+                        return String(val);
+                    };
+
+                    const serialHead = showPrintSerial
+                        ? `<th class="sf-print-th sf-print-th-serial">${escHtml(serialLabel)}</th>`
+                        : "";
+
+                    const ths = printFields
+                        .map(f => {
+                            const lbl = headerMap?.[f] ?? f;
+                            return `<th class="sf-print-th">${escHtml(lbl)}</th>`;
+                        })
+                        .join("");
+
+                    const trs = rows
+                        .map((r, idx) => {
+                            const lower = {};
+                            Object.keys(r || {}).forEach(k => {
+                                lower[String(k).toLowerCase()] = r[k];
+                            });
+
+                            const serialTd = showPrintSerial
+                                ? `<td class="sf-print-td sf-print-td-serial">${idx + 1}</td>`
+                                : "";
+
+                            const tds = printFields
+                                .map(f => {
+                                    const val = r?.[f] ?? lower?.[String(f).toLowerCase()] ?? "";
+                                    return `<td class="sf-print-td">${escHtml(formatValue(val))}</td>`;
+                                })
+                                .join("");
+
+                            return `<tr class="sf-print-tr">${serialTd}${tds}</tr>`;
+                        })
+                        .join("");
+
+                    const footerHtml = showPageNumbers
+                        ? `
+<div class="sf-print-footer">
+    <span class="sf-print-page-num"></span>
+</div>`
+                        : "";
+
+                    const html = `<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="utf-8" />
+    <title>${escHtml(title)}</title>
+    <base href="${window.location.origin}/">
+    <style>
+        @page {
+            size: A4 ${orientation};
+            margin: 14mm 12mm 16mm 12mm;
+        }
+    </style>
+    <link rel="stylesheet" href="${escHtml(cssHref)}" />
+</head>
+<body class="sf-print-body ${orientation === "landscape" ? "is-landscape" : "is-portrait"} ${showPageNumbers ? "has-page-numbers" : "no-page-numbers"} ${showPrintSerial ? "has-print-serial" : "no-print-serial"}">
+    <div class="sf-print-wrap" data-orientation="${escHtml(orientation)}" data-page-numbers="${showPageNumbers ? "true" : "false"}">
+        <div class="sf-print-header">
+            <h1 class="sf-print-title">${escHtml(title)}</h1>
+        </div>
+
+        <div class="sf-print-meta">
+            <div class="sf-print-date">${escHtml(new Date().toLocaleString("ar-SA"))}</div>
+        </div>
+
+        <div class="sf-print-table-box">
+            <table class="sf-print-table">
+                <thead class="sf-print-thead">
+                    <tr class="sf-print-head-row">${serialHead}${ths}</tr>
+                </thead>
+                <tbody class="sf-print-tbody">
+                    ${trs}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    ${footerHtml}
+</body>
+</html>`;
+
+                    let frame = document.getElementById("sf-print-frame");
+                    if (!frame) {
+                        frame = document.createElement("iframe");
+                        frame.id = "sf-print-frame";
+                        frame.style.position = "fixed";
+                        frame.style.right = "0";
+                        frame.style.bottom = "0";
+                        frame.style.width = "0";
+                        frame.style.height = "0";
+                        frame.style.border = "0";
+                        frame.style.visibility = "hidden";
+                        document.body.appendChild(frame);
+                    }
+
+                    const win = frame.contentWindow;
+                    const doc = win.document;
+
+                    doc.open();
+                    doc.write(html);
+                    doc.close();
+
+                    const link = doc.querySelector('link[rel="stylesheet"]');
+                    let printed = false;
+
+                    const doPrint = () => {
+                        if (printed) return;
+                        printed = true;
+
+                        setTimeout(() => {
+                            win.focus();
+                            win.print();
+
+                            setTimeout(() => {
+                                try {
+                                    const l = doc.querySelector('link[rel="stylesheet"]');
+                                    if (l) {
+                                        l.onload = null;
+                                        l.onerror = null;
+                                    }
+                                    doc.open();
+                                    doc.write("");
+                                    doc.close();
+                                } catch (_) { }
+                            }, 300);
+                        }, 150);
+                    };
+
+                    if (link) {
+                        link.onload = () => doPrint();
+
+                        link.onerror = () => {
+                            console.error("Print CSS failed to load:", cssHref);
+                            doPrint();
+                        };
+
+                        setTimeout(() => {
+                            doPrint();
+                        }, 1200);
+                    } else {
+                        doPrint();
+                    }
+                };
+                // ============== End Print Modal button =================
+
+
                 const normalizeObjKeyLookup = (obj) => {
                     const map = {};
                     if (!obj || typeof obj !== "object") return map;
@@ -2656,7 +2892,30 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     return { page: p, pageSize, total, pages, slice, startIndex: start };
                 };
 
-                const renderPager = ({ page, pages }, slotKey = "m1") => {
+//                const renderPager = ({ page, pages }, slotKey = "m1") => {
+//                    if (pages <= 1) return "";
+
+//                    const maxBtns = 7;
+//                    let start = Math.max(1, page - Math.floor(maxBtns / 2));
+//                    let end = Math.min(pages, start + maxBtns - 1);
+//                    start = Math.max(1, end - maxBtns + 1);
+
+//                    const btn = (p, label, cls = "") => `
+//<button type="button"
+//        class="sf-extra-page-btn ${cls}"
+//        onclick="window.__sfTableActive?.__setExtraPage?.('${slotKey}', ${p})">
+//    ${label}
+//</button>`;
+
+//                    let html = `<div class="sf-extra-pager">`;
+//                    html += btn(Math.max(1, page - 1), "السابق", page <= 1 ? "is-disabled" : "");
+//                    for (let p = start; p <= end; p++) html += btn(p, p, p === page ? "is-active" : "");
+//                    html += btn(Math.min(pages, page + 1), "التالي", page >= pages ? "is-disabled" : "");
+//                    html += `</div>`;
+//                    return html;
+//                };
+
+                const renderPager = ({ page, pages, total }, slotKey = "m1") => {
                     if (pages <= 1) return "";
 
                     const maxBtns = 7;
@@ -2671,13 +2930,30 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
     ${label}
 </button>`;
 
-                    let html = `<div class="sf-extra-pager">`;
-                    html += btn(Math.max(1, page - 1), "السابق", page <= 1 ? "is-disabled" : "");
-                    for (let p = start; p <= end; p++) html += btn(p, p, p === page ? "is-active" : "");
-                    html += btn(Math.min(pages, page + 1), "التالي", page >= pages ? "is-disabled" : "");
-                    html += `</div>`;
-                    return html;
+                    let btns = "";
+                    btns += btn(Math.max(1, page - 1), "السابق", `sf-extra-page-btn--edge ${page <= 1 ? "is-disabled" : ""}`);
+                    for (let p = start; p <= end; p++) {
+                        btns += btn(p, p, `sf-extra-page-btn--num ${p === page ? "is-active" : ""}`);
+                    }
+                    btns += btn(Math.min(pages, page + 1), "التالي", `sf-extra-page-btn--edge ${page >= pages ? "is-disabled" : ""}`);
+
+                    return `
+<div class="sf-extra-pager">
+    <div class="sf-extra-pager-info">
+        <span class="sf-extra-pager-range">عدد السجلات: ${total}</span>
+    </div>
+    <div class="sf-extra-pager-nav">
+        ${btns}
+    </div>
+    <div class="sf-extra-pager-info">
+        <span class="sf-extra-pager-range">الصفحة: ${page} / ${pages}</span>
+    </div>
+</div>`;
                 };
+
+
+
+
 
                 // filtering + sorting (safe defaults)
                 const applyFilterSort = (data, cols, meta, stateOverride = null) => {
@@ -2808,6 +3084,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     const emptyText = meta.emptyText ?? meta.EmptyText ?? "لا توجد بيانات";
                     const enableSearch = (meta.enableSearch ?? meta.EnableSearch ?? true) !== false;
                     const sortable = (meta.sortable ?? meta.Sortable ?? true) !== false;
+                    const showPrint = toBool(meta.showPrint ?? meta.ShowPrint, false);
+                    
 
                     let cols = buildColumnsFromArray(extraArray);
 
@@ -2926,22 +3204,40 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                     const showMeta = toBool(meta.showMeta ?? meta.ShowMeta, true);
 
-                    const infoHtml = showMeta ? `
-<div class="sf-extra-meta">
-  <div>عدد السجلات: <b>${pg.total}</b></div>
-  <div>الصفحة: <b>${pg.page}</b> / <b>${pg.pages}</b></div>
-</div>` : "";
+//                    const infoHtml = showMeta ? `
+//<div class="sf-extra-meta">
+//  <div>عدد السجلات: <b>${pg.total}</b></div>
+//  <div>الصفحة: <b>${pg.page}</b> / <b>${pg.pages}</b></div>
+                    //</div>` : "";
+
+                    const infoHtml = "";
 
                     const searchBox = enableSearch ? `
 <div class="sf-extra-search">
-  <input type="text"
-         class="sf-extra-search-input"
-         placeholder="بحث داخل البيانات..."
-         value="${esc(state.query || "")}"
-         oninput="window.__sfTableActive?.__setExtraQuery?.('${slotKey}', this.value)" />
+
+  <div class="sf-extra-search-tools">
+    <input type="text"
+           class="sf-extra-search-input"
+           placeholder="بحث داخل البيانات..."
+           value="${esc(state.query || "")}"
+           oninput="window.__sfTableActive?.__setExtraQuery?.('${slotKey}', this.value)" />
+
+    <button type="button"
+            class="sf-extra-search-clear"
+            onclick="window.__sfTableActive?.__setExtraQuery?.('${slotKey}', '')">
+      مسح
+    </button>
+  </div>
+
+  ${showPrint ? `
   <button type="button"
-          class="sf-extra-search-clear"
-          onclick="window.__sfTableActive?.__setExtraQuery?.('${slotKey}', '')">مسح</button>
+          class="sf-extra-print-btn"
+          onclick="window.__sfTableActive?.__printExtraTable?.('${slotKey}')">
+      <i class="fa fa-print"></i>
+      طباعة
+  </button>
+  ` : ``}
+
 </div>` : "";
 
                     return `
@@ -3005,9 +3301,9 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         sec.setAttribute("data-slot", slotKey);
 
                         sec.innerHTML = `
-          <div class="sf-extra-section-title" style="margin:8px 0;font-weight:600">${esc(title)}</div>
-          <div class="sf-extra-section-body" id="sf-extra-${esc(slotKey)}"></div>
-        `;
+  <div class="sf-extra-section-title" style="margin:8px 0;font-weight:500;text-align:center;">${esc(title)}</div>
+  <div class="sf-extra-section-body" id="sf-extra-${esc(slotKey)}"></div>
+`;
 
                         wrap.appendChild(sec);
                     });
@@ -3045,10 +3341,22 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         }
                     };
 
+                    
+
                     this.__setExtraQuery = (slotKey, q) => {
                         slotKey = String(slotKey || "m1");
                         const st = this.modal.__extraStateMap?.[slotKey];
                         if (!st) return;
+
+                        const el = document.getElementById(`sf-extra-${slotKey}`);
+                        const active = document.activeElement;
+                        const wasSearchInput =
+                            active &&
+                            active.classList &&
+                            active.classList.contains("sf-extra-search-input");
+
+                        const caretStart = wasSearchInput ? active.selectionStart : null;
+                        const caretEnd = wasSearchInput ? active.selectionEnd : null;
 
                         st.query = String(q ?? "");
                         st.page = 1;
@@ -3058,9 +3366,25 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 ? window.__sfTableActive.__renderExtraTable(st.cache, this.__metaBySlot?.[slotKey], st, slotKey)
                                 : `<div class="p-4 text-gray-500">تعذر رسم الجدول</div>`;
 
-                            const el = document.getElementById(`sf-extra-${slotKey}`);
                             if (el) el.innerHTML = html;
-                            this.$nextTick(() => this.initModalScripts?.());
+
+                            this.$nextTick(() => {
+                                this.initModalScripts?.();
+
+                                if (wasSearchInput && el) {
+                                    const newInput = el.querySelector(".sf-extra-search-input");
+                                    if (newInput) {
+                                        newInput.focus();
+                                        try {
+                                            const pos = String(st.query || "").length;
+                                            newInput.setSelectionRange(
+                                                caretStart ?? pos,
+                                                caretEnd ?? pos
+                                            );
+                                        } catch (_) { }
+                                    }
+                                }
+                            });
                         }
                     };
 
@@ -3084,6 +3408,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     };
 
                     // ===================== Extra UI (table / form / both) =====================
+
+                    
 
                 
 
@@ -4104,7 +4430,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     html += `<div class="col-span-12 flex justify-end gap-2 mt-4 sf-modal-actions">`;
 
                     // زر حفظ
-                    html += `<button type="submit" class="btn btn-success sf-modal-btn-save">حفظ</button>`;
+                    /*html += `<button type="submit" class="btn btn-success sf-modal-btn-save">حفظ</button>`;*/
+                    html += `<button type="submit" class="btn btn-success sf-modal-btn-save"><i class="fas fa-check"></i> حفظ</button>`;
 
                     // زر إلغاء
                     html += `<button type="button" class="btn btn-secondary sf-modal-btn-cancel sf-modal-cancel">إلغاء</button>`;

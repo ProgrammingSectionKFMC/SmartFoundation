@@ -664,7 +664,7 @@ textarea[readonly] {
     text-align: center;
     white-space: nowrap;
     vertical-align: middle;
-    //border-top: 1px solid #d4af37;
+    /*border-top: 1px solid #d4af37;*/
     border-bottom: 1px solid #025c42;
     border-left: 1px solid rgba(255, 255, 255, 0.10);
     border-right: none;
@@ -2344,12 +2344,12 @@ textarea[readonly] {
     margin-top: 10px;
     margin-bottom: 6px;
     padding: 0;
-    font-family: "Tajawal", "Inter", "Segoe UI", sans-serif;
+    font-family: "Tajawal","Inter","Segoe UI",sans-serif;
     color: #374151;
     direction: rtl;
 }
 
-@media (min-width: 768px) {
+@media (min-width:768px) {
     .pagination {
         flex-direction: row;
         align-items: center;
@@ -2357,9 +2357,6 @@ textarea[readonly] {
     }
 }
 
-/* =========================
-   Info
-   ========================= */
 .pagination-info {
     display: flex;
     align-items: center;
@@ -2370,41 +2367,27 @@ textarea[readonly] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 28px;
     height: 28px;
     padding: 0 10px;
     background: #fafafa;
     color: #4b5563;
     border: 1px solid #d6ddd9;
     border-radius: 3px;
-    box-shadow: none !important;
     font-size: 12px;
     font-weight: 500;
     line-height: 1;
     white-space: nowrap;
 }
 
-/* =========================
-   Nav Wrapper
-   ========================= */
 .pagination-nav {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    flex-wrap: wrap;
     gap: 4px;
-    padding: 2px;
-    background: #fafafa;
-    border: 1px solid #d6ddd9;
-    border-radius: 3px;
-    box-shadow: none !important;
+    flex-wrap: wrap;
 }
 
-    /* =========================
-   Buttons Base
-   ========================= */
-    .pagination-nav .page-btn,
-    .pagination-nav button {
+    .pagination-nav button,
+    .pagination-nav .page-btn {
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -2415,42 +2398,28 @@ textarea[readonly] {
         color: #374151;
         border: 1px solid #c8d4ce;
         border-radius: 3px;
-        box-shadow: none !important;
-        font-family: "Tajawal", "Inter", "Segoe UI", sans-serif;
+        font-family: "Tajawal","Inter","Segoe UI",sans-serif;
         font-size: 12px;
         font-weight: 500;
         line-height: 1;
-        white-space: nowrap;
         cursor: pointer;
-        appearance: none;
-        -webkit-appearance: none;
-        transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+        transition: background-color .12s ease,border-color .12s ease,color .12s ease;
     }
 
-        .pagination-nav .page-btn:hover:not(:disabled),
-        .pagination-nav button:hover:not(:disabled) {
+        .pagination-nav button:hover:not(:disabled),
+        .pagination-nav .page-btn:hover:not(:disabled) {
             background: #f3f7f4;
             border-color: #9db8ac;
-            color: #1f2937;
         }
 
-        .pagination-nav .page-btn:focus,
-        .pagination-nav .page-btn:focus-visible,
         .pagination-nav button:focus,
-        .pagination-nav button:focus-visible {
-            outline: none !important;
+        .pagination-nav .page-btn:focus {
+            outline: none;
             border-color: #0f766e;
-            box-shadow: inset 0 0 0 0.5px #0f766e !important;
         }
 
-        /* إزالة القفز */
-        .pagination-nav .page-btn:active:not(:disabled),
-        .pagination-nav button:active:not(:disabled) {
-            transform: none !important;
-        }
-
-        .pagination-nav .page-btn:disabled,
-        .pagination-nav button:disabled {
+        .pagination-nav button:disabled,
+        .pagination-nav .page-btn:disabled {
             cursor: not-allowed;
             opacity: .55;
             color: #9ca3af;
@@ -2458,57 +2427,65 @@ textarea[readonly] {
             border-color: #e5e7eb;
         }
 
-    /* =========================
-   Numeric buttons
-   ========================= */
-    .pagination-nav .page-btn--num {
-        min-width: 30px;
-        padding: 0 6px;
+    .pagination-nav .active {
+        background: #0b7a5a;
+        border-color: #0b7a5a;
+        color: #fff;
     }
 
-        /* الزر النشط */
-        .pagination-nav .page-btn--num.active,
-        .pagination-nav .page-btn.active {
-            background: #0b7a5a;
-            border-color: #0b7a5a;
-            color: #ffffff;
-            box-shadow: inset 0 0 0 0.5px rgba(255,255,255,.10) !important;
+        .pagination-nav .active:hover {
+            background: #096749;
+            border-color: #096749;
+            color: #fff;
         }
 
-            .pagination-nav .page-btn--num.active:hover,
-            .pagination-nav .page-btn.active:hover {
-                background: #096749;
-                border-color: #096749;
-                color: #ffffff;
-            }
-
-    /* =========================
-   Edge buttons
-   ========================= */
     .pagination-nav .page-btn--edge {
         min-width: 52px;
-        padding: 0 10px;
+    }
+    .pagination-nav button:hover:not(:disabled):not(.active),
+    .pagination-nav .page-btn:hover:not(:disabled):not(.active) {
+        background: #f3f7f4;
+        border-color: #9db8ac;
     }
 
-    /* =========================
-   Legacy page text support
-   ========================= */
-    .pagination-nav .page-text {
-        display: inline-flex;
-        align-items: center;
+    .pagination-nav .active,
+    .pagination-nav .active:hover {
+        background: #0b7a5a !important;
+        border-color: #0b7a5a !important;
+        color: #fff !important;
+    }
+
+@media (max-width:767.98px) {
+
+    .pagination {
+        align-items: stretch;
+        gap: 7px;
+    }
+
+    .pagination-info,
+    .pagination-nav {
+        width: 100%;
+    }
+
+    .pagination-nav {
         justify-content: center;
-        min-height: 28px;
-        padding: 0 6px;
-        color: #6b7280;
-        font-size: 11.5px;
-        font-weight: 500;
-        line-height: 1;
-        white-space: nowrap;
     }
 
-/* =========================
-   Mobile
-   ========================= */
+    .pagination-range {
+        width: 100%;
+        justify-content: center;
+        font-size: 11.5px;
+    }
+
+    .pagination-nav button,
+    .pagination-nav .page-btn {
+        height: 28px;
+        min-width: 28px;
+        font-size: 11.5px;
+        padding: 0 7px;
+    }
+}
+
 @media (max-width: 767.98px) {
     .pagination {
         align-items: stretch;
@@ -2548,9 +2525,6 @@ textarea[readonly] {
         min-width: 50px;
     }
 }
-
-
-
 
 
 
@@ -2920,7 +2894,7 @@ textarea[readonly] {
 .sf-modal .sf-textarea {
     display: block;
     width: 100%;
-    min-height: 100px;
+    min-height: 60px;
     padding: 10px 12px;
     background: #ffffff;
     border: 1px solid #c8d4ce;
@@ -3218,7 +3192,7 @@ textarea[readonly] {
 }
 
 /* =========================
-   SF Form Icon Fix
+   SF Form Icon 
    ========================= */
 .sf-form .pointer-events-none.absolute.inset-y-0.left-0 {
     left: auto !important;
@@ -4764,8 +4738,6 @@ body.sf-navigating .sf-select-panel {
 
 /* =========================================================
    SmartTable — Pill
-   Matched to official table theme
-   No rounded radius
    ========================================================= */
 
 /* ─── Base ──────────────────────────────────────────────── */
@@ -4777,7 +4749,7 @@ body.sf-navigating .sf-select-panel {
     max-width: 100%;
     min-width: 0;
     padding: 4px 10px;
-    border-radius: 3px !important;
+    border-radius: 12px !important;
     border: 1px solid transparent;
     background-clip: padding-box;
     font-family: "Tajawal", "Inter", "Segoe UI", sans-serif;
@@ -4800,7 +4772,7 @@ body.sf-navigating .sf-select-panel {
         width: 7px;
         height: 7px;
         flex: 0 0 7px;
-        border-radius: 0 !important;
+        border-radius: 12px;
         background: currentColor;
         opacity: var(--pill-dot-opacity);
     }
@@ -6019,99 +5991,129 @@ html, body{ transform:none; }
 
 
 
-
-
 /* =========================
    Modal scroll (content)
    ========================= */
 .sf-modal .sf-modal-body {
-  max-height: 72vh;
-  overflow: auto;
+    max-height: 72vh;
+    overflow: auto;
 }
 
 /* =========================
    Extra table inside modal
    ========================= */
 .sf-extra-wrap {
-  padding: 0 12px 12px 12px;
+    padding: 0 12px 12px 12px;
 }
 
 /* =========================
-   Search (يمين)
+   Search (يمين) + Print (يسار)
    ========================= */
 .sf-extra-search {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start; 
-  gap: 10px;
-  margin: 10px 0 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 10px 0 12px;
+    width: 100%;
 }
 
-/* colcss-4 */
+.sf-extra-search-tools {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+}
+
+/* =========================
+   search input
+   ========================= */
 .sf-extra-search-input {
-  flex: 0 0 33.3333%;
-  max-width: 33.3333%;
-  width: 100%;
-  height: 33px;
-  padding: 0 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  background: #fff;
-  color: #0f172a;
-  font-size: 13px;
-
-  outline: none;
-  box-shadow: none !important;
-  -webkit-box-shadow: none !important;
-  transition: none !important;
-  caret-color: #0f172a;
+    flex: 0 0 320px;
+    max-width: 320px;
+    width: 320px;
+    height: 33px;
+    padding: 0 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    background: #fff;
+    color: #0f172a;
+    font-size: 13px;
+    outline: none;
+    box-shadow: none !important;
+    -webkit-box-shadow: none !important;
+    transition: none !important;
+    caret-color: #0f172a;
 }
 
-.sf-extra-search-input::placeholder {
-  color: #94a3b8;
-}
+    .sf-extra-search-input::placeholder {
+        color: #94a3b8;
+    }
 
-.sf-extra-search-input:hover,
-.sf-extra-search-input:focus {
-  border-color: #047857;
-  box-shadow: none !important;
-}
+    .sf-extra-search-input:hover,
+    .sf-extra-search-input:focus {
+        border-color: #047857;
+    }
 
-.sf-extra-search-input:focus-visible {
-  outline: none !important;
-  box-shadow: none !important;
-}
+    .sf-extra-search-input:focus-visible {
+        outline: none !important;
+    }
 
-/* زر المسح */
+/* =========================
+   clear button
+   ========================= */
 .sf-extra-search-clear {
-  height: 33px;
-  padding: 0 14px;
-  border-radius: 4px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
-  color: #0f172a;
-  font-size: 13px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: transform .08s ease, background .12s ease, border-color .12s ease;
-  box-shadow: none !important;
+    height: 33px;
+    padding: 0 14px;
+    border-radius: 4px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #0f172a;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
 }
 
-.sf-extra-search-clear:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
+    .sf-extra-search-clear:hover {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+    }
+
+    .sf-extra-search-clear:active {
+        transform: translateY(1px);
+        background: #e2e8f0;
+    }
+
+/* =========================
+   print button
+   ========================= */
+.sf-extra-print-btn {
+    height: 33px;
+    padding: 0 14px;
+    border-radius: 4px;
+    border: 1px solid #2563eb;
+    background: #2563eb;
+    color: #fff;
+    font-size: 13px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: auto;
 }
 
-.sf-extra-search-clear:active {
-  transform: translateY(1px);
-  background: #e2e8f0;
-  border-color: #cbd5e1;
-}
+    .sf-extra-print-btn:hover {
+        background: #1d4ed8;
+    }
+
+    .sf-extra-print-btn:active {
+        transform: translateY(1px);
+        background: #1e40af;
+    }
 
 /* =========================
    meta
    ========================= */
-
 .sf-extra-meta {
     display: flex;
     justify-content: space-between;
@@ -6123,19 +6125,17 @@ html, body{ transform:none; }
     margin-top: 10px;
 }
 
-    .sf-extra-meta > div {
-        flex: 0 0 auto;
-        text-align: inherit;
+    .sf-extra-meta > div:first-child {
+        text-align: right;
     }
 
-        .sf-extra-meta > div:first-child {
-            text-align: right;
-        }
+    .sf-extra-meta > div:last-child {
+        text-align: left;
+    }
 
-        .sf-extra-meta > div:last-child {
-            text-align: left; 
-        }
-
+/* =========================
+   scroll container
+   ========================= */
 .sf-extra-scroll {
     max-height: 58vh;
     overflow: auto;
@@ -6149,128 +6149,494 @@ html, body{ transform:none; }
    table
    ========================= */
 .sf-extra-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  font-size: 13px;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
 }
 
-/*  الهيدر  */
-.sf-extra-table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: #f1f5f9;
-  color: #0f172a;
-  text-align: center;
-  padding: 10px 12px;
-  border-bottom: 1px solid #e2e8f0;
-  white-space: nowrap;
-}
+    /* header */
+    .sf-extra-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: #f1f5f9;
+        color: #0f172a;
+        text-align: center;
+        padding: 10px 12px;
+        border-bottom: 1px solid #f3f4f6;
+        white-space: nowrap;
+    }
 
-/*  المحتوى  */
-.sf-extra-table tbody td {
-  padding: 10px 12px;
-  border-bottom: 0px solid #f1f5f9;
-  color: #111827;
-  vertical-align: middle;
-  text-align: center;
-}
+    /* rows */
+    .sf-extra-table tbody td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #f3f4f6; /* gray-100 */
+        color: #111827;
+        vertical-align: middle;
+        text-align: center;
+    }
 
-.sf-extra-table tbody tr:hover td {
-  background: #f8fafc;
-}
+    .sf-extra-table tbody tr:hover td {
+        background: #f8fafc;
+    }
 
-.sf-extra-serial {
-  width: 52px;
-  text-align: center !important;
-  color: #6b7280 !important;
-  white-space: nowrap;
-}
-
-.sf-extra-empty {
-  padding: 16px;
-  text-align: center;
-  color: #6b7280;
-}
-
-/* =========================
-   Column separators (gray-100)
+    /* =========================
+   column separators
    ========================= */
+    .sf-extra-table thead th:not(:last-child) {
+        border-left: 1px solid #f3f4f6;
+    }
 
-/* فاصل بين أعمدة الهيدر */
-.sf-extra-table thead th:not(:last-child) {
-    border-left: 1px solid #f3f4f6; 
-}
+    .sf-extra-table tbody td:not(:last-child) {
+        border-left: 1px solid #f3f4f6;
+    }
 
-/* فاصل بين أعمدة الصفوف */
-.sf-extra-table tbody td:not(:last-child) {
-    border-left: 1px solid #f3f4f6; 
-}
 /* =========================
-   pager
+   serial column
+   ========================= */
+.sf-extra-serial {
+    width: 52px;
+    text-align: center !important;
+    color: #6b7280 !important;
+}
+
+/* =========================
+   empty
+   ========================= */
+.sf-extra-empty {
+    padding: 16px;
+    text-align: center;
+    color: #6b7280;
+}
+
+/* =========================
+   Extra Modal Pager
    ========================= */
 .sf-extra-pager {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+    margin-bottom: 6px;
+    padding: 0;
+    font-family: "Tajawal","Inter","Segoe UI",sans-serif;
+    color: #374151;
+    direction: rtl;
 }
 
-.sf-extra-page-btn {
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
-  color: #111827;
-  padding: 8px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  cursor: pointer;
-  min-width: 44px;
+@media (min-width:768px) {
+    .sf-extra-pager {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
 }
 
-.sf-extra-page-btn:hover {
-  background: #f9fafb;
+.sf-extra-pager-info {
+    display: flex;
+    align-items: center;
+    min-width: 0;
 }
 
-.sf-extra-page-btn.is-active {
-  border-color: #0ea5e9;
-  background: #e0f2fe;
-  color: #075985;
+.sf-extra-pager-range {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    color: #4b5563;
+    border: none;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
 }
 
-.sf-extra-page-btn.is-disabled {
-  opacity: .45;
-  pointer-events: none;
+.sf-extra-pager-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
 }
 
+    .sf-extra-pager-nav button,
+    .sf-extra-page-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 30px;
+        height: 28px;
+        padding: 0 8px;
+        background: #ffffff;
+        color: #374151;
+        border: 1px solid #c8d4ce;
+        border-radius: 3px;
+        font-family: "Tajawal","Inter","Segoe UI",sans-serif;
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 1;
+        cursor: pointer;
+        transition: background-color .12s ease, border-color .12s ease, color .12s ease;
+    }
+
+        .sf-extra-pager-nav button:hover:not(:disabled):not(.is-active),
+        .sf-extra-page-btn:hover:not(:disabled):not(.is-active) {
+            background: #f3f7f4;
+            border-color: #9db8ac;
+        }
+
+        .sf-extra-pager-nav button:focus,
+        .sf-extra-page-btn:focus {
+            outline: none;
+            border-color: #0f766e;
+        }
+
+        .sf-extra-pager-nav button:disabled,
+        .sf-extra-page-btn.is-disabled {
+            cursor: not-allowed;
+            opacity: .55;
+            color: #9ca3af;
+            background: #f9fafb;
+            border-color: #e5e7eb;
+            pointer-events: none;
+        }
+
+        .sf-extra-page-btn.is-active,
+        .sf-extra-page-btn.is-active:hover {
+            background: #0b7a5a !important;
+            border-color: #0b7a5a !important;
+            color: #fff !important;
+        }
+
+.sf-extra-page-btn--edge {
+    min-width: 52px;
+}
+
+/* Mobile */
+@media (max-width: 767.98px) {
+    .sf-extra-pager {
+        align-items: stretch;
+        gap: 7px;
+    }
+
+    .sf-extra-pager-info,
+    .sf-extra-pager-nav {
+        width: 100%;
+    }
+
+    .sf-extra-pager-nav {
+        justify-content: center;
+    }
+
+    .sf-extra-pager-range {
+        width: 100%;
+        justify-content: center;
+        min-height: 28px;
+        height: 28px;
+        font-size: 11.5px;
+    }
+
+    .sf-extra-pager-nav button,
+    .sf-extra-page-btn {
+        height: 28px;
+        min-width: 28px;
+        font-size: 11.5px;
+        padding: 0 7px;
+    }
+
+    .sf-extra-page-btn--num {
+        min-width: 28px;
+    }
+
+    .sf-extra-page-btn--edge {
+        min-width: 50px;
+    }
+}
 /* =========================
    responsive
    ========================= */
 @media (max-width: 768px) {
-  .sf-extra-scroll { max-height: 60vh; }
-  .sf-extra-table { font-size: 12px; }
 
-  .sf-extra-search {
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-start; 
-  }
+    .sf-extra-scroll {
+        max-height: 60vh;
+    }
 
-  .sf-extra-search-input {
-    flex: 1 1 auto;
-    max-width: 100%;
-  }
+    .sf-extra-table {
+        font-size: 12px;
+    }
 
-  .sf-extra-search-clear {
+    .sf-extra-search {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .sf-extra-search-tools {
+        width: 100%;
+        flex-direction: column;
+        margin-left: 0;
+    }
+
+    .sf-extra-search-input {
+        flex: 1 1 auto;
+        max-width: 100%;
+        width: 100%;
+    }
+
+    .sf-extra-search-clear,
+    .sf-extra-print-btn {
+        width: 100%;
+        margin-right: 0;
+    }
+
+    .sf-extra-meta {
+        flex-direction: column;
+    }
+
+        .sf-extra-meta > div {
+            text-align: center;
+        }
+}
+
+
+/* ================== print modal page ==================== */
+
+* {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+    color: #1f2937;
+    font-family: "Tajawal", Arial, sans-serif;
+    direction: rtl;
+    counter-reset: page 1;
+}
+
+/* الاتجاه */
+.sf-print-body.is-landscape,
+.sf-print-body.is-portrait {
+    direction: rtl;
+}
+
+.sf-print-wrap[data-orientation="landscape"] {
+    --sf-page-size: A4 landscape;
+}
+
+.sf-print-wrap[data-orientation="portrait"] {
+    --sf-page-size: A4 portrait;
+}
+
+/* الحاوية العامة */
+.sf-print-wrap {
     width: 100%;
-  }
+    margin: 0;
+    padding: 0;
+}
 
-  .sf-extra-meta {
-    flex-direction: column;
-  }
+.sf-print-header {
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #cfd4dc;
+}
 
-  .sf-extra-meta > div {
+.sf-print-title {
+    margin: 0;
     text-align: center;
-  }
-}  
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.7;
+    color: #111827;
+    letter-spacing: 0;
+}
+
+.sf-print-subtitle {
+    margin-top: 4px;
+    text-align: center;
+    font-size: 11px;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.sf-print-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0 0 12px;
+    font-size: 11px;
+    color: #4b5563;
+}
+
+.sf-print-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    padding: 4px 12px;
+    border: 1px solid #d5dae1;
+    background: #f3f4f6;
+    color: #374151;
+    border-radius: 999px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.sf-print-date {
+    white-space: nowrap;
+    font-weight: 500;
+    color: #6b7280;
+}
+
+/* الجدول */
+.sf-print-table-box {
+    width: 100%;
+    border: 1px solid #cfd4dc;
+    overflow: hidden;
+    background: #ffffff;
+}
+
+.sf-print-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+    background: #ffffff;
+}
+
+.sf-print-thead {
+    display: table-header-group;
+}
+
+.sf-print-head-row {
+    page-break-inside: avoid;
+}
+
+.sf-print-th,
+.sf-print-td {
+    border: 1px solid #d7dce3;
+    padding: 8px 10px;
+    text-align: center;
+    vertical-align: middle;
+    font-size: 12px;
+    line-height: 1.7;
+    word-break: break-word;
+}
+
+.sf-print-th {
+    background: #eceff3;
+    color: #1f2937;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.sf-print-tbody .sf-print-tr:nth-child(even) .sf-print-td {
+    background: #f8f9fb;
+}
+
+.sf-print-tbody .sf-print-tr:nth-child(odd) .sf-print-td {
+    background: #ffffff;
+}
+
+/* التذييل */
+.sf-print-footer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 4mm;
+    text-align: center;
+    font-size: 11px;
+    color: #6b7280;
+}
+
+@media screen {
+    .sf-print-page-num::after {
+        content: "صفحة 1";
+    }
+}
+
+@media print {
+    @page {
+        counter-increment: page;
+    }
+
+    .sf-print-page-num::after {
+        content: "صفحة " counter(page);
+    }
+}
+
+.sf-print-body.no-page-numbers .sf-print-footer {
+    display: none;
+}
+
+/* تحسينات الطباعة */
+.sf-print-tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.sf-print-table thead {
+    display: table-header-group;
+}
+
+.sf-print-table tfoot {
+    display: table-footer-group;
+}
+
+/* دعم العرض */
+.sf-print-body.is-landscape .sf-print-th,
+.sf-print-body.is-landscape .sf-print-td {
+    font-size: 11px;
+    padding: 7px 8px;
+}
+
+/* دعم الطول */
+.sf-print-body.is-portrait .sf-print-th,
+.sf-print-body.is-portrait .sf-print-td {
+    font-size: 12px;
+    padding: 8px 10px;
+}
+
+@media print {
+    html,
+    body {
+        margin: 0;
+        padding: 0;
+        background: #fff;
+    }
+
+    .sf-print-wrap {
+        width: 100%;
+    }
+
+    .sf-print-meta {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .sf-print-table-box {
+        break-inside: auto;
+        page-break-inside: auto;
+    }
+
+    .sf-print-tr,
+    .sf-print-th,
+    .sf-print-td {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+}
+
+/* للشاشات الصغيرة قبل فتح الطباعة */
+@media screen {
+    .sf-print-wrap {
+        padding: 12px;
+        background: #ffffff;
+    }
+}
+/* ================== end print modal page ==================== */
