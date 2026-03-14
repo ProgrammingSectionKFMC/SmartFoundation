@@ -60,7 +60,7 @@ html, body {
     height: var(--page-header-h);
     background: #ffffff;
     border-bottom: 1px solid #e4eae6;
-    border-top: 1.5px solid #d4af37;
+    /*border-top: 1.5px solid #d4af37;*/
     box-shadow: none !important;
     z-index: 40;
     display: flex;
@@ -198,7 +198,7 @@ html, body {
     .sf-bc-text .current,
     .sf-bc-text a[aria-current="page"] {
         color: #1f2937;
-        font-weight: 600;
+        font-weight: 500;
         padding: 4px 6px;
     }
 
@@ -1153,7 +1153,7 @@ button[data-dropdown-toggle="notification-dropdown"] svg {
 .sf-admin-badge {
     margin-top: 0.5rem;
     padding: 7px 12px;
-    background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 40%, #b91c1c 100%);
+    background: #b91c1c;
     border: 1px solid rgba(255, 255, 255, 0.04);
     border-radius: 4px;
     color: #ffffff;
@@ -1171,19 +1171,10 @@ button[data-dropdown-toggle="notification-dropdown"] svg {
     overflow: hidden;
 }
 
-    .sf-admin-badge::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.00) 100%);
-        pointer-events: none;
-    }
-
     .sf-admin-badge i {
         font-size: 13px;
         flex-shrink: 0;
         color: #fca5a5;
-        filter: drop-shadow(0 0 4px rgba(252, 165, 165, 0.5));
     }
 
 

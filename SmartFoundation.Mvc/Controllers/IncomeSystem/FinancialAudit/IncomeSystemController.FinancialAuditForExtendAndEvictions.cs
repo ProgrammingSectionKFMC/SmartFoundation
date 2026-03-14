@@ -1046,28 +1046,98 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 ["tableIndex"] = 0
             };
 
+            //        var extraMetaBills = new Dictionary<string, object?>
+            //        {
+            //            ["extraSlotKey"] = "m1",
+            //            ["extraTitle"] = "بيانات المطالبات",
+            //            ["useRowExtra"] = true,
+            //            ["lazyExtra"] = true,
+            //            ["extraEndpoint"] = "/crud/extradataload",
+            //            ["allowNoSelection"] = true,
+            //            ["emptyText"] = "لاتوجد مطالبات مسجلة",
+            //            ["showPrint"]= true,
+
+            //            // المهم
+            //            ["extraLoadOnOpen"] = true,
+
+            //            ["ctx"] = extraBillsCtx,
+            //            ["extraRequest"] = extraBillsRequestBase,
+
+            //            ["extraParamMap"] = new Dictionary<string, string>
+            //            {
+            //                ["parameter_01"] = "p02"
+            //                ,
+            //                ["parameter_02"] = "p03"
+            //                ,
+            //                ["parameter_03"] = "p05"
+            //            },
+
+            //            ["EnableSearch"] = true,
+            //            ["ShowMeta"] = true,
+            //            ["PageSize"] = 10,
+            //            ["Sortable"] = true,
+            //            ["showRowNumbers"] = true,
+
+            //            ["visibleFields"] = new List<string>
+            //{
+            //    "BillsID","BillNumber","BillChargeTypeName_A", "buildingDetailsNo","TotalPrice"
+            //},
+
+            //            ["headerMap"] = new Dictionary<string, string>
+            //            {
+            //                ["BillsID"] = "الرقم المرجعي",
+            //                ["BillNumber"] = "رقم الفاتورة",
+            //                ["BillChargeTypeName_A"] = "الخدمة",
+            //                ["buildingDetailsNo"] = "رقم المبنى",
+            //                ["TotalPrice"] = "المبلغ"
+            //            }
+            //        };
+
             var extraMetaBills = new Dictionary<string, object?>
             {
                 ["extraSlotKey"] = "m1",
-                ["extraTitle"] = "بيانات المطالبات",
+                //["extraTitle"] = "بيانات المطالبات",
                 ["useRowExtra"] = true,
                 ["lazyExtra"] = true,
                 ["extraEndpoint"] = "/crud/extradataload",
                 ["allowNoSelection"] = true,
                 ["emptyText"] = "لاتوجد مطالبات مسجلة",
 
-                // المهم
-                ["extraLoadOnOpen"] = true,
 
+                ["showPrint"] = true,
+                ["printTitle"] = "المطالبات",
+                ["printOrientation"] = "portrait", // أو landscape
+                ["showPageNumbers"] = true,        // أو false
+                ["showPrintSerial"] = true,        // أو false
+                ["printSerialLabel"] = "م",
+
+
+                ["printFields"] = new List<string>
+                {
+                    //"BillsID",
+                    "BillNumber",
+                    "BillChargeTypeName_A",
+                    "buildingDetailsNo",
+                    "TotalPrice"
+                },
+
+                ["printHeaderMap"] = new Dictionary<string, string>
+                {
+                    //["BillsID"] = "الرقم المرجعي",
+                    ["BillNumber"] = "رقم الفاتورة",
+                    ["BillChargeTypeName_A"] = "الخدمة",
+                    ["buildingDetailsNo"] = "رقم المبنى",
+                    ["TotalPrice"] = "المبلغ"
+                },
+
+                ["extraLoadOnOpen"] = true,
                 ["ctx"] = extraBillsCtx,
                 ["extraRequest"] = extraBillsRequestBase,
 
                 ["extraParamMap"] = new Dictionary<string, string>
                 {
-                    ["parameter_01"] = "p02"
-                    ,
-                    ["parameter_02"] = "p03"
-                    ,
+                    ["parameter_01"] = "p02",
+                    ["parameter_02"] = "p03",
                     ["parameter_03"] = "p05"
                 },
 
@@ -1078,9 +1148,9 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 ["showRowNumbers"] = true,
 
                 ["visibleFields"] = new List<string>
-    {
-        "BillsID","BillNumber","BillChargeTypeName_A", "buildingDetailsNo","TotalPrice"
-    },
+                {
+                    "BillsID","BillNumber","BillChargeTypeName_A", "buildingDetailsNo","TotalPrice"
+                },
 
                 ["headerMap"] = new Dictionary<string, string>
                 {
@@ -1326,6 +1396,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                          IsEdit = true,
                          OpenModal = true,
                          ModalTitle = "استعراض السدادات",
+                         
                          //ModalMessage = msgservice,
                          //ModalMessageIcon = "fa-solid fa-circle-info",
                          //ModalMessageClass = colorservice,
