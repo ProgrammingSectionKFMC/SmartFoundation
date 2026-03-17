@@ -56,6 +56,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
             List<OptionItem> ExtendTypeOptions = new();
+            List<OptionItem> ExtendInsuranceTypeOptions = new();
 
 
             // ---------------------- DDLValues ----------------------
@@ -72,6 +73,16 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             json = JsonSerializer.Serialize(result!.Value);
 
             ExtendTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+
+            //// ---------------------- rankOptions ----------------------
+            result = await _CrudController.GetDDLValues(
+                "ExtendInsuranceTypeName_A", "ExtendInsuranceTypeID", "3", nameof(HousingExtend), usersId, IdaraId, HostName
+           ) as JsonResult;
+
+
+            json = JsonSerializer.Serialize(result!.Value);
+
+            ExtendInsuranceTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
 
             //// ---------------------- END DDL ----------------------
@@ -179,7 +190,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                || isresidentInfoID || isIdaraId   || isAssignPeriodID || isbuildingDetailsID || isLastActionID  || isWaitingOrderTypeName || isWaitingListOrder || isLastActionTypeID),
+                                || isresidentInfoID || isIdaraId   || isAssignPeriodID || isbuildingDetailsID ||  isWaitingOrderTypeName || isWaitingListOrder ),
 
                             //  فلتر للرتبة + الوحدة + الجنسية
                                 Filter = (isbuildingActionTypeResidentAlias || isWaitingClassName )
@@ -283,6 +294,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p19", Label = "رقم المبنى", Type = "text", ColCss = "3", Readonly = true },
 
 
                 
@@ -330,7 +342,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
-
+                new FieldConfig { Name = "p19", Label = "رقم المبنى", Type = "text", ColCss = "3", Readonly = true },
 
 
                 new FieldConfig { Name = "p22", Label = "تاريخ خطاب موافقة الامهال", Type = "date", ColCss = "3",Required = true },
@@ -377,7 +389,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
-
+                new FieldConfig { Name = "p19", Label = "رقم المبنى", Type = "text", ColCss = "3", Readonly = true },
 
 
                 new FieldConfig { Name = "p22", Label = "تاريخ خطاب موافقة الامهال", Type = "date", ColCss = "3",Required = true, Readonly = true },
@@ -424,7 +436,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
-
+                new FieldConfig { Name = "p19", Label = "رقم المبنى", Type = "text", ColCss = "3", Readonly = true },
 
 
                 new FieldConfig { Name = "p22", Label = "تاريخ خطاب موافقة الامهال", Type = "date", ColCss = "3",Required = true , Readonly = true },
@@ -472,7 +484,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
-
+                new FieldConfig { Name = "p19", Label = "رقم المبنى", Type = "text", ColCss = "3", Readonly = true },
 
 
                 new FieldConfig { Name = "p22", Label = "تاريخ خطاب موافقة الامهال", Type = "date", ColCss = "3",Required = true, Readonly = true },
@@ -497,7 +509,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "ApproveExtend" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "EXTENDINSURANCE" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -515,13 +527,13 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p07", Label = "WaitingClassID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
-               
+                new FieldConfig { Name = "p19", Label = "رقم المبنى", Type = "text", ColCss = "3", Readonly = true },
 
-              
+
 
                 new FieldConfig { Name = "p22", Label = "تاريخ خطاب موافقة الامهال", Type = "date", ColCss = "3",Required = true, Readonly = true },
                 new FieldConfig { Name = "p23", Label = "رقم خطاب موافقة الامهال", Type = "text", ColCss = "3",Required = true, Readonly = true },
@@ -530,19 +542,21 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                 new FieldConfig { Name = "p27", Label = "ExtendReasonTypeID", Type = "hidden", ColCss = "4",Required = true,Options=ExtendTypeOptions , Readonly = true},
 
-                new FieldConfig { Name = "p32", Label = "ExtendReasonTypeName_A", Type = "text", ColCss = "3", Readonly = true,HelpText="المتقاعد والمفصول مطلوب تأمين احترازي يرجى الاختيار بدقة*" },
-                 new FieldConfig { Name = "p28", Label = "Remaining", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p32", Label = "سبب الامهال", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p28", Label = "المبالغ الغير مسددة", Type = "text", ColCss = "3", Readonly = true,HelpText="*المطالبات السابقة على المستفيد التي لم يتم استيفائها وقت التدقيق المالي" },
                 new FieldConfig { Name = "p29", Label = "buildingRentAmount", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p30", Label = "InsuranceAmount", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p31", Label = "InsuranceAmountWithRemaining", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p30", Label = "مبلغ التأمين", Type = "text", ColCss = "3", Readonly = true,HelpText="*قيمة الايجار مضروبة في 40"  },
+                new FieldConfig { Name = "p31", Label = "اجمالي التأمين الاحترازي", Type = "text", ColCss = "3", Readonly = true,HelpText="اجمالي المطالبات المتبقية على المستفيد مضاف اليها مبلغ التأمين الاحترازي*"  },
+                new FieldConfig { Name = "p35", Label = "تاريخ وثيقة التأمين الاحترازي", Type = "date", ColCss = "4",Required = true },
+                new FieldConfig { Name = "p33", Label = "رقم وثيقة التأمين الاحترازي", Type = "text", ColCss = "4",Required = true },
+                new FieldConfig { Name = "p36", Label = "نوع تحصيل التأمين الاحترازي", Type = "select", ColCss = "4",Required = true, Options = ExtendInsuranceTypeOptions },
 
 
-                new FieldConfig { Name = "p26", Label = "ملاحظات", Type = "textarea", ColCss = "6",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
+                new FieldConfig { Name = "p26", Label = "ملاحظات", Type = "textarea", ColCss = "6",Required = true,HelpText="*لايجب ان يتجاوز النص 1000 حرف",MaxLength=1000 },
 
                 new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p19", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true },
 
@@ -587,12 +601,49 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowDelete = canSENDHOUSINGEXTENDTOFINANCE,
                     ShowDelete1 = canEXTENDINSURANCE,
                     ShowDelete2 = canAPPROVEEXTEND,
-
-
-
+                    ShowPrint1 = true,
                     ShowBulkDelete = false,
                     
-                   
+                    
+                    
+                    Print1 = new TableAction
+                    {
+                        Label = "طباعة تقرير",
+                        Icon = "fa fa-print",
+                        Color = "info",
+                        OnClickJs = @"
+                                sfPrintWithBusy(table, {
+                                  pdf: 2,
+                                  busy: { title: 'طباعة بيانات المستفيدين'}
+                                });
+                              ",
+
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1,
+
+                        Guards = new TableActionGuards
+                        {
+                            AppliesTo = "any",
+                            DisableWhenAny = new List<TableActionRule>
+                           {
+
+                                new TableActionRule
+                              {
+                                  Field = "LastActionTypeID",
+                                  Op = "neq",
+                                  Value = "24",
+                                  Message = "لايمكن طباعة الطلب لعدم انتهاء امهال الساكن",
+                                  Priority = 3
+                              },
+
+
+
+                           }
+                        }
+                    },
+
+
 
                     ExportConfig = new TableExportConfig
                     {
@@ -935,14 +986,23 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             DisableWhenAny = new List<TableActionRule>
                         {
 
-                              new TableActionRule
+                                 new TableActionRule
                             {
-                                Field = "LastActionTypeID",
-                                Op = "neq",
-                                Value = "48",
-                                Message = "لايمكن تعديل الطلب",
+                                 Field = "LastActionExtendReasonTypeID",
+                                Op = "notin",
+                                Value = "1,2",
+                                Message = "التأمين الاحترازي غير مطلوب يمكنك اعتماد الطلب مباشرة",
                                 Priority = 3
                             },
+
+                                   new TableActionRule
+                                {
+                                     Field = "LastActionTypeID",
+                                    Op = "eq",
+                                    Value = "61",
+                                    Message = "تم تنفيذ التأمين الاحترازي مسبقا",
+                                    Priority = 3
+                                },
                           }
                         }
                     },
@@ -987,9 +1047,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                               new TableActionRule
                             {
                                 Field = "LastActionTypeID",
-                                Op = "neq",
-                                Value = "52",
-                                Message = "لايمكن اعتماد الامهال لعدم انتهاء التدقيق المالي ",
+                                Op = "notin",
+                                Value = "52,61",
+                                Message = "لايمكن اعتماد الامهال لوجود اجراءات لم تنتهي او انه تم امهال الساكن مسبقا ",
                                 Priority = 3
                             },
                           }
@@ -1095,6 +1155,44 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 PillField="buildingActionTypeResidentAlias",
                                 PillTextField="buildingActionTypeResidentAlias",
                                 PillCssClass="pill pill-blue",
+                                PillMode="replace"
+                            },
+
+                                new TableStyleRule
+                            {
+                                Target="row", Field="LastActionTypeID", Op="eq", Value="61", Priority=1,
+                                PillEnabled=true,
+                                PillField="buildingActionTypeResidentAlias",
+                                PillTextField="buildingActionTypeResidentAlias",
+                                PillCssClass="pill pill-yellow",
+                                PillMode="replace"
+                            },
+                                 new TableStyleRule
+                            {
+                                Target="row", Field="InsuranceStatusNo", Op="eq", Value="0", Priority=1,
+                                PillEnabled=true,
+                                PillField="InsuranceStatusName",
+                                PillTextField="InsuranceStatusName",
+                                PillCssClass="pill pill-red",
+                                PillMode="replace"
+                            },
+                               new TableStyleRule
+                            {
+                                Target="row", Field="InsuranceStatusNo", Op="eq", Value="2", Priority=1,
+                                PillEnabled=true,
+                                PillField="InsuranceStatusName",
+                                PillTextField="InsuranceStatusName",
+                                PillCssClass="pill pill-blue",
+                                PillMode="replace"
+                            },
+
+                                new TableStyleRule
+                            {
+                                Target="row", Field="InsuranceStatusNo", Op="eq", Value="1", Priority=1,
+                                PillEnabled=true,
+                                PillField="InsuranceStatusName",
+                                PillTextField="InsuranceStatusName",
+                                PillCssClass="pill pill-green",
                                 PillMode="replace"
                             }
                         };
@@ -1212,6 +1310,98 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                 var pdfBytes = QuestPdfReportRenderer.Render(report);
                 Response.Headers["Content-Disposition"] = "inline; filename=BuildingType.pdf";
+                return File(pdfBytes, "application/pdf");
+            }
+
+
+
+            if (pdf == 2)
+            {
+                var logo = Path.Combine(_env.WebRootPath, "img", "ppng.png");
+
+                var header = new Dictionary<string, string>
+                {
+                    ["no"] = "AssignPeriodID" ?? "",
+                    ["date"] = DateTime.Now.ToString("yyyy/MM/dd"),
+                    ["attach"] = "بيان بأسماء المستفيدين المخصص لهم",
+                    ["subject"] = "محضر تخصيص مساكن",
+
+                    ["right1"] = "المملكة العربية السعودية",
+                    ["right2"] = "وزارة الدفاع",
+                    ["right3"] = "القوات البرية الملكية السعودية",
+                    ["right4"] = "الادارة الهندسية للتشغيل والصيانة",
+                    ["right5"] = "إدارة مدينة الملك فيصل العسكرية",
+
+                    ["bismillah"] = "بسم الله الرحمن الرحيم",
+                    ["midCaption"] = ""
+                };
+
+                var report = new ReportResult
+                {
+                    ReportId = "OfficialLetter01",
+                    Title = "خطاب رسمي",
+                    Kind = ReportKind.Letter,
+
+                    // هنا اختَر الاتجاه اللي تبيه للخطاب
+                    Orientation = ReportOrientation.Portrait, // أو Landscape
+
+                    HeaderType = ReportHeaderType.LetterOfficial,
+                    LogoPath = logo,
+                    ShowFooter = false,
+
+                    HeaderFields = header,
+
+                    LetterBlocks = new List<LetterBlock>
+        {
+            new LetterBlock
+            {
+                Text = "سعادة قائد إدارة مدينة الملك فيصل العسكرية حفظه الله",
+                FontSize = 13,
+                Bold = true,
+                PaddingBottom = 12,
+                PaddingTop = 30,
+                Align = TextAlign.Center
+            },
+
+            new LetterBlock
+            {
+                Text = "السلام عليكم ورحمة الله وبركاته،",
+                FontSize = 12,
+                PaddingBottom = 10,
+                PaddingTop = 15,
+                Align = TextAlign.Right
+            },
+
+            new LetterBlock
+            {
+                Text = "نفيد سعادتكم بأنه بناءً على توجيهاتكم الكريمة تم امهال الساكن " + FullName + " من تاريخ " +" الى تاريخ ",
+                FontSize = 12,
+                Align = TextAlign.Justify,
+                LineHeight = 1.8f,
+                PaddingBottom = 16
+            },
+
+            new LetterBlock
+            {
+                Text = "وتفضلوا بقبول فائق الاحترام والتقدير،",
+                FontSize = 12,
+                PaddingTop = 20,
+                Align = TextAlign.Right
+            },
+
+            new LetterBlock
+            {
+                Text = "مدير الإدارة الهندسية\nالاسم / ..................\nالتوقيع / ...............",
+                FontSize = 11,
+                Align = TextAlign.Left,
+                PaddingTop = 30,
+                PaddingLeft = 120
+            }
+        }
+                };
+
+                var pdfBytes = QuestPdfReportRenderer.Render(report);
+                Response.Headers["Content-Disposition"] = "inline; filename=Letter.pdf";
                 return File(pdfBytes, "application/pdf");
             }
             return View("HousingProcedures/HousingResident", page);

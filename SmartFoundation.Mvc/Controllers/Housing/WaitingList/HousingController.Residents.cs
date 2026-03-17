@@ -629,10 +629,30 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         RequireSelection = false,
                         OnClickJs = @"
                                 sfPrintWithBusy(table, {
-                                  pdf: 1,
+                                  pdf: 2,
                                   busy: { title: 'طباعة بيانات المستفيدين'}
                                 });
-                              "
+                              ",
+
+                            Guards = new TableActionGuards
+                            {
+                                AppliesTo = "any",
+                                DisableWhenAny = new List<TableActionRule>
+                                                   {
+
+                                                         new TableActionRule
+                                                       {
+                                                           Field = "LastActionTypeID",
+                                                           Op = "eq",
+                                                           Value = "48",
+                                                           Message = "تم انشاء الطلب مسبقا",
+                                                           Priority = 3
+                                                       },
+                                                            
+                                                      
+
+                                                     }
+                            }
                     },
 
                     ExportConfig = new TableExportConfig
@@ -1069,6 +1089,98 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                 var pdfBytes = QuestPdfReportRenderer.Render(report);
                 Response.Headers["Content-Disposition"] = "inline; filename=BuildingType.pdf";
+                return File(pdfBytes, "application/pdf");
+            }
+
+
+
+            if (pdf == 2)
+            {
+                var logo = Path.Combine(_env.WebRootPath, "img", "ppng.png");
+
+                var header = new Dictionary<string, string>
+                {
+                    ["no"] = "AssignPeriodID" ?? "",
+                    ["date"] = DateTime.Now.ToString("yyyy/MM/dd"),
+                    ["attach"] = "بيان بأسماء المستفيدين المخصص لهم",
+                    ["subject"] = "محضر تخصيص مساكن",
+
+                    ["right1"] = "المملكة العربية السعودية",
+                    ["right2"] = "وزارة الدفاع",
+                    ["right3"] = "القوات البرية الملكية السعودية",
+                    ["right4"] = "الادارة الهندسية للتشغيل والصيانة",
+                    ["right5"] = "إدارة مدينة الملك فيصل العسكرية",
+
+                    ["bismillah"] = "بسم الله الرحمن الرحيم",
+                    ["midCaption"] = ""
+                };
+
+                var report = new ReportResult
+                {
+                    ReportId = "OfficialLetter01",
+                    Title = "خطاب رسمي",
+                    Kind = ReportKind.Letter,
+
+                    // هنا اختَر الاتجاه اللي تبيه للخطاب
+                    Orientation = ReportOrientation.Portrait, // أو Landscape
+
+                    HeaderType = ReportHeaderType.LetterOfficial,
+                    LogoPath = logo,
+                    ShowFooter = false,
+
+                    HeaderFields = header,
+
+                    LetterBlocks = new List<LetterBlock>
+        {
+            new LetterBlock
+            {
+                Text = "سعادة قائد إدارة مدينة الملك فيصل العسكرية حفظه الله",
+                FontSize = 13,
+                Bold = true,
+                PaddingBottom = 12,
+                PaddingTop = 30,
+                Align = TextAlign.Center
+            },
+
+            new LetterBlock
+            {
+                Text = "السلام عليكم ورحمة الله وبركاته،",
+                FontSize = 12,
+                PaddingBottom = 10,
+                PaddingTop = 15,
+                Align = TextAlign.Right
+            },
+
+            new LetterBlock
+            {
+                Text = "نفيد سعادتكم بأنه بناءً على توجيهاتكم الكريمة ...",
+                FontSize = 12,
+                Align = TextAlign.Justify,
+                LineHeight = 1.8f,
+                PaddingBottom = 16
+            },
+
+            new LetterBlock
+            {
+                Text = "وتفضلوا بقبول فائق الاحترام والتقدير،",
+                FontSize = 12,
+                PaddingTop = 20,
+                Align = TextAlign.Right
+            },
+
+            new LetterBlock
+            {
+                Text = "مدير الإدارة الهندسية\nالاسم / ..................\nالتوقيع / ...............",
+                FontSize = 11,
+                Align = TextAlign.Left,
+                PaddingTop = 30,
+                PaddingLeft = 120
+            }
+        }
+                };
+
+                var pdfBytes = QuestPdfReportRenderer.Render(report);
+                Response.Headers["Content-Disposition"] = "inline; filename=Letter.pdf";
                 return File(pdfBytes, "application/pdf");
             }
             return View("WaitingList/Residents", page);
