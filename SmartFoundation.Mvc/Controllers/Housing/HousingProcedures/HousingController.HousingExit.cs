@@ -728,9 +728,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                               new TableActionRule
                             {
-                                Field = "CanExit",
-                                Op = "eq",
-                                Value = "0",
+                                Field = "LastActionTypeID",
+                                Op = "notin",
+                                Value = "2,24",
                                 Message = "لايمكن اخلاء المستفيد ",
                                 Priority = 3
                             },
@@ -954,6 +954,14 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 Message = "لايمكن ارسال اخلاء مستفيد للتدقيق المالي وهو تحت اجراءات الامهال",
                                 Priority = 3
                             },
+                                               new TableActionRule
+                            {
+                                Field = "LastActionTypeID",
+                                Op = "neq",
+                                Value = "60",
+                                Message = "لايمكن ارسال اخلاء مستفيد للتدقيق المالي ",
+                                Priority = 3
+                            },
                           }
                         }
                     },
@@ -1019,6 +1027,14 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                     Message = "لايمكن اعتماد اخلاء مستفيد وهو تحت اجراءات الامهال",
                                     Priority = 3
                                 },
+                                                       new TableActionRule
+                            {
+                                Field = "LastActionTypeID",
+                                Op = "neq",
+                                Value = "58",
+                                Message = "لايمكن اعتماد اخلاء مستفيد",
+                                Priority = 3
+                            },
                               }
                         }
                     },
