@@ -1209,6 +1209,19 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
             //  UPDATE fields (Form Default / Form 46+)  تجريبي نرجع نمسحه او نعدل عليه
 
+            var metaB = new Dictionary<string, object?>(extraMeta_DependsOnSelect_MultiParams)
+            {
+                ["extraSlotKey"] = "m2",
+                ["extraTitle"] = "بيانات الفاتورة السابقة"
+            };
+
+            var metaC = new Dictionary<string, object?>(extraMeta2)
+            {
+                ["extraSlotKey"] = "m3",
+                ["extraTitle"] = "الفاتورة الجديدة المتوقعه"
+            };
+
+
             var dsModel = new SmartTableDsModel
             {
                 PageTitle = "قراءة العدادات الدورية",
@@ -1360,19 +1373,6 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 }
             };
 
-
-
-            var metaB = new Dictionary<string, object?>(extraMeta_DependsOnSelect_MultiParams)
-            {
-                ["extraSlotKey"] = "m2",
-                ["extraTitle"] = "بيانات الفاتورة السابقة"
-            };
-
-            var metaC = new Dictionary<string, object?>(extraMeta2)
-            {
-                ["extraSlotKey"] = "m3",
-                ["extraTitle"] = "الفاتورة الجديدة المتوقعه"
-            };
 
 
 

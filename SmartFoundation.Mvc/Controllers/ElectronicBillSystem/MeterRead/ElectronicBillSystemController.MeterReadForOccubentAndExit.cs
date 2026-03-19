@@ -4,6 +4,7 @@ using SmartFoundation.UI.ViewModels.SmartForm;
 using SmartFoundation.UI.ViewModels.SmartPage;
 using SmartFoundation.UI.ViewModels.SmartTable;
 using System.Data;
+using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Text.Json;
 
@@ -63,7 +64,11 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
             string rowIdField = "";
             bool canMeterReadForOccubentAndExit = false;
             bool canUpdateMeterReadForOccubentAndExit = false;
-           
+
+
+            string? ExitOrOccubent_ = dt1?.Rows.Count > 0
+                   ? dt1.Rows[0]["buildingActionRoot"]?.ToString()
+                    : null;
 
 
             List<OptionItem> ResidentDetailsOptions = new();
@@ -245,7 +250,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID || isAssignPeriodID || isbuildingDetailsID || isLastActionID|| isActionDecisionNo || isActionDecisionDate || isWaitingOrderTypeName || ismeterID|| isNationalID || isGeneralNo || isWaitingClassName || isFullName_A ||  isbuildingActionTypeResidentAlias || isReadStatusInt || ismeterReadID)
+                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID || isAssignPeriodID || isbuildingDetailsID || isLastActionID|| isActionDecisionNo || isActionDecisionDate || isWaitingOrderTypeName || isNationalID || isGeneralNo || isWaitingClassName || isFullName_A ||  isbuildingActionTypeResidentAlias || isReadStatusInt || ismeterReadID)
                             });
                         }
 
@@ -289,6 +294,8 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             dict["p26"] = Get("meterMaxRead");
                             dict["p28"] = Get("meterReadID");
                             dict["p29"] = Get("LastActionDate");
+                            dict["p30"] = Get("meterServiceTypeID");
+                            dict["p31"] = Get("buildingActionRoot");
 
 
                             rowsList.Add(dict);
@@ -331,22 +338,22 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 new FieldConfig { Name = "p05", Label = "رقم الطلب", Type = "hidden", ColCss = "3", Readonly = true  },
                 new FieldConfig { Name = "p06", Label = "تاريخ الطلب", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p07", Label = "WaitingClassID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
 
 
                
-                new FieldConfig { Name = "p23", Label = "meterID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p24", Label = "نوع الخدمة", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p25", Label = "نوع العداد", Type = "text", ColCss = "3", Readonly = true }, 
-                new FieldConfig { Name = "p22", Label = "اخر قراءة للعداد", Type = "text", ColCss = "3", Readonly = true },
+                //new FieldConfig { Name = "p23", Label = "meterID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p24", Label = "نوع الخدمة", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p25", Label = "نوع العداد", Type = "hidden", ColCss = "3", Readonly = true }, 
+                new FieldConfig { Name = "p22", Label = "اخر قراءة للعداد", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p26", Label = "القراءة القصوى للعداد", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p28", Label = "meterReadID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p29", Label = "LastActionDate", Type = "hidden", ColCss = "3", Readonly = true },
 
-                 new FieldConfig { Name = "p27", Label = "تسجيل القراءة", Type = "number", ColCss = "12",Required = true,HelpText="يجب ان تكون القراءة ارقام فقط*",MaxLength=3900 },
+                // new FieldConfig { Name = "p27", Label = "تسجيل القراءة", Type = "number", ColCss = "12",Required = true,HelpText="يجب ان تكون القراءة ارقام فقط*",MaxLength=3900 },
 
                 new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
@@ -354,6 +361,28 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 new FieldConfig { Name = "p19", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p31", Label = "buildingActionRoot", Type = "hidden", ColCss = "3", Readonly = true },
+
+                  new FieldConfig { Name = "p30", Label = "MeterServiceTypeID_", Type = "hidden" },
+                new FieldConfig { Name = "p23", Label = "رقم العداد", Type = "hidden", ColCss = "3", Required = true},
+
+                new FieldConfig
+                    {
+                        Name = "p27",
+                        Label = "القراءة الجديدة",
+                        Type = "search",
+                        TextMode = "numeric",
+                        ColCss = "6",
+                        Required = true,
+                        ExtraButton = new Dictionary<string, object?>
+                        {
+                            ["Text"] = "تحقق",
+                            ["ClassName"] = "btn btn-warning",
+                            ["SlotKey"] = "m3"
+                        }
+                    },
+                new FieldConfig { Name = "p50", Label = "النظام لاحظ وجود قراءة غير طبيعيه هل انت متأكد من ادراج القراءة وانها صحيحة؟", Type = "checkbox",Required = true,ColCss = "12" },
+                    new FieldConfig { Name = "p99", Type = "hidden", Value = "0" },
 
 
             };
@@ -409,8 +438,281 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true },
 
 
+
+
             };
 
+       
+
+
+            var extraCtx = new Dictionary<string, object?>
+            {
+                ["idaraID"] = IdaraId,
+                ["entrydata"] = usersId,
+                ["hostname"] = HostName
+            };
+
+            var extraRequestBase = new Dictionary<string, object?>
+            {
+                ["pageName_"] = PageName,          // ديناميك حسب الصفحة
+                ["ActionType"] = "MeterLastBill",// غيّره حسب احتياجك
+                ["tableIndex"] = 0
+            };
+
+            var visibleFieldsextraMeta_DependsOnSelect_MultiParams = ExitOrOccubent_ == "1"
+            ? new List<string> { "meterNo", "CurrentRead" }
+            : new List<string> { "meterNo", "CurrentRead", "TotalPrice" };
+
+
+
+            var extraMeta_DependsOnSelect_MultiParams = new Dictionary<string, object?>
+            {
+                ["useRowExtra"] = true,
+                ["lazyExtra"] = true,
+                ["extraEndpoint"] = "/crud/extradataload",
+                ["allowNoSelection"] = true,
+                ["EnableSearch"] = false,   // أو true
+                ["ShowMeta"] = false,        // أو false
+                ["PageSize"] = 5,           // 5/10/20...
+                ["Sortable"] = false,        // أو false
+                ["showRowNumbers"] = false,
+                ["emptyText"] = "لا يوجد بيانات",
+                ["extraSlotKey"] = "m1",
+                ["extraTitle"] = "الجدول ب",
+
+                ["ctx"] = extraCtx,
+                ["extraRequest"] = extraRequestBase,
+
+                // يعتمد على اختيار
+                ["extraDependsOn"] = "p23",
+                ["extraLoadOnOpen"] = true,
+                ["extraEmptyTextBeforeSelect"] = "",
+
+                // ✅ جديد: خارطة باراميترات متعددة من فورم المودل
+                // p01 -> parameter_01
+                // p02 -> parameter_02
+                ["extraParamMap"] = new Dictionary<string, string>
+                {
+                    ["parameter_01"] = "p30",
+                    ["parameter_02"] = "p23"
+                    //,
+                    //["parameter_03"] = "p03"
+                },
+                ["visibleFields"] = visibleFieldsextraMeta_DependsOnSelect_MultiParams,
+
+                //= new List<string>
+                //                {
+                //                    "meterNo","CurrentRead","TotalPrice"
+                //                },
+                ["headerMap"] = new Dictionary<string, string>
+                {
+                    ["meterID"] = "رقم العداد المرجعيٍ",
+                    ["meterNo"] = "رقم العداد",
+                    ["TotalPrice"] = "مبلغ الفاتورة السابقة",
+                    ["CurrentRead"] = "القراءة السابقة",
+                    ["periods_"] = "فترة الفاتورة السابقة",
+
+                },
+
+                // (اختياري) باراميترات ثابتة إضافية مع الخريطة
+                //["extraParams"] = new Dictionary<string, object?>
+                //{
+                //    //["parameter_03"] = "STATIC",
+                //    ["parameter_02"] = 1
+                //},
+
+
+            };
+
+            var extraCtx2 = new Dictionary<string, object?>
+            {
+                ["idaraID"] = IdaraId,
+                ["entrydata"] = usersId,
+                ["hostname"] = HostName
+            };
+
+            var extraRequestBase2 = new Dictionary<string, object?>
+            {
+                ["pageName_"] = PageName,          // ديناميك حسب الصفحة
+                ["ActionType"] = "MeterNewBill",// غيّره حسب احتياجك
+                ["tableIndex"] = 0
+            };
+
+            var visibleFieldsextraMeta2 = ExitOrOccubent_ == "1"
+                ? new List<string> { "meterNo", "LastRead", "CurrentRead", "ReadDiff" }
+                : new List<string> { "meterNo", "LastRead", "CurrentRead", "ReadDiff", "PRICE", "PRICETAX", "ServicePriceWithTAX", "TotalPrice" };
+
+
+            var extraMeta2 = new Dictionary<string, object?>
+            {
+
+
+                ["EnableSearch"] = false,   // أو true
+                ["ShowMeta"] = false,        // أو false
+                ["PageSize"] = 5,           // 5/10/20...
+                ["Sortable"] = false,        // أو false
+                ["showRowNumbers"] = false,
+
+                ["extraSlotKey"] = "m3",
+                ["extraTitle"] = "الجدول الثاني",
+                ["useRowExtra"] = true,
+                ["lazyExtra"] = true,
+                ["extraEndpoint"] = "/crud/extradataload",
+                ["allowNoSelection"] = true,
+
+
+
+                ["extraTriggerMode"] = "button",
+                ["extraTriggerField"] = "p03",
+                ["extraButtonText"] = "تحقق",
+
+                ["ctx"] = extraCtx2,
+                ["extraRequest"] = extraRequestBase2,
+
+                ["extraParamMap"] = new Dictionary<string, string>
+                {
+                    ["parameter_01"] = "p30",
+                    ["parameter_04"] = "p27",
+                    ["parameter_02"] = "p23"
+                },
+
+                ["verifyField"] = "p99",
+                ["verifyResetFields"] = new List<string> { "p23", "p27" },
+                ["verifyRequiredMessage"] = "يجب الضغط على زر التحقق أولاً قبل الحفظ",
+
+                ["rowColorColumn"] = "checks",
+                ["rowColorOperator"] = "=",
+                ["rowColorValue"] = "0",
+                ["rowColorTrueStyle"] = "background:#f74f53;color:#ffffff;",
+                ["rowColorFalseStyle"] = "",
+
+                //["rowColorTrueStyle"] = "background:#fef2f2;color:#991b1b;",
+                //["rowColorFalseStyle"] = "background:#f0fdf4;color:#166534;",
+
+                //["rowColorColumn"] = "TotalPrice",
+                //["rowColorOperator"] = ">",
+                //["rowColorCompareColumn"] = "ServicePriceWithTAX",
+                //["rowColorTrueClass"] = "bg-red-50 text-red-800",
+                //["rowColorFalseClass"] = "bg-green-50 text-green-800"
+
+                ["toggleField"] = "p50",
+                ["toggleColumn"] = "checks",
+                ["toggleOperator"] = "=",
+                ["toggleValue"] = 0,
+                ["toggleDefaultHidden"] = true,
+                ["toggleRequiredWhenShown"] = true,
+
+
+                //["toggleField"] = "p50",
+                //["toggleColumn"] = "TotalPrice",
+                //["toggleOperator"] = "=",
+                //["toggleCompareColumn"] = "ServicePriceWithTAX",
+                //["toggleDefaultHidden"] = true,
+                //["toggleRequiredWhenShown"] = true,
+
+
+                ["visibleFields"] = visibleFieldsextraMeta2,
+
+                //            new List<string>
+                //{
+                //     "meterNo","LastRead","CurrentRead","ReadDiff","PRICE","PRICETAX","ServicePriceWithTAX","TotalPrice"
+                //},
+
+                ["headerMap"] = new Dictionary<string, string>
+                {
+                    ["meterNo"] = "رقم العداد",
+                    ["LastRead"] = "القراءة السابقة",
+                    ["CurrentRead"] = "القراءة الحالية",
+                    ["ReadDiff"] = "فرق القراءة",
+                    ["PRICE"] = "المبلغ",
+                    ["PRICETAX"] = "الضريبة",
+                    ["ServicePriceWithTAX"] = "رسوم الخدمة",
+                    ["TotalPrice"] = "الاجمالي"
+                }
+            };
+
+            var extraEditCtx = new Dictionary<string, object?>
+            {
+                ["idaraID"] = IdaraId,
+                ["entrydata"] = usersId,
+                ["hostname"] = HostName
+            };
+
+            var extraEditRequestBase = new Dictionary<string, object?>
+            {
+                ["pageName_"] = PageName,
+                ["ActionType"] = "EditBill",
+                ["tableIndex"] = 0
+            };
+
+            var extraMetaAutoOpen = new Dictionary<string, object?>
+            {
+                ["extraSlotKey"] = "m1",
+                ["extraTitle"] = "تفاصيل",
+                ["useRowExtra"] = true,
+                ["lazyExtra"] = true,
+                ["extraEndpoint"] = "/crud/extradataload",
+                ["allowNoSelection"] = true,
+
+                // المهم
+                ["extraLoadOnOpen"] = true,
+
+                ["ctx"] = extraEditCtx,
+                ["extraRequest"] = extraEditRequestBase,
+
+                ["extraParamMap"] = new Dictionary<string, string>
+                {
+
+                    ["parameter_01"] = "p30",
+                    ["parameter_02"] = "p23"
+                },
+
+                ["EnableSearch"] = false,
+                ["ShowMeta"] = false,
+                ["PageSize"] = 10,
+                ["Sortable"] = false,
+                ["showRowNumbers"] = false,
+
+                ["visibleFields"] = new List<string>
+    {
+        "meterServiceTypeName_A","meterNo","LastRead", "CurrentRead","ReadDiff", "TotalPrice"
+    },
+
+                ["headerMap"] = new Dictionary<string, string>
+                {
+                    ["meterServiceTypeName_A"] = "نوع الخدمة",
+                    ["meterNo"] = "رقم العداد",
+                    ["LastRead"] = "القراءة السابقة",
+                    ["CurrentRead"] = "القراءة الحالية",
+                    ["ReadDiff"] = "فرق القراءة",
+                    ["TotalPrice"] = "الإجمالي"
+                }
+            };
+
+
+            //  UPDATE fields (Form Default / Form 46+)  تجريبي نرجع نمسحه او نعدل عليه
+            var extraTitlemetaB = ExitOrOccubent_ == "1"
+                        ? "بيانات القراءة السابقة"
+                        : "بيانات الفاتورة السابقة";
+
+
+            var metaB = new Dictionary<string, object?>(extraMeta_DependsOnSelect_MultiParams)
+            {
+                ["extraSlotKey"] = "m2",
+                ["extraTitle"] = extraTitlemetaB
+            };
+
+            var extraTitlemetaC = ExitOrOccubent_ == "1"
+                        ? "قراءة التسكين الجديدة المتوقعة بعد التنفيذ"
+                        : "فاتورة الاخلاء الجديدة المتوقعة بعد التنفيذ";
+
+            var metaC = new Dictionary<string, object?>(extraMeta2)
+            {
+                ["extraSlotKey"] = "m3",
+                ["extraTitle"] = extraTitlemetaC
+            };
+
+           
 
             var dsModel = new SmartTableDsModel
             {
@@ -435,14 +737,42 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     ShowExportExcel = false,
                     ShowDelete = canUpdateMeterReadForOccubentAndExit,
                     ShowEdit = canMeterReadForOccubentAndExit,
+                    ShowAdd = canMeterReadForOccubentAndExit,
                     ShowPrint1 = false,
                     ShowPrint = false,
                     ShowBulkDelete = false,
                     ShowExportPdf = false,
 
+                    Add = new TableAction
+                    {
+                        Label = "اضافة قراءة عداد",
+                        Icon = "fa fa-plus",
+                        Color = "success",
+                        OpenModal = true,
+                        ModalTitle = "اضافة قراءة عداد",
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "buildingClassInsertForm",
+                            Title = "بيانات قراءة عداد",
+                            Method = "post",
+                            ActionUrl = "/crud/insert",
+                            Fields = MeterReadFields,
+                            Buttons = new List<FormButtonConfig>
+                            {
+                                new FormButtonConfig { Text = "حفظ",   Type = "submit", Color = "success" },
+                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
+                            }
+                        },
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1,
+
+                        Meta = metaB
+                        ,
+                        Meta1 = metaC
+                    },
 
 
-                   
                     Edit = new TableAction
                     {
                         Label = "قراءة عداد",
@@ -472,7 +802,9 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                         RequireSelection = true,
                         MinSelection = 1,
                         MaxSelection = 1,
-
+                        Meta = metaB
+                        ,
+                        
 
                         Guards = new TableActionGuards
                         {

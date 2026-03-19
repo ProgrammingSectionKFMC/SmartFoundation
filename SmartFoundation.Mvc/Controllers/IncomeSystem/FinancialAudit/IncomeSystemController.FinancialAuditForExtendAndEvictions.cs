@@ -786,6 +786,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
 
             var currentUrl = Request.Path + Request.QueryString;
+            var currentUrlonly = Request.Path;
 
             var ApproveExtendOrExitFields = new List<FieldConfig>
             {
@@ -795,7 +796,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
-                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrlonly },
                 new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
                 new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
                 new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
@@ -806,7 +807,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true,Value=residentInfoIDvalue },
                 new FieldConfig { Name = "p03", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsIDvalue },
                 new FieldConfig { Name = "p11", Label = "ملاحظات", Type = "textarea", ColCss = "6",Required = true,HelpText="يجب ان لاتتجاوز 4000 حرف*",MaxLength=3900 },
-                new FieldConfig { Name = "p30", Label = "ملاحظات", Type = "text", ColCss = "6",Value = LastActionDatevalue },
+                //new FieldConfig { Name = "p30", Label = "ملاحظات", Type = "text", ColCss = "6",Value = LastActionDatevalue },
                 //new FieldConfig { Name = "p40", Label = "سبب الامهال", Type = "select", ColCss = "4",Required = true,HelpText="المتقاعد والمفصول مطلوب تأمين احترازي يرجى الاختيار بدقة*",Options=billPaymentTypeOptions,Value=LastActionExtendReasonTypeIDvalue},
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true,Value = LastActionTypeIDvalue },
                 new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
