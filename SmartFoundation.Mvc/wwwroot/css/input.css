@@ -665,7 +665,7 @@ textarea[readonly] {
     white-space: nowrap;
     vertical-align: middle;
     /*border-top: 1px solid #d4af37;*/
-    border-bottom: 1px solid #025c42;
+    /*border-bottom: 1px solid #025c42;*/
     border-left: 1px solid rgba(255, 255, 255, 0.10);
     border-right: none;
     letter-spacing: 0.01em;
@@ -1351,6 +1351,7 @@ textarea[readonly] {
     background: transparent;
     border: 0;
     border-radius: 0;
+    position: relative;
 }
 
 @media (max-width: 767.98px) {
@@ -1364,20 +1365,37 @@ textarea[readonly] {
 .search-input {
     @apply h-9 w-full md:w-72;
     @apply border border-gray-300 bg-white;
-    @apply px-3 text-sm text-gray-700 placeholder:text-gray-400;
+    @apply text-sm text-gray-700 placeholder:text-gray-400;
     @apply transition duration-150;
     line-height: 1.35;
     box-shadow: none !important;
     border-radius: 3px;
     width: 100% !important;
     min-width: 220px;
-    height: 36px;
+    height: 32px;
     background: #ffffff !important;
+    direction: rtl;
+    padding-right: 34px !important;
+    padding-left: 12px !important;
+    color-scheme: light;
 }
 
     .search-input::placeholder {
         color: #9aaba3 !important;
+        text-align: right;
     }
+
+    .search-input::-webkit-search-cancel-button {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 10px;
+        height: 10px;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M2 2l10 10M12 2L2 12' stroke='%234b5563' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-size: contain;
+        cursor: pointer;
+    }
+
 
 /* =========================
    Select (Single definitive)

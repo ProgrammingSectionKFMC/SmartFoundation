@@ -187,8 +187,7 @@
        data-drawer-placement="right"
        data-drawer-backdrop="true"
        data-drawer-body-scrolling="false"
-       class="fixed top-0 right-0 z-40 h-screen w-60 translate-x-full border-l border-emerald-900 bg-slate-800 text-slate-200
-       transition-all duration-300 lg:translate-x-0"
+       class="fixed top-0 right-0 z-40 h-screen w-60 translate-x-full border-l border-emerald-900 bg-slate-800 text-slate-200 transition-[width,transform] duration-300 ease-out lg:translate-x-0"
        aria-label="Sidebar">
 
 
@@ -633,177 +632,231 @@
 
 
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const body = document.body;
-        const sidebar = document.getElementById('logo-sidebar');
-        const pinBtn = document.getElementById('pin-sidebar');
-        const toggleSidebarBtn = document.getElementById("toggle-sidebar");
+document.addEventListener('DOMContentLoaded', () => {
+    const body = document.body;
+    const sidebar = document.getElementById('logo-sidebar');
+    const pinBtn = document.getElementById('pin-sidebar');
+    const toggleSidebarBtn = document.getElementById('toggle-sidebar');
+    const mobileToggleBtn = document.querySelector('[data-drawer-toggle="logo-sidebar"]');
 
-            //  إدارة الحالة
     const SIDEBAR_STATES = {
         PINNED: "sidebar-pinned",
         COLLAPSED: "sidebar-collapsed",
         MOBILE_OPEN: "with-sidebar-open"
     };
 
+    let hoverTimer = null;
+    let isHoverOpen = false;
+
+    // let isHoverTriggered = false;
+
     function resetSidebarState() {
+    body.classList.remove(
+        SIDEBAR_STATES.PINNED,
+        SIDEBAR_STATES.COLLAPSED,
+        SIDEBAR_STATES.MOBILE_OPEN
+    );
+}
+
+    function removeSidebarBackdrop() {
+        document.querySelectorAll('.sidebar-backdrop, [drawer-backdrop]').forEach(el => el.remove());
+    }
+
+    function openMobileSidebar() {
+        body.classList.add(SIDEBAR_STATES.MOBILE_OPEN);
+
+        if (!document.querySelector('.sidebar-backdrop')) {
+            const backdrop = document.createElement('div');
+            backdrop.className = 'sidebar-backdrop lg:hidden';
+            backdrop.addEventListener('click', () => {
+                body.classList.remove(SIDEBAR_STATES.MOBILE_OPEN);
+                removeSidebarBackdrop();
+            });
+            document.body.appendChild(backdrop);
+        }
+    }
+
+    function closeMobileSidebar() {
+        body.classList.remove(SIDEBAR_STATES.MOBILE_OPEN);
+        sidebar?.classList.add('translate-x-full');
+        removeSidebarBackdrop();
+    }
+
+    // function applyDesktopSidebarState() {
+    //     const savedSidebarState = localStorage.getItem('sidebarState');
+
+    //     resetSidebarState();
+
+    //     if (savedSidebarState === SIDEBAR_STATES.COLLAPSED) {
+    //         body.classList.add(SIDEBAR_STATES.COLLAPSED);
+    //     } else {
+    //         body.classList.add(SIDEBAR_STATES.PINNED);
+    //     }
+    // }
+    function applyDesktopSidebarState() {
+    const savedSidebarState = localStorage.getItem('sidebarState');
+
+    body.classList.remove(SIDEBAR_STATES.MOBILE_OPEN);
+
+    if (savedSidebarState === SIDEBAR_STATES.COLLAPSED) {
+        body.classList.remove(SIDEBAR_STATES.PINNED);
+        body.classList.add(SIDEBAR_STATES.COLLAPSED);
+    } else {
+        body.classList.remove(SIDEBAR_STATES.COLLAPSED);
+        body.classList.add(SIDEBAR_STATES.PINNED);
+    }
+}
+
+    // function setDesktopSidebarState(state) {
+    //     resetSidebarState();
+    //     body.classList.add(state);
+    //     localStorage.setItem('sidebarState', state);
+    // }
+    function setDesktopSidebarState(state) {
+    if (state === SIDEBAR_STATES.COLLAPSED) {
+        body.classList.remove(SIDEBAR_STATES.PINNED, SIDEBAR_STATES.MOBILE_OPEN);
+        body.classList.add(SIDEBAR_STATES.COLLAPSED);
+    } else if (state === SIDEBAR_STATES.PINNED) {
+        body.classList.remove(SIDEBAR_STATES.COLLAPSED, SIDEBAR_STATES.MOBILE_OPEN);
+        body.classList.add(SIDEBAR_STATES.PINNED);
+    }
+
+    localStorage.setItem('sidebarState', state);
+}
+
+    // function initSidebarState() {
+    //     if (window.innerWidth >= 1024) {
+    //         applyDesktopSidebarState();
+    //         removeSidebarBackdrop();
+    //         sidebar?.classList.remove('translate-x-full');
+    //     } else {
+    //         resetSidebarState();
+    //         removeSidebarBackdrop();
+    //         sidebar?.classList.add('translate-x-full');
+    //     }
+    // }
+
+    /* ===============================
+   Hover open (delay 1 second)
+================================= */
+
+sidebar?.addEventListener('mouseenter', () => {
+    if (window.innerWidth < 1024) return;
+
+    if (!body.classList.contains(SIDEBAR_STATES.COLLAPSED)) return;
+
+    
+    hoverTimer = setTimeout(() => {
+        body.classList.remove(SIDEBAR_STATES.COLLAPSED);
+        body.classList.add(SIDEBAR_STATES.PINNED);
+        isHoverOpen = true;
+    }, 200); 
+});
+
+sidebar?.addEventListener('mouseleave', () => {
+    if (window.innerWidth < 1024) return;
+
+    
+    if (hoverTimer) {
+        clearTimeout(hoverTimer);
+        hoverTimer = null;
+    }
+
+    
+    if (isHoverOpen) {
+        body.classList.remove(SIDEBAR_STATES.PINNED);
+        body.classList.add(SIDEBAR_STATES.COLLAPSED);
+        isHoverOpen = false;
+    }
+});
+
+    function initSidebarState() {
+    if (window.innerWidth >= 1024) {
+        applyDesktopSidebarState();
+        removeSidebarBackdrop();
+        sidebar?.classList.remove('translate-x-full');
+    } else {
         body.classList.remove(
             SIDEBAR_STATES.PINNED,
             SIDEBAR_STATES.COLLAPSED,
             SIDEBAR_STATES.MOBILE_OPEN
         );
+        removeSidebarBackdrop();
+        sidebar?.classList.add('translate-x-full');
     }
+}
+    /* زر الهيدر */
+    toggleSidebarBtn?.addEventListener('click', () => {
+        if (window.innerWidth < 1024) {
+            const isOpen = body.classList.contains(SIDEBAR_STATES.MOBILE_OPEN);
+            if (isOpen) {
+                closeMobileSidebar();
+            } else {
+                openMobileSidebar();
+                sidebar?.classList.remove('translate-x-full');
+            }
+            return;
+        }
 
-    //  زر الهيدر
-        toggleSidebarBtn?.addEventListener("click", () => {
+        if (body.classList.contains(SIDEBAR_STATES.PINNED)) {
+            setDesktopSidebarState(SIDEBAR_STATES.COLLAPSED);
+        } else {
+            setDesktopSidebarState(SIDEBAR_STATES.PINNED);
+        }
+    });
+
+    /* زر التثبيت */
+    pinBtn?.addEventListener('click', () => {
+        if (window.innerWidth < 1024) return;
+
+        if (body.classList.contains(SIDEBAR_STATES.PINNED)) {
+            setDesktopSidebarState(SIDEBAR_STATES.COLLAPSED);
+        } else {
+            setDesktopSidebarState(SIDEBAR_STATES.PINNED);
+        }
+    });
+
+    /* زر القائمة للموبايل إذا موجود */
+    mobileToggleBtn?.addEventListener('click', () => {
+        if (window.innerWidth >= 1024) return;
+
         const isOpen = body.classList.contains(SIDEBAR_STATES.MOBILE_OPEN);
-
         if (isOpen) {
-            body.classList.remove(SIDEBAR_STATES.MOBILE_OPEN);
-            const backdrop = document.querySelector(".sidebar-backdrop");
-            if (backdrop) backdrop.remove();
+            closeMobileSidebar();
         } else {
-            body.classList.add(SIDEBAR_STATES.MOBILE_OPEN);
+            openMobileSidebar();
+            sidebar?.classList.remove('translate-x-full');
+        }
+    });
 
-            // نتأكد ما فيه خلفية موجودة مسبقًا
-            if (!document.querySelector(".sidebar-backdrop")) {
-                const backdrop = document.createElement("div");
-                backdrop.className = "sidebar-backdrop lg:hidden";
-                backdrop.addEventListener("click", () => {
-                    body.classList.remove(SIDEBAR_STATES.MOBILE_OPEN);
-                    backdrop.remove();
-                });
-                document.body.appendChild(backdrop);
+    /* resize */
+    window.addEventListener('resize', () => {
+        initSidebarState();
+    });
+
+    /* روابط السايدبار في الموبايل */
+    document.querySelectorAll('#logo-sidebar a').forEach(link => {
+        link.addEventListener('click', () => {
+            if (window.innerWidth < 1024) {
+                closeMobileSidebar();
             }
-        }
+        });
     });
 
-
-    //  زر التثبيت
-    pinBtn?.addEventListener("click", () => {
-        const isPinned = body.classList.contains(SIDEBAR_STATES.PINNED);
-        resetSidebarState();
-        if (!isPinned) {
-            body.classList.add(SIDEBAR_STATES.PINNED);
-        } else {
-            body.classList.add(SIDEBAR_STATES.COLLAPSED);
-        }
-    });
-
-
-        window.addEventListener("resize", () => {
-        if (window.innerWidth >= 1024 && window.innerWidth < 1440) {
-            resetSidebarState();
-            body.classList.add(SIDEBAR_STATES.COLLAPSED);
-        } else if (window.innerWidth >= 1440) {
-            resetSidebarState();
-            body.classList.add(SIDEBAR_STATES.PINNED);
-        } else {
-            resetSidebarState();
-        }
-    });
-
-    //  عند التحميل
-        if (window.innerWidth >= 1024) {
-        body.classList.add(SIDEBAR_STATES.PINNED);
-    } else {
-        body.classList.add(SIDEBAR_STATES.MOBILE_OPEN); 
+    /* RTL */
+    if (document.documentElement.getAttribute('dir') === 'rtl') {
+        sidebar?.classList.add('right-0');
+        sidebar?.classList.remove('left-0');
     }
 
-        
-        const mobileToggleBtn = document.querySelector('[data-drawer-toggle="logo-sidebar"]');
 
-        let isHoverTriggered = false; 
 
-        //  زر القائمة (موبايل)
-        if (mobileToggleBtn) {
-            mobileToggleBtn.addEventListener('click', () => {
-                const isOpen = !sidebar.classList.contains('translate-x-full');
-                if (isOpen) {
-                    sidebar.classList.add('translate-x-full');
-                    const backdrop = document.querySelector('[drawer-backdrop]');
-                    if (backdrop) backdrop.remove();
-                } else {
-                    sidebar.classList.remove('translate-x-full');
-                    if (!document.querySelector('[drawer-backdrop]')) {
-                        const backdrop = document.createElement('div');
-                        backdrop.className = 'fixed inset-0 z-30 bg-black/50 lg:hidden';
-                        backdrop.setAttribute('drawer-backdrop', '');
-                        backdrop.addEventListener('click', () => {
-                            sidebar.classList.add('translate-x-full');
-                            backdrop.remove();
-                        });
-                        document.body.appendChild(backdrop);
-                    }
-                }
-            });
-        }
+    // sidebar?.removeEventListener?.('mouseenter', null);
+    // sidebar?.removeEventListener?.('mouseleave', null);
 
-        //  زر التثبيت داخل السايدبار
-        if (pinBtn) {
-            pinBtn.addEventListener('click', () => {
-                if (body.classList.contains('sidebar-collapsed')) {
-                    body.classList.remove('sidebar-collapsed');
-                    body.classList.add('sidebar-pinned');
-                } else if (body.classList.contains('sidebar-pinned')) {
-                    body.classList.remove('sidebar-pinned');
-                    body.classList.add('sidebar-collapsed');
-                } else {
-                    body.classList.add('sidebar-collapsed');
-                }
-            });
-        }
-
-        //  زر الهيدر (بجانب البريدكامب)
-        if (toggleSidebarBtn) {
-            toggleSidebarBtn.addEventListener("click", () => {
-                if (body.classList.contains("sidebar-pinned")) {
-                    body.classList.remove("sidebar-pinned");
-                    body.classList.add("sidebar-collapsed");
-                } else if (body.classList.contains("sidebar-collapsed")) {
-                    body.classList.remove("sidebar-collapsed");
-                    body.classList.add("sidebar-pinned");
-                } else {
-                    body.classList.add("sidebar-collapsed");
-                }
-            });
-        }
-
-        //  روابط السايدبار (موبايل)
-        document.querySelectorAll('#logo-sidebar a').forEach(link => {
-            link.addEventListener('click', () => {
-                if (window.innerWidth < 1024) {
-                    sidebar.classList.add('translate-x-full');
-                    const backdrop = document.querySelector('[drawer-backdrop]');
-                    if (backdrop) backdrop.remove();
-                }
-            });
-        });
-
-        //  RTL
-        if (document.documentElement.getAttribute('dir') === 'rtl') {
-            sidebar.classList.add('right-0');
-            sidebar.classList.remove('left-0');
-        }
-
-        // فتح مؤقت بالماوس إذا السايدبار مصغر
-        sidebar.addEventListener("mouseenter", () => {
-            if (window.innerWidth >= 1024 && body.classList.contains("sidebar-collapsed")) {
-                isHoverTriggered = true;
-                body.classList.remove("sidebar-collapsed");
-                body.classList.add("sidebar-pinned");
-            }
-        });
-
-        //  يرجع يقفل إذا خرج الماوس منه فقط إذا الفتح كان Hover
-        sidebar.addEventListener("mouseleave", () => {
-            if (window.innerWidth >= 1024 && isHoverTriggered) {
-                body.classList.remove("sidebar-pinned");
-                body.classList.add("sidebar-collapsed");
-                isHoverTriggered = false;
-            }
-        });
-    });
+    /* تشغيل أولي */
+    initSidebarState();
+});
 </script>
 
 <!-- Change Password Modal -->
@@ -1345,54 +1398,6 @@
             </div>
         </div>
     </div>
-
-    <!-- ✅ CSS for animations and custom toast position -->
-    <style>
-        @@keyframes pulse-border {
-            0%, 100% { border-color: rgb(239 68 68); }
-            50% { border-color: rgb(251 146 60); }
-        }
-        .animate-pulse-border {
-            animation: pulse-border 2s ease-in-out infinite;
-        }
-
-        @@keyframes bounce-slow {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-5px); }
-        }
-        .animate-bounce-slow {
-            animation: bounce-slow 2s ease-in-out infinite;
-        }
-
-        @@keyframes pulse-slow {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.85; }
-        }
-        .animate-pulse-slow {
-            animation: pulse-slow 3s ease-in-out infinite;
-        }
-
-        @@keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-10px); }
-            75% { transform: translateX(10px); }
-        }
-        .animate-shake {
-            animation: shake 0.5s ease-in-out;
-        }
-
-        body.modal-open {
-            overflow: hidden !important;
-        }
-
-        /* ✅ Add visual indicator for disabled elements */
-        .force-disabled {
-            pointer-events: none !important;
-            opacity: 0.4 !important;
-            cursor: not-allowed !important;
-            filter: grayscale(50%) !important;
-        }
-    </style>
 
     <script>
         (function() {

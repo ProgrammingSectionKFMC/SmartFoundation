@@ -754,6 +754,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             },
             // Client-side mode support (new)
             clientSideMode: !!cfg.clientSideMode,
+            headerColor: cfg.headerColor || "",
             initialRows: Array.isArray(cfg.rows) ? cfg.rows : [],
             // Selection
             selectable: !!cfg.selectable,
