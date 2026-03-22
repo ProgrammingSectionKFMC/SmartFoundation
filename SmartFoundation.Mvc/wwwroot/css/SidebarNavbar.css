@@ -1,15 +1,37 @@
 ﻿/* =========================
-   CSS Variables (keep as-is)
+   متغيرات الجذر (CSS Variables)
    ========================= */
 :root {
     --top-header-h: 64px;
     --page-header-h: 48px;
+    --footer-h: 70px;
     --sidebar-w: 16rem;
     --sidebar-w-collapsed: 4.5rem;
+    /* متغيرات الإشعارات */
+    --nd-shell: #053b2d;
+    --nd-shell-2: #042f26;
+    --nd-border: rgba(255,255,255,.18);
+    --nd-header: #0b6b52;
+    --nd-footer: #0b6b52;
+    --nd-list: rgba(255,255,255,.09);
+    --nd-card: rgba(255,255,255,.14);
+    --nd-card-hover: rgba(255,255,255,.16);
+    --nd-card-border: rgba(255,255,255,.22);
+    --nd-unread-bg: rgba(16,185,129,.24);
+    --nd-unread-border: rgba(16,185,129,.55);
+    --nd-unread-rail: rgba(16,185,129,.92);
+    --nd-text: rgba(255,255,255,.97);
+    --nd-muted: rgba(255,255,255,.82);
+    --nd-dim: rgba(255,255,255,.70);
+    --nd-ok: #22c55e;
+    --nd-danger: #ef4444;
+    --nd-warn: #f59e0b;
+    --nd-focus: rgba(255,255,255,.22);
 }
 
+
 /* =========================
-   Base Layout (keep as-is)
+   القاعدة (Base Layout)
    ========================= */
 html, body {
     height: 100%;
@@ -17,8 +39,9 @@ html, body {
     padding: 0;
 }
 
+
 /* =========================
-   Top Header 
+   الشريط العلوي (Top Header)
    ========================= */
 #top-header {
     position: fixed;
@@ -34,7 +57,17 @@ html, body {
     text-rendering: geometricPrecision;
 }
 
-/* Top Header - Desktop (keep behavior) */
+@media (max-width: 1023px) {
+    #top-header {
+        z-index: 70 !important;
+    }
+
+        #top-header .sf-sidebar-toggle {
+            z-index: 80 !important;
+            pointer-events: auto !important;
+        }
+}
+
 @media (min-width: 1024px) {
     body.sidebar-pinned #top-header {
         right: var(--sidebar-w);
@@ -49,8 +82,9 @@ html, body {
     }
 }
 
+
 /* =========================
-   Page Header 
+   شريط رأس الصفحة (Page Header)
    ========================= */
 #page-header {
     position: fixed;
@@ -60,7 +94,6 @@ html, body {
     height: var(--page-header-h);
     background: #ffffff;
     border-bottom: 1px solid #e4eae6;
-    /*border-top: 1.5px solid #d4af37;*/
     box-shadow: none !important;
     z-index: 40;
     display: flex;
@@ -76,7 +109,6 @@ html, body {
     min-width: 0;
 }
 
-/* Page Header - Mobile/Tablet */
 @media (max-width: 1023px) {
     #page-header {
         right: 0 !important;
@@ -84,7 +116,6 @@ html, body {
     }
 }
 
-/* Page Header - Desktop */
 @media (min-width: 1024px) {
     body.sidebar-pinned #page-header {
         right: var(--sidebar-w);
@@ -96,8 +127,10 @@ html, body {
         left: 0;
     }
 }
+
+
 /* =========================
-   Breadcrumb Component 
+   مسار التنقل (Breadcrumb)
    ========================= */
 .sf-bc {
     direction: rtl;
@@ -208,19 +241,9 @@ html, body {
     }
 }
 
-/* =========================
-   Root Variables (keep as-is)
-   ========================= */
-:root {
-    --top-header-h: 64px;
-    --page-header-h: 48px;
-    --footer-h: 70px;
-    --sidebar-w: 16rem;
-    --sidebar-w-collapsed: 4.5rem;
-}
 
 /* =========================
-   Main Content Area (keep as-is)
+   منطقة المحتوى الرئيسي (Main Content)
    ========================= */
 #main-content {
     position: fixed;
@@ -234,15 +257,23 @@ html, body {
     isolation: isolate;
 }
 
-    /* Hide content when loading (keep as-is) */
     #main-content.is-loading > *:not(#main-loading) {
         visibility: hidden;
     }
 
+@media (min-width: 1024px) {
+    body.sidebar-pinned #main-content {
+        margin-right: var(--sidebar-w) !important;
+    }
+
+    body.sidebar-collapsed #main-content {
+        margin-right: var(--sidebar-w-collapsed) !important;
+    }
+}
 
 
 /* =========================
-   Main Loading Overlay
+   طبقة التحميل (Main Loading Overlay)
    ========================= */
 #main-loading {
     position: absolute;
@@ -254,17 +285,13 @@ html, body {
     justify-content: center;
 }
 
-
 #main-content.is-loading .loader-inner {
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%); 
+    transform: translate(-50%, -50%);
 }
 
-/* =========================
-   Spinner
-   ========================= */
 .gov-spinner {
     width: 40px;
     height: 40px;
@@ -284,22 +311,9 @@ html, body {
     }
 }
 
-/* =========================
-   Main Content - Desktop
-   ========================= */
-@media (min-width: 1024px) {
-    body.sidebar-pinned #main-content {
-        margin-right: var(--sidebar-w) !important;
-    }
-
-    body.sidebar-collapsed #main-content {
-        margin-right: var(--sidebar-w-collapsed) !important;
-    }
-}
-
 
 /* =========================
-   Sidebar Toggle Button
+   زر تبديل القائمة الجانبية (Sidebar Toggle Button)
    ========================= */
 .sf-sidebar-toggle {
     width: 32px;
@@ -320,21 +334,20 @@ html, body {
     will-change: transform;
 }
 
-.sf-sidebar-toggle:hover {
-    background-color: #f9fafb;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-}
+    .sf-sidebar-toggle:hover {
+        background-color: #f9fafb;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
 
-.sf-sidebar-toggle:active {
-    transform: scale(0.96);
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15);
-}
+    .sf-sidebar-toggle:active {
+        transform: scale(0.96);
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.15);
+    }
 
-.sf-sidebar-toggle:focus {
-    outline: none;
-}
+    .sf-sidebar-toggle:focus {
+        outline: none;
+    }
 
-/* Sidebar Toggle - Mobile/Tablet */
 @media (max-width: 1023px) {
     .sf-sidebar-toggle {
         position: relative;
@@ -342,7 +355,6 @@ html, body {
     }
 }
 
-/* Sidebar Toggle in Top Header */
 #top-header .sf-sidebar-toggle {
     position: fixed;
     top: 0;
@@ -356,18 +368,18 @@ html, body {
     z-index: 60;
 }
 
-#top-header .sf-sidebar-toggle svg {
-    width: 22px;
-    height: 22px;
-}
+    #top-header .sf-sidebar-toggle svg {
+        width: 22px;
+        height: 22px;
+    }
 
-#top-header .sf-sidebar-toggle:hover {
-    background: rgba(255, 255, 255, 0.12);
-}
+    #top-header .sf-sidebar-toggle:hover {
+        background: rgba(255,255,255,0.12);
+    }
 
-#top-header .sf-sidebar-toggle:active {
-    background: rgba(255, 255, 255, 0.18);
-}
+    #top-header .sf-sidebar-toggle:active {
+        background: rgba(255,255,255,0.18);
+    }
 
 @media (min-width: 1024px) {
     #top-header .sf-sidebar-toggle {
@@ -376,8 +388,9 @@ html, body {
     }
 }
 
+
 /* =========================
-   Sidebar Base Styles
+   القائمة الجانبية - قاعدة (Sidebar Base)
    ========================= */
 #logo-sidebar {
     background: #064E3B;
@@ -386,24 +399,25 @@ html, body {
     overflow-x: hidden !important;
 }
 
-#logo-sidebar .bg-white {
-    background: transparent !important;
-}
+    #logo-sidebar .bg-white {
+        background: transparent !important;
+    }
 
-#logo-sidebar .text-gray-900 {
-    color: #e2e8f0 !important;
-}
+    #logo-sidebar .text-gray-900 {
+        color: #e2e8f0 !important;
+    }
 
-#logo-sidebar .divide-y > :not([hidden]) ~ :not([hidden]) {
-    border-color: #334155 !important;
-}
+    #logo-sidebar .divide-y > :not([hidden]) ~ :not([hidden]) {
+        border-color: #334155 !important;
+    }
 
-/* Sidebar - Mobile/Tablet */
 @media (max-width: 1023px) {
     #logo-sidebar {
+        top: var(--top-header-h) !important;
+        height: calc(100vh - var(--top-header-h)) !important;
         transform: translateX(100%);
         transition: transform 0.3s ease;
-        z-index: 50 !important;
+        z-index: 55 !important;
     }
 
     body.with-sidebar-open #logo-sidebar {
@@ -412,17 +426,20 @@ html, body {
 
     .sidebar-backdrop {
         position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 30;
-        display: none !important;
+        top: var(--top-header-h);
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 45;
+        display: block;
     }
 }
 
-/* Sidebar - Desktop */
 @media (min-width: 1024px) {
     #logo-sidebar {
         transform: none !important;
+        transition: width 280ms ease-out, transform 280ms ease-out;
     }
 
     body.sidebar-pinned #logo-sidebar {
@@ -434,26 +451,187 @@ html, body {
     }
 }
 
+
 /* =========================
-   Sidebar Scrollbar
+   القائمة الجانبية - حالة المطوية (Sidebar Collapsed)
+   ========================= */
+@media (min-width: 1024px) {
+
+    body.sidebar-collapsed #logo-sidebar {
+        position: fixed !important;
+        overflow: hidden !important;
+    }
+
+        body.sidebar-collapsed #logo-sidebar .sidebar-logo,
+        body.sidebar-collapsed #logo-sidebar .user-card,
+        body.sidebar-collapsed #logo-sidebar .sf-idara-badge,
+        body.sidebar-collapsed #logo-sidebar .sf-admin-badge,
+        body.sidebar-collapsed #logo-sidebar .menu-chevron,
+        body.sidebar-collapsed #logo-sidebar a span,
+        body.sidebar-collapsed #logo-sidebar button span,
+        body.sidebar-collapsed #logo-sidebar i,
+        body.sidebar-collapsed #logo-sidebar svg {
+            display: none !important;
+        }
+
+        body.sidebar-collapsed #logo-sidebar .overflow-y-auto,
+        body.sidebar-collapsed #logo-sidebar .flex-1.space-y-1,
+        body.sidebar-collapsed #logo-sidebar ul,
+        body.sidebar-collapsed #logo-sidebar li {
+            overflow: hidden !important;
+            max-height: none !important;
+        }
+
+        body.sidebar-collapsed #logo-sidebar .overflow-y-auto {
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
+        }
+
+            body.sidebar-collapsed #logo-sidebar .overflow-y-auto::-webkit-scrollbar {
+                display: none !important;
+                width: 0 !important;
+            }
+
+        body.sidebar-collapsed #logo-sidebar a,
+        body.sidebar-collapsed #logo-sidebar button {
+            position: relative !important;
+            justify-content: center !important;
+            align-items: center !important;
+            padding-right: 0 !important;
+            padding-left: 0 !important;
+            min-height: 40px !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            overflow: hidden !important;
+        }
+
+            body.sidebar-collapsed #logo-sidebar a.bg-slate-700,
+            body.sidebar-collapsed #logo-sidebar button.bg-slate-700,
+            body.sidebar-collapsed #logo-sidebar a:hover,
+            body.sidebar-collapsed #logo-sidebar button:hover {
+                background: transparent !important;
+                box-shadow: none !important;
+            }
+
+        body.sidebar-collapsed #logo-sidebar ul > li > ul > li > a::before,
+        body.sidebar-collapsed #logo-sidebar ul > li > ul > li > button::before {
+            display: none !important;
+        }
+
+        /* الصفحة النشطة في وضع المطوية */
+        body.sidebar-collapsed #logo-sidebar a.sidebar-link.bg-slate-700 {
+            position: absolute !important;
+            top: 50% !important;
+            right: 50% !important;
+            transform: translate(50%, -50%) !important;
+            z-index: 30 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 10px !important;
+            width: auto !important;
+            height: auto !important;
+            min-width: 0 !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            overflow: visible !important;
+        }
+
+            body.sidebar-collapsed #logo-sidebar a.sidebar-link.bg-slate-700 > span {
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                writing-mode: vertical-rl !important;
+                text-orientation: mixed !important;
+                white-space: nowrap !important;
+                font-size: 15px !important;
+                line-height: 1.05 !important;
+                font-weight: 700 !important;
+                color: #ffffff !important;
+                text-align: center !important;
+                pointer-events: none !important;
+            }
+
+            body.sidebar-collapsed #logo-sidebar a.sidebar-link.bg-slate-700::after {
+                content: "";
+                display: block;
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: #22c55e;
+                flex: 0 0 10px;
+                box-shadow: none !important;
+                filter: none !important;
+            }
+
+        body.sidebar-collapsed #logo-sidebar .menu-sep,
+        body.sidebar-collapsed #logo-sidebar hr {
+            opacity: 0.2 !important;
+        }
+
+        /* الدوائر في القائمة الفرعية */
+        body.sidebar-collapsed #logo-sidebar ul > li > ul > li > a,
+        body.sidebar-collapsed #logo-sidebar ul > li > ul > li > button {
+            position: relative;
+            background: transparent !important;
+            box-shadow: none !important;
+        }
+
+            body.sidebar-collapsed #logo-sidebar ul > li > ul > li > a:hover,
+            body.sidebar-collapsed #logo-sidebar ul > li > ul > li > button:hover,
+            body.sidebar-collapsed #logo-sidebar ul > li > ul > li > a.bg-slate-700,
+            body.sidebar-collapsed #logo-sidebar ul > li > ul > li > button.bg-slate-700 {
+                background: transparent !important;
+                box-shadow: none !important;
+            }
+
+            body.sidebar-collapsed #logo-sidebar ul > li > ul > li > a::before,
+            body.sidebar-collapsed #logo-sidebar ul > li > ul > li > button::before {
+                content: "";
+                position: absolute;
+                top: 50%;
+                right: 50%;
+                transform: translate(50%, -50%);
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: transparent;
+                box-shadow: none !important;
+                filter: none !important;
+                pointer-events: none;
+            }
+
+            body.sidebar-collapsed #logo-sidebar ul > li > ul > li > a:hover::before,
+            body.sidebar-collapsed #logo-sidebar ul > li > ul > li > button:hover::before,
+            body.sidebar-collapsed #logo-sidebar ul > li > ul > li > a.bg-slate-700::before,
+            body.sidebar-collapsed #logo-sidebar ul > li > ul > li > button.bg-slate-700::before {
+                background: #22c55e;
+            }
+}
+
+
+/* =========================
+   القائمة الجانبية - سكروول وشعار
    ========================= */
 #logo-sidebar .overflow-y-auto::-webkit-scrollbar {
     display: none;
 }
 
-/* =========================
-   Sidebar Logo
-   ========================= */
 body.sidebar-collapsed .sidebar-logo {
     visibility: hidden;
 }
 
+
 /* =========================
-   Sidebar User Card
+   القائمة الجانبية - بطاقة المستخدم (User Card)
    ========================= */
 #logo-sidebar .user-card {
     border: none !important;
-    box-shadow: 0 0 0 0.5px rgba(255, 255, 255, .18), 0 0px 1px rgba(0, 0, 0, .18);
+    box-shadow: 0 0 0 0.5px rgba(255,255,255,.18), 0 0px 1px rgba(0,0,0,.18);
     background: #064E3B !important;
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
@@ -464,10 +642,10 @@ body.sidebar-collapsed .sidebar-logo {
     border-radius: 0.375rem;
 }
 
-#logo-sidebar .user-card,
-#logo-sidebar .user-card * {
-    color: #dcdcdc !important;
-}
+    #logo-sidebar .user-card,
+    #logo-sidebar .user-card * {
+        color: #dcdcdc !important;
+    }
 
 @media (min-width: 1024px) {
     body.sidebar-collapsed #logo-sidebar .user-card {
@@ -475,27 +653,29 @@ body.sidebar-collapsed .sidebar-logo {
     }
 }
 
+
 /* =========================
-   Sidebar Menu Separators
+   القائمة الجانبية - فواصل القائمة (Menu Separators)
    ========================= */
 #logo-sidebar .menu-sep {
     height: 0.5px;
     margin: 8px 0;
-    background: rgba(255, 255, 255, .14);
+    background: rgba(255,255,255,.14);
 }
 
-#logo-sidebar .menu-sep.sm {
-    margin: 4px 0;
-}
+    #logo-sidebar .menu-sep.sm {
+        margin: 4px 0;
+    }
 
 #logo-sidebar hr {
     border: 0 !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.25) !important;
+    border-top: 1px solid rgba(255,255,255,0.25) !important;
     margin: 4px 0 !important;
 }
 
+
 /* =========================
-   Sidebar Links & Buttons
+   القائمة الجانبية - روابط وأزرار (Links & Buttons)
    ========================= */
 #logo-sidebar a,
 #logo-sidebar button {
@@ -514,54 +694,37 @@ body.sidebar-collapsed .sidebar-logo {
     padding-bottom: 0.45rem !important;
 }
 
-#logo-sidebar a span,
-#logo-sidebar button span {
-    min-width: 0;
-    max-width: 100%;
-    overflow-wrap: anywhere;
-    word-break: break-word;
-}
-
-#logo-sidebar a:hover,
-#logo-sidebar button:hover,
-#logo-sidebar .hover\:bg-white:hover {
-    background: #0b6b52 !important;
-    color: #f8fafc !important;
-}
-
-/* Sidebar - Desktop Collapsed State */
-@media (min-width: 1024px) {
-    body.sidebar-collapsed #logo-sidebar span,
-    body.sidebar-collapsed #logo-sidebar .menu-chevron {
-        display: none !important;
+    #logo-sidebar a span,
+    #logo-sidebar button span {
+        min-width: 0;
+        max-width: 100%;
+        overflow-wrap: anywhere;
+        word-break: break-word;
     }
 
-    body.sidebar-collapsed #logo-sidebar a,
-    body.sidebar-collapsed #logo-sidebar button {
-        justify-content: center;
-        padding-right: 0.5rem !important;
-        padding-left: 0.5rem !important;
+    #logo-sidebar a:hover,
+    #logo-sidebar button:hover,
+    #logo-sidebar .hover\:bg-white:hover {
+        background: #0b6b52 !important;
+        color: #f8fafc !important;
     }
 
-    body.sidebar-collapsed #logo-sidebar i {
-        margin: 0 !important;
-    }
-}
 
-/* =========================
-   Sidebar Menu Chevron
+    /* =========================
+   القائمة الجانبية - سهم القائمة الفرعية (Chevron)
    ========================= */
-#logo-sidebar button .menu-chevron {
-    transform: rotate(0deg);
-    transition: transform 0.2s ease;
-}
+    #logo-sidebar button .menu-chevron {
+        transform: rotate(0deg);
+        transition: transform 0.2s ease;
+    }
 
-#logo-sidebar button[aria-expanded="true"] .menu-chevron {
-    transform: rotate(90deg);
-}
+    #logo-sidebar button[aria-expanded="true"] .menu-chevron {
+        transform: rotate(90deg);
+    }
+
 
 /* =========================
-   Sidebar Submenu
+   القائمة الجانبية - القوائم الفرعية (Submenus)
    ========================= */
 #logo-sidebar ul > li > ul {
     padding-right: 0.75rem;
@@ -569,356 +732,233 @@ body.sidebar-collapsed .sidebar-logo {
     border-right: none;
 }
 
-#logo-sidebar ul > li > ul::before {
-    content: none;
-    border-right: none;
-}
-
-#logo-sidebar ul li ul li a::after,
-#logo-sidebar ul li ul li button::after {
-    content: none;
-}
-
-/* =========================
-   Sidebar Submenu Items (Level 2)
-   ========================= */
-#logo-sidebar ul > li > ul > li > a,
-#logo-sidebar ul > li > ul > li > button {
-    position: relative;
-    padding-top: 0.40rem !important;
-    padding-bottom: 0.40rem !important;
-    padding-right: 0.75rem !important;
-    padding-left: 0.75rem !important;
-    margin-inline: 0.25rem;
-    border-radius: 0.3rem;
-    font-size: 14px;
-    line-height: 1.4;
-    opacity: 0.9;
-    background: transparent;
-    box-shadow: 0 0 0 0 rgba(15, 23, 42, 0);
-    transform: translateX(0);
-    transition: background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.14s ease, opacity 0.18s ease;
-}
-
-#logo-sidebar ul > li > ul > li > a:hover,
-#logo-sidebar ul > li > ul > li > button:hover {
-    background: #0b6b52 !important;
-    color: #f0fdf4 !important;
-    opacity: 1;
-    transform: translateX(-4px);
-    box-shadow: none !important;
-}
-
-#logo-sidebar ul > li > ul > li > a.bg-slate-700,
-#logo-sidebar ul > li > ul > li > button.bg-slate-700 {
-    background: #0b6b52 !important;
-    color: #f9fafb !important;
-    box-shadow: none !important;
-    opacity: 1;
-    transform: translateX(-2px);
-}
-
-#logo-sidebar ul > li > ul > li > a:focus-visible,
-#logo-sidebar ul > li > ul > li > button:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(21, 128, 61, 0.75);
-    transform: translateX(-2px);
-    opacity: 1;
-}
-
-/* Submenu Item Indicator */
-#logo-sidebar ul > li > ul > li > a::before,
-#logo-sidebar ul > li > ul > li > button::before {
-    content: "";
-    position: absolute;
-    right: 0.15rem;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 3px;
-    height: 10px;
-    border-radius: 999px;
-    background: transparent;
-    transition: background 0.18s ease, height 0.18s ease, transform 0.14s ease;
-}
-
-#logo-sidebar ul > li > ul > li > a:hover::before,
-#logo-sidebar ul > li > ul > li > button:hover::before,
-#logo-sidebar ul > li > ul > li > a.bg-slate-700::before,
-#logo-sidebar ul > li > ul > li > button.bg-slate-700::before {
-    background: #3c6;
-    height: 26px;
-    transform: translateY(-50%) scaleX(1.2);
-}
-
-/* Submenu - Desktop Collapsed State */
-@media (min-width: 1024px) {
-    body.sidebar-collapsed #logo-sidebar ul > li > ul > li > a::before,
-    body.sidebar-collapsed #logo-sidebar ul > li > ul > li > button::before {
-        top: auto !important;
-        bottom: 6px !important;
-        right: 50% !important;
-        left: auto !important;
-        width: 22px !important;
-        height: 3px !important;
-        transform: translateX(50%) !important;
-        border-radius: 999px !important;
+    #logo-sidebar ul > li > ul::before,
+    #logo-sidebar ul li ul li a::after,
+    #logo-sidebar ul li ul li button::after {
+        content: none;
     }
 
-    body.sidebar-collapsed #logo-sidebar ul > li > ul > li > a:hover::before,
-    body.sidebar-collapsed #logo-sidebar ul > li > ul > li > button:hover::before,
-    body.sidebar-collapsed #logo-sidebar ul > li > ul > li > a.bg-slate-700::before,
-    body.sidebar-collapsed #logo-sidebar ul > li > ul > li > button.bg-slate-700::before {
-        height: 3px !important;
-        transform: translateX(50%) !important;
+    /* عناصر المستوى الثاني */
+    #logo-sidebar ul > li > ul > li > a,
+    #logo-sidebar ul > li > ul > li > button {
+        position: relative;
+        padding-top: 0.40rem !important;
+        padding-bottom: 0.40rem !important;
+        padding-right: 0.75rem !important;
+        padding-left: 0.75rem !important;
+        margin-inline: 0.25rem;
+        border-radius: 0.3rem;
+        font-size: 14px;
+        line-height: 1.4;
+        opacity: 0.9;
+        background: transparent;
+        box-shadow: 0 0 0 0 rgba(15,23,42,0);
+        transform: translateX(0);
+        transition: background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.14s ease, opacity 0.18s ease;
     }
-}
+
+        #logo-sidebar ul > li > ul > li > a:hover,
+        #logo-sidebar ul > li > ul > li > button:hover {
+            background: #0b6b52 !important;
+            color: #f0fdf4 !important;
+            opacity: 1;
+            transform: translateX(-4px);
+            box-shadow: none !important;
+        }
+
+        #logo-sidebar ul > li > ul > li > a.bg-slate-700,
+        #logo-sidebar ul > li > ul > li > button.bg-slate-700 {
+            background: #0b6b52 !important;
+            color: #f9fafb !important;
+            box-shadow: none !important;
+            opacity: 1;
+            transform: translateX(-2px);
+        }
+
+        #logo-sidebar ul > li > ul > li > a:focus-visible,
+        #logo-sidebar ul > li > ul > li > button:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(21,128,61,0.75);
+            transform: translateX(-2px);
+            opacity: 1;
+        }
+
+        /* مؤشر جانبي للعناصر الفرعية */
+        #logo-sidebar ul > li > ul > li > a::before,
+        #logo-sidebar ul > li > ul > li > button::before {
+            content: "";
+            position: absolute;
+            right: 0.15rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 10px;
+            border-radius: 999px;
+            background: transparent;
+            transition: background 0.18s ease, height 0.18s ease, transform 0.14s ease;
+        }
+
+        #logo-sidebar ul > li > ul > li > a:hover::before,
+        #logo-sidebar ul > li > ul > li > button:hover::before,
+        #logo-sidebar ul > li > ul > li > a.bg-slate-700::before,
+        #logo-sidebar ul > li > ul > li > button.bg-slate-700::before {
+            background: #3c6;
+            height: 26px;
+            transform: translateY(-50%) scaleX(1.2);
+        }
+
 
 /* =========================
-   Sidebar Pin Button
+   زر التثبيت (Pin Button)
    ========================= */
 #pin-sidebar {
     flex: 0 0 auto;
 }
 
-#pin-sidebar i {
-    transition: transform .15s ease;
-}
+    #pin-sidebar i {
+        transition: transform .15s ease;
+    }
 
 body.sidebar-collapsed #pin-sidebar i {
     transform: rotate(45deg);
 }
 
+
 /* =========================
-   Top Header Navigation Links
+   روابط الهيدر السريعة (Header Action Buttons)
    ========================= */
+.sf-header-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 4px;
+    color: #cbd5e1;
+    font-size: 13px;
+    font-family: "Tajawal", sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+    .sf-header-action-btn:hover {
+        background: rgba(255,255,255,0.08);
+        border-color: rgba(255,255,255,0.22);
+        color: #ffffff;
+    }
+
+    .sf-header-action-btn i {
+        font-size: 13px;
+        color: #94a3b8;
+        transition: color 120ms ease;
+    }
+
+    .sf-header-action-btn:hover i {
+        color: #e2e8f0;
+    }
+
 nav[aria-label="روابط سريعة"] a:hover {
     background: #0b6b52 !important;
     color: #fff !important;
 }
 
+
 /* =========================
-   Search Box
+   شريط البحث (Search Box)
    ========================= */
 #topbar-search {
     background: #e5e7eb !important;
     color: #111827 !important;
 }
 
-#topbar-search::placeholder {
-    color: #6b7280 !important;
-}
+    #topbar-search::placeholder {
+        color: #6b7280 !important;
+    }
 
-#topbar-search:hover {
-    background: #d1d5db !important;
-}
+    #topbar-search:hover {
+        background: #d1d5db !important;
+    }
 
-#topbar-search:focus {
-    background: #e5e7eb !important;
-    border-color: #065f46 !important;
-    box-shadow: 0 0 0 2px rgba(5, 150, 105, .35) !important;
-}
+    #topbar-search:focus {
+        background: #e5e7eb !important;
+        border-color: #065f46 !important;
+        box-shadow: 0 0 0 2px rgba(5,150,105,.35) !important;
+    }
+
 
 /* =========================
-   Notifications Dropdown
+   قائمة الإشعارات (Notifications Dropdown)
    ========================= */
 #notification-dropdown {
     background: #0b6b52 !important;
-    border: 1px solid rgba(255, 255, 255, .25) !important;
-    box-shadow: 0 12px 24px rgba(0, 0, 0, .3) !important;
+    border: 1px solid rgba(255,255,255,.25) !important;
+    box-shadow: 0 12px 24px rgba(0,0,0,.3) !important;
     color: #fff !important;
 }
 
-#notification-dropdown * {
-    color: #fff !important;
-    opacity: 1 !important;
-}
+    #notification-dropdown * {
+        color: #fff !important;
+        opacity: 1 !important;
+    }
 
-#notification-dropdown .px-4.py-2 {
-    background: rgba(0, 0, 0, .25) !important;
-    border-bottom: 1px solid rgba(255, 255, 255, .12) !important;
-    font-weight: 700;
-}
+    #notification-dropdown .px-4.py-2 {
+        background: rgba(0,0,0,.25) !important;
+        border-bottom: 1px solid rgba(255,255,255,.12) !important;
+        font-weight: 700;
+    }
 
-#notification-dropdown a.block {
-    background: rgba(0, 0, 0, .25) !important;
-    border-top: 1px solid rgba(255, 255, 255, .12) !important;
-}
+    #notification-dropdown a.block {
+        background: rgba(0,0,0,.25) !important;
+        border-top: 1px solid rgba(255,255,255,.12) !important;
+    }
 
-#notification-dropdown a.block:hover {
-    background: rgba(0, 0, 0, .35) !important;
-}
+        #notification-dropdown a.block:hover {
+            background: rgba(0,0,0,.35) !important;
+        }
 
-#notification-dropdown a.notification-item:hover {
-    background: rgba(0, 0, 0, .25) !important;
-}
+    #notification-dropdown a.notification-item:hover {
+        background: rgba(0,0,0,.25) !important;
+    }
 
 #notification-scroll-container .notification-item + .notification-item {
-    border-top: 1px solid rgba(255, 255, 255, .10) !important;
+    border-top: 1px solid rgba(255,255,255,.10) !important;
 }
 
-/* Notification Bell Button */
-#notification-bell-btn:hover,
-#notification-bell-btn:focus,
-#notification-bell-btn:focus-visible,
-button[data-dropdown-toggle="notification-dropdown"]:hover,
-button[data-dropdown-toggle="notification-dropdown"]:focus,
-button[data-dropdown-toggle="notification-dropdown"]:focus-visible {
-    background: #0b6b52 !important;
-    color: #fff !important;
-    box-shadow: none !important;
-    outline: none !important;
-}
-
-#notification-bell-btn:hover i,
-#notification-bell-btn:hover svg,
-button[data-dropdown-toggle="notification-dropdown"]:hover i {
-    color: #fff !important;
-}
-
-button[data-dropdown-toggle="notification-dropdown"],
-button[data-dropdown-toggle="notification-dropdown"] i,
-button[data-dropdown-toggle="notification-dropdown"] svg {
+/* زر جرس الإشعارات */
+#notification-bell-btn,
+button[data-dropdown-toggle="notification-dropdown"] {
     color: #fff !important;
     fill: #fff !important;
     opacity: 1 !important;
 }
 
-/* =========================
-   User Settings Dropdown
-   ========================= */
-#user-dropdown {
-    background: #0b6b52 !important;
-    border: 1px solid rgba(255, 255, 255, .25) !important;
-    box-shadow: 0 12px 24px rgba(0, 0, 0, .3) !important;
-    color: #fff !important;
-}
-
-#user-dropdown hr {
-    border-color: rgba(255, 255, 255, .20) !important;
-}
-
-#user-dropdown a {
-    color: #fff !important;
-}
-
-#user-dropdown a:hover {
-    background: rgba(0, 0, 0, .25) !important;
-}
-
-#user-menu-button,
-#user-menu-button i,
-#user-dropdown i {
-    color: #fff !important;
-    opacity: 1 !important;
-}
-
-/* User Menu Button */
-#user-menu-button:hover,
-#user-menu-button:focus,
-#user-menu-button:focus-visible {
-    background: #0b6b52 !important;
-    color: #fff !important;
-    box-shadow: none !important;
-    outline: none !important;
-}
-
-#user-menu-button:hover i {
-    color: #fff !important;
-}
-
-
-
-
-/* =============
-   Idara Badge 
-   ============= */
-.sf-idara-badge {
-    width: 100%;
-    padding: 8px 10px;
-    border-radius: 0.375rem;
-    border: 0px solid rgba(255,255,255,.35);
-    background: transparent;
-    color: #ffffff;
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 1.4;
-    text-align: center;
-    box-shadow: none;
-    letter-spacing: 0;
-    white-space: normal;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-}
-
-#logo-sidebar .sf-idara-badge {
-    border-color: rgba(255,255,255,.40);
-    background: rgba(255,255,255,.06);
-    border-radius: 0.375rem; 
-}
-
-
-
-/*==============
- notifications 
- ============== */
-:root {
-    --nd-shell: #053b2d;
-    --nd-shell-2: #042f26;
-    --nd-border: rgba(255,255,255,.18);
-    /* Header / Footer */
-    --nd-header: #0b6b52;
-    --nd-footer: #0b6b52;
-    --nd-list: rgba(255,255,255,.09);
-    --nd-card: rgba(255,255,255,.14);
-    --nd-card-hover: rgba(255,255,255,.16);
-    --nd-card-border: rgba(255,255,255,.22);
-    --nd-unread-bg: rgba(16,185,129,.24);
-    --nd-unread-border: rgba(16,185,129,.55);
-    --nd-unread-rail: rgba(16,185,129,.92);
-    --nd-text: rgba(255,255,255,.97);
-    --nd-muted: rgba(255,255,255,.82);
-    --nd-dim: rgba(255,255,255,.70);
-    --nd-ok: #22c55e;
-    --nd-danger: #ef4444;
-    --nd-warn: #f59e0b;
-    --nd-focus: rgba(255,255,255,.22);
-}
-
-.line-clamp-1, .line-clamp-2, .line-clamp-3, .line-clamp-4 {
-    display: -webkit-box !important;
-    -webkit-box-orient: vertical !important;
-    overflow: hidden !important;
-}
-
-.line-clamp-1 {
-    -webkit-line-clamp: 1 !important;
-}
-
-.line-clamp-2 {
-    -webkit-line-clamp: 2 !important;
-}
-
-.line-clamp-3 {
-    -webkit-line-clamp: 3 !important;
-}
-
-.line-clamp-4 {
-    -webkit-line-clamp: 4 !important;
-}
-
-/* Button */
-.notif-btn {
-    background: rgba(255,255,255,.06);
-    border: 1px solid rgba(255,255,255,.18);
-    backdrop-filter: blur(6px);
-}
-
-    .notif-btn:hover {
-        background: rgba(255,255,255,.11);
-        border-color: rgba(255,255,255,.26);
+    #notification-bell-btn i,
+    #notification-bell-btn svg,
+    button[data-dropdown-toggle="notification-dropdown"] i {
+        color: #fff !important;
     }
 
-/* Dropdown shell */
+    #notification-bell-btn:hover,
+    #notification-bell-btn:focus,
+    #notification-bell-btn:focus-visible,
+    button[data-dropdown-toggle="notification-dropdown"]:hover,
+    button[data-dropdown-toggle="notification-dropdown"]:focus,
+    button[data-dropdown-toggle="notification-dropdown"]:focus-visible {
+        background: #0b6b52 !important;
+        color: #fff !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+        #notification-bell-btn:hover i,
+        #notification-bell-btn:hover svg,
+        button[data-dropdown-toggle="notification-dropdown"]:hover i {
+            color: #fff !important;
+        }
+
+/* Dropdown Shell */
 #notification-dropdown.notif-dd {
     direction: rtl;
     background: linear-gradient(180deg, var(--nd-shell), var(--nd-shell-2));
@@ -930,7 +970,6 @@ button[data-dropdown-toggle="notification-dropdown"] svg {
     max-width: calc(100vw - 20px);
 }
 
-    /* Header */
     #notification-dropdown.notif-dd .notif-dd__header {
         background: radial-gradient(120% 140% at 50% 0%, rgba(255,255,255,.14) 0%, rgba(255,255,255,0) 60%), linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,.22)), var(--nd-header);
         border-bottom: 1px solid rgba(255,255,255,.20);
@@ -953,7 +992,7 @@ button[data-dropdown-toggle="notification-dropdown"] svg {
     font-weight: 800;
 }
 
-/* List */
+/* قائمة الإشعارات - سكروول */
 #notification-dropdown .notification-list {
     background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.09));
     max-height: 360px;
@@ -982,7 +1021,18 @@ button[data-dropdown-toggle="notification-dropdown"] svg {
             background-clip: padding-box;
         }
 
-/* Item (Card) */
+/* بطاقة الإشعار */
+.notif-btn {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.18);
+    backdrop-filter: blur(6px);
+}
+
+    .notif-btn:hover {
+        background: rgba(255,255,255,.11);
+        border-color: rgba(255,255,255,.26);
+    }
+
 .notif-item {
     display: flex;
     gap: 10px;
@@ -1015,7 +1065,6 @@ button[data-dropdown-toggle="notification-dropdown"] svg {
         min-width: 0;
     }
 
-/* Dot */
 .notif-dot {
     width: 10px;
     height: 10px;
@@ -1033,7 +1082,6 @@ button[data-dropdown-toggle="notification-dropdown"] svg {
     background: var(--nd-ok);
 }
 
-/* Title / Meta / Body */
 .notif-item__title {
     color: var(--nd-text);
     font-weight: 950;
@@ -1063,7 +1111,6 @@ button[data-dropdown-toggle="notification-dropdown"] svg {
     flex-shrink: 0;
 }
 
-/* Status badges */
 .notif-status {
     display: inline-flex;
     align-items: center;
@@ -1090,7 +1137,6 @@ button[data-dropdown-toggle="notification-dropdown"] svg {
     border-color: rgba(239,68,68,.48);
 }
 
-/* Empty */
 .notif-empty {
     background: rgba(255,255,255,.08);
     color: rgba(255,255,255,.90);
@@ -1103,7 +1149,7 @@ button[data-dropdown-toggle="notification-dropdown"] svg {
         color: rgba(255,255,255,.70);
     }
 
-/*  Footer  */
+/* Footer الإشعارات */
 #notification-dropdown.notif-dd .notif-dd__footer,
 #notification-dropdown.notif-dd a#show-all-notifications-btn.notif-dd__footer {
     background-color: transparent !important;
@@ -1121,40 +1167,110 @@ button[data-dropdown-toggle="notification-dropdown"] svg {
     #notification-dropdown.notif-dd a#show-all-notifications-btn.notif-dd__footer:hover {
         filter: brightness(1.06);
     }
-/*==============
-  End Notifications 
- ============== */
 
-
-/*.sf-admin-badge {
-    margin-top: 0.5rem;
-    padding: 6px 12px;
-    background: #dc2626;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 4px;
-    color: #ffffff;
-    font-size: 13px;
-    font-weight: 500;
-    text-align: center;
-    font-family: "Tajawal", sans-serif;
-    letter-spacing: 0.01em;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    width: 100%;
+/* Line Clamp */
+.line-clamp-1, .line-clamp-2, .line-clamp-3, .line-clamp-4 {
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
 }
 
-    .sf-admin-badge i {
-        font-size: 13px;
-        flex-shrink: 0;
-    }*/
+.line-clamp-1 {
+    -webkit-line-clamp: 1 !important;
+}
 
+.line-clamp-2 {
+    -webkit-line-clamp: 2 !important;
+}
+
+.line-clamp-3 {
+    -webkit-line-clamp: 3 !important;
+}
+
+.line-clamp-4 {
+    -webkit-line-clamp: 4 !important;
+}
+
+
+/* =========================
+   قائمة المستخدم (User Dropdown)
+   ========================= */
+#user-dropdown {
+    background: #0b6b52 !important;
+    border: 1px solid rgba(255,255,255,.25) !important;
+    box-shadow: 0 12px 24px rgba(0,0,0,.3) !important;
+    color: #fff !important;
+}
+
+    #user-dropdown hr {
+        border-color: rgba(255,255,255,.20) !important;
+    }
+
+    #user-dropdown a {
+        color: #fff !important;
+    }
+
+        #user-dropdown a:hover {
+            background: rgba(0,0,0,.25) !important;
+        }
+
+    #user-menu-button,
+    #user-menu-button i,
+    #user-dropdown i {
+        color: #fff !important;
+        opacity: 1 !important;
+    }
+
+        #user-menu-button:hover,
+        #user-menu-button:focus,
+        #user-menu-button:focus-visible {
+            background: #0b6b52 !important;
+            color: #fff !important;
+            box-shadow: none !important;
+            outline: none !important;
+        }
+
+            #user-menu-button:hover i {
+                color: #fff !important;
+            }
+
+
+/* =========================
+   شارة الإدارة (Idara Badge)
+   ========================= */
+.sf-idara-badge {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 0.375rem;
+    border: 0px solid rgba(255,255,255,.35);
+    background: transparent;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+    text-align: center;
+    box-shadow: none;
+    letter-spacing: 0;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+#logo-sidebar .sf-idara-badge {
+    border-color: rgba(255,255,255,.40);
+    background: rgba(255,255,255,.06);
+    border-radius: 0.375rem;
+}
+
+
+/* =========================
+   شارة المشرف (Admin Badge)
+   ========================= */
 .sf-admin-badge {
     margin-top: 0.5rem;
     padding: 7px 12px;
     background: #b91c1c;
-    border: 1px solid rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255,255,255,0.04);
     border-radius: 4px;
     color: #ffffff;
     font-size: 13px;
@@ -1178,36 +1294,100 @@ button[data-dropdown-toggle="notification-dropdown"] svg {
     }
 
 
-
-    /* password */
-.sf-header-action-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 12px;
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 4px;
-    color: #cbd5e1;
-    font-size: 13px;
-    font-family: "Tajawal", sans-serif;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+/* =========================
+   إخفاء أيقونة كلمة المرور الافتراضية في المتصفحات
+   ========================= */
+#current-password::-ms-reveal,
+#current-password::-ms-clear,
+#new-password::-ms-reveal,
+#new-password::-ms-clear,
+#confirm-password::-ms-reveal,
+#confirm-password::-ms-clear {
+    display: none !important;
 }
 
-    .sf-header-action-btn:hover {
-        background: rgba(255, 255, 255, 0.08);
-        border-color: rgba(255, 255, 255, 0.22);
-        color: #ffffff;
+
+/* =========================
+   الحركة السلسة للقائمة (Smooth Transition)
+   ========================= */
+@media (min-width: 1024px) {
+    #main-content,
+    #page-header,
+    #top-header {
+        transition: margin-right 280ms ease-out, right 280ms ease-out;
+    }
+}
+
+
+
+/*////////////////////////////////*/
+@keyframes pulse-border {
+    0%, 100% {
+        border-color: rgb(239 68 68);
     }
 
-    .sf-header-action-btn i {
-        font-size: 13px;
-        color: #94a3b8;
-        transition: color 120ms ease;
+    50% {
+        border-color: rgb(251 146 60);
+    }
+}
+
+.animate-pulse-border {
+    animation: pulse-border 2s ease-in-out infinite;
+}
+
+@keyframes bounce-slow {
+    0%, 100% {
+        transform: translateY(0);
     }
 
-    .sf-header-action-btn:hover i {
-        color: #e2e8f0;
+    50% {
+        transform: translateY(-5px);
     }
+}
+
+.animate-bounce-slow {
+    animation: bounce-slow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-slow {
+    0%, 100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.85;
+    }
+}
+
+.animate-pulse-slow {
+    animation: pulse-slow 3s ease-in-out infinite;
+}
+
+@keyframes shake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+
+    25% {
+        transform: translateX(-10px);
+    }
+
+    75% {
+        transform: translateX(10px);
+    }
+}
+
+.animate-shake {
+    animation: shake 0.5s ease-in-out;
+}
+
+body.modal-open {
+    overflow: hidden !important;
+}
+
+.force-disabled {
+    pointer-events: none !important;
+    opacity: 0.4 !important;
+    cursor: not-allowed !important;
+    filter: grayscale(50%) !important;
+}

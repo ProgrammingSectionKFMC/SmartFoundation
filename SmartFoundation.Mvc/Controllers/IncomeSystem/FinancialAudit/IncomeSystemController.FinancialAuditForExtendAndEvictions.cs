@@ -1284,6 +1284,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 ToggleDefaultOpen = true,
                 ShowToggleCount = false,
                 Selectable = true,
+                HeaderColor = "#1e3a8a", // تختار لون الهيدر بكيفك
 
                 Toolbar = new TableToolbarConfig
                 {
@@ -1601,6 +1602,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 ToggleDefaultOpen = true,
                 ShowToggleCount = false,
                 Selectable = false,
+                HeaderColor = "#92400e", // تختار لون الهيدر بكيفك
 
                 Toolbar = new TableToolbarConfig
                 {

@@ -156,13 +156,21 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
 
         public bool ShowColumnVisibility { get; set; } = false;
 
+        // ===== Header Color =====
+        public string? HeaderColor { get; set; } = null;
+
         public List<ProfileBadge> ProfileBadges { get; set; } = new();
         public List<TableStyleRule> StyleRules { get; set; } = new();
+
+        
     }
+
 
     public class ProfileBadge
     {
         public string Field { get; set; } = "";
         public string Label { get; set; } = "";
     }
+
+
 }

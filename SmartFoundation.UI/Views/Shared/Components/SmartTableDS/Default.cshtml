@@ -79,7 +79,8 @@
         tabDefaultActive = Model.TabDefaultActive,
         showTabCount = Model.ShowTabCount,
         tabCount = Model.TabCount,
-        tabOrder = Model.TabOrder
+        tabOrder = Model.TabOrder,
+        headerColor = Model.HeaderColor ?? ""
     };
 }
 
@@ -135,7 +136,10 @@
             {
                 <div class="toolbar">
 
-                    <div class="toolbar-search" x-show="searchable">
+                    <div class="toolbar-search" x-show="searchable" style="position: relative;">
+                        <i class="fa-solid fa-magnifying-glass"
+                           style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+                        color: #9aaba3; font-size: 13px; pointer-events: none; z-index: 1;"></i>
                         <input type="search"
                                class="sf-input search-input"
                                name=""
@@ -146,7 +150,8 @@
                                autocomplete="off"
                                autocorrect="off"
                                autocapitalize="off"
-                               spellcheck="false" />
+                               spellcheck="false"
+                               style="padding-right: 34px;" />
                     </div>
 
                     <div class="toolbar-actions">
@@ -377,10 +382,12 @@
                 <table class="sf-table">
                     <thead x-show="showHeader" class="table-head">
                         <tr>
-                            <th x-show="selectable" class="th-cell"></th>
+                            <th x-show="selectable" class="th-cell"
+                                :style="headerColor ? `background-color:${headerColor}` : ''"></th>
 
                             <template x-for="col in visibleColumns()" :key="col.field">
                                 <th class="th-cell"
+                                    :style="`${col.width ? 'width:'+col.width+';' : ''}${headerColor ? 'background-color:'+headerColor : ''}`"
                                     :style="col.width ? `width:${col.width}` : ''"
                                     :class="col.sortable ? 'cursor-pointer' : ''"
                                     x-on:click="toggleSort(col)">
