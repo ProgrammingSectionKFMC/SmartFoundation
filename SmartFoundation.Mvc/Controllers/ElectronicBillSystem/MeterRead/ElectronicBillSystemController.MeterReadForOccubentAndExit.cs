@@ -30,8 +30,11 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
             residentInfoID_ = string.IsNullOrWhiteSpace(residentInfoID_) ? null : residentInfoID_.Trim();
 
             bool ready = false;
+          
 
-            ready = !string.IsNullOrWhiteSpace(residentInfoID_);
+            ready = !string.IsNullOrWhiteSpace(residentInfoID_) && residentInfoID_ != "-1";
+
+           
 
 
             ControllerName = nameof(ElectronicBillSystem);
@@ -53,6 +56,15 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
             //  تقسيم الداتا سيت للجدول الأول + جداول أخرى
             SplitDataSet(ds);
+
+            if (dt2 != null && dt2.Rows.Count > 0)
+            {
+                TempData["JobsAvaliable"] = $"يوجد عدد  {dt2.Rows.Count} ساكنين مطلوب انهاء القراءات الخاصة بهم";
+            }
+            else
+            {
+                TempData["NoJobs"] = "لا توجد قراءات مطلوبة";
+            }
 
             //  التحقق من الصلاحيات
             if (permissionTable is null || permissionTable.Rows.Count == 0)
@@ -736,7 +748,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     ShowExportCsv = false,
                     ShowExportExcel = false,
                     ShowDelete = canUpdateMeterReadForOccubentAndExit,
-                    ShowEdit = canMeterReadForOccubentAndExit,
+                   
                     ShowAdd = canMeterReadForOccubentAndExit,
                     ShowPrint1 = false,
                     ShowPrint = false,
@@ -773,57 +785,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     },
 
 
-                    Edit = new TableAction
-                    {
-                        Label = "قراءة عداد",
-                        Icon = "fa fa-edit",
-                        Color = "success",
-                        //Placement = TableActionPlacement.ActionsMenu, //   أي زر بعد ما نسويه ونبيه يظهر في الاجراءات نحط هذا السطر فقط عشان ما يصير زحمة في التيبل اكشن
-                        IsEdit = true,
-                        OpenModal = true,
-                        //ModalTitle = "رسالة تحذيرية",
-                        ModalTitle = "قراءة عداد",
-                        ModalMessage = "تأكد من قراءة العداد بشكل صحيح لايمكن التراجع عن هذا الاجراء بعد التسكين النهائي",
-                        ModalMessageClass = "bg-red-50 text-red-700",
-                        ModalMessageIcon = "fa-solid fa-triangle-exclamation",
-                        OpenForm = new FormConfig
-                        {
-                            FormId = "employeeDeleteForm",
-                            Title = "تأكيد قراءة عداد",
-                            Method = "post",
-                            ActionUrl = "/crud/delete",
-                            Buttons = new List<FormButtonConfig>
-                            {
-                                new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "success", Icon = "fa fa-check" },
-                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
-                            },
-                            Fields = MeterReadFields
-                        },
-                        RequireSelection = true,
-                        MinSelection = 1,
-                        MaxSelection = 1,
-                        Meta = metaB
-                        ,
-                        
-
-                        Guards = new TableActionGuards
-                        {
-                                AppliesTo = "any",
-                                DisableWhenAny = new List<TableActionRule>
-                            {
-
-                                  new TableActionRule
-                                {
-                                    Field = "LastActionTypeID",
-                                    Op = "notin",
-                                    Value = "46,59",
-                                    Message = "تم ارسال طلب قراءة العدادات مسبقا",
-                                    Priority = 3
-                                }
-
-                            }
-                        }
-                    },
+              
 
 
                     Delete = new TableAction
