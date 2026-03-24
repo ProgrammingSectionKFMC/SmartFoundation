@@ -6659,46 +6659,7 @@ body {
 }
 /* ================== end print modal page ==================== */
 
-/* ================== Column reorder styles ================== */
 
-/*.sf-col-draggable {
-    cursor: grab;
-    user-select: none;
-    -webkit-user-select: none;
-}
-
-    .sf-col-draggable:active {
-        cursor: grabbing;
-    }
-
-.sf-col-drag-over {
-    position: relative;
-}
-
-    .sf-col-drag-over::after {
-        content: "";
-        position: absolute;
-        inset: 4px;
-        border: 2px dashed rgba(255, 255, 255, 0.95);
-        border-radius: 6px;
-        pointer-events: none;
-        z-index: 2;
-    }
-
-    .sf-col-drag-over::before {
-        content: "";
-        position: absolute;
-        top: 6px;
-        bottom: 6px;
-        right: 6px;
-        width: 4px;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.95);
-        pointer-events: none;
-        z-index: 2;
-    }*/
-
-/* ================== End column reorder styles ================== */
 
 /* ================== Column reorder styles ================== */
 
@@ -6740,7 +6701,6 @@ body {
         border-radius: 4px;
     }
 
-/* ghost اللي يتحرك وقت السحب */
 .sf-col-ghost {
     position: fixed;
     pointer-events: none;
@@ -6773,7 +6733,6 @@ body {
     max-width: none;
 }
 
-/* مهم: لا تخفي العمود الأصلي أثناء السحب */
 .sf-col-hidden-source {
     visibility: visible !important;
     opacity: 1 !important;
