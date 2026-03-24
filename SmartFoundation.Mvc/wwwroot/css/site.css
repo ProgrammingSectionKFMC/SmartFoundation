@@ -1148,12 +1148,6 @@ body {
       background-color: color-mix(in oklab, var(--color-black) 20%, transparent);
     }
   }
-  .bg-black\/50 {
-    background-color: color-mix(in srgb, #000 50%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-black) 50%, transparent);
-    }
-  }
   .bg-black\/90 {
     background-color: color-mix(in srgb, #000 90%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
@@ -1940,6 +1934,11 @@ body {
   }
   .transition {
     transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
+    transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+    transition-duration: var(--tw-duration, var(--default-transition-duration));
+  }
+  .transition-\[width\,transform\] {
+    transition-property: width,transform;
     transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
     transition-duration: var(--tw-duration, var(--default-transition-duration));
   }
@@ -11531,7 +11530,6 @@ input[readonly], textarea[readonly] {
   text-align: center;
   white-space: nowrap;
   vertical-align: middle;
-  border-bottom: 1px solid #025c42;
   border-left: 1px solid rgba(255, 255, 255, 0.10);
   border-right: none;
   letter-spacing: 0.01em;
@@ -12062,6 +12060,7 @@ input[readonly], textarea[readonly] {
   background: transparent;
   border: 0;
   border-radius: 0;
+  position: relative;
 }
 @media (max-width: 767.98px) {
   .toolbar-search {
@@ -12080,7 +12079,6 @@ input[readonly], textarea[readonly] {
   border-width: 1px;
   border-color: var(--color-gray-300);
   background-color: var(--color-white);
-  padding-inline: calc(var(--spacing) * 3);
   font-size: var(--text-sm);
   line-height: var(--tw-leading, var(--text-sm--line-height));
   color: var(--color-gray-700);
@@ -12097,11 +12095,26 @@ input[readonly], textarea[readonly] {
   border-radius: 3px;
   width: 100% !important;
   min-width: 220px;
-  height: 36px;
+  height: 32px;
   background: #ffffff !important;
+  direction: rtl;
+  padding-right: 34px !important;
+  padding-left: 12px !important;
+  color-scheme: light;
 }
 .search-input::placeholder {
   color: #9aaba3 !important;
+  text-align: right;
+}
+.search-input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Cpath d='M2 2l10 10M12 2L2 12' stroke='%234b5563' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: contain;
+  cursor: pointer;
 }
 .select-sm {
   width: 72px;
@@ -16106,6 +16119,71 @@ html, body {
     padding: 12px;
     background: #ffffff;
   }
+}
+.sf-col-draggable {
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.sf-col-draggable:active {
+  cursor: grabbing;
+}
+.sf-col-drag-over {
+  position: relative;
+}
+.sf-col-drag-over::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 2px dashed rgba(255, 255, 255, 0.95);
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 2;
+}
+.sf-col-dragging {
+  position: relative;
+  z-index: 3;
+}
+.sf-col-dragging::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
+  pointer-events: none;
+  border-radius: 4px;
+}
+.sf-col-ghost {
+  position: fixed;
+  pointer-events: none;
+  z-index: 999999;
+  overflow: visible;
+  background: transparent;
+  box-shadow: none;
+}
+.sf-col-ghost__inner {
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  font-weight: 700;
+  font-size: 15px;
+  text-align: center;
+  white-space: nowrap;
+  width: max-content;
+  max-width: none;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.18);
+}
+.sf-col-ghost__title {
+  display: block;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  max-width: none;
+}
+.sf-col-hidden-source {
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 @property --tw-translate-x {
   syntax: "*";

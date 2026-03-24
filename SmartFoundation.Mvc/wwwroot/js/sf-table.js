@@ -104,7 +104,14 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             filterOptionsCache: {},   // key -> [{value,text}]
             filterOptionsLoading: {}, // key -> true/false (اختياري)
             showColumnVisibility: (cfg.showColumnVisibility === true),
-
+            enableColumnReorder: !!cfg.enableColumnReorder,
+            dragColField: null,
+            dragOverColField: null,
+            draggingColField: null,
+            ghostEl: null,
+            ghostOffsetX: 0,
+            ghostOffsetY: 0,
+            boundGhostMove: null,
 
 
             // تجهيز القيم الافتراضية للفلاتر لكل عمود
@@ -754,6 +761,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             },
             // Client-side mode support (new)
             clientSideMode: !!cfg.clientSideMode,
+            headerColor: cfg.headerColor || "",
             initialRows: Array.isArray(cfg.rows) ? cfg.rows : [],
             // Selection
             selectable: !!cfg.selectable,
@@ -1044,56 +1052,13 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
 
 
-            // ===== Initialization =====
-            //init() {
-            //    this.colVisLoad();
-            //    this.loadStoredPreferences();
-            //    this.initColumnFilters();
-            //    if (this.showFilters) {
-            //        this.initFilterSelect2();
-            //    }
-
-            //    this.bindPrintListenerOnce();
-
-            //    this.load();
-            //    this.setupEventListeners();
-
-            //    if (this.showFilters) this.preloadSelectFilters();
-
-
-
-
-
-            //    if (!this.enablePagination) {
-            //        this.page = 1;
-            //        this.pages = 1;
-
-
-            //        this.pageSize = (this.rows && this.rows.length)
-            //            ? this.rows.length
-            //            : this.pageSize;
-            //    }
-
-
-            //    this.load();
-            //    this.setupEventListeners();
-
-            //    this.$nextTick(() => {
-            //        if (this.filtersEnabled && this.filtersRow && this.showFilters) {
-            //            this.initFilterSelect2();
-            //        }
-            //    });
-
-            //},
 
             init() {
                 this.colVisLoad();
                 this.loadStoredPreferences();
                 this.initColumnFilters();
 
-                //if (this.showFilters) {
-                //    this.initFilterSelect2();
-                //}
+                
 
                 this.bindPrintListenerOnce();
 
@@ -1132,7 +1097,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         if (prefs.columnFilters && typeof prefs.columnFilters === "object") {
                             this.columnFilters = prefs.columnFilters;
 
-                            // ✅ normalize values (لا تسمح بأي object/array يكسر الفلاتر)
+                            //  normalize values (لا تسمح بأي object/array يكسر الفلاتر)
                             for (const k of Object.keys(this.columnFilters)) {
                                 const v = this.columnFilters[k];
 
@@ -1157,7 +1122,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             }
                         }
 
-                        // ✅ أكمل أي مفاتيح ناقصة بدون ما يضيف فلاتر
+                        //  أكمل أي مفاتيح ناقصة بدون ما يضيف فلاتر
                         this.initColumnFilters();
 
 
@@ -1207,41 +1172,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 }
             },
 
-            //initSelect2InModal(modalEl) {
-            //    if (!window.jQuery || !jQuery.fn || !jQuery.fn.select2) return;
-
-            //    const $modal = jQuery(modalEl);
-
-            //    // 1) destroy أي تهيئة قديمة
-            //    $modal.find("select.js-select2").each(function () {
-            //        const $sel = jQuery(this);
-            //        if ($sel.hasClass("select2-hidden-accessible")) {
-            //            $sel.select2("destroy");
-            //        }
-            //    });
-            //    // 2) init
-            //    $modal.find("select.js-select2").each(function () {
-            //        const $sel = jQuery(this);
-
-            //        const minResults = $sel.data("s2-min-results"); // ممكن undefined
-            //        const ph =
-            //            $sel.data("s2-placeholder") ||
-            //            $sel.find('option[value=""]').text() ||
-            //            "الرجاء الاختيار";
-
-            //        $sel.select2({
-            //            width: "100%",
-            //            dir: "rtl",
-            //            dropdownParent: jQuery(document.body), //  يرسم dropdown فوق المودال
-            //            placeholder: ph,
-            //            allowClear: false,
-            //            minimumResultsForSearch:
-            //                (minResults === undefined || minResults === null) ? 0 : Number(minResults)
-            //        });
-
-            //    });
-            //},
-
+           
 
             initSelect2InModal(modalEl) {
                 if (!window.jQuery || !jQuery.fn || !jQuery.fn.select2) return;
@@ -1321,15 +1252,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         return;
                     }
 
-                    //  الضغط على الخلفية (خارج الصندوق) يغلق المودال
-                    //const backdrop = e.target.closest('.sf-modal-backdrop');
-                    //if (backdrop) {
-                    //    const inside = e.target.closest('.sf-modal');
-                    //    if (!inside) {
-                    //        e.preventDefault();
-                    //        api.closeModal();
-                    //    }
-                    //}
+                   
                 });
 
                 // depends dropdowns (listener واحد فقط)
@@ -1579,10 +1502,190 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             //    return this.columns.filter(col => col.visible !== false);
             //},
             visibleColumns() {
-                const cols = Array.isArray(this.columns) ? this.columns : [];  //اليوم
+                const cols = Array.isArray(this.columns) ? this.columns : [];
                 return cols.filter(c => this.colVisIsShown(c));
             },
 
+            getColumnIndexByField(field) {
+                return (this.columns || []).findIndex(c => String(c?.field || "") === String(field || ""));
+            },
+
+            onColumnDragStart(col, e) {
+                if (!this.enableColumnReorder || !col?.field) return;
+
+                this.dragColField = String(col.field);
+                this.dragOverColField = null;
+                this.draggingColField = String(col.field);
+
+                try {
+                    e?.stopPropagation?.();
+                } catch { }
+
+                if (e?.dataTransfer) {
+                    e.dataTransfer.effectAllowed = "move";
+                    e.dataTransfer.dropEffect = "move";
+                    e.dataTransfer.setData("text/plain", String(col.field));
+                }
+
+                this.createDragGhost(e, col);
+            },
+
+            onColumnDragOver(col, e) {
+                if (!this.enableColumnReorder || !this.dragColField || !col?.field) return;
+
+                const overField = String(col.field);
+                const dragField = String(this.dragColField);
+
+                if (!overField || overField === dragField) return;
+
+                e.preventDefault();
+
+                try {
+                    e?.stopPropagation?.();
+                } catch { }
+
+                this.dragOverColField = overField;
+
+                if (e?.dataTransfer) {
+                    e.dataTransfer.dropEffect = "move";
+                }
+            },
+
+            onColumnDrop(targetCol, e) {
+                if (!this.enableColumnReorder || !this.dragColField || !targetCol?.field) return;
+
+                e.preventDefault();
+
+                try {
+                    e?.stopPropagation?.();
+                } catch { }
+
+                const fromField = String(this.dragColField || "");
+                const toField = String(targetCol.field || "");
+
+                if (!fromField || !toField || fromField === toField) {
+                    this.dragColField = null;
+                    this.dragOverColField = null;
+                    this.draggingColField = null;
+                    return;
+                }
+
+                const currentCols = Array.isArray(this.columns) ? [...this.columns] : [];
+                const fromIndex = currentCols.findIndex(c => String(c?.field || "") === fromField);
+                const toIndex = currentCols.findIndex(c => String(c?.field || "") === toField);
+
+                if (fromIndex < 0 || toIndex < 0) {
+                    this.dragColField = null;
+                    this.dragOverColField = null;
+                    this.draggingColField = null;
+                    return;
+                }
+
+                const movedCol = currentCols[fromIndex];
+                currentCols.splice(fromIndex, 1);
+                currentCols.splice(toIndex, 0, movedCol);
+
+                this.columns = [...currentCols];
+
+                this.dragColField = null;
+                this.dragOverColField = null;
+                this.draggingColField = null;
+                this.removeDragGhost();
+
+                this.$nextTick(() => {
+                    this.savePreferences?.();
+                });
+            },
+
+            onColumnDragEnd() {
+                this.dragColField = null;
+                this.dragOverColField = null;
+                this.draggingColField = null;
+                this.removeDragGhost();
+            },
+
+            createDragGhost(e, col) {
+                const field = String(col?.field || "");
+                if (!field) return;
+
+                const th = e.target.closest("th");
+                if (!th) return;
+
+                const label =
+                    String(col?.label || col?.title || col?.header || col?.field || "").trim();
+
+                const rect = th.getBoundingClientRect();
+                const thStyle = window.getComputedStyle(th);
+                const bgColor = thStyle.backgroundColor;
+                const textColor = thStyle.color;
+                const borderRadius = "6px";
+                const ghost = document.createElement("div");
+                ghost.className = "sf-col-ghost";
+                ghost.style.position = "fixed";
+                ghost.style.pointerEvents = "none";
+                ghost.style.zIndex = "999999";
+                ghost.style.left = rect.left + "px";
+                ghost.style.top = rect.top + "px";
+                ghost.style.background = "transparent";
+                ghost.style.borderRadius = borderRadius;
+
+                ghost.innerHTML = `
+        <div class="sf-col-ghost__inner">
+            <span class="sf-col-ghost__title">${this.escapeHtml(label)}</span>
+        </div>
+    `;
+
+                const ghostInner = ghost.querySelector(".sf-col-ghost__inner");
+                if (ghostInner) {
+                    ghostInner.style.background = bgColor;
+                    ghostInner.style.color = textColor;
+                    ghostInner.style.borderRadius = borderRadius;
+                    ghostInner.style.minWidth = rect.width + "px";
+                    ghostInner.style.width = "max-content";
+                    ghostInner.style.maxWidth = "none";
+                }
+
+                document.body.appendChild(ghost);
+
+                this.ghostEl = ghost;
+                this.ghostOffsetX = e.clientX - rect.left;
+                this.ghostOffsetY = e.clientY - rect.top;
+
+                if (e?.dataTransfer) {
+                    const dragImg = document.createElement("div");
+                    dragImg.style.position = "fixed";
+                    dragImg.style.top = "-9999px";
+                    dragImg.style.left = "-9999px";
+                    dragImg.style.width = "1px";
+                    dragImg.style.height = "1px";
+                    dragImg.style.opacity = "0";
+                    document.body.appendChild(dragImg);
+                    e.dataTransfer.setDragImage(dragImg, 0, 0);
+
+                    setTimeout(() => dragImg.remove(), 0);
+                }
+
+                this.boundGhostMove = (ev) => this.moveDragGhost(ev);
+                document.addEventListener("dragover", this.boundGhostMove);
+            },
+            moveDragGhost(e) {
+                if (!this.ghostEl) return;
+
+                this.ghostEl.style.left = (e.clientX - this.ghostOffsetX) + 'px';
+                this.ghostEl.style.top = (e.clientY - this.ghostOffsetY) + 'px';
+            },
+
+            removeDragGhost() {
+                if (this.ghostEl) {
+                    this.ghostEl.remove();
+                    this.ghostEl = null;
+                }
+
+                if (this.boundGhostMove) {
+                    document.removeEventListener('dragover', this.boundGhostMove);
+                    this.boundGhostMove = null;
+                }
+            },
 
             toggleColumnVisibility(col) {
                 col.visible = col.visible === false;
@@ -1601,12 +1704,11 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                 this.page = 1;
                 if (this.serverPaging) {
-                    this.load();                //  سيرفر سايد
+                    this.load();
                 } else {
                     this.applyFiltersAndSort();
                 }
             },
-
 
 
             // ===== Selection Management =====
@@ -6058,36 +6160,88 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             },
 
 
+            //showToast(message, type = 'info') {
+            //    const toast = document.createElement('div');
+            //    toast.textContent = message;
+            //    Object.assign(toast.style, {
+            //        position: 'fixed',
+            //        top: '20px',
+            //        left: '50%',
+            //        transform: 'translateX(-50%)',
+            //        padding: '0.7rem 2rem',
+            //        borderRadius: '0.5rem',
+            //        color: 'white',
+            //        backgroundColor:
+            //            type === 'error' ? '#EF4444' :
+            //                type === 'success' ? '#16A34A' :
+            //                    '#3B82F6',
+            //        zIndex: '10000',
+            //        fontSize: '1rem',
+            //        textAlign: 'center',
+            //        maxWidth: '90%',
+            //        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+            //    });
+
+            //    document.body.appendChild(toast);
+
+            //    setTimeout(() => {
+            //        toast.remove();
+            //    }, 3000);
+            //},
+
             showToast(message, type = 'info') {
                 const toast = document.createElement('div');
-                toast.textContent = message;
+
+                const icon =
+                    type === 'error'
+                        ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                 <path d="M6 6L18 18M18 6L6 18" stroke="white" stroke-width="2" stroke-linecap="round"/>
+               </svg>`
+                        : type === 'success'
+                            ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                     <path d="M5 13L9 17L19 7" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                   </svg>`
+                            : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                     <circle cx="12" cy="12" r="10" stroke="white" stroke-width="2"/>
+                     <path d="M12 8V12" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                     <circle cx="12" cy="16" r="1" fill="white"/>
+                   </svg>`;
+
+                toast.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;">
+            ${icon}
+            <span>${message}</span>
+        </div>
+    `;
+
                 Object.assign(toast.style, {
                     position: 'fixed',
-                    top: '20px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    padding: '0.7rem 2rem',
-                    borderRadius: '0.5rem',
+                    top: '10px',
+                    left: '20px',
+                    padding: '0.65rem 1.6rem',
+                    borderRadius: '6px',
                     color: 'white',
-                    backgroundColor:
-                        type === 'error' ? '#EF4444' :
-                            type === 'success' ? '#16A34A' :
-                                '#3B82F6',
-                    zIndex: '10000',
-                    fontSize: '1rem',
-                    textAlign: 'center',
-                    maxWidth: '90%',
-                    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+                    background:
+                        type === 'error' ? 'linear-gradient(135deg,#ef4444,#dc2626)' :
+                            type === 'success' ? 'linear-gradient(135deg,#16a34a,#15803d)' :
+                                'linear-gradient(135deg,#3b82f6,#2563eb)',
+                    zIndex: '99999',
+                    fontSize: '0.95rem',
+                    fontWeight: '500',
+                    boxShadow: '0 6px 18px rgba(0,0,0,0.2)',
+                    backdropFilter: 'blur(6px)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    direction: 'rtl'
                 });
 
                 document.body.appendChild(toast);
 
                 setTimeout(() => {
-                    toast.remove();
+                    toast.style.opacity = '0';
+                    toast.style.transition = '0.3s';
+                    setTimeout(() => toast.remove(), 300);
                 }, 3000);
             },
-
-
 
             // ===== Advanced Features =====
             toggleFullscreen() {
