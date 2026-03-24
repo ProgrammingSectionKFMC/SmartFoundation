@@ -6160,36 +6160,88 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             },
 
 
+            //showToast(message, type = 'info') {
+            //    const toast = document.createElement('div');
+            //    toast.textContent = message;
+            //    Object.assign(toast.style, {
+            //        position: 'fixed',
+            //        top: '20px',
+            //        left: '50%',
+            //        transform: 'translateX(-50%)',
+            //        padding: '0.7rem 2rem',
+            //        borderRadius: '0.5rem',
+            //        color: 'white',
+            //        backgroundColor:
+            //            type === 'error' ? '#EF4444' :
+            //                type === 'success' ? '#16A34A' :
+            //                    '#3B82F6',
+            //        zIndex: '10000',
+            //        fontSize: '1rem',
+            //        textAlign: 'center',
+            //        maxWidth: '90%',
+            //        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+            //    });
+
+            //    document.body.appendChild(toast);
+
+            //    setTimeout(() => {
+            //        toast.remove();
+            //    }, 3000);
+            //},
+
             showToast(message, type = 'info') {
                 const toast = document.createElement('div');
-                toast.textContent = message;
+
+                const icon =
+                    type === 'error'
+                        ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                 <path d="M6 6L18 18M18 6L6 18" stroke="white" stroke-width="2" stroke-linecap="round"/>
+               </svg>`
+                        : type === 'success'
+                            ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                     <path d="M5 13L9 17L19 7" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                   </svg>`
+                            : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                     <circle cx="12" cy="12" r="10" stroke="white" stroke-width="2"/>
+                     <path d="M12 8V12" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                     <circle cx="12" cy="16" r="1" fill="white"/>
+                   </svg>`;
+
+                toast.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;">
+            ${icon}
+            <span>${message}</span>
+        </div>
+    `;
+
                 Object.assign(toast.style, {
                     position: 'fixed',
-                    top: '20px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    padding: '0.7rem 2rem',
-                    borderRadius: '0.5rem',
+                    top: '10px',
+                    left: '20px',
+                    padding: '0.65rem 1.6rem',
+                    borderRadius: '6px',
                     color: 'white',
-                    backgroundColor:
-                        type === 'error' ? '#EF4444' :
-                            type === 'success' ? '#16A34A' :
-                                '#3B82F6',
-                    zIndex: '10000',
-                    fontSize: '1rem',
-                    textAlign: 'center',
-                    maxWidth: '90%',
-                    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+                    background:
+                        type === 'error' ? 'linear-gradient(135deg,#ef4444,#dc2626)' :
+                            type === 'success' ? 'linear-gradient(135deg,#16a34a,#15803d)' :
+                                'linear-gradient(135deg,#3b82f6,#2563eb)',
+                    zIndex: '99999',
+                    fontSize: '0.95rem',
+                    fontWeight: '500',
+                    boxShadow: '0 6px 18px rgba(0,0,0,0.2)',
+                    backdropFilter: 'blur(6px)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    direction: 'rtl'
                 });
 
                 document.body.appendChild(toast);
 
                 setTimeout(() => {
-                    toast.remove();
+                    toast.style.opacity = '0';
+                    toast.style.transition = '0.3s';
+                    setTimeout(() => toast.remove(), 300);
                 }, 3000);
             },
-
-
 
             // ===== Advanced Features =====
             toggleFullscreen() {
