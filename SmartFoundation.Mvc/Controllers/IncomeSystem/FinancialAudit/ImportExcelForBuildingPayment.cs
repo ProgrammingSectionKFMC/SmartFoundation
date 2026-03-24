@@ -569,6 +569,8 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 ShowFilter = false,
                 FilterRow = true,
                 ShowColumnVisibility = true,
+                
+
                 Selectable = false,
                 //RenderAsToggle = true,
                 //ToggleLabel = "استيراد Excel جديد",
@@ -654,7 +656,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             var extraMetaAutoOpen = new Dictionary<string, object?>
             {
                 ["extraSlotKey"] = "m1",
-                ["extraTitle"] = "بيانات المسير",
+                //["extraTitle"] = "بيانات المسير",
                 ["useRowExtra"] = true,
                 ["lazyExtra"] = true,
                 ["extraEndpoint"] = "/crud/extradataload",
@@ -721,6 +723,8 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 //ToggleIcon = "fa-solid fa-newspaper",
                 //ToggleDefaultOpen = true,
                 //ShowToggleCount = false,
+                EnableColumnReorder = true,// الافتراضي تحريك الاعمدة شغال 
+                
 
                 RenderMode = SmartTableRenderMode.Tab,
                 RenderAsToggle = false,

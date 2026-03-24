@@ -606,7 +606,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 FilterRow = true,
                 FilterDebounce = 250,
                 ShowColumnVisibility=true,
-                
+                EnableColumnReorder = true, // الافتراضي تحريك الاعمدة شغال 
 
                 Toolbar = new TableToolbarConfig
                 {

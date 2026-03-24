@@ -46,16 +46,16 @@
                 </button>
 
 
-                 <button id="toggle-sidebar"
-                    type="button"
-                    class="sf-sidebar-toggle"
-                    aria-label="Toggle sidebar">
-                <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd"
-                          d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-                          clip-rule="evenodd"></path>
-                </svg>
-            </button> 
+                <button id="toggle-sidebar"
+                        type="button"
+                        class="sf-sidebar-toggle"
+                        aria-label="Toggle sidebar">
+                    <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                              d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+                              clip-rule="evenodd"></path>
+                    </svg>
+                </button>
             </div>
 
 
@@ -183,6 +183,25 @@
 </div>
 
 
+<script>
+    (function () {
+        const savedSidebarState = localStorage.getItem('sidebarState');
+        const body = document.body;
+
+        if (!body) return;
+
+        if (window.innerWidth >= 1024) {
+            if (savedSidebarState === 'sidebar-collapsed') {
+                body.classList.add('sidebar-collapsed');
+                body.classList.remove('sidebar-pinned', 'with-sidebar-open');
+            } else {
+                body.classList.add('sidebar-pinned');
+                body.classList.remove('sidebar-collapsed', 'with-sidebar-open');
+            }
+        }
+    })();
+</script>
+
 <aside id="logo-sidebar"
        data-drawer-placement="right"
        data-drawer-backdrop="true"
@@ -221,8 +240,8 @@
                     }
 
                     <div class="mx-auto mb-3 flex h-16 w-16
-                items-center justify-center overflow-hidden rounded-full bg-white/10
-                ring-1 ring-white/20">
+                        items-center justify-center overflow-hidden rounded-full bg-white/10
+                        ring-1 ring-white/20">
                         @if (hasPhoto)
                         {
                             <img src="data:image/jpeg;base64,@photo"
@@ -248,12 +267,12 @@
                     </div>
 
 
-                   @*  <div class="mt-0.5 text-base font-semibold text-emerald-300">
+                    @*  <div class="mt-0.5 text-base font-semibold text-emerald-300">
                         @(sessionGeneralNo?.ToString() ?? "غير معروف")
                     </div> *@
 
                     @if (!string.IsNullOrWhiteSpace(sessionAdminTypeID) &&
-                                        (sessionAdminTypeID == "1" || sessionAdminTypeID == "2"))
+                                                                                (sessionAdminTypeID == "1" || sessionAdminTypeID == "2"))
                     {
                         
                         @* <div class="border-white-300 mt-2 rounded-md border bg-red-700 px-3 py-1.5 text-center text-sm font-medium text-white shadow-sm">
@@ -281,13 +300,30 @@
         // ================================================================
 
         const menuData = @Html.Raw(JsonSerializer.Serialize(
-                                                Model ?? new List<MenuItem>(),
-                                                new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping }
-                                ))
+                                                                                                                                                                                                Model ?? new List<MenuItem>(),
+                                                                                                                                                                                                new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping }
+                                                                                                                                ))
 
         console.log("Menu data:", menuData);
 
-        const currentPath = window.location.pathname.toLowerCase();
+        // const currentPath = window.location.pathname.toLowerCase();
+            function normalizePath(path) {
+        if (!path) return "/";
+
+        path = path.split("?")[0].trim().toLowerCase();
+
+        if (path !== "/" && path.endsWith("/")) {
+            path = path.slice(0, -1);
+        }
+
+        if (path === "" || path === "/home" || path === "/home/index") {
+            return "/home";
+        }
+
+        return path;
+    }
+
+    const currentPath = normalizePath(window.location.pathname);
 
         function cleanMenuLink(link) {
             if (!link || typeof link !== "string") return "";
@@ -346,7 +382,8 @@
                 }
             }
 
-            const isActive = isClickableLink && currentPath === itemLink.toLowerCase();
+            // const isActive = isClickableLink && currentPath === itemLink.toLowerCase();
+            const isActive = isClickableLink && normalizePath(currentPath) === normalizePath(itemLink);
 
             if (isActive || hasActiveChildRecursive(child)) {
                 return true;
@@ -395,7 +432,8 @@
                 }
             }
 
-            const isActive = isClickableLink && currentPath === itemLink.toLowerCase();
+            // const isActive = isClickableLink && currentPath === itemLink.toLowerCase();
+            const isActive = isClickableLink && normalizePath(currentPath) === normalizePath(itemLink);
             const activeClass = isActive ? " bg-slate-700 text-slate-50" : "";
 
             const iconHtml =
@@ -440,7 +478,7 @@
 
         
             item.Children.forEach((child, idx) => {
-                // الخط الفاصل بين القوائم الفرعية 
+                // الخط الفاصل بين القوائم الفرعية
                    html += `<li>${idx === 0 ? "" : '<div class="menu-sep sm"></div>'}${buildMenuItem(child, level + 1)}</li>`;
 
            });
@@ -502,18 +540,31 @@
             return html;
         }
 
+    //             function setActiveSidebar(url) {
+    //     const path = (url || "").split("?")[0].toLowerCase();
+
+    //     document.querySelectorAll("a.sidebar-link").forEach(a => {
+    //         a.classList.remove("bg-slate-700", "text-slate-50");
+
+    //         const itemUrl = (a.getAttribute("data-url") || "").split("?")[0].toLowerCase();
+    //         if (itemUrl === path) {
+    //             a.classList.add("bg-slate-700", "text-slate-50");
+    //         }
+    //     });
+    // }
                 function setActiveSidebar(url) {
-        const path = (url || "").split("?")[0].toLowerCase();
+                const path = normalizePath(url || window.location.pathname);
 
-        document.querySelectorAll("a.sidebar-link").forEach(a => {
-            a.classList.remove("bg-slate-700", "text-slate-50");
+                document.querySelectorAll("a.sidebar-link").forEach(a => {
+                    a.classList.remove("bg-slate-700", "text-slate-50");
 
-            const itemUrl = (a.getAttribute("data-url") || "").split("?")[0].toLowerCase();
-            if (itemUrl === path) {
-                a.classList.add("bg-slate-700", "text-slate-50");
+                    const itemUrl = normalizePath(a.getAttribute("data-url") || "");
+                    if (itemUrl === path) {
+                        a.classList.add("bg-slate-700", "text-slate-50");
+                    }
+                });
             }
-        });
-    }
+
 
     function loadPageIntoMainContent(url) {
         const main = document.getElementById("main-content");
@@ -599,26 +650,74 @@
         });
 
         // الضغط على روابط القائمة (AJAX)
+        // document.body.addEventListener("click", function (e) {
+        //     const link = e.target.closest("a.sidebar-link");
+        //     if (!link) return;
+
+            
+        //     if (e.button !== 0 || e.ctrlKey || e.shiftKey || e.metaKey || e.altKey) {
+        //         return;
+        //     }
+
+        //     e.preventDefault();
+
+        //     const url = link.getAttribute("data-url");
+        //     if (!url) return;
+
+        //     showMainLoading();
+        //     document.body.style.pointerEvents = "none";
+
+        //     loadPageIntoMainContent(url);
+        // });
+                // تحميل جزئي للروابط الداخلية: السايدبار + الهيدر + breadcrumb
         document.body.addEventListener("click", function (e) {
-            const link = e.target.closest("a.sidebar-link");
+            const link = e.target.closest('a');
             if (!link) return;
 
-            // السماح بفتح تبويب جديد/نفس خيارات المتصفح
+            // تجاهل الأزرار التي ليست روابط تنقل
+            if (
+                link.hasAttribute('target') ||
+                link.hasAttribute('download') ||
+                link.getAttribute('href') === '#' ||
+                link.getAttribute('href')?.startsWith('javascript:') ||
+                link.closest('[data-modal-toggle]') ||
+                link.closest('[data-modal-target]')
+            ) {
+                return;
+            }
+
+            // السماح بفتح تبويب جديد أو أوامر المتصفح المعتادة
             if (e.button !== 0 || e.ctrlKey || e.shiftKey || e.metaKey || e.altKey) {
                 return;
             }
 
-            e.preventDefault();
+            const href = link.getAttribute('href');
+            const dataUrl = link.getAttribute('data-url');
+            const url = dataUrl || href;
 
-            const url = link.getAttribute("data-url");
             if (!url) return;
+
+            // تجاهل الروابط الخارجية
+            if (url.startsWith('http://') || url.startsWith('https://')) {
+                const targetUrl = new URL(url, window.location.origin);
+                if (targetUrl.origin !== window.location.origin) return;
+            }
+
+            // تجاهل تسجيل الخروج وأي صفحات لازم تحمل كامل
+            if (
+                url.startsWith('/Login/Logout') ||
+                link.classList.contains('force-disabled')
+            ) {
+                return;
+            }
+
+            // فقط الروابط الداخلية
+            if (!url.startsWith('/')) return;
+
+            e.preventDefault();
 
             showMainLoading();
             document.body.style.pointerEvents = "none";
-
-            // setTimeout(() => {
-            //     loadPageIntoMainContent(url);
-            // }, 1000);
             loadPageIntoMainContent(url);
         });
 
@@ -627,167 +726,199 @@
         });
     });
 
-    </script>
+</script>
 
 
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    const body = document.body;
-    const sidebar = document.getElementById('logo-sidebar');
-    const pinBtn = document.getElementById('pin-sidebar');
-    const toggleSidebarBtn = document.getElementById('toggle-sidebar');
-    const mobileToggleBtn = document.querySelector('[data-drawer-toggle="logo-sidebar"]');
+    document.addEventListener('DOMContentLoaded', () => {
+        const body = document.body;
+        const sidebar = document.getElementById('logo-sidebar');
+        const pinBtn = document.getElementById('pin-sidebar');
+        const toggleSidebarBtn = document.getElementById('toggle-sidebar');
+        const mobileToggleBtn = document.querySelector('[data-drawer-toggle="logo-sidebar"]');
 
-    const SIDEBAR_STATES = {
-        PINNED: "sidebar-pinned",
-        COLLAPSED: "sidebar-collapsed",
-        MOBILE_OPEN: "with-sidebar-open"
-    };
+        const SIDEBAR_STATES = {
+            PINNED: "sidebar-pinned",
+            COLLAPSED: "sidebar-collapsed",
+            MOBILE_OPEN: "with-sidebar-open"
+        };
 
-    let hoverTimer = null;
-    let isHoverOpen = false;
+        let hoverTimer = null;
+        let isHoverOpen = false;
 
-    // let isHoverTriggered = false;
+        // let isHoverTriggered = false;
 
-    function resetSidebarState() {
-    body.classList.remove(
-        SIDEBAR_STATES.PINNED,
-        SIDEBAR_STATES.COLLAPSED,
-        SIDEBAR_STATES.MOBILE_OPEN
-    );
-}
-
-    function removeSidebarBackdrop() {
-        document.querySelectorAll('.sidebar-backdrop, [drawer-backdrop]').forEach(el => el.remove());
-    }
-
-    function openMobileSidebar() {
-        body.classList.add(SIDEBAR_STATES.MOBILE_OPEN);
-
-        if (!document.querySelector('.sidebar-backdrop')) {
-            const backdrop = document.createElement('div');
-            backdrop.className = 'sidebar-backdrop lg:hidden';
-            backdrop.addEventListener('click', () => {
-                body.classList.remove(SIDEBAR_STATES.MOBILE_OPEN);
-                removeSidebarBackdrop();
-            });
-            document.body.appendChild(backdrop);
-        }
-    }
-
-    function closeMobileSidebar() {
-        body.classList.remove(SIDEBAR_STATES.MOBILE_OPEN);
-        sidebar?.classList.add('translate-x-full');
-        removeSidebarBackdrop();
-    }
-
-    // function applyDesktopSidebarState() {
-    //     const savedSidebarState = localStorage.getItem('sidebarState');
-
-    //     resetSidebarState();
-
-    //     if (savedSidebarState === SIDEBAR_STATES.COLLAPSED) {
-    //         body.classList.add(SIDEBAR_STATES.COLLAPSED);
-    //     } else {
-    //         body.classList.add(SIDEBAR_STATES.PINNED);
-    //     }
-    // }
-    function applyDesktopSidebarState() {
-    const savedSidebarState = localStorage.getItem('sidebarState');
-
-    body.classList.remove(SIDEBAR_STATES.MOBILE_OPEN);
-
-    if (savedSidebarState === SIDEBAR_STATES.COLLAPSED) {
-        body.classList.remove(SIDEBAR_STATES.PINNED);
-        body.classList.add(SIDEBAR_STATES.COLLAPSED);
-    } else {
-        body.classList.remove(SIDEBAR_STATES.COLLAPSED);
-        body.classList.add(SIDEBAR_STATES.PINNED);
-    }
-}
-
-    // function setDesktopSidebarState(state) {
-    //     resetSidebarState();
-    //     body.classList.add(state);
-    //     localStorage.setItem('sidebarState', state);
-    // }
-    function setDesktopSidebarState(state) {
-    if (state === SIDEBAR_STATES.COLLAPSED) {
-        body.classList.remove(SIDEBAR_STATES.PINNED, SIDEBAR_STATES.MOBILE_OPEN);
-        body.classList.add(SIDEBAR_STATES.COLLAPSED);
-    } else if (state === SIDEBAR_STATES.PINNED) {
-        body.classList.remove(SIDEBAR_STATES.COLLAPSED, SIDEBAR_STATES.MOBILE_OPEN);
-        body.classList.add(SIDEBAR_STATES.PINNED);
-    }
-
-    localStorage.setItem('sidebarState', state);
-}
-
-    // function initSidebarState() {
-    //     if (window.innerWidth >= 1024) {
-    //         applyDesktopSidebarState();
-    //         removeSidebarBackdrop();
-    //         sidebar?.classList.remove('translate-x-full');
-    //     } else {
-    //         resetSidebarState();
-    //         removeSidebarBackdrop();
-    //         sidebar?.classList.add('translate-x-full');
-    //     }
-    // }
-
-    /* ===============================
-   Hover open (delay 1 second)
-================================= */
-
-sidebar?.addEventListener('mouseenter', () => {
-    if (window.innerWidth < 1024) return;
-
-    if (!body.classList.contains(SIDEBAR_STATES.COLLAPSED)) return;
-
-    
-    hoverTimer = setTimeout(() => {
-        body.classList.remove(SIDEBAR_STATES.COLLAPSED);
-        body.classList.add(SIDEBAR_STATES.PINNED);
-        isHoverOpen = true;
-    }, 200); 
-});
-
-sidebar?.addEventListener('mouseleave', () => {
-    if (window.innerWidth < 1024) return;
-
-    
-    if (hoverTimer) {
-        clearTimeout(hoverTimer);
-        hoverTimer = null;
-    }
-
-    
-    if (isHoverOpen) {
-        body.classList.remove(SIDEBAR_STATES.PINNED);
-        body.classList.add(SIDEBAR_STATES.COLLAPSED);
-        isHoverOpen = false;
-    }
-});
-
-    function initSidebarState() {
-    if (window.innerWidth >= 1024) {
-        applyDesktopSidebarState();
-        removeSidebarBackdrop();
-        sidebar?.classList.remove('translate-x-full');
-    } else {
+        function resetSidebarState() {
         body.classList.remove(
             SIDEBAR_STATES.PINNED,
             SIDEBAR_STATES.COLLAPSED,
             SIDEBAR_STATES.MOBILE_OPEN
         );
-        removeSidebarBackdrop();
-        sidebar?.classList.add('translate-x-full');
     }
-}
-    /* زر الهيدر */
-    toggleSidebarBtn?.addEventListener('click', () => {
-        if (window.innerWidth < 1024) {
+
+        function removeSidebarBackdrop() {
+            document.querySelectorAll('.sidebar-backdrop, [drawer-backdrop]').forEach(el => el.remove());
+        }
+
+        function openMobileSidebar() {
+            body.classList.add(SIDEBAR_STATES.MOBILE_OPEN);
+
+            if (!document.querySelector('.sidebar-backdrop')) {
+                const backdrop = document.createElement('div');
+                backdrop.className = 'sidebar-backdrop lg:hidden';
+                backdrop.addEventListener('click', () => {
+                    body.classList.remove(SIDEBAR_STATES.MOBILE_OPEN);
+                    removeSidebarBackdrop();
+                });
+                document.body.appendChild(backdrop);
+            }
+        }
+
+        function closeMobileSidebar() {
+            body.classList.remove(SIDEBAR_STATES.MOBILE_OPEN);
+            sidebar?.classList.add('translate-x-full');
+            removeSidebarBackdrop();
+        }
+
+        // function applyDesktopSidebarState() {
+        //     const savedSidebarState = localStorage.getItem('sidebarState');
+
+        //     resetSidebarState();
+
+        //     if (savedSidebarState === SIDEBAR_STATES.COLLAPSED) {
+        //         body.classList.add(SIDEBAR_STATES.COLLAPSED);
+        //     } else {
+        //         body.classList.add(SIDEBAR_STATES.PINNED);
+        //     }
+        // }
+        function applyDesktopSidebarState() {
+        const savedSidebarState = localStorage.getItem('sidebarState');
+
+        body.classList.remove(SIDEBAR_STATES.MOBILE_OPEN);
+
+        if (savedSidebarState === SIDEBAR_STATES.COLLAPSED) {
+            body.classList.remove(SIDEBAR_STATES.PINNED);
+            body.classList.add(SIDEBAR_STATES.COLLAPSED);
+        } else {
+            body.classList.remove(SIDEBAR_STATES.COLLAPSED);
+            body.classList.add(SIDEBAR_STATES.PINNED);
+        }
+    }
+
+        // function setDesktopSidebarState(state) {
+        //     resetSidebarState();
+        //     body.classList.add(state);
+        //     localStorage.setItem('sidebarState', state);
+        // }
+        function setDesktopSidebarState(state) {
+        if (state === SIDEBAR_STATES.COLLAPSED) {
+            body.classList.remove(SIDEBAR_STATES.PINNED, SIDEBAR_STATES.MOBILE_OPEN);
+            body.classList.add(SIDEBAR_STATES.COLLAPSED);
+        } else if (state === SIDEBAR_STATES.PINNED) {
+            body.classList.remove(SIDEBAR_STATES.COLLAPSED, SIDEBAR_STATES.MOBILE_OPEN);
+            body.classList.add(SIDEBAR_STATES.PINNED);
+        }
+
+        localStorage.setItem('sidebarState', state);
+    }
+
+        // function initSidebarState() {
+        //     if (window.innerWidth >= 1024) {
+        //         applyDesktopSidebarState();
+        //         removeSidebarBackdrop();
+        //         sidebar?.classList.remove('translate-x-full');
+        //     } else {
+        //         resetSidebarState();
+        //         removeSidebarBackdrop();
+        //         sidebar?.classList.add('translate-x-full');
+        //     }
+        // }
+
+        /* ===============================
+       Hover open (delay 1 second)
+    ================================= */
+
+    sidebar?.addEventListener('mouseenter', () => {
+        if (window.innerWidth < 1024) return;
+
+        if (!body.classList.contains(SIDEBAR_STATES.COLLAPSED)) return;
+
+    
+        hoverTimer = setTimeout(() => {
+            body.classList.remove(SIDEBAR_STATES.COLLAPSED);
+            body.classList.add(SIDEBAR_STATES.PINNED);
+            isHoverOpen = true;
+        }, 200);
+    });
+
+    sidebar?.addEventListener('mouseleave', () => {
+        if (window.innerWidth < 1024) return;
+
+    
+        if (hoverTimer) {
+            clearTimeout(hoverTimer);
+            hoverTimer = null;
+        }
+
+    
+        if (isHoverOpen) {
+            body.classList.remove(SIDEBAR_STATES.PINNED);
+            body.classList.add(SIDEBAR_STATES.COLLAPSED);
+            isHoverOpen = false;
+        }
+    });
+
+        function initSidebarState() {
+        if (window.innerWidth >= 1024) {
+            applyDesktopSidebarState();
+            removeSidebarBackdrop();
+            sidebar?.classList.remove('translate-x-full');
+        } else {
+            body.classList.remove(
+                SIDEBAR_STATES.PINNED,
+                SIDEBAR_STATES.COLLAPSED,
+                SIDEBAR_STATES.MOBILE_OPEN
+            );
+            removeSidebarBackdrop();
+            sidebar?.classList.add('translate-x-full');
+        }
+    }
+        /* زر الهيدر */
+        toggleSidebarBtn?.addEventListener('click', () => {
+            if (window.innerWidth < 1024) {
+                const isOpen = body.classList.contains(SIDEBAR_STATES.MOBILE_OPEN);
+                if (isOpen) {
+                    closeMobileSidebar();
+                } else {
+                    openMobileSidebar();
+                    sidebar?.classList.remove('translate-x-full');
+                }
+                return;
+            }
+
+            if (body.classList.contains(SIDEBAR_STATES.PINNED)) {
+                setDesktopSidebarState(SIDEBAR_STATES.COLLAPSED);
+            } else {
+                setDesktopSidebarState(SIDEBAR_STATES.PINNED);
+            }
+        });
+
+        /* زر التثبيت */
+        pinBtn?.addEventListener('click', () => {
+            if (window.innerWidth < 1024) return;
+
+            if (body.classList.contains(SIDEBAR_STATES.PINNED)) {
+                setDesktopSidebarState(SIDEBAR_STATES.COLLAPSED);
+            } else {
+                setDesktopSidebarState(SIDEBAR_STATES.PINNED);
+            }
+        });
+
+        /* زر القائمة للموبايل إذا موجود */
+        mobileToggleBtn?.addEventListener('click', () => {
+            if (window.innerWidth >= 1024) return;
+
             const isOpen = body.classList.contains(SIDEBAR_STATES.MOBILE_OPEN);
             if (isOpen) {
                 closeMobileSidebar();
@@ -795,72 +926,40 @@ sidebar?.addEventListener('mouseleave', () => {
                 openMobileSidebar();
                 sidebar?.classList.remove('translate-x-full');
             }
-            return;
+        });
+
+        /* resize */
+        window.addEventListener('resize', () => {
+            initSidebarState();
+        });
+
+        /* روابط السايدبار في الموبايل */
+        document.querySelectorAll('#logo-sidebar a').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 1024) {
+                    closeMobileSidebar();
+                }
+            });
+        });
+
+        /* RTL */
+        if (document.documentElement.getAttribute('dir') === 'rtl') {
+            sidebar?.classList.add('right-0');
+            sidebar?.classList.remove('left-0');
         }
 
-        if (body.classList.contains(SIDEBAR_STATES.PINNED)) {
-            setDesktopSidebarState(SIDEBAR_STATES.COLLAPSED);
-        } else {
-            setDesktopSidebarState(SIDEBAR_STATES.PINNED);
-        }
-    });
 
-    /* زر التثبيت */
-    pinBtn?.addEventListener('click', () => {
-        if (window.innerWidth < 1024) return;
 
-        if (body.classList.contains(SIDEBAR_STATES.PINNED)) {
-            setDesktopSidebarState(SIDEBAR_STATES.COLLAPSED);
-        } else {
-            setDesktopSidebarState(SIDEBAR_STATES.PINNED);
-        }
-    });
+        // sidebar?.removeEventListener?.('mouseenter', null);
+        // sidebar?.removeEventListener?.('mouseleave', null);
 
-    /* زر القائمة للموبايل إذا موجود */
-    mobileToggleBtn?.addEventListener('click', () => {
-        if (window.innerWidth >= 1024) return;
-
-        const isOpen = body.classList.contains(SIDEBAR_STATES.MOBILE_OPEN);
-        if (isOpen) {
-            closeMobileSidebar();
-        } else {
-            openMobileSidebar();
-            sidebar?.classList.remove('translate-x-full');
-        }
-    });
-
-    /* resize */
-    window.addEventListener('resize', () => {
+        /* تشغيل أولي */
         initSidebarState();
     });
-
-    /* روابط السايدبار في الموبايل */
-    document.querySelectorAll('#logo-sidebar a').forEach(link => {
-        link.addEventListener('click', () => {
-            if (window.innerWidth < 1024) {
-                closeMobileSidebar();
-            }
-        });
-    });
-
-    /* RTL */
-    if (document.documentElement.getAttribute('dir') === 'rtl') {
-        sidebar?.classList.add('right-0');
-        sidebar?.classList.remove('left-0');
-    }
-
-
-
-    // sidebar?.removeEventListener?.('mouseenter', null);
-    // sidebar?.removeEventListener?.('mouseleave', null);
-
-    /* تشغيل أولي */
-    initSidebarState();
-});
 </script>
 
 <!-- Change Password Modal -->
-<div id="change-password-modal" tabindex="-1" aria-hidden="true" 
+<div id="change-password-modal" tabindex="-1" aria-hidden="true"
      class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full">
     <div class="relative p-4 w-full max-w-md max-h-full">
         <div class="relative bg-slate-800 rounded-lg shadow border border-slate-700">
@@ -870,7 +969,7 @@ sidebar?.addEventListener('mouseleave', () => {
                     <i class="fa-solid fa-key text-emerald-400 me-2"></i>
                     تغيير كلمة المرور
                 </h3>
-                <button type="button" 
+                <button type="button"
                         class="text-slate-400 bg-transparent hover:bg-slate-700 hover:text-white rounded-lg text-sm w-8 h-8 inline-flex justify-center items-center"
                         data-modal-hide="change-password-modal">
                     <i class="fa-solid fa-xmark text-xl"></i>
@@ -886,13 +985,13 @@ sidebar?.addEventListener('mouseleave', () => {
                             كلمة المرور الحالية
                         </label>
                         <div class="relative">
-                            <input type="password" 
-                                   id="current-password" 
+                            <input type="password"
+                                   id="current-password"
                                    name="currentPassword"
                                    class="bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5 pe-10"
                                    placeholder="أدخل كلمة المرور الحالية"
                                    required>
-                            <button type="button" 
+                            <button type="button"
                                     class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 hover:text-white"
                                     onclick="togglePasswordVisibility('current-password')">
                                 <i class="fa-solid fa-eye"></i>
@@ -906,14 +1005,14 @@ sidebar?.addEventListener('mouseleave', () => {
                             كلمة المرور الجديدة
                         </label>
                         <div class="relative">
-                            <input type="password" 
-                                   id="new-password" 
+                            <input type="password"
+                                   id="new-password"
                                    name="newPassword"
                                    class="bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5 pe-10"
                                    placeholder="أدخل كلمة المرور الجديدة"
                                    minlength="6"
                                    required>
-                            <button type="button" 
+                            <button type="button"
                                     class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 hover:text-white"
                                     onclick="togglePasswordVisibility('new-password')">
                                 <i class="fa-solid fa-eye"></i>
@@ -928,13 +1027,13 @@ sidebar?.addEventListener('mouseleave', () => {
                             تأكيد كلمة المرور
                         </label>
                         <div class="relative">
-                            <input type="password" 
-                                   id="confirm-password" 
+                            <input type="password"
+                                   id="confirm-password"
                                    name="confirmPassword"
                                    class="bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5 pe-10"
                                    placeholder="أعادة إدخال كلمة المرور الجديدة"
                                    required>
-                            <button type="button" 
+                            <button type="button"
                                     class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 hover:text-white"
                                     onclick="togglePasswordVisibility('confirm-password')">
                                 <i class="fa-solid fa-eye"></i>
@@ -946,42 +1045,42 @@ sidebar?.addEventListener('mouseleave', () => {
                     <div id="password-error" class="hidden p-3 text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-lg"></div>
 
                     <!-- Password Strength Indicator -->
-<div id="password-strength" class="mt-2 hidden">
-    <div class="flex items-center gap-2">
-        <div class="flex-1 h-2 bg-slate-600 rounded-full overflow-hidden">
-            <div id="strength-bar" class="h-full transition-all duration-300"></div>
-        </div>
-        <span id="strength-text" class="text-xs font-medium"></span>
-    </div>
-    <ul class="mt-2 text-xs text-slate-400 space-y-1">
-        <li id="check-length" class="flex items-center gap-2">
-            <i class="fa-solid fa-circle-xmark text-red-400"></i>
-            <span>8 خانات على الأقل</span>
-        </li>
-        <li id="check-uppercase" class="flex items-center gap-2">
-            <i class="fa-solid fa-circle-xmark text-red-400"></i>
-            <span>حرف كبير (A-Z)</span>
-        </li>
-        <li id="check-lowercase" class="flex items-center gap-2">
-            <i class="fa-solid fa-circle-xmark text-red-400"></i>
-            <span>حرف صغير (a-z)</span>
-        </li>
-        <li id="check-number" class="flex items-center gap-2">
-            <i class="fa-solid fa-circle-xmark text-red-400"></i>
-            <span>رقم واحد (0-9)</span>
-        </li>
-    </ul>
-</div>
+                    <div id="password-strength" class="mt-2 hidden">
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 h-2 bg-slate-600 rounded-full overflow-hidden">
+                                <div id="strength-bar" class="h-full transition-all duration-300"></div>
+                            </div>
+                            <span id="strength-text" class="text-xs font-medium"></span>
+                        </div>
+                        <ul class="mt-2 text-xs text-slate-400 space-y-1">
+                            <li id="check-length" class="flex items-center gap-2">
+                                <i class="fa-solid fa-circle-xmark text-red-400"></i>
+                                <span>8 خانات على الأقل</span>
+                            </li>
+                            <li id="check-uppercase" class="flex items-center gap-2">
+                                <i class="fa-solid fa-circle-xmark text-red-400"></i>
+                                <span>حرف كبير (A-Z)</span>
+                            </li>
+                            <li id="check-lowercase" class="flex items-center gap-2">
+                                <i class="fa-solid fa-circle-xmark text-red-400"></i>
+                                <span>حرف صغير (a-z)</span>
+                            </li>
+                            <li id="check-number" class="flex items-center gap-2">
+                                <i class="fa-solid fa-circle-xmark text-red-400"></i>
+                                <span>رقم واحد (0-9)</span>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
 
                 <!-- Modal footer -->
                 <div class="flex items-center gap-3 pt-4 mt-4 border-t border-slate-700">
-                    <button type="submit" 
+                    <button type="submit"
                             class="w-full text-white bg-emerald-600 hover:bg-emerald-700 focus:ring-4 focus:outline-none focus:ring-emerald-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">
                         <i class="fa-solid fa-check me-2"></i>
                         حفظ كلمة المرور
                     </button>
-                    <button type="button" 
+                    <button type="button"
                             data-modal-hide="change-password-modal"
                             class="w-full text-slate-300 bg-slate-700 hover:bg-slate-600 rounded-lg border border-slate-600 text-sm font-medium px-5 py-2.5 hover:text-white">
                         إلغاء
@@ -1230,9 +1329,10 @@ sidebar?.addEventListener('mouseleave', () => {
 <!-- Force Change Password Modal (Cannot be closed) -->
 @if (mustChangePassword)
 {
-    <div id="force-change-password-modal" 
+    <div id="force-change-password-modal"
          class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md">
-        <div class="relative p-4 w-full max-w-2xl"> <!-- ✅ Changed to max-w-2xl for wider modal -->
+        <div class="relative p-4 w-full max-w-2xl">
+            <!-- ✅ Changed to max-w-2xl for wider modal -->
             <div class="relative bg-slate-800 rounded-lg shadow-2xl border-2 border-red-500 animate-pulse-border">
                 <!-- Modal header -->
                 <div class="flex items-center justify-between p-5 border-b border-slate-700 bg-gradient-to-r from-red-900/30 to-orange-900/30">
@@ -1292,13 +1392,13 @@ sidebar?.addEventListener('mouseleave', () => {
                                     كلمة المرور الحالية <span class="text-red-400">*</span>
                                 </label>
                                 <div class="relative">
-                                    <input type="password" 
-                                           id="force-current-password" 
+                                    <input type="password"
+                                           id="force-current-password"
                                            name="currentPassword"
                                            class="bg-slate-700 border border-slate-600 text-white text-base rounded-lg focus:ring-red-500 focus:border-red-500 block w-full p-3 pe-12"
                                            placeholder="أدخل كلمة المرور الحالية"
                                            required>
-                                    <button type="button" 
+                                    <button type="button"
                                             class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 hover:text-white"
                                             onclick="togglePasswordVisibility('force-current-password')">
                                         <i class="fa-solid fa-eye"></i>
@@ -1312,14 +1412,14 @@ sidebar?.addEventListener('mouseleave', () => {
                                     كلمة المرور الجديدة <span class="text-red-400">*</span>
                                 </label>
                                 <div class="relative">
-                                    <input type="password" 
-                                           id="force-new-password" 
+                                    <input type="password"
+                                           id="force-new-password"
                                            name="newPassword"
                                            class="bg-slate-700 border border-slate-600 text-white text-base rounded-lg focus:ring-red-500 focus:border-red-500 block w-full p-3 pe-12"
                                            placeholder="أدخل كلمة المرور الجديدة"
                                            minlength="8"
                                            required>
-                                    <button type="button" 
+                                    <button type="button"
                                             class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 hover:text-white"
                                             onclick="togglePasswordVisibility('force-new-password')">
                                         <i class="fa-solid fa-eye"></i>
@@ -1334,13 +1434,13 @@ sidebar?.addEventListener('mouseleave', () => {
                                     تأكيد كلمة المرور <span class="text-red-400">*</span>
                                 </label>
                                 <div class="relative">
-                                    <input type="password" 
-                                           id="force-confirm-password" 
+                                    <input type="password"
+                                           id="force-confirm-password"
                                            name="confirmPassword"
                                            class="bg-slate-700 border border-slate-600 text-white text-base rounded-lg focus:ring-red-500 focus:border-red-500 block w-full p-3 pe-12"
                                            placeholder="أعادة إدخال كلمة المرور الجديدة"
                                            required>
-                                    <button type="button" 
+                                    <button type="button"
                                             class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 hover:text-white"
                                             onclick="togglePasswordVisibility('force-confirm-password')">
                                         <i class="fa-solid fa-eye"></i>
@@ -1382,13 +1482,13 @@ sidebar?.addEventListener('mouseleave', () => {
 
                         <!-- Modal footer -->
                         <div class="flex items-center gap-3 pt-5 mt-5 border-t border-slate-700">
-                            <button type="submit" 
+                            <button type="submit"
                                     class="flex-1 text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-base px-6 py-3 text-center">
                                 <i class="fa-solid fa-shield-halved me-2"></i>
                                 تغيير كلمة المرور الآن
                             </button>
-                            <a href="/Login/Logout" 
-                               class="flex-1 text-center text-slate-300 bg-slate-700 hover:bg-slate-600 rounded-lg border border-slate-600 text-base font-medium px-6 py-3 hover:text-white">
+                            <a href="/Login/Logout"
+                                   class="flex-1 text-center text-slate-300 bg-slate-700 hover:bg-slate-600 rounded-lg border border-slate-600 text-base font-medium px-6 py-3 hover:text-white">
                                 <i class="fa-solid fa-right-from-bracket me-2"></i>
                                 تسجيل الخروج
                             </a>
@@ -1508,7 +1608,7 @@ sidebar?.addEventListener('mouseleave', () => {
                 if (!element) return;
                 const icon = element.querySelector('i');
                 if (icon) {
-                    icon.className = isValid 
+                    icon.className = isValid
                         ? 'fa-solid fa-circle-check text-green-400'
                         : 'fa-solid fa-circle-xmark text-red-400';
                 }

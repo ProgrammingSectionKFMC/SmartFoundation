@@ -208,7 +208,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                     Type="text",
                                     ColCss="3",
                                     Icon="fa-solid fa-address-card",
-                                    Placeholder="1xxxxxxxxx",
+                                    Placeholder="أدخل الرقم (مثال: 1xxxxxxxxx)",
                                     //HelpText="عشرةأرقام فقط*",
                                     Value= NationalID_,                 // القيمة الافتراضية (من السيرفر)
                                     MaxLength=10,

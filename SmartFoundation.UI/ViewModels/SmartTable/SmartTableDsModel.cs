@@ -156,6 +156,8 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
 
         public bool ShowColumnVisibility { get; set; } = false;
 
+        public bool EnableColumnReorder { get; set; } = true; 
+
         // ===== Header Color =====
         public string? HeaderColor { get; set; } = null;
 

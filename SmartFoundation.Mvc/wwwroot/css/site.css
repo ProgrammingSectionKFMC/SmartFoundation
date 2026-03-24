@@ -627,12 +627,6 @@ body {
   .ml-2 {
     margin-left: calc(var(--spacing) * 2);
   }
-  .line-clamp-1 {
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-  }
   .line-clamp-2 {
     overflow: hidden;
     display: -webkit-box;
@@ -644,12 +638,6 @@ body {
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
-  }
-  .line-clamp-4 {
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 4;
   }
   .block {
     display: block;
@@ -710,9 +698,6 @@ body {
   }
   .table-row-group {
     display: table-row-group;
-  }
-  .h-1\.5 {
-    height: calc(var(--spacing) * 1.5);
   }
   .h-2 {
     height: calc(var(--spacing) * 2);
@@ -995,15 +980,6 @@ body {
       margin-inline-end: calc(calc(var(--spacing) * 2) * calc(1 - var(--tw-space-x-reverse)));
     }
   }
-  .divide-y {
-    :where(& > :not(:last-child)) {
-      --tw-divide-y-reverse: 0;
-      border-bottom-style: var(--tw-border-style);
-      border-top-style: var(--tw-border-style);
-      border-top-width: calc(1px * var(--tw-divide-y-reverse));
-      border-bottom-width: calc(1px * calc(1 - var(--tw-divide-y-reverse)));
-    }
-  }
   .self-end {
     align-self: flex-end;
   }
@@ -1172,12 +1148,6 @@ body {
       background-color: color-mix(in oklab, var(--color-black) 20%, transparent);
     }
   }
-  .bg-black\/50 {
-    background-color: color-mix(in srgb, #000 50%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-black) 50%, transparent);
-    }
-  }
   .bg-black\/90 {
     background-color: color-mix(in srgb, #000 90%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
@@ -1204,12 +1174,6 @@ body {
   }
   .bg-emerald-600 {
     background-color: var(--color-emerald-600);
-  }
-  .bg-emerald-700\/70 {
-    background-color: color-mix(in srgb, oklch(50.8% 0.118 165.612) 70%, transparent);
-    @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-emerald-700) 70%, transparent);
-    }
   }
   .bg-gray-50 {
     background-color: var(--color-gray-50);
@@ -1970,11 +1934,6 @@ body {
   }
   .transition {
     transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, --tw-gradient-from, --tw-gradient-via, --tw-gradient-to, opacity, box-shadow, transform, translate, scale, rotate, filter, -webkit-backdrop-filter, backdrop-filter, display, content-visibility, overlay, pointer-events;
-    transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
-    transition-duration: var(--tw-duration, var(--default-transition-duration));
-  }
-  .transition-\[transform\] {
-    transition-property: transform;
     transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
     transition-duration: var(--tw-duration, var(--default-transition-duration));
   }
@@ -10783,6 +10742,11 @@ body {
   inherits: false;
   initial-value: 0;
 }
+@property --tw-divide-y-reverse {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
 @property --tw-content {
   syntax: "*";
   inherits: false;
@@ -16156,6 +16120,71 @@ html, body {
     background: #ffffff;
   }
 }
+.sf-col-draggable {
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.sf-col-draggable:active {
+  cursor: grabbing;
+}
+.sf-col-drag-over {
+  position: relative;
+}
+.sf-col-drag-over::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 2px dashed rgba(255, 255, 255, 0.95);
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 2;
+}
+.sf-col-dragging {
+  position: relative;
+  z-index: 3;
+}
+.sf-col-dragging::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
+  pointer-events: none;
+  border-radius: 4px;
+}
+.sf-col-ghost {
+  position: fixed;
+  pointer-events: none;
+  z-index: 999999;
+  overflow: visible;
+  background: transparent;
+  box-shadow: none;
+}
+.sf-col-ghost__inner {
+  min-height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  font-weight: 700;
+  font-size: 15px;
+  text-align: center;
+  white-space: nowrap;
+  width: max-content;
+  max-width: none;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.18);
+}
+.sf-col-ghost__title {
+  display: block;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  max-width: none;
+}
+.sf-col-hidden-source {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
 @property --tw-translate-x {
   syntax: "*";
   inherits: false;
@@ -16197,11 +16226,6 @@ html, body {
   initial-value: 0;
 }
 @property --tw-space-x-reverse {
-  syntax: "*";
-  inherits: false;
-  initial-value: 0;
-}
-@property --tw-divide-y-reverse {
   syntax: "*";
   inherits: false;
   initial-value: 0;
@@ -16497,7 +16521,6 @@ html, body {
       --tw-skew-y: initial;
       --tw-space-y-reverse: 0;
       --tw-space-x-reverse: 0;
-      --tw-divide-y-reverse: 0;
       --tw-border-style: solid;
       --tw-gradient-position: initial;
       --tw-gradient-from: #0000;
@@ -16563,6 +16586,7 @@ html, body {
       --tw-scale-y: 1;
       --tw-scale-z: 1;
       --tw-divide-x-reverse: 0;
+      --tw-divide-y-reverse: 0;
       --tw-content: "";
     }
   }

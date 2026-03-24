@@ -56,7 +56,7 @@
         toggleCount = Model.ToggleCount,
         profileBadges = Model.ProfileBadges ?? new List<ProfileBadge>(),
         showColumnVisibility = Model.ShowColumnVisibility,
-
+        enableColumnReorder = Model.EnableColumnReorder,
         renderMode = Model.RenderMode.ToString(),
         renderAsToggle = Model.RenderAsToggle,
         renderAsSection = Model.RenderAsSection,
@@ -382,20 +382,31 @@
                 <table class="sf-table">
                     <thead x-show="showHeader" class="table-head">
                         <tr>
-                            <th x-show="selectable" class="th-cell"
-                                :style="headerColor ? `background-color:${headerColor}` : ''"></th>
+                            <th x-show="selectable"
+                                class="th-cell"
+                                x-bind:style="headerColor ? 'background-color:' + headerColor + ';' : ''">
+                            </th>
 
                             <template x-for="col in visibleColumns()" :key="col.field">
                                 <th class="th-cell"
-                                    :style="`${col.width ? 'width:'+col.width+';' : ''}${headerColor ? 'background-color:'+headerColor : ''}`"
-                                    :style="col.width ? `width:${col.width}` : ''"
-                                    :class="col.sortable ? 'cursor-pointer' : ''"
-                                    x-on:click="toggleSort(col)">
-                                    <div class="th-inner flex items-center justify-center gap-1">
+                                    x-bind:style="(col.width ? 'width:' + col.width + ';' : '') + (headerColor ? 'background-color:' + headerColor + ';' : '')"
+                                    x-bind:class="(dragOverColField === col.field ? 'sf-col-drag-over ' : '') + (draggingColField === col.field ? 'sf-col-dragging' : '')">
+
+                                    <div class="th-inner flex items-center justify-center gap-1"
+                                         x-bind:class="(col.sortable ? 'cursor-pointer ' : '') + (enableColumnReorder ? 'sf-col-draggable ' : '')"
+                                         x-bind:draggable="enableColumnReorder"
+                                         x-on:click="toggleSort(col)"
+                                         x-on:dragstart="onColumnDragStart(col, $event)"
+                                         x-on:dragover.prevent.stop="onColumnDragOver(col, $event)"
+                                         x-on:drop.prevent.stop="onColumnDrop(col, $event)"
+                                         x-on:dragend="onColumnDragEnd()">
+
                                         <span x-text="col.label"></span>
-                                        <template x-if="col.sortable && sort.field===col.field">
+
+                                        <template x-if="col.sortable && sort.field === col.field">
                                             <i class="fas ml-1 text-xs text-gray-400"
-                                               :class="sort.dir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'"></i>
+                                                   x-bind:class="sort.dir === 'asc' ? 'fa-sort-up' : 'fa-sort-down'">
+                                            </i>
                                         </template>
                                     </div>
                                 </th>
@@ -406,7 +417,8 @@
                             <th x-show="selectable" class="th-cell sf-filter-cell"></th>
 
                             <template x-for="col in visibleColumns()" :key="'f-' + col.field">
-                                <th class="th-cell sf-filter-cell" :style="col.width ? `width:${col.width}` : ''">
+                                <th class="th-cell sf-filter-cell"
+                                    x-bind:style="col.width ? 'width:' + col.width + ';' : ''">
 
                                     <template x-if="isColFilterEnabled(col)">
                                         <div class="sf-filter-wrap">
@@ -414,8 +426,8 @@
                                             <template x-if="getColFilterType(col) === 'text'">
                                                 <input type="text"
                                                        class="sf-filter-input"
-                                                       :placeholder="getColFilterPlaceholder(col)"
-                                                       :aria-label="`فلتر: ${col.title ?? col.header ?? col.field}`"
+                                                       x-bind:placeholder="getColFilterPlaceholder(col)"
+                                                       x-bind:aria-label="'فلتر: ' + (col.title || col.header || col.field)"
                                                        autocomplete="off"
                                                        dir="auto"
                                                        inputmode="text"
@@ -428,7 +440,7 @@
                                                 <input type="text"
                                                        class="sf-filter-input"
                                                        placeholder="مثال: >=10"
-                                                       :aria-label="`فلتر رقمي: ${col.title ?? col.header ?? col.field}`"
+                                                       x-bind:aria-label="'فلتر رقمي: ' + (col.title || col.header || col.field)"
                                                        autocomplete="off"
                                                        dir="auto"
                                                        inputmode="decimal"
@@ -441,7 +453,7 @@
                                                 <input type="text"
                                                        class="sf-filter-input"
                                                        placeholder="YYYY-MM-DD أو .."
-                                                       :aria-label="`فلتر تاريخ: ${col.title ?? col.header ?? col.field}`"
+                                                       x-bind:aria-label="'فلتر تاريخ: ' + (col.title || col.header || col.field)"
                                                        autocomplete="off"
                                                        dir="auto"
                                                        inputmode="numeric"
@@ -452,7 +464,7 @@
 
                                             <template x-if="getColFilterType(col) === 'bool'">
                                                 <select class="sf-filter-input"
-                                                        :aria-label="`فلتر نعم/لا: ${col.title ?? col.header ?? col.field}`"
+                                                        x-bind:aria-label="'فلتر نعم/لا: ' + (col.title || col.header || col.field)"
                                                         x-model="columnFilters[col.field]"
                                                         x-on:change="onColumnFilterInput()">
                                                     <option value="">الكل</option>
@@ -463,14 +475,14 @@
 
                                             <template x-if="getColFilterType(col) === 'select'">
                                                 <select class="sf-filter-input sf-filter-select2"
-                                                        :data-field="col.field"
-                                                        :aria-label="`فلتر قائمة: ${col.title ?? col.header ?? col.field}`"
+                                                        x-bind:data-field="col.field"
+                                                        x-bind:aria-label="'فلتر قائمة: ' + (col.title || col.header || col.field)"
                                                         x-model="columnFilters[col.field]"
                                                         x-on:change="onColumnFilterInput()">
                                                     <option value="">الكل</option>
                                                     <template x-for="opt in getColFilterOptions(col)"
                                                               :key="String(opt.value ?? opt.Value ?? opt.text ?? opt.Text)">
-                                                        <option :value="String(opt.value ?? opt.Value ?? '')"
+                                                        <option x-bind:value="String(opt.value ?? opt.Value ?? '')"
                                                                 x-text="String(opt.text ?? opt.Text ?? opt.value ?? opt.Value ?? '')">
                                                         </option>
                                                     </template>
@@ -488,7 +500,7 @@
                     <tbody>
                         <template x-if="loading">
                             <tr>
-                                <td :colspan="visibleColumns().length + (selectable?1:0)" class="td-loading">
+                                <td x-bind:colspan="visibleColumns().length + (selectable ? 1 : 0)" class="td-loading">
                                     <i class="fa fa-spinner animate-spin"></i> جاري التحميل...
                                 </td>
                             </tr>
@@ -496,7 +508,7 @@
 
                         <template x-if="!loading && error">
                             <tr>
-                                <td :colspan="Math.max(1, visibleColumns().length + (selectable ? 1 : 0))"
+                                <td x-bind:colspan="Math.max(1, visibleColumns().length + (selectable ? 1 : 0))"
                                     class="td-empty">
                                     <div class="flex items-center justify-center py-6">
                                         <span x-text="error"></span>
@@ -505,9 +517,9 @@
                             </tr>
                         </template>
 
-                        <template x-if="!loading && !error && rows.length===0">
+                        <template x-if="!loading && !error && rows.length === 0">
                             <tr>
-                                <td :colspan="visibleColumns().length + (selectable?1:0)"
+                                <td x-bind:colspan="visibleColumns().length + (selectable ? 1 : 0)"
                                     class="py-6 text-center">
                                     لا توجد بيانات.
                                 </td>
@@ -522,7 +534,7 @@
                                 <td x-show="selectable" class="td-cell">
                                     <input type="checkbox"
                                            class="sf-checkbox"
-                                           :checked="isSelected(row)"
+                                           x-bind:checked="isSelected(row)"
                                            x-on:click.stop="toggleRow(row)" />
                                 </td>
 
