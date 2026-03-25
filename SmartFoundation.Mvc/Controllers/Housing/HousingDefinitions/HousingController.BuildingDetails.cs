@@ -80,6 +80,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             List<OptionItem> BuildingClassOptions = new();
 
 
+            List<OptionItem> YesNoOptions = new()
+            {
+                new OptionItem { Value = "1", Text = "نعم" },
+                new OptionItem { Value = "0", Text = "لا" }
+            };
+
 
             FormConfig form = new();
 
@@ -352,6 +358,42 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             bool buildingUtilityIsRent = false;
             string buildingUtilityIsRentValue = "0";
 
+            bool ElectrictyService = false;
+            string ElectrictyServiceValue = "0";
+
+            bool WaterService = false;
+            string WaterServiceValue = "0";
+
+            bool GasService = false;
+            string GasServiceValue = "0";
+
+            if (dt7 != null && dt7.Rows.Count > 0)
+            {
+                var row = dt7.Rows[0];
+
+                if (dt7.Columns.Contains("ElectrictyService"))
+                {
+                    ElectrictyServiceValue = row["ElectrictyService"]?.ToString()?.Trim() ?? "0";
+                    // ✅ قارن مع "1" بدلاً من "True"
+                    ElectrictyService = (ElectrictyServiceValue == "1" || ElectrictyServiceValue.Equals("True", StringComparison.OrdinalIgnoreCase));
+                }
+
+                if (dt7.Columns.Contains("WaterService"))
+                {
+                    WaterServiceValue = row["WaterService"]?.ToString()?.Trim() ?? "0";
+                    // ✅ قارن مع "1" بدلاً من "True"
+                    WaterService = (WaterServiceValue == "1" || WaterServiceValue.Equals("True", StringComparison.OrdinalIgnoreCase));
+                }
+
+                if (dt7.Columns.Contains("GasService"))
+                {
+                    GasServiceValue = row["GasService"]?.ToString()?.Trim() ?? "0";
+                    // ✅ قارن مع "1" بدلاً من "True"
+                    GasService = (GasServiceValue == "1" || GasServiceValue.Equals("True", StringComparison.OrdinalIgnoreCase));
+                }
+            }
+
+
             if (dt2 != null && dt2.Columns.Contains("buildingUtilityIsRent"))
             {
                 var row = dt2.AsEnumerable()
@@ -385,20 +427,75 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
     new FieldConfig { Name = "p13", Label = "تاريخ بداية المبنى", Type = "date", ColCss = "3", Required = true },
     new FieldConfig { Name = "p18", Label = "تاريخ نهاية المبنى", Type = "date", ColCss = "3" },
-    new FieldConfig { Name = "p14", Label = "ملاحظات", Type = "text", ColCss = "6", Required = false },
+    new FieldConfig { Name = "p14", Label = "ملاحظات", Type = "text", ColCss = "6", Required = false},
+
     new FieldConfig { Name = "p15", Label = "UtilityTypeID_", Type = "hidden", ColCss = "3", Required = false,Value =UtilityTypeID_ },
+
 };
 
-            // ✅ إذا فيه إيجار: أضف p12/p13 بمكانها الصحيح قبل p14
+            // ✅ إذا فيه إيجار: أضف p11/p12 بعد p10
             if (buildingUtilityIsRent)
             {
-                // حطهم بعد p10 مباشرة (بدون أرقام Insert ثابتة)
                 var idxAfterP10 = addFields.FindIndex(f => f.Name == "p10");
                 if (idxAfterP10 < 0) idxAfterP10 = addFields.Count - 1;
 
                 addFields.Insert(idxAfterP10 + 1, new FieldConfig { Name = "p11", Label = "نوع الايجار", Type = "select", ColCss = "3", Required = true, Options = BuildingRentTypeOptions });
                 addFields.Insert(idxAfterP10 + 2, new FieldConfig { Name = "p12", Label = "مبلغ الايجار", Type = "text", ColCss = "3", Required = true });
             }
+
+
+            // ✅ احسب موقع الملاحظات قبل الإضافة
+            int notesIndex = addFields.FindIndex(f => f.Name == "p14");
+            if (notesIndex < 0) notesIndex = addFields.Count; // إذا ما لقينا الملاحظات، نحطهم في الآخر
+
+
+            // ✅ استخدم notesIndex بدلاً من 19، 20
+            if (ElectrictyService)
+            {
+                addFields.Insert(notesIndex, new FieldConfig
+                {
+                    Name = "p19",
+                    Label = "خدمة كهرباء",
+                    Type = "select",
+                    ColCss = "3",
+                    Required = true,
+                    Options = YesNoOptions
+                });
+                notesIndex++; // حدّث الموقع بعد الإضافة
+            }
+
+
+            if (WaterService)
+            {
+                addFields.Insert(notesIndex, new FieldConfig
+                {
+                    Name = "p20",
+                    Label = "خدمة مياه على المبنى",
+                    Type = "select",
+                    ColCss = "3",
+                    Required = true,
+                    Options = YesNoOptions
+                });
+                notesIndex++; // حدّث الموقع بعد الإضافة
+            }
+
+
+            if (GasService)
+            {
+                addFields.Insert(notesIndex, new FieldConfig
+                {
+                    Name = "p21",
+                    Label = "خدمة غاز على المبنى",
+                    Type = "select",
+                    ColCss = "3",
+                    Required = true,
+                    Options = YesNoOptions
+                });
+                // لا داعي لتحديث notesIndex لأنه آخر إضافة
+            }
+
+
+
 
             // ✅ Inject required hidden headers (مرة واحدة فقط)
             addFields.Insert(0, new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") });
