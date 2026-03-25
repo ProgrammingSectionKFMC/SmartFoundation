@@ -409,10 +409,5 @@ SmartFoundation.Mvc/appsettings.json
 docs/ImplementationGuide.md
 docs/PRD.md
 
-# Task Master AI - Personal Tasks and Reports
-# Each team member should create their own tasks from their PRD
-.taskmaster/tasks/
-.taskmaster/reports/
-.taskmaster/.initialized
 /SmartFoundation.Mvc/Controllers/MastersCrudController.cs
 /SmartFoundation.Mvc/AiModels/qwen2.5-3b-instruct-q4_k_m.gguf

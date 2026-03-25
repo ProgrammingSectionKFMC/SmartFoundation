@@ -28,28 +28,6 @@ User asks: "How do I use dependency injection in ASP.NET Core?"
 → Use Context7 MCP to fetch latest ASP.NET Core DI documentation
 ```
 
-### TaskMaster AI MCP - Task Management
-
-**When to use:**
-
-- ✅ **ALWAYS** use TaskMaster AI MCP tools when user asks about tasks, task status, or project planning
-- Use `mcp_task-master-a_get_tasks` to retrieve task lists
-- Use `mcp_task-master-a_get_task` for specific task details
-- Use `mcp_task-master-a_set_task_status` to update task progress
-- Use other TaskMaster tools for task creation, expansion, and management when applicable
-
-**When NOT to use:**
-
-- Simple TODO tracking within a conversation (use manage_todo_list instead)
-- When TaskMaster is not initialized in the project
-
-**Example usage:**
-
-```
-User asks: "What tasks are pending?"
-→ Use mcp_task-master-a_get_tasks with status filter
-```
-
 Sequential Thinking MCP - Stepwise Reasoning & Problem Breakdown
 
 **When to use:**
@@ -1567,7 +1545,7 @@ stateDiagram-v2
     Cancelled --> [*]
 ```
 
-**Example Use Case:** Document task workflow states in TaskMaster.
+**Example Use Case:** Document project workflow states for team delivery.
 
 #### 6. Gantt Charts
 
