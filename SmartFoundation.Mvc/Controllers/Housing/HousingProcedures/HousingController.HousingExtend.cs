@@ -13,7 +13,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 {
     public partial class HousingController : Controller
     {
-        public async Task<IActionResult> HousingExtend(int pdf = 0)
+        public async Task<IActionResult> HousingExtend(int pdf = 0, int? rowId = null)
         {
             //  قراءة السيشن والكونتكست
             if (!InitPageContext(out var redirect))
@@ -607,11 +607,20 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         Icon = "fa fa-print",
                         Color = "info",
                         OnClickJs = @"
+                            const selectedRows = table.getSelectedRows();
+                                if (selectedRows.length === 1) {
+                                    const row = selectedRows[0];
+                                    const rowId = row.p01 || row.ActionID;
+                                    
+                                    if (!rowId) {
+                                        alert('خطأ: لا يمكن العثور على معرف السجل');
+                                        return;
+                                    }
                                 sfPrintWithBusy(table, {
                                   pdf: 2,
                                   busy: { title: 'طباعة بيانات المستفيدين'}
                                 });
-                              ",
+",
 
                         RequireSelection = true,
                         MinSelection = 1,
@@ -1308,10 +1317,168 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 return File(pdfBytes, "application/pdf");
             }
 
+            //    if (pdf == 2)
+            //    {
+            //        // Debug: Check if rowId is received
+            //        if (!rowId.HasValue)
+            //        {
+            //            return Content("خطأ: لم يتم استلام معرف السجل");
+            //        }
 
+            //        // Find the selected row
+            //        var selectedRow = rowsList.FirstOrDefault(r =>
+            //            r.TryGetValue("p01", out var id) &&
+            //            id != null &&
+            //            Convert.ToInt32(id) == rowId.Value);
+
+            //        if (selectedRow == null)
+            //        {
+            //            return Content($"لم يتم العثور على البيانات المطلوبة. معرف السجل: {rowId}, عدد السجلات: {rowsList.Count}");
+            //        }
+
+            //        // Extract data from selected row
+            //        string residentName = selectedRow.GetValueOrDefault("p15")?.ToString() ?? "";
+            //        string nationalId = selectedRow.GetValueOrDefault("p03")?.ToString() ?? "";
+            //        string generalNo = selectedRow.GetValueOrDefault("p04")?.ToString() ?? "";
+            //        string buildingNo = selectedRow.GetValueOrDefault("p19")?.ToString() ?? "";
+            //        string decisionNo = selectedRow.GetValueOrDefault("p23")?.ToString() ?? "";
+            //        string extendReason = selectedRow.GetValueOrDefault("p32")?.ToString() ?? "";
+
+            //        // Parse dates
+            //        DateTime? decisionDate = selectedRow.GetValueOrDefault("p22") as DateTime?;
+            //        DateTime? extendFromDate = selectedRow.GetValueOrDefault("p24") as DateTime?;
+            //        DateTime? extendToDate = selectedRow.GetValueOrDefault("p25") as DateTime?;
+
+            //        string decisionDateStr = decisionDate?.ToString("yyyy/MM/dd") ?? "";
+            //        string extendFromDateStr = extendFromDate?.ToString("yyyy/MM/dd") ?? "";
+            //        string extendToDateStr = extendToDate?.ToString("yyyy/MM/dd") ?? "";
+
+            //        // Create PDF
+            //        var logo = Path.Combine(_env.WebRootPath, "img", "ppng.png");
+
+            //        var header = new Dictionary<string, string>
+            //        {
+            //            ["no"] = decisionNo,
+            //            ["date"] = DateTime.Now.ToString("yyyy/MM/dd"),
+            //            ["attach"] = "—",
+            //            ["subject"] = "إمهال مستفيد",
+            //            ["right1"] = "المملكة العربية السعودية",
+            //            ["right2"] = "وزارة الدفاع",
+            //            ["right3"] = "القوات البرية الملكية السعودية",
+            //            ["right4"] = "الادارة الهندسية للتشغيل والصيانة",
+            //            ["right5"] = "إدارة مدينة الملك فيصل العسكرية",
+            //            ["bismillah"] = "بسم الله الرحمن الرحيم",
+            //            ["midCaption"] = ""
+            //        };
+
+            //        var report = new ReportResult
+            //        {
+            //            ReportId = "HousingExtendLetter",
+            //            Title = "خطاب إمهال مستفيد",
+            //            Kind = ReportKind.Letter,
+            //            Orientation = ReportOrientation.Portrait,
+            //            HeaderType = ReportHeaderType.LetterOfficial,
+            //            LogoPath = logo,
+            //            ShowFooter = false,
+            //            HeaderFields = header,
+            //            LetterBlocks = new List<LetterBlock>
+            //{
+            //    new LetterBlock
+            //    {
+            //        Text = "سعادة قائد إدارة مدينة الملك فيصل العسكرية حفظه الله",
+            //        FontSize = 13,
+            //        Bold = true,
+            //        PaddingBottom = 12,
+            //        PaddingTop = 30,
+            //        Align = TextAlign.Center
+            //    },
+            //    new LetterBlock
+            //    {
+            //        Text = "السلام عليكم ورحمة الله وبركاته،",
+            //        FontSize = 12,
+            //        PaddingBottom = 10,
+            //        PaddingTop = 15,
+            //        Align = TextAlign.Right
+            //    },
+            //    new LetterBlock
+            //    {
+            //        Text = $"نفيد سعادتكم بأنه بناءً على توجيهاتكم الكريمة تم إمهال المستفيد {residentName} " +
+            //               $"صاحب رقم الهوية الوطنية {nationalId} والرقم العام {generalNo} " +
+            //               $"القاطن في المنزل رقم {buildingNo} للفترة من تاريخ {extendFromDateStr} " +
+            //               $"إلى تاريخ {extendToDateStr}، وذلك لسبب: {extendReason}.",
+            //        FontSize = 12,
+            //        Align = TextAlign.Justify,
+            //        LineHeight = 1.8f,
+            //        PaddingBottom = 16
+            //    },
+            //    new LetterBlock
+            //    {
+            //        Text = $"رقم خطاب الموافقة: {decisionNo}\nتاريخ خطاب الموافقة: {decisionDateStr}",
+            //        FontSize = 11,
+            //        Align = TextAlign.Right,
+            //        PaddingBottom = 16
+            //    },
+            //    new LetterBlock
+            //    {
+            //        Text = "وتفضلوا بقبول فائق الاحترام والتقدير،",
+            //        FontSize = 12,
+            //        PaddingTop = 20,
+            //        Align = TextAlign.Right
+            //    },
+            //    new LetterBlock
+            //    {
+            //        Text = "مدير الإدارة الهندسية\nالاسم / ..................\nالتوقيع / ...............",
+            //        FontSize = 11,
+            //        Align = TextAlign.Left,
+            //        PaddingTop = 30,
+            //        PaddingLeft = 120
+            //    }
+            //}
+            //        };
+
+            //        var pdfBytes = QuestPdfReportRenderer.Render(report);
+            //        Response.Headers["Content-Disposition"] = $"inline; filename=HousingExtend_{nationalId}.pdf";
+            //        return File(pdfBytes, "application/pdf");
+            //    }
 
             if (pdf == 2)
             {
+
+                if (!rowId.HasValue)
+                {
+                    return Content("خطأ: لم يتم استلام معرف السجل");
+                }
+
+                // Find the selected row
+                var selectedRow = rowsList.FirstOrDefault(r =>
+                    r.TryGetValue("p01", out var id) &&
+                    id != null &&
+                    Convert.ToInt32(id) == rowId.Value);
+
+                if (selectedRow == null)
+                {
+                    return Content($"لم يتم العثور على البيانات المطلوبة. معرف السجل: {rowId}, عدد السجلات: {rowsList.Count}");
+                }
+
+                // Extract data from selected row
+                string residentName = selectedRow.GetValueOrDefault("p15")?.ToString() ?? "";
+                string nationalId = selectedRow.GetValueOrDefault("p03")?.ToString() ?? "";
+                string generalNo = selectedRow.GetValueOrDefault("p04")?.ToString() ?? "";
+                string buildingNo = selectedRow.GetValueOrDefault("p19")?.ToString() ?? "";
+                string decisionNo = selectedRow.GetValueOrDefault("p23")?.ToString() ?? "";
+                string extendReason = selectedRow.GetValueOrDefault("p32")?.ToString() ?? "";
+
+                // Parse dates
+                DateTime? decisionDate = selectedRow.GetValueOrDefault("p22") as DateTime?;
+                DateTime? extendFromDate = selectedRow.GetValueOrDefault("p24") as DateTime?;
+                DateTime? extendToDate = selectedRow.GetValueOrDefault("p25") as DateTime?;
+
+                string decisionDateStr = decisionDate?.ToString("yyyy/MM/dd") ?? "";
+                string extendFromDateStr = extendFromDate?.ToString("yyyy/MM/dd") ?? "";
+                string extendToDateStr = extendToDate?.ToString("yyyy/MM/dd") ?? "";
+
+
+
                 var logo = Path.Combine(_env.WebRootPath, "img", "ppng.png");
 
                 var header = new Dictionary<string, string>
@@ -1347,52 +1514,52 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     HeaderFields = header,
 
                     LetterBlocks = new List<LetterBlock>
-        {
-            new LetterBlock
             {
-                Text = "سعادة قائد إدارة مدينة الملك فيصل العسكرية حفظه الله",
-                FontSize = 13,
-                Bold = true,
-                PaddingBottom = 12,
-                PaddingTop = 30,
-                Align = TextAlign.Center
-            },
+                new LetterBlock
+                {
+                    Text = "سعادة قائد إدارة مدينة الملك فيصل العسكرية حفظه الله",
+                    FontSize = 13,
+                    Bold = true,
+                    PaddingBottom = 12,
+                    PaddingTop = 30,
+                    Align = TextAlign.Center
+                },
 
-            new LetterBlock
-            {
-                Text = "السلام عليكم ورحمة الله وبركاته،",
-                FontSize = 12,
-                PaddingBottom = 10,
-                PaddingTop = 15,
-                Align = TextAlign.Right
-            },
+                new LetterBlock
+                {
+                    Text = "السلام عليكم ورحمة الله وبركاته،",
+                    FontSize = 12,
+                    PaddingBottom = 10,
+                    PaddingTop = 15,
+                    Align = TextAlign.Right
+                },
 
-            new LetterBlock
-            {
-                Text = "نفيد سعادتكم بأنه بناءً على توجيهاتكم الكريمة تم امهال الساكن " + FullName + " من تاريخ " +" الى تاريخ ",
-                FontSize = 12,
-                Align = TextAlign.Justify,
-                LineHeight = 1.8f,
-                PaddingBottom = 16
-            },
+                new LetterBlock
+                {
+                    Text = "نفيد سعادتكم بأنه بناءً على توجيهاتكم الكريمة تم امهال الساكن " + residentName + " من تاريخ " +" الى تاريخ ",
+                    FontSize = 12,
+                    Align = TextAlign.Justify,
+                    LineHeight = 1.8f,
+                    PaddingBottom = 16
+                },
 
-            new LetterBlock
-            {
-                Text = "وتفضلوا بقبول فائق الاحترام والتقدير،",
-                FontSize = 12,
-                PaddingTop = 20,
-                Align = TextAlign.Right
-            },
+                new LetterBlock
+                {
+                    Text = "وتفضلوا بقبول فائق الاحترام والتقدير،",
+                    FontSize = 12,
+                    PaddingTop = 20,
+                    Align = TextAlign.Right
+                },
 
-            new LetterBlock
-            {
-                Text = "مدير الإدارة الهندسية\nالاسم / ..................\nالتوقيع / ...............",
-                FontSize = 11,
-                Align = TextAlign.Left,
-                PaddingTop = 30,
-                PaddingLeft = 120
+                new LetterBlock
+                {
+                    Text = "مدير الإدارة الهندسية\nالاسم / ..................\nالتوقيع / ...............",
+                    FontSize = 11,
+                    Align = TextAlign.Left,
+                    PaddingTop = 30,
+                    PaddingLeft = 120
+                }
             }
-        }
                 };
 
                 var pdfBytes = QuestPdfReportRenderer.Render(report);

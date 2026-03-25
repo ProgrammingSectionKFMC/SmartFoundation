@@ -31,6 +31,9 @@ namespace SmartFoundation.Mvc.Controllers.Home
             DataSet ds = await _mastersServies.GetDataLoadDataSetAsync(spParameters);
             SplitDataSet(ds);
 
+
+
+
             // ✅ قراءة أسماء الـ Charts من ChartTable
             var chartMethodNames = new List<string>();
 

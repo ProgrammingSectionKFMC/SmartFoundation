@@ -61,6 +61,8 @@ namespace SmartFoundation.Mvc.Controllers.Home
         protected string? HostName;
         protected string? LastActivityUtc;
 
+
+        protected DataTable? permissionTable;
         protected DataTable? ChartTable;
         protected DataTable? dt1;
         protected DataTable? dt2;
@@ -120,16 +122,17 @@ namespace SmartFoundation.Mvc.Controllers.Home
         /// </summary>
         protected void SplitDataSet(DataSet ds)
         {
-            ChartTable = (ds?.Tables?.Count ?? 0) > 0 ? ds.Tables[0] : null;
-            dt1 = (ds?.Tables?.Count ?? 0) > 1 ? ds.Tables[1] : null;
-            dt2 = (ds?.Tables?.Count ?? 0) > 2 ? ds.Tables[2] : null;
-            dt3 = (ds?.Tables?.Count ?? 0) > 3 ? ds.Tables[3] : null;
-            dt4 = (ds?.Tables?.Count ?? 0) > 4 ? ds.Tables[4] : null;
-            dt5 = (ds?.Tables?.Count ?? 0) > 5 ? ds.Tables[5] : null;
-            dt6 = (ds?.Tables?.Count ?? 0) > 6 ? ds.Tables[6] : null;
-            dt7 = (ds?.Tables?.Count ?? 0) > 7 ? ds.Tables[7] : null;
-            dt8 = (ds?.Tables?.Count ?? 0) > 8 ? ds.Tables[8] : null;
-            dt9 = (ds?.Tables?.Count ?? 0) > 9 ? ds.Tables[9] : null;
+            permissionTable = (ds?.Tables?.Count ?? 0) > 0 ? ds.Tables[0] : null;
+            ChartTable = (ds?.Tables?.Count ?? 0) > 1 ? ds.Tables[1] : null;
+            dt1 = (ds?.Tables?.Count ?? 0) > 2 ? ds.Tables[2] : null;
+            dt2 = (ds?.Tables?.Count ?? 0) > 3 ? ds.Tables[3] : null;
+            dt3 = (ds?.Tables?.Count ?? 0) > 4 ? ds.Tables[4] : null;
+            dt4 = (ds?.Tables?.Count ?? 0) > 5 ? ds.Tables[5] : null;
+            dt5 = (ds?.Tables?.Count ?? 0) > 6 ? ds.Tables[6] : null;
+            dt6 = (ds?.Tables?.Count ?? 0) > 7 ? ds.Tables[7] : null;
+            dt7 = (ds?.Tables?.Count ?? 0) > 8 ? ds.Tables[8] : null;
+            dt8 = (ds?.Tables?.Count ?? 0) > 9 ? ds.Tables[9] : null;
+            dt9 = (ds?.Tables?.Count ?? 0) > 10 ? ds.Tables[10] : null;
         }
     }
 }
