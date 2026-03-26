@@ -74,11 +74,8 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
     }
 
 
-
-
     public class TableStyleRule
     {
-        
         // "row" = صف كامل
         // "cell" = خلية واحدة (حسب Field)
         // "column" = عمود كامل (حسب Field)
@@ -89,49 +86,37 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
 
         // نوع المقارنة: eq, neq, gt, gte, lt, lte, contains, startswith, endswith, in
         public string Op { get; set; } = "eq";
-        // "eq"    يساوي
-        //"neq"   لا يساوي
-        //"gt"    أكبر من (أرقام)
-        //"lt"    أصغر من
-        //"gte"   أكبر أو يساوي
-        //"lte"   أصغر أو يساوي
-        //"contains"  يحتوي نص
 
-        // القيمة المراد مقارنتها (نخليها object عشان تدعم نص/رقم/بول)
         public object? Value { get; set; }
 
-        // CSS class تُطبق عند تحقق الشرط
         public string CssClass { get; set; } = "";
 
-        // (اختياري) ترتيب التنفيذ: الأقل أولاً
         public int Priority { get; set; } = 0;
 
-        // (اختياري) إذا true: أول Rule ينطبق يوقف
         public bool StopOnMatch { get; set; } = false;
 
-
-        // ✅ NEW: Pill / Badge
         public bool PillEnabled { get; set; } = false;
 
-        // بأي عمود تنعرض الكبسولة؟ (إذا null -> نفس Field)
         public string? PillField { get; set; }
 
-        // نص ثابت للكبسولة (اختياري)
         public string? PillText { get; set; }
 
-        // أو جيب النص من حقل في الـ row (اختياري)
         public string? PillTextField { get; set; }
 
-        // كلاس CSS للكبسولة (مثلاً: pill-green)
         public string? PillCssClass { get; set; }
 
         public string? PillIcon { get; set; }
 
-        // طريقة العرض: append | prepend | replace
         public string PillMode { get; set; } = "replace";
+
+        public bool IconOnly { get; set; } = false;
+
+        public string? IconOnlyCssClass { get; set; }
+
+        public string? PillSvg { get; set; }
+
+        public string? PillTitle { get; set; }
     }
-
-
 
     public class TableColumn
     {

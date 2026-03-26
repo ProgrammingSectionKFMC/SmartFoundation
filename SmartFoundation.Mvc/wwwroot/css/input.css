@@ -600,36 +600,46 @@ textarea[readonly] {
     border-right: 1px solid #d6ddd9;
     border-left: 1px solid #d6ddd9;
     border-bottom: 1px solid #d6ddd9;
-    scrollbar-width: thin;
-    scrollbar-color: #8ea196 #edf0ee;
     overflow-anchor: none;
     scroll-behavior: auto;
+    /* Firefox */
+    scrollbar-width: thin;
+    scrollbar-color: #b8c0bb #f3f5f4;
 }
 
     /* ─── WebKit Scrollbar ─────────────────────────────────── */
     .table-box::-webkit-scrollbar {
-        height: 8px;
+        height: 12px;
     }
 
+    /* المسار (هادئ جدًا) */
     .table-box::-webkit-scrollbar-track {
-        background: #edf0ee;
-        border-top: 1px solid #d9e2dc;
-    }
-
-    .table-box::-webkit-scrollbar-thumb {
-        background: #9aaca1;
-        border: 2px solid #edf0ee;
+        background: #f3f5f4;
         border-radius: 999px;
-        min-width: 40px;
     }
 
+    /* المقبض (خفيف ومحايد) */
+    .table-box::-webkit-scrollbar-thumb {
+        background: #c1c9c4;
+        border-radius: 999px;
+        border: 3px solid #f3f5f4;
+        min-width: 70px;
+    }
+
+        /* hover بسيط */
         .table-box::-webkit-scrollbar-thumb:hover {
-            background: #7f9388;
+            background: #aeb7b1;
         }
 
+        /* active */
         .table-box::-webkit-scrollbar-thumb:active {
-            background: #6f8478;
+            background: #9da6a0;
         }
+
+    .table-box::-webkit-scrollbar-corner {
+        background: #f3f5f4;
+    }
+
 
 /* ─── Table ─────────────────────────────────────────────── */
 .sf-table {
@@ -5012,6 +5022,52 @@ tr.row-purple .pill-purple {
         }
 }
 
+/* Icon only mode */
+.sf-icon-only {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    vertical-align: middle;
+}
+
+    .sf-icon-only svg,
+    .sf-icon-only img,
+    .sf-icon-only i {
+        width: 18px;
+        height: 18px;
+        display: block;
+    }
+
+.sf-icon-only--success {
+    color: #065f46;
+}
+
+.sf-icon-only--danger {
+    color: #7f1d1d;
+}
+
+.sf-icon-only--muted {
+    color: #6b7280;
+}
+
+
+.pill-svg,
+.sf-icon-only > span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+    .pill-svg svg,
+    .sf-icon-only svg {
+        width: 16px;
+        height: 16px;
+        display: block;
+        fill: currentColor;
+    }
+
 /* ─── Print ────────────────────────────────────────────── */
 @media print {
     .pill {
@@ -6740,18 +6796,3 @@ body {
 
 /* ================== End column reorder styles ================== */
 
-
-
-
-.pill i {
-    font-size: 1rem;
-}
-
-/* Icon Only Pills (no text) */
-.pill-icon-only {
-    padding: 0.375rem 0.5rem;
-}
-
-    .pill-icon-only span {
-        display: none;
-    }

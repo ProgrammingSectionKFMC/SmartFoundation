@@ -390,10 +390,10 @@
                             <template x-for="col in visibleColumns()" :key="col.field">
                                 <th class="th-cell"
                                     x-bind:style="(col.width ? 'width:' + col.width + ';' : '') + (headerColor ? 'background-color:' + headerColor + ';' : '')"
-                                    x-bind:class="(dragOverColField === col.field ? 'sf-col-drag-over ' : '') + (draggingColField === col.field ? 'sf-col-dragging' : '')">
+                                    x-bind:class="(dragOverColField === col.field ? 'sf-col-drag-over' : '') + (draggingColField === col.field ? 'sf-col-dragging' : '')">
 
                                     <div class="th-inner flex items-center justify-center gap-1"
-                                         x-bind:class="(col.sortable ? 'cursor-pointer ' : '') + (enableColumnReorder ? 'sf-col-draggable ' : '')"
+                                         x-bind:class="(col.sortable ? 'cursor-pointer' : '') + (enableColumnReorder ? 'sf-col-draggable' : '')"
                                          x-bind:draggable="enableColumnReorder"
                                          x-on:click="toggleSort(col)"
                                          x-on:dragstart="onColumnDragStart(col, $event)"
@@ -539,10 +539,13 @@
                                 </td>
 
                                 <template x-for="col in visibleColumns()" :key="col.field">
-                                    <td class="td-cell"
+                                   @*  <td class="td-cell"
                                         x-bind:class="[col.align, col.truncate ? 'truncate-cell' : '', applyStyleRules(row, col, 'cell'), enableCellCopy ? 'sf-copy-cell' : '', enableCellCopy ? 'hover:bg-gray-50' : '']"
                                         x-on:dblclick.stop="enableCellCopy && copyCell(row, col, $event)"
-                                        x-html="formatCell(row, col)">
+                                        x-html="formatCell(row, col)"> *@
+                                    <td class="td-cell"
+                                        x-bind:class="[col.align, col.truncate ? 'truncate-cell' : '', applyStyleRules(row, col, 'cell'), enableCellCopy ? 'sf-copy-cell' : '', enableCellCopy ? 'hover:bg-gray-50' : '']"
+                                        x-on:dblclick.stop="enableCellCopy && copyCell(row, col, $event)">
 
                                         <template x-if="(() =>
                                             {
@@ -554,7 +557,8 @@
                                             );
                                             return matchingRule;
                                             })()">
-                                            <span :class="(() =>
+
+                                            <template x-if="(() =>
                                                 {
                                                 const rule = styleRules.find(r =>
                                                 r.target === 'cell' &&
@@ -562,9 +566,9 @@
                                                 r.pillEnabled &&
                                                 String(row[col.field] ?? '') === String(r.value ?? '')
                                                 );
-                                                return rule?.pillCssClass || 'pill';
+                                                return !!rule?.iconOnly;
                                                 })()">
-                                                <template x-if="(() =>
+                                                <span :class="(() =>
                                                     {
                                                     const rule = styleRules.find(r =>
                                                     r.target === 'cell' &&
@@ -572,9 +576,19 @@
                                                     r.pillEnabled &&
                                                     String(row[col.field] ?? '') === String(r.value ?? '')
                                                     );
-                                                    return rule?.pillIcon;
+                                                    return rule?.iconOnlyCssClass || 'sf-icon-only';
+                                                    })()"
+                                                      :title="(() => {
+                                                    const rule = styleRules.find(r =>
+                                                    r.target === 'cell' &&
+                                                    r.field === col.field &&
+                                                    r.pillEnabled &&
+                                                    String(row[col.field] ?? '') === String(r.value ?? '')
+                                                    );
+                                                    return rule?.pillTitle || rule?.pillText || '';
                                                     })()">
-                                                    <i :class="(() =>
+
+                                                    <template x-if="(() =>
                                                         {
                                                         const rule = styleRules.find(r =>
                                                         r.target === 'cell' &&
@@ -582,11 +596,57 @@
                                                         r.pillEnabled &&
                                                         String(row[col.field] ?? '') === String(r.value ?? '')
                                                         );
-                                                        return rule?.pillIcon;
+                                                        return !!rule?.pillSvg;
                                                         })()">
-                                                    </i>
-                                                </template>
-                                                <span x-text="(() =>
+                                                        <span x-html="(() =>
+                                                            {
+                                                            const rule = styleRules.find(r =>
+                                                            r.target === 'cell' &&
+                                                            r.field === col.field &&
+                                                            r.pillEnabled &&
+                                                            String(row[col.field] ?? '') === String(r.value ?? '')
+                                                            );
+                                                            return rule?.pillSvg || '';
+                                                            })()">
+                                                        </span>
+                                                    </template>
+
+                                                    <template x-if="(() =>
+                                                        {
+                                                        const rule = styleRules.find(r =>
+                                                        r.target === 'cell' &&
+                                                        r.field === col.field &&
+                                                        r.pillEnabled &&
+                                                        String(row[col.field] ?? '') === String(r.value ?? '')
+                                                        );
+                                                        return !rule?.pillSvg && !!rule?.pillIcon;
+                                                        })()">
+                                                        <i :class="(() =>
+                                                            {
+                                                            const rule = styleRules.find(r =>
+                                                            r.target === 'cell' &&
+                                                            r.field === col.field &&
+                                                            r.pillEnabled &&
+                                                            String(row[col.field] ?? '') === String(r.value ?? '')
+                                                            );
+                                                            return rule?.pillIcon || '';
+                                                            })()">
+                                                        </i>
+                                                    </template>
+                                                </span>
+                                            </template>
+
+                                            <template x-if="(() =>
+                                                {
+                                                const rule = styleRules.find(r =>
+                                                r.target === 'cell' &&
+                                                r.field === col.field &&
+                                                r.pillEnabled &&
+                                                String(row[col.field] ?? '') === String(r.value ?? '')
+                                                );
+                                                return !rule?.iconOnly;
+                                                })()">
+                                                <span :class="(() =>
                                                     {
                                                     const rule = styleRules.find(r =>
                                                     r.target === 'cell' &&
@@ -594,10 +654,77 @@
                                                     r.pillEnabled &&
                                                     String(row[col.field] ?? '') === String(r.value ?? '')
                                                     );
-                                                    return rule?.pillText || row[col.field] || '';
+                                                    return rule?.pillCssClass || 'pill';
+                                                    })()"
+                                                      :title="(() => {
+                                                    const rule = styleRules.find(r =>
+                                                    r.target === 'cell' &&
+                                                    r.field === col.field &&
+                                                    r.pillEnabled &&
+                                                    String(row[col.field] ?? '') === String(r.value ?? '')
+                                                    );
+                                                    return rule?.pillTitle || rule?.pillText || '';
                                                     })()">
+
+                                                    <template x-if="(() =>
+                                                        {
+                                                        const rule = styleRules.find(r =>
+                                                        r.target === 'cell' &&
+                                                        r.field === col.field &&
+                                                        r.pillEnabled &&
+                                                        String(row[col.field] ?? '') === String(r.value ?? '')
+                                                        );
+                                                        return !!rule?.pillSvg;
+                                                        })()">
+                                                        <span class="pill-svg" x-html="(() =>
+                                                            {
+                                                            const rule = styleRules.find(r =>
+                                                            r.target === 'cell' &&
+                                                            r.field === col.field &&
+                                                            r.pillEnabled &&
+                                                            String(row[col.field] ?? '') === String(r.value ?? '')
+                                                            );
+                                                            return rule?.pillSvg || '';
+                                                            })()">
+                                                        </span>
+                                                    </template>
+
+                                                    <template x-if="(() =>
+                                                        {
+                                                        const rule = styleRules.find(r =>
+                                                        r.target === 'cell' &&
+                                                        r.field === col.field &&
+                                                        r.pillEnabled &&
+                                                        String(row[col.field] ?? '') === String(r.value ?? '')
+                                                        );
+                                                        return !rule?.pillSvg && !!rule?.pillIcon;
+                                                        })()">
+                                                        <i :class="(() =>
+                                                            {
+                                                            const rule = styleRules.find(r =>
+                                                            r.target === 'cell' &&
+                                                            r.field === col.field &&
+                                                            r.pillEnabled &&
+                                                            String(row[col.field] ?? '') === String(r.value ?? '')
+                                                            );
+                                                            return rule?.pillIcon || '';
+                                                            })()">
+                                                        </i>
+                                                    </template>
+
+                                                    <span x-text="(() =>
+                                                        {
+                                                        const rule = styleRules.find(r =>
+                                                        r.target === 'cell' &&
+                                                        r.field === col.field &&
+                                                        r.pillEnabled &&
+                                                        String(row[col.field] ?? '') === String(r.value ?? '')
+                                                        );
+                                                        return rule?.pillText || row[col.field] || '';
+                                                        })()">
+                                                    </span>
                                                 </span>
-                                            </span>
+                                            </template>
                                         </template>
 
                                         <template x-if="!(() =>

@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using SmartFoundation.Mvc.Helpers;
 using SmartFoundation.UI.ViewModels.SmartForm;
 using SmartFoundation.UI.ViewModels.SmartPage;
 using SmartFoundation.UI.ViewModels.SmartTable;
@@ -795,9 +796,112 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
 
+            //            dsModel.StyleRules = new List<TableStyleRule>
+            //{
+            //    // Electricity Service - Icon check (green) when = 1
+            //    new TableStyleRule
+            //    {
+            //        Target = "cell",
+            //        Field = "ElectrcityServicesView",
+            //        Op = "eq",
+            //        Value = "1",
+            //        Priority = 1,
+            //        PillEnabled = true,
+            //        PillField = "ElectrcityServicesView",
+            //        PillTextField = "ElectrcityServicesView",
+            //        PillCssClass = "pill pill-green",
+            //        PillMode = "replace",
+            //        PillIcon = "fa fa-check",
+            //        PillText = "متوفرة"
+            //    },
+            //    // Electricity Service - Icon X (red) when = 0
+            //    new TableStyleRule
+            //    {
+            //        Target = "cell",
+            //        Field = "ElectrcityServicesView",
+            //        Op = "eq",
+            //        Value = "0",
+            //        Priority = 1,
+            //        PillEnabled = true,
+            //        PillField = "ElectrcityServicesView",
+            //        PillTextField = "ElectrcityServicesView",
+            //        PillCssClass = "pill pill-red",
+            //        PillMode = "replace",
+            //        PillIcon = "fa fa-times",
+            //        PillText = "غير متوفرة"
+            //    },
+
+            //    // Water Service - Icon check (green) when = 1
+            //    new TableStyleRule
+            //    {
+            //        Target = "cell",
+            //        Field = "WaterServicesView",
+            //        Op = "eq",
+            //        Value = "1",
+            //        Priority = 1,
+            //        PillEnabled = true,
+            //        PillField = "WaterServicesView",
+            //        PillTextField = "WaterServicesView",
+            //        PillCssClass = "pill pill-green",
+            //        PillMode = "replace",
+            //        PillIcon = "fa fa-check",
+            //        PillText = "متوفرة"
+            //    },
+            //    // Water Service - Icon X (red) when = 0
+            //    new TableStyleRule
+            //    {
+            //        Target = "cell",
+            //        Field = "WaterServicesView",
+            //        Op = "eq",
+            //        Value = "0",
+            //        Priority = 1,
+            //        PillEnabled = true,
+            //        PillField = "WaterServicesView",
+            //        PillTextField = "WaterServicesView",
+            //        PillCssClass = "pill pill-red",
+            //        PillMode = "replace",
+            //        PillIcon = "fa fa-times",
+            //        PillText = "غير متوفرة"
+            //    },
+
+            //    // Gas Service - Icon check (green) when = 1
+            //    new TableStyleRule
+            //    {
+            //        Target = "cell",
+            //        Field = "GasServicesView",
+            //        Op = "eq",
+            //        Value = "1",
+            //        Priority = 1,
+            //        PillEnabled = true,
+            //        PillField = "GasServicesView",
+            //        PillTextField = "GasServicesView",
+            //        PillCssClass = "pill pill-green",
+            //        PillMode = "replace",
+            //        PillIcon = "fa fa-check",
+            //        PillText = "متوفرة"
+            //    },
+            //    // Gas Service - Icon X (red) when = 0
+            //    new TableStyleRule
+            //    {
+            //        Target = "cell",
+            //        Field = "GasServicesView",
+            //        Op = "eq",
+            //        Value = "0",
+            //        Priority = 1,
+            //        PillEnabled = true,
+            //        PillField = "GasServicesView",
+            //        PillTextField = "GasServicesView",
+            //        PillCssClass = "pill pill-red",
+            //        PillMode = "replace",
+            //        PillIcon = "fa fa-times",
+            //        PillText = "غير متوفرة"
+            //    }
+            //};
+
+
             dsModel.StyleRules = new List<TableStyleRule>
 {
-    // Electricity Service - Icon check (green) when = 1
+    // Electricity
     new TableStyleRule
     {
         Target = "cell",
@@ -806,14 +910,11 @@ namespace SmartFoundation.Mvc.Controllers.Housing
         Value = "1",
         Priority = 1,
         PillEnabled = true,
-        PillField = "ElectrcityServicesView",
-        PillTextField = "ElectrcityServicesView",
-        PillCssClass = "pill pill-green",
-        PillMode = "replace",
-        PillIcon = "fa fa-check",
-        PillText = "متوفرة"
+        IconOnly = true,
+        IconOnlyCssClass = "sf-icon-only sf-icon-only--success",
+        PillTitle = "متوفرة",
+        PillSvg = SfIcons.Check
     },
-    // Electricity Service - Icon X (red) when = 0
     new TableStyleRule
     {
         Target = "cell",
@@ -822,15 +923,13 @@ namespace SmartFoundation.Mvc.Controllers.Housing
         Value = "0",
         Priority = 1,
         PillEnabled = true,
-        PillField = "ElectrcityServicesView",
-        PillTextField = "ElectrcityServicesView",
-        PillCssClass = "pill pill-red",
-        PillMode = "replace",
-        PillIcon = "fa fa-times",
-        PillText = "غير متوفرة"
+        IconOnly = true,
+        IconOnlyCssClass = "sf-icon-only sf-icon-only--danger",
+        PillTitle = "غير متوفرة",
+        PillSvg = SfIcons.Close
     },
-    
-    // Water Service - Icon check (green) when = 1
+
+    // Water
     new TableStyleRule
     {
         Target = "cell",
@@ -839,14 +938,11 @@ namespace SmartFoundation.Mvc.Controllers.Housing
         Value = "1",
         Priority = 1,
         PillEnabled = true,
-        PillField = "WaterServicesView",
-        PillTextField = "WaterServicesView",
-        PillCssClass = "pill pill-green",
-        PillMode = "replace",
-        PillIcon = "fa fa-check",
-        PillText = "متوفرة"
+        IconOnly = true,
+        IconOnlyCssClass = "sf-icon-only sf-icon-only--success",
+        PillTitle = "متوفرة",
+        PillSvg = SfIcons.Check
     },
-    // Water Service - Icon X (red) when = 0
     new TableStyleRule
     {
         Target = "cell",
@@ -855,15 +951,13 @@ namespace SmartFoundation.Mvc.Controllers.Housing
         Value = "0",
         Priority = 1,
         PillEnabled = true,
-        PillField = "WaterServicesView",
-        PillTextField = "WaterServicesView",
-        PillCssClass = "pill pill-red",
-        PillMode = "replace",
-        PillIcon = "fa fa-times",
-        PillText = "غير متوفرة"
+        IconOnly = true,
+        IconOnlyCssClass = "sf-icon-only sf-icon-only--danger",
+        PillTitle = "غير متوفرة",
+        PillSvg = SfIcons.Close
     },
-    
-    // Gas Service - Icon check (green) when = 1
+
+    // Gas
     new TableStyleRule
     {
         Target = "cell",
@@ -872,14 +966,11 @@ namespace SmartFoundation.Mvc.Controllers.Housing
         Value = "1",
         Priority = 1,
         PillEnabled = true,
-        PillField = "GasServicesView",
-        PillTextField = "GasServicesView",
-        PillCssClass = "pill pill-green",
-        PillMode = "replace",
-        PillIcon = "fa fa-check",
-        PillText = "متوفرة"
+        IconOnly = true,
+        IconOnlyCssClass = "sf-icon-only sf-icon-only--success",
+        PillTitle = "متوفرة",
+        PillSvg = SfIcons.Check
     },
-    // Gas Service - Icon X (red) when = 0
     new TableStyleRule
     {
         Target = "cell",
@@ -888,12 +979,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
         Value = "0",
         Priority = 1,
         PillEnabled = true,
-        PillField = "GasServicesView",
-        PillTextField = "GasServicesView",
-        PillCssClass = "pill pill-red",
-        PillMode = "replace",
-        PillIcon = "fa fa-times",
-        PillText = "غير متوفرة"
+        IconOnly = true,
+        IconOnlyCssClass = "sf-icon-only sf-icon-only--danger",
+        PillTitle = "غير متوفرة",
+        PillSvg = SfIcons.Close
     }
 };
             //var vm = new FormTableViewModel
