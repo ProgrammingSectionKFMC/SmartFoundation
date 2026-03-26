@@ -76,6 +76,13 @@ This repository uses gateway stored procedures for many Housing-style flows.
 - Downstream procedures hold business logic and validations
 - `ProcedureMapper` should map entry procedures exposed to the app layer, not every downstream business procedure
 
+Shared database-side patterns:
+
+- `Masters_DataLoad` returns `permissionTypeName_E` first, then page-specific resultsets
+- Housing `DL` procedures usually return main feature data first, then DDL/lookup resultsets
+- Housing `SP` procedures usually follow a shared write template with transaction guards, `TRY/CATCH`, business validations, audit logging, and `IsSuccessful` / `Message_` results
+- `Masters_CRUD` handles permission checks before downstream writes and may trigger notifications through `dbo.Notifications_Create`
+
 Canonical example:
 
 - `dbo.Masters_DataLoad` -> `[Housing].[WaitingListByResidentDL]`

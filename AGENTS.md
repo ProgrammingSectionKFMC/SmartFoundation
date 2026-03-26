@@ -245,6 +245,64 @@ Reference files:
 - `SmartFoundation.Database/Housing/Stored Procedures/WaitingListByResidentDL.sql`
 - `SmartFoundation.Database/Housing/Stored Procedures/WaitingListByResidentSP.sql`
 
+## Gateway And Feature Procedure Patterns
+
+There are shared SQL patterns across `dbo` gateway procedures and downstream Housing procedures. Agents should preserve these patterns when changing app code or SQL-related behavior.
+
+Gateway read pattern in `Masters_DataLoad`:
+
+- gateway procedures accept shared context first, then generic positional parameters
+- `Masters_DataLoad` selects `permissionTypeName_E` from `dbo.ft_UserPagePermissions(@entrydata, @pageName_)` before page-specific resultsets
+- page-specific routing is typically a large `IF / ELSE IF` block on `@pageName_`
+- downstream `DL` procedures usually return the main feature dataset first, then one or more DDL/lookup datasets
+
+Gateway write pattern in `Masters_CRUD`:
+
+- `Masters_CRUD` routes by both `@pageName_` and `@ActionType`
+- it performs permission checks before calling downstream write procedures
+- it captures downstream results using the shared `IsSuccessful` / `Message_` contract
+- it can trigger notification outbox behavior through `dbo.Notifications_Create`
+- business errors are returned to the caller directly; unexpected errors are logged to `dbo.ErrorLog`
+
+Downstream Housing `DL` pattern:
+
+- shared parameters usually start with `@pageName_`, `@idaraID`, `@entrydata`, and `@hostname`
+- some pages add one or more feature-specific filters after the shared parameters
+- the first feature resultset is the primary page data
+- later resultsets are often DDL sources used to populate selects in MVC forms
+- many filters follow the active-record pattern such as `...Active = 1`
+- many Housing lookups are scoped by Idara with conditions like `(IdaraId_FK is null or IdaraId_FK = @idaraID)`
+
+Downstream Housing `SP` pattern:
+
+- write procedures typically use `SET NOCOUNT ON` and `SET XACT_ABORT ON`
+- they usually guard transactions with `@@TRANCOUNT`
+- they use `BEGIN TRY / BEGIN CATCH`
+- business validation errors commonly use `THROW 50001`
+- unexpected/programmatic failures commonly use `THROW 50002`
+- successful branches usually end with `SELECT 1 AS IsSuccessful, N'...' AS Message_` followed by `RETURN`
+- delete behavior is often a soft delete using an `...Active = 0` update, not a physical delete
+- many procedures append `entryData` and `hostName` instead of replacing them
+- writes commonly insert an audit row into `dbo.AuditLog`
+
+Important error-handling rule:
+
+- in `Masters_CRUD`, errors in the `50001` to `50999` range are treated as business/user-facing errors
+- unexpected errors are logged to `dbo.ErrorLog` and converted into a generic failure message
+
+Reference files:
+
+- `SmartFoundation.Database/dbo/Stored Procedures/Masters_DataLoad.sql:40`
+- `SmartFoundation.Database/dbo/Stored Procedures/Masters_CRUD.sql:65`
+- `SmartFoundation.Database/dbo/Stored Procedures/Masters_CRUD.sql:3133`
+- `SmartFoundation.Database/dbo/Stored Procedures/Masters_CRUD.sql:3182`
+- `SmartFoundation.Database/Housing/Stored Procedures/BuildingTypeDL.sql`
+- `SmartFoundation.Database/Housing/Stored Procedures/BuildingTypeSP.sql`
+- `SmartFoundation.Database/Housing/Stored Procedures/BuildingDetailsDL.sql`
+- `SmartFoundation.Database/Housing/Stored Procedures/BuildingDetailsSP.sql`
+- `SmartFoundation.Database/Housing/Stored Procedures/WaitingListByResidentDL.sql`
+- `SmartFoundation.Database/Housing/Stored Procedures/WaitingListByResidentSP.sql`
+
 ## Application Layer Guidance
 
 Current reality:
