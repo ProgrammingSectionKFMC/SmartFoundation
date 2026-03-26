@@ -543,6 +543,75 @@
                                         x-bind:class="[col.align, col.truncate ? 'truncate-cell' : '', applyStyleRules(row, col, 'cell'), enableCellCopy ? 'sf-copy-cell' : '', enableCellCopy ? 'hover:bg-gray-50' : '']"
                                         x-on:dblclick.stop="enableCellCopy && copyCell(row, col, $event)"
                                         x-html="formatCell(row, col)">
+
+                                        <template x-if="(() =>
+                                            {
+                                            const matchingRule = styleRules?.find(r =>
+                                            r.target === 'cell' &&
+                                            r.field === col.field &&
+                                            r.pillEnabled &&
+                                            String(row[col.field] ?? '') === String(r.value ?? '')
+                                            );
+                                            return matchingRule;
+                                            })()">
+                                            <span :class="(() =>
+                                                {
+                                                const rule = styleRules.find(r =>
+                                                r.target === 'cell' &&
+                                                r.field === col.field &&
+                                                r.pillEnabled &&
+                                                String(row[col.field] ?? '') === String(r.value ?? '')
+                                                );
+                                                return rule?.pillCssClass || 'pill';
+                                                })()">
+                                                <template x-if="(() =>
+                                                    {
+                                                    const rule = styleRules.find(r =>
+                                                    r.target === 'cell' &&
+                                                    r.field === col.field &&
+                                                    r.pillEnabled &&
+                                                    String(row[col.field] ?? '') === String(r.value ?? '')
+                                                    );
+                                                    return rule?.pillIcon;
+                                                    })()">
+                                                    <i :class="(() =>
+                                                        {
+                                                        const rule = styleRules.find(r =>
+                                                        r.target === 'cell' &&
+                                                        r.field === col.field &&
+                                                        r.pillEnabled &&
+                                                        String(row[col.field] ?? '') === String(r.value ?? '')
+                                                        );
+                                                        return rule?.pillIcon;
+                                                        })()">
+                                                    </i>
+                                                </template>
+                                                <span x-text="(() =>
+                                                    {
+                                                    const rule = styleRules.find(r =>
+                                                    r.target === 'cell' &&
+                                                    r.field === col.field &&
+                                                    r.pillEnabled &&
+                                                    String(row[col.field] ?? '') === String(r.value ?? '')
+                                                    );
+                                                    return rule?.pillText || row[col.field] || '';
+                                                    })()">
+                                                </span>
+                                            </span>
+                                        </template>
+
+                                        <template x-if="!(() =>
+                                            {
+                                            const matchingRule = styleRules?.find(r =>
+                                            r.target === 'cell' &&
+                                            r.field === col.field &&
+                                            r.pillEnabled &&
+                                            String(row[col.field] ?? '') === String(r.value ?? '')
+                                            );
+                                            return matchingRule;
+                                            })()">
+                                            <span x-html="formatCell(row, col)"></span>
+                                        </template>
                                     </td>
                                 </template>
                             </tr>

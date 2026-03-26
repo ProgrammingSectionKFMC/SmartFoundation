@@ -4539,7 +4539,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                     // زر حفظ
                     /*html += `<button type="submit" class="btn btn-success sf-modal-btn-save">حفظ</button>`;*/
-                    html += `<button type="submit" class="btn btn-success sf-modal-btn-save"><i class="fas fa-check"></i> حفظ</button>`;
+                    html += `<button type="submit" class="btn btn-success sf-modal-btn-save"><i class="fas fa-check"></i> تنفيذ</button>`;
 
                     // زر إلغاء
                     html += `<button type="button" class="btn btn-secondary sf-modal-btn-cancel sf-modal-cancel">إلغاء</button>`;

@@ -6739,3 +6739,19 @@ body {
 }
 
 /* ================== End column reorder styles ================== */
+
+
+
+
+.pill i {
+    font-size: 1rem;
+}
+
+/* Icon Only Pills (no text) */
+.pill-icon-only {
+    padding: 0.375rem 0.5rem;
+}
+
+    .pill-icon-only span {
+        display: none;
+    }

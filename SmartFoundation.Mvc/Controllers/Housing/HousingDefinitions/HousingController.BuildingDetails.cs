@@ -234,6 +234,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ["buildingDetailsTel_2"] = "تليفون 2",
                             ["buildingDetailsRemark"] = "ملاحظات",
                             ["buildingRentTypeName_A"] = "نوع الايجار",
+                            ["ElectrcityServicesView"] = "خدمة كهرباء",
+                            ["WaterServicesView"] = "خدمة ماء",
+                            ["GasServicesView"] = "خدمة غاز",
                             ["buildingRentAmount"] = "الايجار"
                         };
 
@@ -263,6 +266,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             bool isbuildingDetailsTel_1 = c.ColumnName.Equals("buildingDetailsTel_1", StringComparison.OrdinalIgnoreCase);
                             bool isbuildingDetailsTel_2 = c.ColumnName.Equals("buildingDetailsTel_2", StringComparison.OrdinalIgnoreCase);
                             bool isbuildingRentTypeID = c.ColumnName.Equals("buildingRentTypeID", StringComparison.OrdinalIgnoreCase);
+                            bool isElectrcityServices = c.ColumnName.Equals("ElectrcityServices", StringComparison.OrdinalIgnoreCase);
+                            bool isWaterServices = c.ColumnName.Equals("WaterServices", StringComparison.OrdinalIgnoreCase);
+                            bool isGasServices = c.ColumnName.Equals("GasServices", StringComparison.OrdinalIgnoreCase);
 
                             dynamicColumns.Add(new TableColumn
                             {
@@ -274,7 +280,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 ,
                                 Visible = !(isbuildingDetailsID || isbuildingTypeID_FK || isbuildingUtilityTypeID_FK || ismilitaryLocationID_FK
                                 || isbuildingClassID_FK || isbuildingDetailsStartDate || isbuildingDetailsEndDate || isbuildingDetailsActive
-                                || isbuildingRentStartDate || isbuildingRentEndDate || isIdaraId_FK || isbuildingDetailsTel_1 || isbuildingDetailsTel_2 || isbuildingRentTypeID)
+                                || isbuildingRentStartDate || isbuildingRentEndDate || isIdaraId_FK || isbuildingDetailsTel_1 || isbuildingDetailsTel_2 || isbuildingRentTypeID|| isElectrcityServices || isWaterServices || isGasServices)
                             });
                         }
 
@@ -322,6 +328,20 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             dict["p16"] = Get("buildingDetailsRemark");
                             dict["p17"] = Get("IdaraId_FK");
                             dict["p18"] = Get("buildingDetailsEndDate");
+                            string ConvertToYesNo(object? value)
+                            {
+                                if (value == null) return "0";
+
+                                var strValue = value.ToString();
+                                return (value is true ||
+                                        strValue == "1" ||
+                                        strValue.Equals("True", StringComparison.OrdinalIgnoreCase)) ? "1" : "0";
+                            }
+
+                            // Then use it:
+                            dict["p19"] = ConvertToYesNo(Get("ElectrcityServices"));
+                            dict["p20"] = ConvertToYesNo(Get("WaterServices"));
+                            dict["p21"] = ConvertToYesNo(Get("GasServices"));
 
                             rowsList.Add(dict);
                         }
@@ -455,7 +475,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 addFields.Insert(notesIndex, new FieldConfig
                 {
                     Name = "p19",
-                    Label = "خدمة كهرباء",
+                    Label = "خدمة كهرباء على المبنى",
                     Type = "select",
                     ColCss = "3",
                     Required = true,
@@ -573,6 +593,57 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
 
+            int notesIndexu = updateFields.FindIndex(f => f.Name == "p16");
+            if (notesIndexu < 0) notesIndexu = updateFields.Count; // إذا ما لقينا الملاحظات، نحطهم في الآخر
+
+
+            // ✅ استخدم notesIndex بدلاً من 19، 20
+            if (ElectrictyService)
+            {
+                updateFields.Insert(notesIndexu, new FieldConfig
+                {
+                    Name = "p19",
+                    Label = "خدمة كهرباء على المبنى",
+                    Type = "select",
+                    ColCss = "3",
+                    Required = true,
+                    Options = YesNoOptions
+                });
+                notesIndexu++; // حدّث الموقع بعد الإضافة
+            }
+
+
+            if (WaterService)
+            {
+                updateFields.Insert(notesIndexu, new FieldConfig
+                {
+                    Name = "p20",
+                    Label = "خدمة مياه على المبنى",
+                    Type = "select",
+                    ColCss = "3",
+                    Required = true,
+                    Options = YesNoOptions
+                });
+                notesIndexu++; // حدّث الموقع بعد الإضافة
+            }
+
+
+            if (GasService)
+            {
+                updateFields.Insert(notesIndexu, new FieldConfig
+                {
+                    Name = "p21",
+                    Label = "خدمة غاز على المبنى",
+                    Type = "select",
+                    ColCss = "3",
+                    Required = true,
+                    Options = YesNoOptions
+                });
+                // لا داعي لتحديث notesIndex لأنه آخر إضافة
+            }
+
+
+
             //Delete fields: show confirmation as a label(not textbox) and show ID as label while still posting p01
 
             var deleteFields = new List<FieldConfig>
@@ -674,7 +745,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ActionUrl = "/crud/update",
                             SubmitText = "حفظ التعديلات",
                             CancelText = "إلغاء",
-                            Fields = updateFields
+                            Fields = updateFields,
+                            //Buttons = new List<FormButtonConfig>
+                            //{
+                            //    new FormButtonConfig { Text = "تنفيذ", Type = "submit", Color = "success", Icon = "fa fa-check" },
+                            //    new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", Icon = "fa fa-times", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
+                            //},
                         },
                         RequireSelection = true,
                         MinSelection = 1,
@@ -715,6 +791,111 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 }
             };
 
+
+
+
+
+            dsModel.StyleRules = new List<TableStyleRule>
+{
+    // Electricity Service - Icon check (green) when = 1
+    new TableStyleRule
+    {
+        Target = "cell",
+        Field = "ElectrcityServicesView",
+        Op = "eq",
+        Value = "1",
+        Priority = 1,
+        PillEnabled = true,
+        PillField = "ElectrcityServicesView",
+        PillTextField = "ElectrcityServicesView",
+        PillCssClass = "pill pill-green",
+        PillMode = "replace",
+        PillIcon = "fa fa-check",
+        PillText = "متوفرة"
+    },
+    // Electricity Service - Icon X (red) when = 0
+    new TableStyleRule
+    {
+        Target = "cell",
+        Field = "ElectrcityServicesView",
+        Op = "eq",
+        Value = "0",
+        Priority = 1,
+        PillEnabled = true,
+        PillField = "ElectrcityServicesView",
+        PillTextField = "ElectrcityServicesView",
+        PillCssClass = "pill pill-red",
+        PillMode = "replace",
+        PillIcon = "fa fa-times",
+        PillText = "غير متوفرة"
+    },
+    
+    // Water Service - Icon check (green) when = 1
+    new TableStyleRule
+    {
+        Target = "cell",
+        Field = "WaterServicesView",
+        Op = "eq",
+        Value = "1",
+        Priority = 1,
+        PillEnabled = true,
+        PillField = "WaterServicesView",
+        PillTextField = "WaterServicesView",
+        PillCssClass = "pill pill-green",
+        PillMode = "replace",
+        PillIcon = "fa fa-check",
+        PillText = "متوفرة"
+    },
+    // Water Service - Icon X (red) when = 0
+    new TableStyleRule
+    {
+        Target = "cell",
+        Field = "WaterServicesView",
+        Op = "eq",
+        Value = "0",
+        Priority = 1,
+        PillEnabled = true,
+        PillField = "WaterServicesView",
+        PillTextField = "WaterServicesView",
+        PillCssClass = "pill pill-red",
+        PillMode = "replace",
+        PillIcon = "fa fa-times",
+        PillText = "غير متوفرة"
+    },
+    
+    // Gas Service - Icon check (green) when = 1
+    new TableStyleRule
+    {
+        Target = "cell",
+        Field = "GasServicesView",
+        Op = "eq",
+        Value = "1",
+        Priority = 1,
+        PillEnabled = true,
+        PillField = "GasServicesView",
+        PillTextField = "GasServicesView",
+        PillCssClass = "pill pill-green",
+        PillMode = "replace",
+        PillIcon = "fa fa-check",
+        PillText = "متوفرة"
+    },
+    // Gas Service - Icon X (red) when = 0
+    new TableStyleRule
+    {
+        Target = "cell",
+        Field = "GasServicesView",
+        Op = "eq",
+        Value = "0",
+        Priority = 1,
+        PillEnabled = true,
+        PillField = "GasServicesView",
+        PillTextField = "GasServicesView",
+        PillCssClass = "pill pill-red",
+        PillMode = "replace",
+        PillIcon = "fa fa-times",
+        PillText = "غير متوفرة"
+    }
+};
             //var vm = new FormTableViewModel
             //{
             //    Form = form,

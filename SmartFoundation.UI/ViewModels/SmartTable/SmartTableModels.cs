@@ -125,6 +125,8 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         // كلاس CSS للكبسولة (مثلاً: pill-green)
         public string? PillCssClass { get; set; }
 
+        public string? PillIcon { get; set; }
+
         // طريقة العرض: append | prepend | replace
         public string PillMode { get; set; } = "replace";
     }

@@ -73,6 +73,15 @@ namespace SmartFoundation.Mvc.Controllers.Home
         protected DataTable? dt7;
         protected DataTable? dt8;
         protected DataTable? dt9;
+        protected DataTable? dt10;
+        protected DataTable? dt11;
+        protected DataTable? dt12;
+        protected DataTable? dt13;
+        protected DataTable? dt14;
+        protected DataTable? dt15;
+        protected DataTable? dt16;
+        protected DataTable? dt17;
+        protected DataTable? dt18;
 
         public IActionResult HomeIndex()
         {
@@ -133,6 +142,15 @@ namespace SmartFoundation.Mvc.Controllers.Home
             dt7 = (ds?.Tables?.Count ?? 0) > 8 ? ds.Tables[8] : null;
             dt8 = (ds?.Tables?.Count ?? 0) > 9 ? ds.Tables[9] : null;
             dt9 = (ds?.Tables?.Count ?? 0) > 10 ? ds.Tables[10] : null;
+            dt10 = (ds?.Tables?.Count ?? 0) > 11 ? ds.Tables[11] : null;
+            dt11 = (ds?.Tables?.Count ?? 0) > 12 ? ds.Tables[12] : null;
+            dt12 = (ds?.Tables?.Count ?? 0) > 13 ? ds.Tables[13] : null;
+            dt13 = (ds?.Tables?.Count ?? 0) > 14 ? ds.Tables[14] : null;
+            dt14 = (ds?.Tables?.Count ?? 0) > 15 ? ds.Tables[15] : null;
+            dt15 = (ds?.Tables?.Count ?? 0) > 16 ? ds.Tables[16] : null;
+            dt16 = (ds?.Tables?.Count ?? 0) > 17 ? ds.Tables[17] : null;
+            dt17 = (ds?.Tables?.Count ?? 0) > 18 ? ds.Tables[18] : null;
+            dt18 = (ds?.Tables?.Count ?? 0) > 19 ? ds.Tables[19] : null;
         }
     }
 }
