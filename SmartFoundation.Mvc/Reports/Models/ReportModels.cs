@@ -9,9 +9,8 @@ public record ReportColumn(
     string Align = "right",
     int Weight = 2,
     float? FontSize = null,
-    float? Width = null 
+    float? Width = null
 );
-
 
 public class ReportResult
 {
@@ -43,14 +42,12 @@ public class ReportResult
     public bool ShowFooter { get; set; } = true;
 }
 
-
 public enum ReportHeaderType
 {
     Standard,
     LetterOfficial,
     WithLogoRight
 }
-
 
 public enum ReportKind
 {
@@ -66,34 +63,181 @@ public enum TextAlign
     Justify
 }
 
-public class LetterBlock
+public enum ReportHeaderRepeat
+{
+    AllPages,
+    FirstPageOnly
+}
+
+public enum LetterBlockType
+{
+    Text,
+    Table,
+    Spacer,
+    Divider
+}
+
+public class LetterTableCell
 {
     public string Text { get; set; } = "";
+    public int ColumnSpan { get; set; } = 1;
+    public int RowSpan { get; set; } = 1;
+    public bool Bold { get; set; } = false;
+    public TextAlign Align { get; set; } = TextAlign.Center;
+    public string BackgroundColor { get; set; } = "#FFFFFF";
+    public float FontSize { get; set; } = 11;
+}
 
+public class LetterTableRow
+{
+    public List<LetterTableCell> Cells { get; set; } = new();
+}
+
+public class LetterTable
+{
+    public List<float> Columns { get; set; } = new();
+    public List<LetterTableRow> HeaderRows { get; set; } = new();
+    public List<LetterTableRow> Rows { get; set; } = new();
+
+    public float BorderWidth { get; set; } = 1f;
+    public string BorderColor { get; set; } = "#444444";
+    public float CellPadding { get; set; } = 6f;
+}
+
+public class LetterBlock
+{
+    public LetterBlockType Type { get; set; } = LetterBlockType.Text;
+
+    // ===== Text =====
+    public string Text { get; set; } = "";
     public float FontSize { get; set; } = 12;
-
     public bool Bold { get; set; } = false;
     public bool Underline { get; set; } = false;
-
     public TextAlign Align { get; set; } = TextAlign.Right;
 
-    // مسافات خارجية
+    // ===== Common spacing =====
     public float PaddingTop { get; set; } = 0;
     public float PaddingBottom { get; set; } = 0;
     public float PaddingRight { get; set; } = 0;
     public float PaddingLeft { get; set; } = 0;
 
-    // تباعد الأسطر داخل الفقرة
+    // ===== Text only =====
     public float LineHeight { get; set; } = 1.4f;
+
+    // ===== Spacer =====
+    public float Height { get; set; } = 0;
+
+    // ===== Table =====
+    public LetterTable? Table { get; set; }
 }
 
-
-public enum ReportHeaderRepeat
+public static class LetterBlockFactory
 {
-    AllPages,      // الهيدر في كل الصفحات
-    FirstPageOnly  // الهيدر في الصفحة الأولى فقط
+    public static LetterBlock TextBlock(
+        string text,
+        float fontSize = 12,
+        bool bold = false,
+        TextAlign align = TextAlign.Right,
+        float paddingTop = 0,
+        float paddingBottom = 0,
+        float paddingRight = 0,
+        float paddingLeft = 0,
+        float lineHeight = 1.4f,
+        bool underline = false)
+    {
+        return new LetterBlock
+        {
+            Type = LetterBlockType.Text,
+            Text = text,
+            FontSize = fontSize,
+            Bold = bold,
+            Underline = underline,
+            Align = align,
+            PaddingTop = paddingTop,
+            PaddingBottom = paddingBottom,
+            PaddingRight = paddingRight,
+            PaddingLeft = paddingLeft,
+            LineHeight = lineHeight
+        };
+    }
+
+    public static LetterBlock TableBlock(
+        LetterTable table,
+        float paddingTop = 0,
+        float paddingBottom = 0,
+        float paddingRight = 0,
+        float paddingLeft = 0)
+    {
+        return new LetterBlock
+        {
+            Type = LetterBlockType.Table,
+            Table = table,
+            PaddingTop = paddingTop,
+            PaddingBottom = paddingBottom,
+            PaddingRight = paddingRight,
+            PaddingLeft = paddingLeft
+        };
+    }
+
+    public static LetterBlock Spacer(float height)
+    {
+        return new LetterBlock
+        {
+            Type = LetterBlockType.Spacer,
+            Height = height
+        };
+    }
+
+    public static LetterBlock Divider(
+        float paddingTop = 6,
+        float paddingBottom = 6)
+    {
+        return new LetterBlock
+        {
+            Type = LetterBlockType.Divider,
+            PaddingTop = paddingTop,
+            PaddingBottom = paddingBottom
+        };
+    }
 }
 
+public static class ReportTableFactory
+{
+    public static LetterTable CreateOfficialTable(List<float> columns)
+    {
+        return new LetterTable
+        {
+            Columns = columns,
+            BorderWidth = 1f,
+            BorderColor = "#555555",
+            CellPadding = 6f
+        };
+    }
+
+    public static LetterTableCell HeaderCell(string text, TextAlign align = TextAlign.Center)
+    {
+        return new LetterTableCell
+        {
+            Text = text,
+            Bold = true,
+            Align = align,
+            BackgroundColor = "#F3F3F3",
+            FontSize = 11
+        };
+    }
+
+    public static LetterTableCell ValueCell(string text, TextAlign align = TextAlign.Center, float fontSize = 11)
+    {
+        return new LetterTableCell
+        {
+            Text = text,
+            Bold = false,
+            Align = align,
+            BackgroundColor = "#FFFFFF",
+            FontSize = fontSize
+        };
+    }
+}
 
 
 
