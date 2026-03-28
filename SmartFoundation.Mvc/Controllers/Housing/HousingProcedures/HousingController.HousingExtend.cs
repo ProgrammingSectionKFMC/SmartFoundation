@@ -1380,7 +1380,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 // =========================
                 // جدول 1: بيانات أساسية
                 // =========================
-                var personInfoTable = ReportTableFactory.CreateOfficialTable(new List<float> { 2, 2, 2, 4 });
+                var personInfoTable = ReportTableFactory.CreateOfficialTable(new List<float> { 2, 2, 4, 2 });
 
                 personInfoTable.HeaderRows.Add(new LetterTableRow
                 {
@@ -1388,8 +1388,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
         {
             ReportTableFactory.HeaderCell("الرقم العام"),
             ReportTableFactory.HeaderCell("رقم الهوية"),
-            ReportTableFactory.HeaderCell("رقم المبنى"),
-            ReportTableFactory.HeaderCell("اسم المستفيد")
+            ReportTableFactory.HeaderCell("اسم المستفيد"),
+            ReportTableFactory.HeaderCell("رقم المبنى")
         }
                 });
 
@@ -1399,8 +1399,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
         {
             ReportTableFactory.ValueCell(generalNo),
             ReportTableFactory.ValueCell(nationalId),
-            ReportTableFactory.ValueCell(buildingNo),
-            ReportTableFactory.ValueCell(residentName)
+            ReportTableFactory.ValueCell(residentName),
+            ReportTableFactory.ValueCell(buildingNo)
         }
                 });
 
@@ -1597,12 +1597,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             // Signature block
             LetterBlockFactory.TextBlock(
-                "مدير الإدارة الهندسية\nالاسم / ..................\nالتوقيع / ...............",
+                "مدير الإدارة الهندسية\n\nالاسم / ..................\n\n\n\nالتوقيع / ...............",
                 fontSize: 11,
                 align: TextAlign.Left,
                 paddingTop: 10,
-                paddingLeft: 120,
-                lineHeight: 1.7f)
+                paddingLeft: 50,
+                lineHeight: 2.7f)
         }
                 };
 

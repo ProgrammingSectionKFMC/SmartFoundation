@@ -220,6 +220,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             dict["p19"] = Get("buildingDetailsNo");
                             dict["p20"] = Get("AssignPeriodID");
                             dict["p21"] = Get("LastActionID");
+                            dict["p22"] = Get("meterscount");
 
 
                             rowsList.Add(dict);
@@ -272,6 +273,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p19", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p22", Label = "meterscount", Type = "hidden", ColCss = "3", Readonly = true },
 
 
             };

@@ -57,6 +57,51 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
             //  تقسيم الداتا سيت للجدول الأول + جداول أخرى
             SplitDataSet(ds);
 
+            bool Notfinished = !(dt1?.AsEnumerable()
+    .Any(r => r.Field<string>("ReadStatusInt") == "0") ?? false);
+
+
+
+
+            var datarow = dt1?.Rows.Count > 0 ? dt1.Rows[0] : null;
+
+            string ActionID_ = datarow?["ActionID"]?.ToString() ?? "";
+            string residentInfoIDs_ = datarow?["residentInfoID"]?.ToString() ?? "";
+            string FullName_A_ = datarow?["FullName_A"]?.ToString() ?? "";
+            string NationalID_ = datarow?["NationalID"]?.ToString() ?? "";
+            string GeneralNo_ = datarow?["GeneralNo"]?.ToString() ?? "";
+            string ActionDecisionNo_ = datarow?["ActionDecisionNo"]?.ToString() ?? "";
+            string ActionDecisionDate_ = datarow?["ActionDecisionDate"]?.ToString() ?? "";
+            string WaitingClassID_ = datarow?["WaitingClassID"]?.ToString() ?? "";
+            string WaitingClassName_ = datarow?["WaitingClassName"]?.ToString() ?? "";
+            string WaitingOrderTypeID_ = datarow?["WaitingOrderTypeID"]?.ToString() ?? "";
+            string WaitingOrderTypeName_ = datarow?["WaitingOrderTypeName"]?.ToString() ?? "";
+            string waitingClassSequence_ = datarow?["waitingClassSequence"]?.ToString() ?? "";
+
+            string buildingDetailsID_ = datarow?["buildingDetailsID"]?.ToString() ?? "";
+            string buildingDetailsNo_ = datarow?["buildingDetailsNo"]?.ToString() ?? "";
+
+            string meterID_ = datarow?["meterID"]?.ToString() ?? "";
+            string meterServiceTypeName_ = datarow?["meterServiceTypeName_A"]?.ToString() ?? "";
+            string meterServiceTypeID_ = datarow?["meterServiceTypeID"]?.ToString() ?? "";
+            string meterTypeName_ = datarow?["meterTypeName_A"]?.ToString() ?? "";
+
+            string BeforeLastReadValue_ = datarow?["BeforeLastReadValue"]?.ToString() ?? "";
+            string meterMaxRead_ = datarow?["meterMaxRead"]?.ToString() ?? "";
+            string meterReadID_ = datarow?["meterReadID"]?.ToString() ?? "";
+            string LastActionDate_ = datarow?["LastActionDate"]?.ToString() ?? "";
+
+            string IdaraId_ = datarow?["IdaraId"]?.ToString() ?? "";
+            string LastActionTypeID_ = datarow?["LastActionTypeID"]?.ToString() ?? "";
+            string buildingActionTypeResidentAlias_ = datarow?["buildingActionTypeResidentAlias"]?.ToString() ?? "";
+            string AssignPeriodID_ = datarow?["AssignPeriodID"]?.ToString() ?? "";
+            string LastActionID_ = datarow?["LastActionID"]?.ToString() ?? "";
+            string buildingActionRoot_ = datarow?["buildingActionRoot"]?.ToString() ?? "";
+            string BillsID_ = datarow?["BillsID"]?.ToString() ?? "";
+            string LastActionDecisionDate_ = datarow?["LastActionDecisionDate"]?.ToString() ?? "";
+            string LastActionDecisionNo_ = datarow?["LastActionDecisionNo"]?.ToString() ?? "";
+
+
             if (dt2 != null && dt2.Rows.Count > 0)
             {
                 TempData["JobsAvaliable"] = $"يوجد عدد  {dt2.Rows.Count} ساكنين مطلوب انهاء القراءات الخاصة بهم";
@@ -76,6 +121,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
             string rowIdField = "";
             bool canMeterReadForOccubentAndExit = false;
             bool canUpdateMeterReadForOccubentAndExit = false;
+            bool canAPPROVEMETERREADFOROCCUBENTANDEXIT = false;
 
 
             string? ExitOrOccubent_ = dt1?.Rows.Count > 0
@@ -182,6 +228,11 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                         {
                             canUpdateMeterReadForOccubentAndExit = true;
                         }
+
+                        if (permissionName.Equals("APPROVEMETERREADFOROCCUBENTANDEXIT", StringComparison.OrdinalIgnoreCase))
+                        {
+                            canAPPROVEMETERREADFOROCCUBENTANDEXIT = true;
+                        }
                     }
 
 
@@ -205,11 +256,14 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             ["FullName_A"] = "الاسم",
                             ["ReadStatus"] = "الحالة",
                             ["meterReadValue"] = "اخر قراءة للعداد",
+                            ["BeforeLastReadValue"] = "القراءة السابقة للعداد",
+                            ["ReadDiff"] = "فرق القراءة",
                             ["meterServiceTypeName_A"] = "نوع الخدمة",
                             ["meterTypeName_A"] = "نوع العداد",
                             ["meterMaxRead"] = "القراءة القصوى للعداد",
                             ["meterNo"] = "رقم العداد",
                             ["ReadType"] = "نوع الطلب",
+                            ["ReadSizeStatusText"] = "ملاحظة القراءة",
                             ["buildingDetailsNo"] = "رقم المنزل"
                         };
 
@@ -249,6 +303,11 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             bool isbuildingActionTypeResidentAlias = c.ColumnName.Equals("buildingActionTypeResidentAlias", StringComparison.OrdinalIgnoreCase);
                             bool isReadStatusInt = c.ColumnName.Equals("ReadStatusInt", StringComparison.OrdinalIgnoreCase);
                             bool ismeterReadID = c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase);
+                            bool ismeterServiceTypeID = c.ColumnName.Equals("meterServiceTypeID", StringComparison.OrdinalIgnoreCase);
+                            bool isReadSizeStatus = c.ColumnName.Equals("ReadSizeStatus", StringComparison.OrdinalIgnoreCase);
+                            bool isLastActionDate = c.ColumnName.Equals("LastActionDate", StringComparison.OrdinalIgnoreCase);
+                            bool isbuildingActionRoot = c.ColumnName.Equals("buildingActionRoot", StringComparison.OrdinalIgnoreCase);
+                            bool isBillsID = c.ColumnName.Equals("BillsID", StringComparison.OrdinalIgnoreCase);
 
 
 
@@ -262,7 +321,9 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID || isAssignPeriodID || isbuildingDetailsID || isLastActionID|| isActionDecisionNo || isActionDecisionDate || isWaitingOrderTypeName || isNationalID || isGeneralNo || isWaitingClassName || isFullName_A ||  isbuildingActionTypeResidentAlias || isReadStatusInt || ismeterReadID)
+                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID || isAssignPeriodID || isbuildingDetailsID || isLastActionID|| isActionDecisionNo || isActionDecisionDate || isWaitingOrderTypeName || isNationalID || isGeneralNo || isWaitingClassName || isFullName_A ||  isbuildingActionTypeResidentAlias  || ismeterReadID|| isLastActionTypeID || ismeterID || ismeterServiceTypeID || isReadSizeStatus || isLastActionDate|| isbuildingActionRoot || isBillsID || isReadStatusInt)
+
+                                
                             });
                         }
 
@@ -308,6 +369,11 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             dict["p29"] = Get("LastActionDate");
                             dict["p30"] = Get("meterServiceTypeID");
                             dict["p31"] = Get("buildingActionRoot");
+                            dict["p32"] = Get("BillsID");
+                            dict["p33"] = Get("BeforeLastReadValue");
+                            dict["p34"] = Get("ReadDiff");
+                            dict["p35"] = Get("ReadSizeStatus");
+                            dict["p36"] = Get("ReadSizeStatusText");
 
 
                             rowsList.Add(dict);
@@ -322,7 +388,8 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
 
 
-            var currentUrl = Request.Path;
+            var currentUrl = Request.Path + Request.QueryString;
+            var currentUrlOnly = Request.Path;
 
 
             // UPDATE fields
@@ -374,6 +441,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p31", Label = "buildingActionRoot", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p32", Label = "BillsID", Type = "hidden", ColCss = "3", Readonly = true },
 
                   new FieldConfig { Name = "p30", Label = "MeterServiceTypeID_", Type = "hidden" },
                 new FieldConfig { Name = "p23", Label = "رقم العداد", Type = "hidden", ColCss = "3", Required = true},
@@ -417,7 +485,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 new FieldConfig { Name = rowIdField, Type = "hidden" },
                 // hidden p01 actually posted to SP
                 new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "ActionID" },
-                new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p14", Label = "الترتيب", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p15", Label = "الاسم", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3", Readonly = true },
@@ -425,7 +493,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 new FieldConfig { Name = "p05", Label = "رقم الطلب", Type = "hidden", ColCss = "3", Readonly = true  },
                 new FieldConfig { Name = "p06", Label = "تاريخ الطلب", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p07", Label = "WaitingClassID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
@@ -433,14 +501,14 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 
 
                 new FieldConfig { Name = "p23", Label = "meterID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p24", Label = "نوع الخدمة", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p25", Label = "نوع العداد", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p22", Label = "اخر قراءة للعداد", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p24", Label = "نوع الخدمة", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p25", Label = "نوع العداد", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p22", Label = "اخر قراءة للعداد", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p26", Label = "القراءة القصوى للعداد", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p28", Label = "meterReadID", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p28", Label = "meterReadID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p29", Label = "LastActionDate", Type = "hidden", ColCss = "3", Readonly = true },
 
-                 new FieldConfig { Name = "p27", Label = "تسجيل القراءة", Type = "number", ColCss = "12",Required = true,HelpText="يجب ان تكون القراءة ارقام فقط*",MaxLength=3900 },
+                 new FieldConfig { Name = "p27", Label = "تسجيل القراءة", Type = "number", ColCss = "6",Required = true,HelpText="يجب ان تكون القراءة ارقام فقط*",MaxLength=3900 },
 
                 new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
@@ -448,13 +516,79 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 new FieldConfig { Name = "p19", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true },
-
+                new FieldConfig { Name = "p31", Label = "buildingActionRoot", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p32", Label = "BillsID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p30", Label = "MeterServiceTypeID_", Type = "hidden" },
 
 
 
             };
 
-       
+
+            var APPROVEMETERREADFOROCCUBENTANDEXITFields = new List<FieldConfig>
+            {
+
+                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "APPROVEMETERREADFOROCCUBENTANDEXIT" },
+                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
+                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
+                new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
+                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrlOnly },
+                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+                // selection context
+                new FieldConfig { Name = rowIdField, Type = "hidden" },
+                // hidden p01 actually posted to SP
+                new FieldConfig { Name = "p01", Type = "hidden", Value = ActionID_ },
+
+new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true, Value = residentInfoID_ },
+
+new FieldConfig { Name = "p14", Label = "الترتيب", Type = "hidden", Value = waitingClassSequence_ },
+
+new FieldConfig { Name = "p15", Label = "الاسم", Type = "text", ColCss = "4", Readonly = true, Value = FullName_A_ },
+
+new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "4", Readonly = true, Value = NationalID_ },
+
+new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "4", Readonly = true, Value = GeneralNo_ },
+
+new FieldConfig { Name = "p23", Label = "meterID", Type = "hidden", Value = meterID_ },
+
+new FieldConfig { Name = "p24", Label = "نوع الخدمة", Type = "hidden", Value = meterServiceTypeName_ },
+
+new FieldConfig { Name = "p25", Label = "نوع العداد", Type = "hidden", Value = meterTypeName_ },
+
+new FieldConfig { Name = "p22", Label = "اخر قراءة للعداد", Type = "hidden", Value = BeforeLastReadValue_ },
+
+new FieldConfig { Name = "p26", Label = "القراءة القصوى للعداد", Type = "hidden", ColCss = "3", Readonly = true, Value = meterMaxRead_ },
+
+new FieldConfig { Name = "p28", Label = "meterReadID", Type = "hidden", Value = meterReadID_ },
+
+new FieldConfig { Name = "p29", Label = "LastActionDate", Type = "hidden", Value = LastActionDate_ },
+
+new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", Value = IdaraId_ },
+
+new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", Value = LastActionTypeID_ },
+
+new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", Value = buildingActionTypeResidentAlias_ },
+
+new FieldConfig { Name = "p19", Label = "buildingDetailsNo", Type = "hidden", Value = buildingDetailsNo_ },
+
+new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", Value = AssignPeriodID_ },
+
+new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", Value = LastActionID_ },
+
+new FieldConfig { Name = "p31", Label = "buildingActionRoot", Type = "hidden", Value = buildingActionRoot_ },
+
+new FieldConfig { Name = "p32", Label = "BillsID", Type = "hidden", Value = BillsID_ },
+
+new FieldConfig { Name = "p30", Label = "MeterServiceTypeID_", Type = "hidden", Value = meterServiceTypeID_ },
+new FieldConfig { Name = "p46", Label = "LastActionDecisionDate", Type = "hidden", Value = LastActionDecisionDate_ },
+new FieldConfig { Name = "p05", Label = "LastActionDecisionNo", Type = "hidden", Value = LastActionDecisionNo_ },
+
+
+
+            };
 
 
             var extraCtx = new Dictionary<string, object?>
@@ -657,6 +791,12 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 ["tableIndex"] = 0
             };
 
+
+            var visibleFieldsextraMetaAutoOpen = ExitOrOccubent_ == "1"
+               ? new List<string> { "meterServiceTypeName_A", "meterNo", "LastRead", "CurrentRead", "ReadDiff" }
+               : new List<string> { "meterServiceTypeName_A", "meterNo", "LastRead", "CurrentRead", "ReadDiff", "TotalPrice" };
+
+
             var extraMetaAutoOpen = new Dictionary<string, object?>
             {
                 ["extraSlotKey"] = "m1",
@@ -675,8 +815,8 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 ["extraParamMap"] = new Dictionary<string, string>
                 {
 
-                    ["parameter_01"] = "p30",
-                    ["parameter_02"] = "p23"
+                    //["parameter_01"] = "p30",
+                    ["parameter_01"] = "p32"
                 },
 
                 ["EnableSearch"] = false,
@@ -685,10 +825,11 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 ["Sortable"] = false,
                 ["showRowNumbers"] = false,
 
-                ["visibleFields"] = new List<string>
-    {
-        "meterServiceTypeName_A","meterNo","LastRead", "CurrentRead","ReadDiff", "TotalPrice"
-    },
+                ["visibleFields"] = visibleFieldsextraMetaAutoOpen,
+                //            new List<string>
+                //{
+                //    "meterServiceTypeName_A","meterNo","LastRead", "CurrentRead","ReadDiff", "TotalPrice"
+                //},
 
                 ["headerMap"] = new Dictionary<string, string>
                 {
@@ -750,6 +891,8 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     ShowDelete = canUpdateMeterReadForOccubentAndExit,
                    
                     ShowAdd = canMeterReadForOccubentAndExit,
+                    ShowDelete1 = canAPPROVEMETERREADFOROCCUBENTANDEXIT,
+                    EnableDelete1 = Notfinished && canAPPROVEMETERREADFOROCCUBENTANDEXIT,
                     ShowPrint1 = false,
                     ShowPrint = false,
                     ShowBulkDelete = false,
@@ -759,9 +902,12 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     {
                         Label = "اضافة قراءة عداد",
                         Icon = "fa fa-plus",
-                        Color = "success",
+                        Color = "info",
                         OpenModal = true,
                         ModalTitle = "اضافة قراءة عداد",
+                        ModalMessage = "يجب توخي الحذر عند تسجيل القراءة لعدم امكانية تعديلها بعد اعتمادها بشكل نهائي",
+                        ModalMessageClass = "bg-red-50 text-red-700",
+                        ModalMessageIcon = "fa-solid fa-triangle-exclamation",
                         OpenForm = new FormConfig
                         {
                             FormId = "buildingClassInsertForm",
@@ -778,6 +924,23 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                         RequireSelection = true,
                         MinSelection = 1,
                         MaxSelection = 1,
+                        Guards = new TableActionGuards
+                        {
+                            AppliesTo = "any",
+                            DisableWhenAny = new List<TableActionRule>
+                        {
+
+                                          new TableActionRule
+                                        {
+                                            Field = "ReadStatusInt",
+                                            Op = "eq",
+                                            Value = "1",
+                                            Message = "تم تسجيل قراءة العداد مسبقا ",
+                                            Priority = 3
+                                        }
+
+                                    }
+                        },
 
                         Meta = metaB
                         ,
@@ -798,7 +961,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                         OpenModal = true,
                         //ModalTitle = "رسالة تحذيرية",
                         ModalTitle = "تعديل قراءة العداد",
-                        ModalMessage = "يجب توخي الحذر عند تسجيل القراءة لعدم امكانية تعديلها بعد اسكان المستفيد بشكل نهائي",
+                        ModalMessage = "يجب توخي الحذر عند تسجيل القراءة لعدم امكانية تعديلها بعد اعتمادها بشكل نهائي",
                         ModalMessageClass = "bg-red-50 text-red-700",
                         ModalMessageIcon = "fa-solid fa-triangle-exclamation",
                         OpenForm = new FormConfig
@@ -818,6 +981,8 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                         MinSelection = 1,
                         MaxSelection = 1,
 
+                        Meta = extraMetaAutoOpen,
+
 
                         Guards = new TableActionGuards
                         {
@@ -829,8 +994,16 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                         {
                                             Field = "LastActionTypeID",
                                             Op = "notin",
-                                            Value = "47,60",
+                                            Value = "46,59",
                                             Message = "لايمكن تعديل قراءة العداد ",
+                                            Priority = 3
+                                        },
+                                            new TableActionRule
+                                        {
+                                            Field = "ReadStatusInt",
+                                            Op = "eq",
+                                            Value = "0",
+                                            Message = "قم بإضافة قراءة العداد اولا",
                                             Priority = 3
                                         }
 
@@ -838,11 +1011,40 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                         }
                     },
 
-                   
+
+
+                    Delete1 = new TableAction
+                    {
+                        Label = "اعتماد القراءات",
+                        Icon = "fa fa-check",
+                        Color = "success",
+                        //Placement = TableActionPlacement.ActionsMenu, //   أي زر بعد ما نسويه ونبيه يظهر في الاجراءات نحط هذا السطر فقط عشان ما يصير زحمة في التيبل اكشن
+                        IsEdit = true,
+                        OpenModal = true,
+                        //ModalTitle = "رسالة تحذيرية",
+                        ModalTitle = "اعتماد القراءات",
+                        ModalMessage = " يجب توخي الحذر عند اعتماد القراءات بشكل نهائي لايمكن التعديل عليها",
+                        ModalMessageClass = "bg-red-50 text-red-700",
+                        ModalMessageIcon = "fa-solid fa-triangle-exclamation",
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "employeeDeleteForm",
+                            Title = "تأكيد تعديل قراءة العداد",
+                            Method = "post",
+                            ActionUrl = "/crud/delete",
+                            Buttons = new List<FormButtonConfig>
+                            {
+                                new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "success", Icon = "fa fa-check" },
+                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
+                            },
+                            Fields = APPROVEMETERREADFOROCCUBENTANDEXITFields
+                        },
+
+                       
+                    },
 
 
 
-                 
 
                 }
             };
@@ -1011,6 +1213,67 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             PillField = "ReadStatus",
                             PillTextField = "ReadStatus",
                             PillCssClass = "pill pill-yellow",
+                            PillMode = "replace"
+                        },
+
+                        new TableStyleRule
+                        {
+                            Target = "row",
+                            Field = "ReadSizeStatus",
+                            Op = "eq",
+                            Value = "0",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "ReadSizeStatusText",
+                            PillTextField = "ReadSizeStatusText",
+                            PillCssClass = "pill pill-green",
+                            PillMode = "replace"
+                        },
+
+                         new TableStyleRule
+                        {
+                            Target = "row",
+                            Field = "ReadSizeStatus",
+                            Op = "eq",
+                            Value = "1",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "ReadSizeStatusText",
+                            PillTextField = "ReadSizeStatusText",
+                            PillCssClass = "pill pill-red",
+                            PillMode = "replace"
+                        },
+
+
+                          new TableStyleRule
+                        {
+                            Target = "row",
+                            Field = "ReadSizeStatus",
+                            Op = "eq",
+                            Value = "0",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "ReadDiff",
+                            PillTextField = "ReadDiff",
+                            PillCssClass = "pill pill-green",
+                            PillMode = "replace"
+                        },
+
+                         new TableStyleRule
+                        {
+                            Target = "row",
+                            Field = "ReadSizeStatus",
+                            Op = "eq",
+                            Value = "1",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "ReadDiff",
+                            PillTextField = "ReadDiff",
+                            PillCssClass = "pill pill-red",
                             PillMode = "replace"
                         },
 

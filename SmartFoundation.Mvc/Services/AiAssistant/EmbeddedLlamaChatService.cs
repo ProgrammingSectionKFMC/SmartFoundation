@@ -238,7 +238,7 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
                     _pending.TryRemove(convoKey, out _);
 
                 var systemOnlyMessage =
-                    "أنا وحيد 👋\n" +
+                    "أنا فيصل 👋\n" +
                     "المساعد الذكي مصمم فقط للإجابة عن النظام الموحد.\n\n" +
                     "اكتب سؤالك عن النظام بهذه الطريقة:\n" +
                     "• كيف أضيف مستفيد؟\n" +

@@ -1006,7 +1006,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 new FieldConfig { Name = "p03", Label = "BillChargeTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p04", Label = "الرصيد المسحوب منه", Type = "text", ColCss = "4", Readonly = true, },
                 new FieldConfig { Name = "p30", Label = "الرصيد المسحوب اليه", Type = "select", ColCss = "4", Readonly = true,Required = true,Options = BillChargeTypeOptions },
-                new FieldConfig { Name = "p05", Label = "buildingDetailsID", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p05", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p06", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsNovalue },
                 new FieldConfig { Name = "p07", Label = "SumBillsTotalPrice", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsIDvalue },
                 new FieldConfig { Name = "p08", Label = "SumTotalPaidBills", Type = "hidden", ColCss = "3", Readonly = true },

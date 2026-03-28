@@ -244,6 +244,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             bool isLastActionDecisionDate = c.ColumnName.Equals("LastActionDecisionDate", StringComparison.OrdinalIgnoreCase);
                             bool isCanExit = c.ColumnName.Equals("CanExit", StringComparison.OrdinalIgnoreCase);
                             bool isBillsID = c.ColumnName.Equals("BillsID", StringComparison.OrdinalIgnoreCase);
+                            bool isWaitingClassName = c.ColumnName.Equals("WaitingClassName", StringComparison.OrdinalIgnoreCase);
 
 
 
@@ -256,7 +257,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                || isresidentInfoID || isIdaraId   || isAssignPeriodID || isbuildingDetailsID || isLastActionID  || isWaitingOrderTypeName || isWaitingListOrder || isLastActionTypeID || isLastActionDecisionNo || isLastActionDecisionDate || isCanExit|| isBillsID)
+                                || isresidentInfoID || isIdaraId   || isAssignPeriodID || isbuildingDetailsID || isLastActionID  || isWaitingOrderTypeName || isWaitingListOrder || isLastActionTypeID || isLastActionDecisionNo || isLastActionDecisionDate || isCanExit|| isBillsID || isWaitingClassName)
                             });
                         }
 
@@ -295,6 +296,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             dict["p31"] = Get("PenaltyReason");
                             dict["p40"] = Get("penaltyPrice");
                             dict["p41"] = Get("BillsID");
+                            dict["p42"] = Get("meterscount");
 
 
 
@@ -380,14 +382,14 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p07", Label = "WaitingClassID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
 
 
 
-                new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "hidden", ColCss = "3",Required = true,Readonly = true },
+                new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "text", ColCss = "3",Required = true,Readonly = true },
 
 
                 new FieldConfig { Name = "p40", Label = "اجمالي مبلغ الغرامة", Type = "text",TextMode="money_sar", ColCss = "6",Required = true,HelpText="يجب كتابة مجموع اجمالي الغرامات على الساكن وفي حال عدم وجود غرامات كتابة المبلغ صفر*",Icon = "/img/Saudi_Riyal_Symbol.svg",MaxLength=18 },
@@ -402,6 +404,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p19", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p42", Label = "meterscount", Type = "hidden", ColCss = "3", Readonly = true },
 
 
             };
@@ -428,7 +431,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p07", Label = "WaitingClassID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
@@ -473,7 +476,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p07", Label = "WaitingClassID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
@@ -518,7 +521,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p07", Label = "WaitingClassID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
@@ -564,7 +567,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p07", Label = "WaitingClassID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
