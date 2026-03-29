@@ -212,9 +212,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ["ActionNote"] = "ملاحظات",
                             ["FullName_A"] = "الاسم",
                             ["buildingActionTypeResidentAlias"] = "الحالة",
-                            ["buildingDetailsNo"] = "رقم المنزل",
-                            ["penaltyPrice"] = "مبلغ الغرامة",
-                            ["PenaltyReason"] = "سبب الغرامة",
+                            //["buildingDetailsNo"] = "رقم المنزل",
+                            //["penaltyPrice"] = "مبلغ الغرامة",
+                           // ["PenaltyReason"] = "سبب الغرامة",
                             ["WaitingListOrder"] = "الترتيب"
                         };
 

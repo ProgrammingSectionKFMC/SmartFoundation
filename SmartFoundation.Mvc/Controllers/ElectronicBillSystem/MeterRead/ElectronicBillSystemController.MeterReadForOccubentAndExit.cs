@@ -542,49 +542,50 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 // hidden p01 actually posted to SP
                 new FieldConfig { Name = "p01", Type = "hidden", Value = ActionID_ },
 
-new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true, Value = residentInfoID_ },
-
-new FieldConfig { Name = "p14", Label = "الترتيب", Type = "hidden", Value = waitingClassSequence_ },
-
-new FieldConfig { Name = "p15", Label = "الاسم", Type = "text", ColCss = "4", Readonly = true, Value = FullName_A_ },
-
-new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "4", Readonly = true, Value = NationalID_ },
-
-new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "4", Readonly = true, Value = GeneralNo_ },
-
-new FieldConfig { Name = "p23", Label = "meterID", Type = "hidden", Value = meterID_ },
-
-new FieldConfig { Name = "p24", Label = "نوع الخدمة", Type = "hidden", Value = meterServiceTypeName_ },
-
-new FieldConfig { Name = "p25", Label = "نوع العداد", Type = "hidden", Value = meterTypeName_ },
-
-new FieldConfig { Name = "p22", Label = "اخر قراءة للعداد", Type = "hidden", Value = BeforeLastReadValue_ },
-
-new FieldConfig { Name = "p26", Label = "القراءة القصوى للعداد", Type = "hidden", ColCss = "3", Readonly = true, Value = meterMaxRead_ },
-
-new FieldConfig { Name = "p28", Label = "meterReadID", Type = "hidden", Value = meterReadID_ },
-
-new FieldConfig { Name = "p29", Label = "LastActionDate", Type = "hidden", Value = LastActionDate_ },
-
-new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", Value = IdaraId_ },
-
-new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", Value = LastActionTypeID_ },
-
-new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", Value = buildingActionTypeResidentAlias_ },
-
-new FieldConfig { Name = "p19", Label = "buildingDetailsNo", Type = "hidden", Value = buildingDetailsNo_ },
-
-new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", Value = AssignPeriodID_ },
-
-new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", Value = LastActionID_ },
-
-new FieldConfig { Name = "p31", Label = "buildingActionRoot", Type = "hidden", Value = buildingActionRoot_ },
-
-new FieldConfig { Name = "p32", Label = "BillsID", Type = "hidden", Value = BillsID_ },
-
-new FieldConfig { Name = "p30", Label = "MeterServiceTypeID_", Type = "hidden", Value = meterServiceTypeID_ },
-new FieldConfig { Name = "p46", Label = "LastActionDecisionDate", Type = "hidden", Value = LastActionDecisionDate_ },
-new FieldConfig { Name = "p05", Label = "LastActionDecisionNo", Type = "hidden", Value = LastActionDecisionNo_ },
+                new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true, Value = residentInfoID_ },
+                
+                new FieldConfig { Name = "p14", Label = "الترتيب", Type = "hidden", Value = waitingClassSequence_ },
+                
+                new FieldConfig { Name = "p15", Label = "الاسم", Type = "text", ColCss = "4", Readonly = true, Value = FullName_A_ },
+                
+                new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "4", Readonly = true, Value = NationalID_ },
+                
+                new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "4", Readonly = true, Value = GeneralNo_ },
+                
+                new FieldConfig { Name = "p23", Label = "meterID", Type = "hidden", Value = meterID_ },
+                
+                new FieldConfig { Name = "p24", Label = "نوع الخدمة", Type = "hidden", Value = meterServiceTypeName_ },
+                
+                new FieldConfig { Name = "p25", Label = "نوع العداد", Type = "hidden", Value = meterTypeName_ },
+                
+                new FieldConfig { Name = "p22", Label = "اخر قراءة للعداد", Type = "hidden", Value = BeforeLastReadValue_ },
+                
+                new FieldConfig { Name = "p26", Label = "القراءة القصوى للعداد", Type = "hidden", ColCss = "3", Readonly = true, Value = meterMaxRead_ },
+                
+                new FieldConfig { Name = "p28", Label = "meterReadID", Type = "hidden", Value = meterReadID_ },
+                
+                new FieldConfig { Name = "p29", Label = "LastActionDate", Type = "hidden", Value = LastActionDate_ },
+                
+                new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", Value = IdaraId_ },
+                
+                new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", Value = LastActionTypeID_ },
+                
+                new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", Value = buildingActionTypeResidentAlias_ },
+                
+                new FieldConfig { Name = "p19", Label = "buildingDetailsNo", Type = "hidden", Value = buildingDetailsNo_ },
+                new FieldConfig { Name = "p18", Label = "buildingDetailsNo", Type = "hidden", Value = buildingDetailsID_ },
+                
+                new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", Value = AssignPeriodID_ },
+                
+                new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", Value = LastActionID_ },
+                
+                new FieldConfig { Name = "p31", Label = "buildingActionRoot", Type = "hidden", Value = buildingActionRoot_ },
+                
+                new FieldConfig { Name = "p32", Label = "BillsID", Type = "hidden", Value = BillsID_ },
+                
+                new FieldConfig { Name = "p30", Label = "MeterServiceTypeID_", Type = "hidden", Value = meterServiceTypeID_ },
+                new FieldConfig { Name = "p46", Label = "LastActionDecisionDate", Type = "hidden", Value = LastActionDecisionDate_ },
+                new FieldConfig { Name = "p05", Label = "LastActionDecisionNo", Type = "hidden", Value = LastActionDecisionNo_ },
 
 
 
