@@ -212,9 +212,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ["ActionNote"] = "ملاحظات",
                             ["FullName_A"] = "الاسم",
                             ["buildingActionTypeResidentAlias"] = "الحالة",
-                            //["buildingDetailsNo"] = "رقم المنزل",
-                            //["penaltyPrice"] = "مبلغ الغرامة",
-                           // ["PenaltyReason"] = "سبب الغرامة",
+                            ["buildingDetailsNo"] = "رقم المنزل",
+                            ["penaltyPrice"] = "مبلغ الغرامة",
+                            ["PenaltyReason"] = "سبب الغرامة",
                             ["WaitingListOrder"] = "الترتيب"
                         };
 
@@ -245,6 +245,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             bool isCanExit = c.ColumnName.Equals("CanExit", StringComparison.OrdinalIgnoreCase);
                             bool isBillsID = c.ColumnName.Equals("BillsID", StringComparison.OrdinalIgnoreCase);
                             bool isWaitingClassName = c.ColumnName.Equals("WaitingClassName", StringComparison.OrdinalIgnoreCase);
+                            bool ismeterscount = c.ColumnName.Equals("meterscount", StringComparison.OrdinalIgnoreCase);
 
 
 
@@ -257,7 +258,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                || isresidentInfoID || isIdaraId   || isAssignPeriodID || isbuildingDetailsID || isLastActionID  || isWaitingOrderTypeName || isWaitingListOrder || isLastActionTypeID || isLastActionDecisionNo || isLastActionDecisionDate || isCanExit|| isBillsID || isWaitingClassName)
+                                || isresidentInfoID || isIdaraId   || isAssignPeriodID || isbuildingDetailsID || isLastActionID  || isWaitingOrderTypeName || isWaitingListOrder || isLastActionTypeID || isLastActionDecisionNo || isLastActionDecisionDate || isCanExit|| isBillsID || isWaitingClassName|| ismeterscount)
                             });
                         }
 
@@ -549,7 +550,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "ApproveExtend" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "APPROVEHOUSINGEXIT" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -574,7 +575,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
 
-                new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "date", ColCss = "3",Required = true },
+                new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "text", ColCss = "3",Required = true, Readonly = true },
 
 
                 new FieldConfig { Name = "p26", Label = "ملاحظات", Type = "textarea", ColCss = "12",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
@@ -1134,11 +1135,11 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             },
                              new TableStyleRule
                             {
-                                Target="row", Field="CanExit", Op="eq", Value="0", Priority=1,
+                                Target="row", Field="LastActionTypeID", Op="eq", Value="3", Priority=1,
                                 PillEnabled=true,
                                 PillField="buildingActionTypeResidentAlias",
                                 PillTextField="buildingActionTypeResidentAlias",
-                                PillCssClass="pill pill-red",
+                                PillCssClass="pill pill-green",
                                 PillMode="replace"
                             },
                                new TableStyleRule
