@@ -1105,7 +1105,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 TabIcon = "fa-solid fa-list",
                 TabDefaultActive = false,
                 ShowTabCount = true,
-                TabOrder = 2,
+                TabOrder = 3,
 
 
 
@@ -1252,7 +1252,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 TabIcon = "fa-solid fa-file-signature",
                 TabDefaultActive = false,
                 ShowTabCount = true,
-                TabOrder = 3,
+                TabOrder = 4,
 
 
                 Toolbar = new TableToolbarConfig
@@ -1388,6 +1388,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 TabIcon = "fa-solid fa-file-signature",
                 TabDefaultActive = false,
                 ShowTabCount = true,
+                TabOrder = 2,
 
                 Toolbar = new TableToolbarConfig
                 {
