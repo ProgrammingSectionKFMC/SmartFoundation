@@ -1,5 +1,68 @@
-﻿@* Floating AI Assistant widget (offline/on-prem) *@
+﻿
+<style>
+    .sf-ai-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .sf-ai-icon {
+        width: 28px;
+        height: 28px;
+        min-width: 28px;
+        min-height: 28px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        border-radius: 50%;
+        background: transparent;
+    }
+
+        .sf-ai-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            border-radius: 50%;
+        }
+
+</style>
+
 <div id="sf-ai" class="sf-ai">
+    <button id="sf-ai-btn" type="button" class="sf-ai-btn" title="تحريك">
+        <span class="sf-ai-icon">
+            <img src="/img/Ai.png" alt="فيصل المساعد الذكي" />
+        </span>
+        <span class="sf-ai-text">فيصل المساعد الذكي</span>
+    </button>
+
+    <input type="hidden" id="sf-ai-userid" value="@Context.Session.GetString("usersID")" />
+
+    <div id="sf-ai-panel" class="sf-ai-panel" aria-hidden="true">
+        <div class="sf-ai-header">
+            <div class="sf-ai-title">
+                <div class="sf-ai-title-main">فيصل المساعد الذكي</div>
+                <div class="sf-ai-title-sub">مساعد شرح استخدام النظام (إطلاق تجريبي)</div>
+            </div>
+            <button id="sf-ai-close" type="button" class="sf-ai-close" title="إغلاق">×</button>
+        </div>
+
+        <div id="sf-ai-messages" class="sf-ai-messages"></div>
+
+        <div class="sf-ai-footer">
+            <input id="sf-ai-input" class="sf-ai-input" type="text" placeholder="اكتب سؤالك… مثال: كيف أطبع التقرير؟" />
+            <button id="sf-ai-send" class="sf-ai-send" type="button">إرسال</button>
+        </div>
+        <div class="sf-ai-hint">
+            تلميح: اذكر اسم الشاشة أو الزر (مثلاً: إضافة، حفظ، طباعة).
+        </div>
+    </div>
+</div>
+
+
+@* Floating AI Assistant widget (offline/on-prem) *@
+@* <div id="sf-ai" class="sf-ai">
     <button id="sf-ai-btn" type="button" class="sf-ai-btn" title="تحريك">
     <span class="sf-ai-icon">🤖</span>
     <span class="sf-ai-text">فيصل المساعد الذكي</span>
@@ -26,4 +89,4 @@
         </div>
     </div>
 </div>
-            
+             *@

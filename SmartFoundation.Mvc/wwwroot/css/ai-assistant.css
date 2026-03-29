@@ -48,10 +48,26 @@
     transition: transform .15s ease, box-shadow .15s ease;
 }
 
-.sf-ai-btn .sf-ai-icon {
-    font-size: 20px;
-    line-height: 1;
-}
+    .sf-ai-btn .sf-ai-icon {
+        width: 24px;
+        height: 24px;
+        min-width: 24px;
+        min-height: 24px;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        border-radius: 50%;
+    }
+
+        .sf-ai-btn .sf-ai-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            border-radius: 50%;
+        }
 
 .sf-ai-btn .sf-ai-text {
     white-space: nowrap;
@@ -173,17 +189,29 @@
 .sf-ai-avatar {
     width: 28px;
     height: 28px;
-    border-radius: 10px;
+    border-radius: 50%;
     display: grid;
     place-items: center;
     font-size: 14px;
     flex: 0 0 auto;
+    overflow: hidden;
 }
 
-.sf-ai-avatar.bot {
-    background: #e0f2fe;
-    color: #0c4a6e;
-}
+    .sf-ai-avatar.bot {
+        background: #e0f2fe;
+        color: #0c4a6e;
+        overflow: hidden;
+        border-radius: 50%;
+    }
+
+        /* صورة البوت داخل المحادثة */
+        .sf-ai-avatar.bot img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            border-radius: 50%;
+        }
 
 .sf-ai-avatar.user {
     background: #dcfce7;
@@ -480,3 +508,5 @@
 .sf-ai-feedback-btn:disabled {
     cursor: not-allowed;
 }
+
+

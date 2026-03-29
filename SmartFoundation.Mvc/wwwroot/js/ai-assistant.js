@@ -216,10 +216,17 @@
         const msg = document.createElement("div");
         msg.className = "sf-ai-msg";
 
+        //const avatar = document.createElement("div");
+        //avatar.className = "sf-ai-avatar " + (role === "user" ? "user" : "bot");
+        //avatar.textContent = role === "user" ? "👤" : "🤖";
         const avatar = document.createElement("div");
-        avatar.className = "sf-ai-avatar " + (role === "user" ? "user" : "bot");
-        avatar.textContent = role === "user" ? "👤" : "🤖";
+avatar.className = "sf-ai-avatar " + (role === "user" ? "user" : "bot");
 
+if (role === "user") {
+    avatar.textContent = "👤";
+} else {
+    avatar.innerHTML = `<img src="/img/Ai.png" alt="فيصل المساعد الذكي">`;
+}
         const bubble = document.createElement("div");
         bubble.className = "sf-ai-bubble " + (role === "user" ? "user" : role === "system" ? "system" : "bot");
         bubble.innerHTML = escapeHtml(text || "");
@@ -315,6 +322,8 @@
         }
     }
 
+
+
     function showThinking() {
         const thinkingId = "sf-ai-thinking-" + Date.now();
         const startTime = Date.now();
@@ -325,7 +334,7 @@
 
         const avatar = document.createElement("div");
         avatar.className = "sf-ai-avatar bot";
-        avatar.textContent = "🤖";
+        avatar.innerHTML = `<img src="/img/Ai.png" alt="فيصل المساعد الذكي">`;
 
         const bubble = document.createElement("div");
         bubble.className = "sf-ai-bubble bot";
@@ -348,11 +357,50 @@
         stopBtn.type = "button";
         stopBtn.title = "إيقاف";
         stopBtn.innerHTML = `
-            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
-                <rect x="4" y="4" width="8" height="8" rx="1"/>
-            </svg>
-            إيقاف
-        `;
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+            <rect x="4" y="4" width="8" height="8" rx="1"/>
+        </svg>
+        إيقاف
+    `;
+    
+    //function showThinking() {
+    //    const thinkingId = "sf-ai-thinking-" + Date.now();
+    //    const startTime = Date.now();
+
+    //    const msg = document.createElement("div");
+    //    msg.className = "sf-ai-msg thinking";
+    //    msg.id = thinkingId;
+
+    //    const avatar = document.createElement("div");
+    //    avatar.className = "sf-ai-avatar bot";
+    //    avatar.textContent = "🤖";
+
+    //    const bubble = document.createElement("div");
+    //    bubble.className = "sf-ai-bubble bot";
+
+    //    const indicator = document.createElement("div");
+    //    indicator.className = "sf-ai-thinking-indicator";
+    //    indicator.innerHTML = "<span></span><span></span><span></span>";
+
+    //    const textSpan = document.createElement("span");
+    //    textSpan.className = "sf-ai-thinking-text";
+    //    textSpan.textContent = "جاري التفكير...";
+
+    //    const timerSpan = document.createElement("span");
+    //    timerSpan.className = "sf-ai-thinking-timer";
+    //    timerSpan.id = thinkingId + "-timer";
+    //    timerSpan.textContent = "0s";
+
+    //    const stopBtn = document.createElement("button");
+    //    stopBtn.className = "sf-ai-stop-btn";
+    //    stopBtn.type = "button";
+    //    stopBtn.title = "إيقاف";
+    //    stopBtn.innerHTML = `
+    //        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+    //            <rect x="4" y="4" width="8" height="8" rx="1"/>
+    //        </svg>
+    //        إيقاف
+    //    `;
         stopBtn.onclick = cancelCurrentRequest;
 
         bubble.appendChild(indicator);
