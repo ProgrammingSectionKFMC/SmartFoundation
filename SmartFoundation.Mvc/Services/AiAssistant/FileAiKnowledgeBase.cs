@@ -157,6 +157,23 @@ public sealed class FileAiKnowledgeBase : IAiKnowledgeBase
                 "### إضافة سجل انتظار جديد",       // ✅ WaitingListByResident
                 "## إدارة"
             };
+
+        else if (ContainsAny(q,
+    "مادة", "نص المادة", "النص النظامي",
+    "لائحة", "نظام", "تعليمات",
+    "شروط", "استثناء", "ضوابط",
+    "آلية", "كيف يطبق", "كيفية التطبيق",
+    "التأمين الاحترازي", "الإخلاء", "أحقية السكن"))
+        {
+            headers = new[]
+{
+    "التأمين الاحترازي",
+    "أحقية السكن",
+    "الإخلاء",
+    "التخصيص",
+    "الصيانة"
+};
+        }
         else
             headers = Array.Empty<string>();
 
@@ -229,9 +246,15 @@ public sealed class FileAiKnowledgeBase : IAiKnowledgeBase
             }
 
             var files = Directory.EnumerateFiles(kbPath, "*.*", SearchOption.AllDirectories)
-                .Where(f => f.EndsWith(".md", StringComparison.OrdinalIgnoreCase)
-                         || f.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
-                .ToList();
+    .Where(f =>
+        (f.EndsWith(".md", StringComparison.OrdinalIgnoreCase) ||
+         f.EndsWith(".txt", StringComparison.OrdinalIgnoreCase))
+        &&
+        !Path.GetFileName(f).Equals("General_Chat.md", StringComparison.OrdinalIgnoreCase)
+        &&
+        !Path.GetFileName(f).StartsWith("chat", StringComparison.OrdinalIgnoreCase)
+    )
+    .ToList();
 
             foreach (var f in files)
             {

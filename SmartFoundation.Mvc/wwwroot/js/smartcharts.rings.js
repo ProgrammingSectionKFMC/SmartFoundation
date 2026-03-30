@@ -111,9 +111,12 @@
         const center = document.createElement("div");
         center.className = "smart-rings__center";
         center.innerHTML = `
-      <div class="smart-rings__center-title">المؤشر الأعلى</div>
-      <div class="smart-rings__center-big">${best.valueText ? best.valueText : (bestPct.toFixed(0) + "%")}</div>
+      <div class="smart-rings__center-title">الاجمالي</div>
+      <div class="smart-rings__center-big">2221</div>
+      
     `;
+
+        //<div class="smart-rings__center-big">${best.valueText ? best.valueText : (bestPct.toFixed(0) + "%")}</div>
         chart.appendChild(center);
 
         // draw rings
@@ -198,7 +201,7 @@
               <span class="smart-rings__dot" style="background:${color}"></span>
               <span>${label}</span>
             </div>
-            <div class="smart-rings__sub">${(pct * 100).toFixed(0)}% من الحد</div>
+            <div class="smart-rings__sub">${(pct * 100)}% من الحد</div>
           </div>
           <div class="smart-rings__right">${r.valueText ? r.valueText : fmtNumber(val, valueFormat)}</div>
         `;

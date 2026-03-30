@@ -229,7 +229,12 @@ if (role === "user") {
 }
         const bubble = document.createElement("div");
         bubble.className = "sf-ai-bubble " + (role === "user" ? "user" : role === "system" ? "system" : "bot");
-        bubble.innerHTML = escapeHtml(text || "");
+
+        if (role === "user") {
+            bubble.textContent = text || "";
+        } else {
+            bubble.innerHTML = parseMarkdown(text || "");
+        }
 
         // ✅ إضافة أزرار التقييم للإجابات فقط
         if (role === "bot" && chatId > 0) {
@@ -521,6 +526,70 @@ if (role === "user") {
         } catch (err) {
             console.error("❌ Failed to send feedback:", err);
         }
+    }
+
+    function parseMarkdown(text) {
+        if (!text) return "";
+
+        let lines = text.split("\n");
+        let html = "";
+        let inList = false;
+
+        for (let line of lines) {
+
+            // عنوان ##
+            if (line.startsWith("## ")) {
+                if (inList) {
+                    html += "</ol>";
+                    inList = false;
+                }
+                html += `<h2>${line.replace("## ", "")}</h2>`;
+                continue;
+            }
+
+            // عنوان ###
+            if (line.startsWith("### ")) {
+                if (inList) {
+                    html += "</ol>";
+                    inList = false;
+                }
+                html += `<h3>${line.replace("### ", "")}</h3>`;
+                continue;
+            }
+
+            // قائمة رقمية
+            if (/^\d+\)/.test(line)) {
+                if (!inList) {
+                    html += "<ol>";
+                    inList = true;
+                }
+
+                let item = line.replace(/^\d+\)\s*/, "");
+
+                // Bold
+                item = item.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+                html += `<li>${item}</li>`;
+                continue;
+            }
+
+            // نص عادي
+            if (inList) {
+                html += "</ol>";
+                inList = false;
+            }
+
+            // Bold
+            line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+            if (line.trim() !== "") {
+                html += `<p>${line}</p>`;
+            }
+        }
+
+        if (inList) html += "</ol>";
+
+        return html;
     }
 
     window.aiAssistant = {
