@@ -74,7 +74,7 @@ namespace SmartFoundation.Mvc.Controllers.Home
                 {
                     charts = new SmartChartsConfig
                     {
-                        Title = "لوحة مؤشرات الإسكان والمباني والصيانة والساكنين",
+                        Title = "لوحة مؤشرات النظام الموحد",
                         Dir = "rtl",
                         Cards = chartCards
                     };
