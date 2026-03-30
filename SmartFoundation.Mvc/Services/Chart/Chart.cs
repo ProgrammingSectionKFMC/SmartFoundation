@@ -931,20 +931,21 @@ namespace SmartFoundation.Mvc.Services.Chart
             return new ChartCardConfig
             {
                 Type = ChartCardType.Bullet,
-                Title = "الأداء مقابل الأهداف",
-                Subtitle = "ملخص مؤشرات التشغيل الرئيسية",
+                Title = "ملخص مؤشرات التشغيل الرئيسية",
+                //Subtitle = "ملخص مؤشرات التشغيل الرئيسية",
                 Icon = "fa-solid fa-bullseye",
                 Tone = ChartTone.Info,
-                ColCss = "4 md:6",
+                ColCss = "12 md:12",
                 Dir = "rtl",
                 BulletValueFormat = "0",
                 BulletShowLegend = false,
                 Bullets = new List<BulletItem>
                 {
-                    new BulletItem { Key="sla_close",   Label="إغلاق البلاغات ضمن SLA", Actual=78, Target=90, Max=100, OkFrom=70, GoodFrom=90, Unit="%", Href="/Maintenance/Sla" },
-                    new BulletItem { Key="occupancy",   Label="نسبة الإشغال",           Actual=92, Target=95, Max=100, OkFrom=85, GoodFrom=95, Unit="%", Href="/Residents/Occupancy" },
-                    new BulletItem { Key="readiness",   Label="جاهزية الوحدات",         Actual=86, Target=90, Max=100, OkFrom=80, GoodFrom=90, Unit="%", Href="/Housing/Readiness" },
-                    new BulletItem { Key="inspections", Label="إنجاز فحوصات المباني",   Actual=64, Target=80, Max=100, OkFrom=60, GoodFrom=80, Unit="%", Href="/Buildings/Inspections" }
+                    new BulletItem { Key="sla_close",   Label="إغلاق البلاغات", Actual=82.22M, Target=98, Max=100, OkFrom=70, GoodFrom=90, Unit="%" },
+                    new BulletItem { Key="occupancy",   Label="نسبة إشغال المساكن",           Actual=92, Target=95, Max=100, OkFrom=85, GoodFrom=95, Unit="%" },
+                    new BulletItem { Key="readiness",   Label="جاهزية الوحدات",         Actual=88.12M, Target=90, Max=100, OkFrom=80, GoodFrom=90, Unit="%" },
+                    new BulletItem { Key="inspections", Label="سرعة إنجاز صيانة المساكن بقسم الصيانة",   Actual=52.90M, Target=80, Max=100, OkFrom=60, GoodFrom=80, Unit="%"},
+                    new BulletItem { Key="inspections", Label="تحصيل المطالبات المالية",   Actual=93.12M, Target=90, Max=100, OkFrom=85, GoodFrom=90, Unit="%"}
                 }
             };
         }
