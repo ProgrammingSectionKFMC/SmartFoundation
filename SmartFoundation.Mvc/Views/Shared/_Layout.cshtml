@@ -261,7 +261,7 @@
     <script src="~/js/sf-dual-date.js" asp-append-version="true"></script>
     <script src="~/js/form-helpers.js" asp-append-version="true"></script>
 
-    @await RenderSectionAsync("Scripts", required: false)
+    
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -352,7 +352,7 @@
     <script src="~/js/smartcharts.execwatch.js" asp-append-version="true"></script>
     <script src="~/js/smartcharts.healthkpiroadmap.js" asp-append-version="true"></script>
 
-
+    @await RenderSectionAsync("Scripts", required: false)
 
     @await Html.PartialAsync("_AiAssistantWidget")
     <script src="~/js/ai-assistant.js" asp-append-version="true"></script>

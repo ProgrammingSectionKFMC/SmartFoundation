@@ -33,7 +33,7 @@
 <nav id="top-header" class="fixed z-50 w-full">
 
     <div class="px-3 py-3 lg:px-5 lg:pe-3">
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between gap-3">
             <div class="flex items-center gap-2">
                 
                
@@ -107,7 +107,7 @@
                         
                         <ul class="py-1">
                             <li>
-                                <a href="/Dashboard" class="flex items-center gap-2 px-4 py-2 text-sm text-slate-200 hover:bg-slate-700">
+                                <a href="/Home" class="flex items-center gap-2 px-4 py-2 text-sm text-slate-200 hover:bg-slate-700">
                                     <i class="fa-solid fa-gauge text-[13px] text-slate-300"></i> لوحة التحكم
                                 </a>
                             </li>
@@ -285,29 +285,57 @@
                     }
                 </div>
 
+
+                
+                <!-- بحث السايدبار -->
+                <div class="sidebar-search-wrap" dir="rtl">
+                    <label for="sidebar-menu-search" class="sr-only">بحث في القائمة</label>
+
+                    <div class="sidebar-search-box">
+                        <span class="sidebar-search-icon" aria-hidden="true">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </span>
+
+                        <input id="sidebar-menu-search"
+                               type="text"
+                               class="sidebar-search-input"
+                               placeholder="ابحث في القائمة ..."
+                               autocomplete="off"
+                               spellcheck="false" />
+
+                        <button type="button"
+                                id="sidebar-menu-search-clear"
+                                class="sidebar-search-clear hidden"
+                                aria-label="مسح البحث">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+
+                    <div id="sidebar-search-empty"
+                         class="sidebar-search-empty hidden">
+                        لا توجد نتائج مطابقة
+                    </div>
+                </div>
+
+
                 <!-- قائمة المنيو -->
                
-                <ul class="space-y-0 pt-2 pb-2" style="margin-top:-6px;">
-                    <li id="menu-container"></li>
-                </ul>
+                <ul id="menu-container" class="space-y-0 pt-2 pb-2" style="margin-top:-6px;"></ul>
             </div>
         </div>
     </div>
 </aside>
 <script>
-        // ================================================================
-        // 🔹 Multi-Level Menu Renderer for Sidebar
-        // ================================================================
+    // ================================================================
+    // 🔹 Multi-Level Menu Renderer for Sidebar
+    // ================================================================
 
-        const menuData = @Html.Raw(JsonSerializer.Serialize(
-                                                                                                                                                                                                Model ?? new List<MenuItem>(),
-                                                                                                                                                                                                new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping }
-                                                                                                                                ))
+    const menuData = @Html.Raw(JsonSerializer.Serialize(
+                        Model ?? new List<MenuItem>(),
+                new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping }
+                ));
 
-        console.log("Menu data:", menuData);
-
-        // const currentPath = window.location.pathname.toLowerCase();
-            function normalizePath(path) {
+    function normalizePath(path) {
         if (!path) return "/";
 
         path = path.split("?")[0].trim().toLowerCase();
@@ -325,51 +353,185 @@
 
     const currentPath = normalizePath(window.location.pathname);
 
-        function cleanMenuLink(link) {
-            if (!link || typeof link !== "string") return "";
-            let cleaned = link.trim();
+    function cleanMenuLink(link) {
+        if (!link || typeof link !== "string") return "";
+        let cleaned = link.trim();
 
-            // ../Employee -> Employee
-            while (cleaned.startsWith("../")) {
-                cleaned = cleaned.substring(3);
-            }
-            // /Employee -> Employee
-            if (cleaned.startsWith("/")) {
-                cleaned = cleaned.substring(1);
-            }
-            // /BuildingClass.aspx -> /BuildingClass
-            if (cleaned.toLowerCase().endsWith(".aspx")) {
-                cleaned = cleaned.substring(0, cleaned.length - 5);
-            }
-
-            return cleaned;
+        while (cleaned.startsWith("../")) {
+            cleaned = cleaned.substring(3);
         }
 
-        function escapeHtml(text) {
-            const div = document.createElement("div");
-            div.textContent = text ?? "";
-            return div.innerHTML;
+        if (cleaned.startsWith("/")) {
+            cleaned = cleaned.substring(1);
         }
 
+        if (cleaned.toLowerCase().endsWith(".aspx")) {
+            cleaned = cleaned.substring(0, cleaned.length - 5);
+        }
 
+        return cleaned;
+    }
 
+    function escapeHtml(text) {
+        const div = document.createElement("div");
+        div.textContent = text ?? "";
+        return div.innerHTML;
+    }
 
+    function normalizeArabicText(text) {
+        return (text || "")
+            .toString()
+            .trim()
+            .toLowerCase()
+            .replace(/[أإآا]/g, "ا")
+            .replace(/ة/g, "ه")
+            .replace(/ى/g, "ي")
+            .replace(/ؤ/g, "و")
+            .replace(/ئ/g, "ي")
+            .replace(/\s+/g, " ");
+    }
 
+    function getMenuDisplayName(item) {
+        return (item?.MenuName_A || item?.MenuNameForView || "").toString().trim();
+    }
 
-            // ترجع true إذا كان تحت هذا العنصر أي ابن (أو ابن ابن...) صفحته الحالية نشطة
+    function highlightMatch(text, query) {
+        const safeText = text || "";
+        const q = (query || "").trim();
+        if (!q) return escapeHtml(safeText);
+
+        const normalizedText = normalizeArabicText(safeText);
+        const normalizedQuery = normalizeArabicText(q);
+
+        const idx = normalizedText.indexOf(normalizedQuery);
+        if (idx === -1) return escapeHtml(safeText);
+
+        const start = safeText.slice(0, idx);
+        const mid = safeText.slice(idx, idx + q.length);
+        const end = safeText.slice(idx + q.length);
+
+        return `${escapeHtml(start)}<mark class="sidebar-search-match">${escapeHtml(mid)}</mark>${escapeHtml(end)}`;
+    }
+
+    function getItemLink(item) {
+        const rawController = item?.MPLink ?? item?.mpLink ?? "";
+        const rawAction = item?.MenuLink ?? item?.menuLink ?? "";
+
+        const controller = cleanMenuLink(rawController);
+        const action = cleanMenuLink(rawAction);
+
+        const hasChildren = Array.isArray(item?.Children) && item.Children.length > 0;
+        const hasAnyLinkInfo = (controller !== "" || action !== "");
+
+        if (!hasAnyLinkInfo || hasChildren) return "#";
+
+        if (controller && action) return `/${controller}/${action}`;
+        if (action) return `/${action}`;
+        if (controller) return `/${controller}`;
+
+        return "#";
+    }
+
+    function isCurrentMenuItem(item) {
+        const itemLink = getItemLink(item);
+        return itemLink !== "#" && normalizePath(itemLink) === normalizePath(currentPath);
+    }
+
+    function getItemLink(item) {
+        const rawController = item?.MPLink ?? item?.mpLink ?? "";
+        const rawAction = item?.MenuLink ?? item?.menuLink ?? "";
+
+        const controller = cleanMenuLink(rawController);
+        const action = cleanMenuLink(rawAction);
+
+        const hasChildren = Array.isArray(item?.Children) && item.Children.length > 0;
+        const hasAnyLinkInfo = (controller !== "" || action !== "");
+
+        if (!hasAnyLinkInfo || hasChildren) return "#";
+
+        if (controller && action) return `/${controller}/${action}`;
+        if (action) return `/${action}`;
+        if (controller) return `/${controller}`;
+
+        return "#";
+    }
+
+    function isCurrentMenuItem(item) {
+        const itemLink = getItemLink(item);
+        return itemLink !== "#" && normalizePath(itemLink) === normalizePath(currentPath);
+    }
+
+    function itemOrDescendantIsActive(item) {
+        if (!item) return false;
+
+        if (isCurrentMenuItem(item)) return true;
+
+        const children = Array.isArray(item.Children) ? item.Children : [];
+        return children.some(child => itemOrDescendantIsActive(child));
+    }
+
+    function filterMenuTree(items, query) {
+        if (!Array.isArray(items)) return [];
+
+        const normalizedQuery = normalizeArabicText(query);
+        if (!normalizedQuery) return items;
+
+        const result = [];
+
+        for (const item of items) {
+            const children = Array.isArray(item.Children) ? item.Children : [];
+            const filteredChildren = filterMenuTree(children, query);
+
+            const itemName = getMenuDisplayName(item);
+            const isSelfMatch = normalizeArabicText(itemName).includes(normalizedQuery);
+            const isActiveSelf = isCurrentMenuItem(item);
+            const hasActiveDescendant = children.some(child => itemOrDescendantIsActive(child));
+            const hadChildrenOriginally = children.length > 0;
+
+            if (isSelfMatch || filteredChildren.length > 0 || isActiveSelf || hasActiveDescendant) {
+                let finalChildren;
+
+                if (isSelfMatch) {
+                    finalChildren = children;
+                } else {
+                    finalChildren = children
+                        .filter(child => {
+                            const childFiltered = filteredChildren.some(x => x.MPID === child.MPID);
+                            const childActivePath = itemOrDescendantIsActive(child);
+                            return childFiltered || childActivePath;
+                        })
+                        .map(child => {
+                            const existingFiltered = filteredChildren.find(x => x.MPID === child.MPID);
+                            return existingFiltered || child;
+                        });
+                }
+
+                result.push({
+                    ...item,
+                    __matched: isSelfMatch,
+                    __forceOpen: hadChildrenOriginally || finalChildren.length > 0 || hasActiveDescendant,
+                    __hadChildrenOriginally: hadChildrenOriginally,
+                    Children: finalChildren
+                });
+            }
+        }
+
+        return result;
+    }
+
     function hasActiveChildRecursive(item) {
         if (!Array.isArray(item.Children)) return false;
 
         for (const child of item.Children) {
             const rawController = child.MPLink ?? child.mpLink ?? "";
-            const rawAction    = child.MenuLink ?? child.menuLink ?? "";
+            const rawAction = child.MenuLink ?? child.menuLink ?? "";
 
             const controller = cleanMenuLink(rawController);
-            const action     = cleanMenuLink(rawAction);
+            const action = cleanMenuLink(rawAction);
 
             const childHasChildren = Array.isArray(child.Children) && child.Children.length > 0;
-            const hasAnyLinkInfo   = (controller !== "" || action !== "");
-            const isClickableLink  = hasAnyLinkInfo && !childHasChildren;
+            const hasAnyLinkInfo = (controller !== "" || action !== "");
+            const isClickableLink = hasAnyLinkInfo && !childHasChildren;
 
             let itemLink = "#";
             if (isClickableLink) {
@@ -382,7 +544,6 @@
                 }
             }
 
-            // const isActive = isClickableLink && currentPath === itemLink.toLowerCase();
             const isActive = isClickableLink && normalizePath(currentPath) === normalizePath(itemLink);
 
             if (isActive || hasActiveChildRecursive(child)) {
@@ -393,78 +554,66 @@
         return false;
     }
 
+    function buildMenuItem(item, level) {
+        const paddingClass = level > 1 ? " ps-10" : "";
+        const baseClasses =
+            "flex items-center w-full p-2 rounded-md transition duration-75 group hover:bg-slate-700 hover:text-slate-50 text-slate-200";
+        const linkClasses = level === 1 ? baseClasses : baseClasses + paddingClass;
 
+        const rawMenuName = getMenuDisplayName(item);
+        const currentSearchValue = document.getElementById("sidebar-menu-search")?.value || "";
+        const menuName = currentSearchValue
+            ? highlightMatch(rawMenuName, currentSearchValue)
+            : escapeHtml(rawMenuName);
 
+        const rawController = item.MPLink ?? item.mpLink ?? "";
+        const rawAction = item.MenuLink ?? item.menuLink ?? "";
 
+        const controller = cleanMenuLink(rawController);
+        const action = cleanMenuLink(rawAction);
 
-        // ------------------------------------------------------------
-        // 🔹 بناء عنصر واحد (recursive) بالاعتماد على Children من JSON
-        // ------------------------------------------------------------
-        function buildMenuItem(item, level) {
-            const paddingClass = level > 1 ? " ps-10" : "";
-            const baseClasses =
-                "flex items-center w-full p-2 rounded-lg transition duration-75 group " +
-                "hover:bg-slate-700 hover:text-slate-50 text-slate-200";
-            const linkClasses = level === 1 ? baseClasses : baseClasses + paddingClass;
+        const hasChildren = (Array.isArray(item.Children) && item.Children.length > 0) || item.__hadChildrenOriginally === true;
+        const hasAnyLinkInfo = (controller !== "" || action !== "");
+        const isClickableLink = hasAnyLinkInfo && !hasChildren;
 
-            const menuName = escapeHtml(item.MenuName_A || item.MenuNameForView || "");
-
-            // ⭐ ندعم الأسماء الكبيرة/الصغيرة في JSON
-            const rawController = item.MPLink ?? item.mpLink ?? "";
-            const rawAction    = item.MenuLink ?? item.menuLink ?? "";
-
-            const controller = cleanMenuLink(rawController);  // ../Employee -> Employee
-            const action     = cleanMenuLink(rawAction);      // /BuildingClass.aspx -> BuildingClass
-
-            const hasChildren     = Array.isArray(item.Children) && item.Children.length > 0;
-            const hasAnyLinkInfo  = (controller !== "" || action !== "");
-            const isClickableLink = hasAnyLinkInfo && !hasChildren;
-
-            //  بناء الرابط النهائي
-            let itemLink = "#";
-            if (isClickableLink) {
-                if (controller && action) {
-                    itemLink = `/${controller}/${action}`;      // /Employee/BuildingClass
-                } else if (action) {
-                    itemLink = `/${action}`;
-                } else if (controller) {
-                    itemLink = `/${controller}`;
-                }
+        let itemLink = "#";
+        if (isClickableLink) {
+            if (controller && action) {
+                itemLink = `/${controller}/${action}`;
+            } else if (action) {
+                itemLink = `/${action}`;
+            } else if (controller) {
+                itemLink = `/${controller}`;
             }
+        }
 
-            // const isActive = isClickableLink && currentPath === itemLink.toLowerCase();
-            const isActive = isClickableLink && normalizePath(currentPath) === normalizePath(itemLink);
-            const activeClass = isActive ? " bg-slate-700 text-slate-50" : "";
+        const isActive = isClickableLink && normalizePath(currentPath) === normalizePath(itemLink);
+        const activeClass = isActive ? " bg-slate-700 text-slate-50" : "";
 
-            const iconHtml =
-                item.MPIcon && item.MPIcon.trim() !== ""
-                    ? `<i class="${escapeHtml(
-                          item.MPIcon
-                      )} me-3 h-5 w-5 text-slate-400 transition-colors duration-200 group-hover:text-slate-50"></i>`
-                    : "";
+        const iconHtml =
+            item.MPIcon && item.MPIcon.trim() !== ""
+                ? `<i class="${escapeHtml(item.MPIcon)} me-3 h-5 w-5 text-slate-400 transition-colors duration-200 group-hover:text-slate-50"></i>`
+                : "";
 
-            let html = "";
-
+        let html = "";
 
         if (hasChildren) {
-        const collapseId = `dropdown-${item.MPID}`;
+            const collapseId = `dropdown-${item.MPID}`;
+            const isSearching = !!(document.getElementById("sidebar-menu-search")?.value || "").trim();
+            const shouldBeOpen = isSearching || hasActiveChildRecursive(item) || item.__forceOpen === true;
+            const childListClasses = shouldBeOpen ? "py-2 space-y-0" : "hidden py-2 space-y-0";
+            const expandedAttr = shouldBeOpen ? 'aria-expanded="true"' : 'aria-expanded="false"';
 
-        const shouldBeOpen = hasActiveChildRecursive(item);
-        const childListClasses = shouldBeOpen ? "py-2 space-y-0" : "hidden py-2 space-y-0";
-        const expandedAttr = shouldBeOpen ? 'aria-expanded="true"' : 'aria-expanded="false"';
-
-        html += `
+            html += `
             <button type="button"
-                    class="${linkClasses}${activeClass}"
-                    data-collapse-toggle="${collapseId}"
+                    class="${linkClasses}${activeClass} sidebar-menu-toggle"
+                    data-menu-toggle="${collapseId}"
                     aria-controls="${collapseId}"
                     ${expandedAttr}>
                 ${iconHtml}
                 <span class="flex-1 text-right leading-snug break-words whitespace-normal">
                     ${menuName}
                 </span>
-
-                <!--  السهم -->
                 <svg class="menu-chevron h-4 w-4 text-slate-400 transition-transform duration-200 group-hover:text-slate-50"
                      fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd"
@@ -472,99 +621,95 @@
                           clip-rule="evenodd"></path>
                 </svg>
             </button>
-
             <ul id="${collapseId}" class="${childListClasses}">
         `;
 
-        
-            item.Children.forEach((child, idx) => {
-                // الخط الفاصل بين القوائم الفرعية
-                   html += `<li>${idx === 0 ? "" : '<div class="menu-sep sm"></div>'}${buildMenuItem(child, level + 1)}</li>`;
+            const safeChildren = Array.isArray(item.Children) ? item.Children : [];
 
-           });
+            safeChildren.forEach((child, idx) => {
+                html += `<li>${idx === 0 ? "" : '<div class="menu-sep sm"></div>'}${buildMenuItem(child, level + 1)}</li>`;
+            });
 
-
-        html += `</ul>`;
-    }
-
+            html += `</ul>`;
+        }
         else if (isClickableLink) {
-        html += `
-        <a href="${escapeHtml(itemLink)}"
-           class="${linkClasses}${activeClass} sidebar-link"
-           data-url="${escapeHtml(itemLink)}">
-          ${iconHtml}
-        <span class="flex-1 leading-snug break-words whitespace-normal">
-            ${menuName}
-        </span>
-            </a>`;
+            html += `
+                    <a href="${escapeHtml(itemLink)}"
+                       class="${linkClasses}${activeClass} sidebar-link"
+                       data-url="${escapeHtml(itemLink)}">
+                        ${iconHtml}
+                        <span class="flex-1 leading-snug break-words whitespace-normal">
+                            ${menuName}
+                        </span>
+                    </a>`;
+        }
+        else {
+            html += `
+                    <div class="${linkClasses}${activeClass}">
+                        ${iconHtml}
+                        <span class="flex-1 leading-snug break-words whitespace-normal">
+                            ${menuName}
+                        </span>
+                    </div>`;
+        }
+
+        return html;
     }
 
- 
-            
-            else {
-               
-                html += `
-    <div class="${linkClasses}${activeClass}">
-      ${iconHtml}
-    <span class="flex-1 leading-snug break-words whitespace-normal">
-        ${menuName}
-    </span>
-        </div>`;
+    function removeDuplicateMenuItems(items) {
+        const seen = new Set();
+        return items.filter(item => {
+            if (seen.has(item.MPID)) return false;
+            seen.add(item.MPID);
+            return true;
+        });
+    }
+
+    function buildMenuItems(items) {
+        const safeItems = Array.isArray(items) ? items : [];
+
+        const rootItems = safeItems
+            .filter(x => x.Levels === 1)
+            .sort((a, b) => (a.MPSerial || 0) - (b.MPSerial || 0));
+
+        let html = "";
+        rootItems.forEach(item => {
+            html += `<li><div class="menu-sep"></div>${buildMenuItem(item, 1)}</li>`;
+        });
+
+        return html;
+    }
+
+    function setActiveSidebar(url) {
+        const path = normalizePath(url || window.location.pathname);
+
+        document.querySelectorAll("a.sidebar-link").forEach(a => {
+            a.classList.remove("bg-slate-700", "text-slate-50");
+
+            const itemUrl = normalizePath(a.getAttribute("data-url") || "");
+            if (itemUrl === path) {
+                a.classList.add("bg-slate-700", "text-slate-50");
             }
+        });
+    }
 
-            return html;
-        }
+    function renderSidebarMenu(searchTerm = "") {
+        const host = document.getElementById("menu-container");
+        const emptyBox = document.getElementById("sidebar-search-empty");
+        if (!host || !Array.isArray(menuData)) return;
 
-        
-        function removeDuplicateMenuItems(items) {
-            const seen = new Set();
-            return items.filter(item => {
-                if (seen.has(item.MPID)) return false;
-                seen.add(item.MPID);
-                return true;
-            });
-        }
+        const uniqueMenuData = removeDuplicateMenuItems(menuData);
+        const finalItems = searchTerm?.trim()
+            ? filterMenuTree(uniqueMenuData, searchTerm)
+            : uniqueMenuData;
 
-        
-        function buildMenuItems(items) {
-            const rootItems = items
-                .filter(x => x.Levels === 1)
-                .sort((a, b) => (a.MPSerial || 0) - (b.MPSerial || 0));
+        host.innerHTML = buildMenuItems(finalItems);
 
-            let html = "";
-            rootItems.forEach(item => {
-                html += `<li><div class="menu-sep"></div>${buildMenuItem(item, 1)}</li>`;
+        const hasResults = Array.isArray(finalItems) && finalItems.length > 0;
+        emptyBox?.classList.toggle("hidden", hasResults || !searchTerm?.trim());
 
-            });
-
-            return html;
-        }
-
-    //             function setActiveSidebar(url) {
-    //     const path = (url || "").split("?")[0].toLowerCase();
-
-    //     document.querySelectorAll("a.sidebar-link").forEach(a => {
-    //         a.classList.remove("bg-slate-700", "text-slate-50");
-
-    //         const itemUrl = (a.getAttribute("data-url") || "").split("?")[0].toLowerCase();
-    //         if (itemUrl === path) {
-    //             a.classList.add("bg-slate-700", "text-slate-50");
-    //         }
-    //     });
-    // }
-                function setActiveSidebar(url) {
-                const path = normalizePath(url || window.location.pathname);
-
-                document.querySelectorAll("a.sidebar-link").forEach(a => {
-                    a.classList.remove("bg-slate-700", "text-slate-50");
-
-                    const itemUrl = normalizePath(a.getAttribute("data-url") || "");
-                    if (itemUrl === path) {
-                        a.classList.add("bg-slate-700", "text-slate-50");
-                    }
-                });
-            }
-
+        setActiveSidebar(window.location.pathname + window.location.search);
+    }
 
     function loadPageIntoMainContent(url) {
         const main = document.getElementById("main-content");
@@ -576,12 +721,11 @@
         }
 
         fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } })
-            .then(function (response) { return response.text(); })
-            .then(function (html) {
+            .then(function(response) { return response.text(); })
+            .then(function(html) {
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, "text/html");
 
-                // ====== 1) تحديث main-content ======
                 const newMain = doc.getElementById("main-content");
                 if (!newMain) {
                     hideMainLoading();
@@ -589,19 +733,17 @@
                     window.location.href = url;
                     return;
                 }
+
                 main.innerHTML = newMain.innerHTML;
 
-    const currentBc = document.querySelector("#page-header .sf-bc-text");
-    const newBc = doc.querySelector("#page-header .sf-bc-text");
-    if (currentBc && newBc) {
-        currentBc.innerHTML = newBc.innerHTML;
-    }
+                const currentBc = document.querySelector("#page-header .sf-bc-text");
+                const newBc = doc.querySelector("#page-header .sf-bc-text");
+                if (currentBc && newBc) {
+                    currentBc.innerHTML = newBc.innerHTML;
+                }
 
-
-                // ====== 3) تهيئة Flowbite بعد التحديث ======
                 if (window.initFlowbite) window.initFlowbite();
 
-                // ====== 4) تحديث الـ URL + title ======
                 window.history.pushState({}, "", url);
 
                 const titleEl = doc.querySelector("title");
@@ -609,13 +751,11 @@
                     document.title = titleEl.textContent;
                 }
 
-                // ====== 5) تفعيل السايدبار + إنهاء التحميل ======
                 setActiveSidebar(url);
                 hideMainLoading();
                 document.body.style.pointerEvents = "auto";
             })
-            .catch(function (err) {
-                console.error("Error loading page", err);
+            .catch(function() {
                 hideMainLoading();
                 document.body.style.pointerEvents = "auto";
                 window.location.href = url;
@@ -623,58 +763,112 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-        const container = document.getElementById("menu-container");
-        if (container && Array.isArray(menuData)) {
-            const uniqueMenuData = removeDuplicateMenuItems(menuData);
-            container.outerHTML = buildMenuItems(uniqueMenuData);
-        } else {
-            console.error("Menu container not found or menuData invalid");
+        renderSidebarMenu("");
+
+        const searchInput = document.getElementById("sidebar-menu-search");
+        const clearBtn = document.getElementById("sidebar-menu-search-clear");
+
+        if (searchInput) {
+            searchInput.addEventListener("input", function() {
+                const value = this.value || "";
+                clearBtn?.classList.toggle("hidden", !value.trim());
+                renderSidebarMenu(value);
+            });
+
+            searchInput.addEventListener("keydown", function(e) {
+                if (e.key === "Escape") {
+                    this.value = "";
+                    clearBtn?.classList.add("hidden");
+                    renderSidebarMenu("");
+                }
+            });
         }
 
-        // تفعيل العنصر الحالي
-        setActiveSidebar(window.location.pathname + window.location.search);
+        clearBtn?.addEventListener("click", function() {
+            if (!searchInput) return;
+            searchInput.value = "";
+            clearBtn.classList.add("hidden");
+            renderSidebarMenu("");
+            searchInput.focus();
+        });
 
-        // تحديث aria-expanded للقوائم (بعد فتح/إغلاق Flowbite)
-        document.body.addEventListener("click", function (e) {
-            const btn = e.target.closest('button[data-collapse-toggle]');
+        document.getElementById("menu-container")?.addEventListener("click", function(e) {
+            const btn = e.target.closest('button[data-menu-toggle]');
             if (!btn) return;
 
-            const id = btn.getAttribute("data-collapse-toggle");
+            if (btn.classList.contains('force-disabled')) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const id = btn.getAttribute("data-menu-toggle");
             const target = document.getElementById(id);
             if (!target) return;
 
-            requestAnimationFrame(() => {
-                const isOpenNow = !target.classList.contains("hidden");
-                btn.setAttribute("aria-expanded", isOpenNow ? "true" : "false");
-            });
+            const willOpen = target.classList.contains("hidden");
+
+            target.classList.toggle("hidden", !willOpen);
+            btn.setAttribute("aria-expanded", willOpen ? "true" : "false");
         });
 
-        // الضغط على روابط القائمة (AJAX)
-        // document.body.addEventListener("click", function (e) {
-        //     const link = e.target.closest("a.sidebar-link");
+        // document.body.addEventListener("click", function(e) {
+        //     const link = e.target.closest('a');
         //     if (!link) return;
 
-            
+        //     if (
+        //         link.hasAttribute('target') ||
+        //         link.hasAttribute('download') ||
+        //         link.getAttribute('href') === '#' ||
+        //         link.getAttribute('href')?.startsWith('javascript:') ||
+        //         link.closest('[data-modal-toggle]') ||
+        //         link.closest('[data-modal-target]')
+        //     ) {
+        //         return;
+        //     }
+
         //     if (e.button !== 0 || e.ctrlKey || e.shiftKey || e.metaKey || e.altKey) {
+        //         return;
+        //     }
+
+        //     const href = link.getAttribute('href');
+        //     const dataUrl = link.getAttribute('data-url');
+        //     const url = dataUrl || href;
+
+        //     if (!url) return;
+
+        //     if (url.startsWith('http://') || url.startsWith('https://')) {
+        //         const targetUrl = new URL(url, window.location.origin);
+        //         if (targetUrl.origin !== window.location.origin) return;
+        //     }
+
+        //     if (
+        //         url.startsWith('/Login/Logout') ||
+        //         link.classList.contains('force-disabled')
+        //     ) {
+        //         return;
+        //     }
+
+        //     if (!url.startsWith('/')) return;
+
+        //     const normalizedUrl = normalizePath(url);
+
+            
+        //     if (normalizedUrl === "/home") {
+        //         window.location.href = url;
         //         return;
         //     }
 
         //     e.preventDefault();
 
-        //     const url = link.getAttribute("data-url");
-        //     if (!url) return;
-
         //     showMainLoading();
         //     document.body.style.pointerEvents = "none";
-
         //     loadPageIntoMainContent(url);
         // });
-                // تحميل جزئي للروابط الداخلية: السايدبار + الهيدر + breadcrumb
-        document.body.addEventListener("click", function (e) {
-            const link = e.target.closest('a');
+
+        document.body.addEventListener("click", function(e) {
+            const link = e.target.closest('#logo-sidebar a.sidebar-link');
             if (!link) return;
 
-            // تجاهل الأزرار التي ليست روابط تنقل
             if (
                 link.hasAttribute('target') ||
                 link.hasAttribute('download') ||
@@ -686,7 +880,6 @@
                 return;
             }
 
-            // السماح بفتح تبويب جديد أو أوامر المتصفح المعتادة
             if (e.button !== 0 || e.ctrlKey || e.shiftKey || e.metaKey || e.altKey) {
                 return;
             }
@@ -697,13 +890,11 @@
 
             if (!url) return;
 
-            // تجاهل الروابط الخارجية
             if (url.startsWith('http://') || url.startsWith('https://')) {
                 const targetUrl = new URL(url, window.location.origin);
                 if (targetUrl.origin !== window.location.origin) return;
             }
 
-            // تجاهل تسجيل الخروج وأي صفحات لازم تحمل كامل
             if (
                 url.startsWith('/Login/Logout') ||
                 link.classList.contains('force-disabled')
@@ -711,8 +902,14 @@
                 return;
             }
 
-            // فقط الروابط الداخلية
             if (!url.startsWith('/')) return;
+
+            const normalizedUrl = normalizePath(url);
+
+            if (normalizedUrl === "/home") {
+                window.location.href = url;
+                return;
+            }
 
             e.preventDefault();
 
@@ -721,11 +918,10 @@
             loadPageIntoMainContent(url);
         });
 
-        window.addEventListener("popstate", function () {
+        window.addEventListener("popstate", function() {
             loadPageIntoMainContent(window.location.pathname + window.location.search);
         });
     });
-
 </script>
 
 
@@ -934,12 +1130,13 @@
         });
 
         /* روابط السايدبار في الموبايل */
-        document.querySelectorAll('#logo-sidebar a').forEach(link => {
-            link.addEventListener('click', () => {
-                if (window.innerWidth < 1024) {
-                    closeMobileSidebar();
-                }
-            });
+        document.addEventListener('click', function(e) {
+            const link = e.target.closest('#logo-sidebar a');
+            if (!link) return;
+
+            if (window.innerWidth < 1024) {
+                closeMobileSidebar();
+            }
         });
 
         /* RTL */
@@ -948,11 +1145,6 @@
             sidebar?.classList.remove('left-0');
         }
 
-
-
-        // sidebar?.removeEventListener?.('mouseenter', null);
-        // sidebar?.removeEventListener?.('mouseleave', null);
-
         /* تشغيل أولي */
         initSidebarState();
     });
@@ -960,17 +1152,17 @@
 
 <!-- Change Password Modal -->
 <div id="change-password-modal" tabindex="-1" aria-hidden="true"
-     class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full">
-    <div class="relative p-4 w-full max-w-md max-h-full">
-        <div class="relative bg-slate-800 rounded-lg shadow border border-slate-700">
+     class="fixed top-0 right-0 left-0 z-50 hidden h-[calc(100%-1rem)] max-h-full w-full items-center justify-center overflow-x-hidden overflow-y-auto md:inset-0">
+    <div class="relative max-h-full w-full max-w-md p-4">
+        <div class="relative rounded-lg border border-slate-700 bg-slate-800 shadow">
             <!-- Modal header -->
-            <div class="flex items-center justify-between p-4 border-b border-slate-700">
+            <div class="flex items-center justify-between border-b border-slate-700 p-4">
                 <h3 class="text-xl font-semibold text-white">
-                    <i class="fa-solid fa-key text-emerald-400 me-2"></i>
+                    <i class="fa-solid fa-key me-2 text-emerald-400"></i>
                     تغيير كلمة المرور
                 </h3>
                 <button type="button"
-                        class="text-slate-400 bg-transparent hover:bg-slate-700 hover:text-white rounded-lg text-sm w-8 h-8 inline-flex justify-center items-center"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-transparent text-sm text-slate-400 hover:bg-slate-700 hover:text-white"
                         data-modal-hide="change-password-modal">
                     <i class="fa-solid fa-xmark text-xl"></i>
                 </button>
@@ -981,14 +1173,14 @@
                 <div class="space-y-4">
                     <!-- Current Password -->
                     <div>
-                        <label for="current-password" class="block mb-2 text-sm font-medium text-white">
+                        <label for="current-password" class="mb-2 block text-sm font-medium text-white">
                             كلمة المرور الحالية
                         </label>
                         <div class="relative">
                             <input type="password"
                                    id="current-password"
                                    name="currentPassword"
-                                   class="bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5 pe-10"
+                                   class="block w-full rounded-lg border border-slate-600 bg-slate-700 p-2.5 pe-10 text-sm text-white focus:border-emerald-500 focus:ring-emerald-500"
                                    placeholder="أدخل كلمة المرور الحالية"
                                    required>
                             <button type="button"
@@ -1001,14 +1193,14 @@
 
                     <!-- New Password -->
                     <div>
-                        <label for="new-password" class="block mb-2 text-sm font-medium text-white">
+                        <label for="new-password" class="mb-2 block text-sm font-medium text-white">
                             كلمة المرور الجديدة
                         </label>
                         <div class="relative">
                             <input type="password"
                                    id="new-password"
                                    name="newPassword"
-                                   class="bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5 pe-10"
+                                   class="block w-full rounded-lg border border-slate-600 bg-slate-700 p-2.5 pe-10 text-sm text-white focus:border-emerald-500 focus:ring-emerald-500"
                                    placeholder="أدخل كلمة المرور الجديدة"
                                    minlength="6"
                                    required>
@@ -1023,14 +1215,14 @@
 
                     <!-- Confirm Password -->
                     <div>
-                        <label for="confirm-password" class="block mb-2 text-sm font-medium text-white">
+                        <label for="confirm-password" class="mb-2 block text-sm font-medium text-white">
                             تأكيد كلمة المرور
                         </label>
                         <div class="relative">
                             <input type="password"
                                    id="confirm-password"
                                    name="confirmPassword"
-                                   class="bg-slate-700 border border-slate-600 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5 pe-10"
+                                   class="block w-full rounded-lg border border-slate-600 bg-slate-700 p-2.5 pe-10 text-sm text-white focus:border-emerald-500 focus:ring-emerald-500"
                                    placeholder="أعادة إدخال كلمة المرور الجديدة"
                                    required>
                             <button type="button"
@@ -1042,17 +1234,17 @@
                     </div>
 
                     <!-- Error Message Area -->
-                    <div id="password-error" class="hidden p-3 text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-lg"></div>
+                    <div id="password-error" class="hidden rounded-lg border border-red-800 bg-red-900/20 p-3 text-sm text-red-400"></div>
 
                     <!-- Password Strength Indicator -->
                     <div id="password-strength" class="mt-2 hidden">
                         <div class="flex items-center gap-2">
-                            <div class="flex-1 h-2 bg-slate-600 rounded-full overflow-hidden">
+                            <div class="h-2 flex-1 overflow-hidden rounded-full bg-slate-600">
                                 <div id="strength-bar" class="h-full transition-all duration-300"></div>
                             </div>
                             <span id="strength-text" class="text-xs font-medium"></span>
                         </div>
-                        <ul class="mt-2 text-xs text-slate-400 space-y-1">
+                        <ul class="mt-2 space-y-1 text-xs text-slate-400">
                             <li id="check-length" class="flex items-center gap-2">
                                 <i class="fa-solid fa-circle-xmark text-red-400"></i>
                                 <span>8 خانات على الأقل</span>
@@ -1074,15 +1266,15 @@
                 </div>
 
                 <!-- Modal footer -->
-                <div class="flex items-center gap-3 pt-4 mt-4 border-t border-slate-700">
+                <div class="mt-4 flex items-center gap-3 border-t border-slate-700 pt-4">
                     <button type="submit"
-                            class="w-full text-white bg-emerald-600 hover:bg-emerald-700 focus:ring-4 focus:outline-none focus:ring-emerald-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">
+                            class="w-full rounded-lg bg-emerald-600 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-emerald-700 focus:ring-4 focus:ring-emerald-300 focus:outline-none">
                         <i class="fa-solid fa-check me-2"></i>
                         حفظ كلمة المرور
                     </button>
                     <button type="button"
                             data-modal-hide="change-password-modal"
-                            class="w-full text-slate-300 bg-slate-700 hover:bg-slate-600 rounded-lg border border-slate-600 text-sm font-medium px-5 py-2.5 hover:text-white">
+                            class="w-full rounded-lg border border-slate-600 bg-slate-700 px-5 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-600 hover:text-white">
                         إلغاء
                     </button>
                 </div>
@@ -1331,17 +1523,17 @@
 {
     <div id="force-change-password-modal"
          class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md">
-        <div class="relative p-4 w-full max-w-2xl">
+        <div class="relative w-full max-w-2xl p-4">
             <!-- ✅ Changed to max-w-2xl for wider modal -->
-            <div class="relative bg-slate-800 rounded-lg shadow-2xl border-2 border-red-500 animate-pulse-border">
+            <div class="animate-pulse-border relative rounded-lg border-2 border-red-500 bg-slate-800 shadow-2xl">
                 <!-- Modal header -->
-                <div class="flex items-center justify-between p-5 border-b border-slate-700 bg-gradient-to-r from-red-900/30 to-orange-900/30">
+                <div class="flex items-center justify-between border-b border-slate-700 bg-gradient-to-r from-red-900/30 to-orange-900/30 p-5">
                     <div class="flex items-center gap-3">
                         <div class="relative">
-                            <i class="fa-solid fa-shield-halved text-red-400 text-4xl animate-pulse"></i>
+                            <i class="fa-solid fa-shield-halved animate-pulse text-4xl text-red-400"></i>
                             <span class="absolute -top-1 -right-1 flex h-4 w-4">
-                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                <span class="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span>
+                                <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
+                                <span class="relative inline-flex h-4 w-4 rounded-full bg-red-500"></span>
                             </span>
                         </div>
                         <h3 class="text-2xl font-bold text-white">
@@ -1353,18 +1545,18 @@
                 <!-- Modal body -->
                 <div class="p-6" dir="rtl">
                     <!-- ✅ Enhanced warning message -->
-                    <div class="mb-6 p-5 bg-gradient-to-r from-yellow-900/30 to-red-900/30 border-2 border-yellow-500 rounded-lg animate-pulse-slow">
+                    <div class="animate-pulse-slow mb-6 rounded-lg border-2 border-yellow-500 bg-gradient-to-r from-yellow-900/30 to-red-900/30 p-5">
                         <div class="flex items-start gap-4">
-                            <i class="fa-solid fa-triangle-exclamation text-yellow-400 text-3xl mt-1 animate-bounce-slow"></i>
+                            <i class="fa-solid fa-triangle-exclamation animate-bounce-slow mt-1 text-3xl text-yellow-400"></i>
                             <div>
-                                <h4 class="text-xl font-bold text-yellow-200 mb-3">
+                                <h4 class="mb-3 text-xl font-bold text-yellow-200">
                                     يجب تغيير كلمة المرور فوراً
                                 </h4>
-                                <p class="text-base text-yellow-100 leading-relaxed mb-4">
+                                <p class="mb-4 text-base leading-relaxed text-yellow-100">
                                     لأسباب أمنية، <strong>لن تتمكن من استخدام أي وظيفة في النظام</strong> حتى تقوم بتغيير كلمة المرور الافتراضية.
                                 </p>
-                                <div class="bg-black/20 rounded-lg p-3">
-                                    <h5 class="text-sm font-semibold text-yellow-300 mb-2">🔒 القيود الحالية:</h5>
+                                <div class="rounded-lg bg-black/20 p-3">
+                                    <h5 class="mb-2 text-sm font-semibold text-yellow-300">🔒 القيود الحالية:</h5>
                                     <ul class="space-y-2 text-sm text-yellow-200">
                                         <li class="flex items-center gap-2">
                                             <i class="fa-solid fa-ban text-red-400"></i>
@@ -1388,14 +1580,14 @@
                         <div class="space-y-4">
                             <!-- Current Password -->
                             <div>
-                                <label for="force-current-password" class="block mb-2 text-sm font-medium text-white">
+                                <label for="force-current-password" class="mb-2 block text-sm font-medium text-white">
                                     كلمة المرور الحالية <span class="text-red-400">*</span>
                                 </label>
                                 <div class="relative">
                                     <input type="password"
                                            id="force-current-password"
                                            name="currentPassword"
-                                           class="bg-slate-700 border border-slate-600 text-white text-base rounded-lg focus:ring-red-500 focus:border-red-500 block w-full p-3 pe-12"
+                                           class="block w-full rounded-lg border border-slate-600 bg-slate-700 p-3 pe-12 text-base text-white focus:border-red-500 focus:ring-red-500"
                                            placeholder="أدخل كلمة المرور الحالية"
                                            required>
                                     <button type="button"
@@ -1408,14 +1600,14 @@
 
                             <!-- New Password -->
                             <div>
-                                <label for="force-new-password" class="block mb-2 text-sm font-medium text-white">
+                                <label for="force-new-password" class="mb-2 block text-sm font-medium text-white">
                                     كلمة المرور الجديدة <span class="text-red-400">*</span>
                                 </label>
                                 <div class="relative">
                                     <input type="password"
                                            id="force-new-password"
                                            name="newPassword"
-                                           class="bg-slate-700 border border-slate-600 text-white text-base rounded-lg focus:ring-red-500 focus:border-red-500 block w-full p-3 pe-12"
+                                           class="block w-full rounded-lg border border-slate-600 bg-slate-700 p-3 pe-12 text-base text-white focus:border-red-500 focus:ring-red-500"
                                            placeholder="أدخل كلمة المرور الجديدة"
                                            minlength="8"
                                            required>
@@ -1430,14 +1622,14 @@
 
                             <!-- Confirm Password -->
                             <div>
-                                <label for="force-confirm-password" class="block mb-2 text-sm font-medium text-white">
+                                <label for="force-confirm-password" class="mb-2 block text-sm font-medium text-white">
                                     تأكيد كلمة المرور <span class="text-red-400">*</span>
                                 </label>
                                 <div class="relative">
                                     <input type="password"
                                            id="force-confirm-password"
                                            name="confirmPassword"
-                                           class="bg-slate-700 border border-slate-600 text-white text-base rounded-lg focus:ring-red-500 focus:border-red-500 block w-full p-3 pe-12"
+                                           class="block w-full rounded-lg border border-slate-600 bg-slate-700 p-3 pe-12 text-base text-white focus:border-red-500 focus:ring-red-500"
                                            placeholder="أعادة إدخال كلمة المرور الجديدة"
                                            required>
                                     <button type="button"
@@ -1451,12 +1643,12 @@
                             <!-- Password Strength Indicator -->
                             <div id="force-password-strength" class="hidden">
                                 <div class="flex items-center gap-2">
-                                    <div class="flex-1 h-2 bg-slate-600 rounded-full overflow-hidden">
+                                    <div class="h-2 flex-1 overflow-hidden rounded-full bg-slate-600">
                                         <div id="force-strength-bar" class="h-full transition-all duration-300"></div>
                                     </div>
                                     <span id="force-strength-text" class="text-xs font-medium"></span>
                                 </div>
-                                <ul class="mt-2 text-xs text-slate-400 space-y-1">
+                                <ul class="mt-2 space-y-1 text-xs text-slate-400">
                                     <li id="force-check-length" class="flex items-center gap-2">
                                         <i class="fa-solid fa-circle-xmark text-red-400"></i>
                                         <span>8 خانات على الأقل</span>
@@ -1477,18 +1669,18 @@
                             </div>
 
                             <!-- Error Message Area -->
-                            <div id="force-password-error" class="hidden p-3 text-sm text-red-400 bg-red-900/20 border border-red-800 rounded-lg"></div>
+                            <div id="force-password-error" class="hidden rounded-lg border border-red-800 bg-red-900/20 p-3 text-sm text-red-400"></div>
                         </div>
 
                         <!-- Modal footer -->
-                        <div class="flex items-center gap-3 pt-5 mt-5 border-t border-slate-700">
+                        <div class="mt-5 flex items-center gap-3 border-t border-slate-700 pt-5">
                             <button type="submit"
-                                    class="flex-1 text-white bg-red-600 hover:bg-red-700 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-base px-6 py-3 text-center">
+                                    class="flex-1 rounded-lg bg-red-600 px-6 py-3 text-center text-base font-medium text-white hover:bg-red-700 focus:ring-4 focus:ring-red-300 focus:outline-none">
                                 <i class="fa-solid fa-shield-halved me-2"></i>
                                 تغيير كلمة المرور الآن
                             </button>
                             <a href="/Login/Logout"
-                                   class="flex-1 text-center text-slate-300 bg-slate-700 hover:bg-slate-600 rounded-lg border border-slate-600 text-base font-medium px-6 py-3 hover:text-white">
+                                   class="flex-1 rounded-lg border border-slate-600 bg-slate-700 px-6 py-3 text-center text-base font-medium text-slate-300 hover:bg-slate-600 hover:text-white">
                                 <i class="fa-solid fa-right-from-bracket me-2"></i>
                                 تسجيل الخروج
                             </a>
@@ -1521,7 +1713,7 @@
                 });
                 
                 // Disable sidebar controls
-                document.querySelectorAll('aside#logo-sidebar button[data-collapse-toggle]').forEach(btn => {
+                document.querySelectorAll('aside#logo-sidebar button[data-menu-toggle]').forEach(btn => {
                     btn.classList.add('force-disabled');
                 });
                 
