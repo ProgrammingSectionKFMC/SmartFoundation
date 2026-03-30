@@ -56,19 +56,19 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             
 
-            string residentInfoIdaraID = "";
+            //string residentInfoIdaraID = "";
             
 
 
            
 
 
-            if (dt1 != null && dt1.Rows.Count > 0)
-            {
-                DataRow rows = dt1.Rows[0];
-                if (dt1.Columns.Contains("IdaraID") && rows["IdaraID"] != DBNull.Value)
-                    residentInfoIdaraID = rows["IdaraID"].ToString();
-            }
+            //if (dt1 != null && dt1.Rows.Count > 0)
+            //{
+            //    DataRow rows = dt1.Rows[0];
+            //    if (dt1.Columns.Contains("IdaraID") && rows["IdaraID"] != DBNull.Value)
+            //        residentInfoIdaraID = rows["IdaraID"].ToString();
+            //}
 
 
 
@@ -116,15 +116,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             string rowIdField = "";
             string rowIdField_dt2 = "";
 
-            bool canInsertWaitingList = false;
-            bool canInsertOCCUBENTLETTER = false;
-            bool canUpdateWaitingList = false;
-            bool canUpdateOCCUBENTLETTER = false;
-            bool canMoveWaitingList = false;
-            bool canDeleteWaitingList = false;
-            bool canDeleteOCCUBENTLETTER = false;
-            bool candeleteMoveWaitingList = false;
-            bool canDELETERESIDENTALLWAITINGLIST = false;
+            bool canADDRENTEXEMPTION = false;
+            bool canEDITRENTEXEMPTION = false;
+            bool canDELETERENTEXEMPTION = false;
+           
 
 
             FormConfig form = new();
@@ -215,15 +210,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     {
                         var permissionName = row["permissionTypeName_E"]?.ToString()?.Trim().ToUpper();
 
-                        if (permissionName == "INSERTWAITINGLIST") canInsertWaitingList = true;
-                        if (permissionName == "INSERTOCCUBENTLETTER") canInsertOCCUBENTLETTER = true;
-                        if (permissionName == "UPDATEWAITINGLIST") canUpdateWaitingList = true;
-                        if (permissionName == "UPDATEOCCUBENTLETTER") canUpdateOCCUBENTLETTER = true;
-                        if (permissionName == "MOVEWAITINGLIST") canMoveWaitingList = true;
-                        if (permissionName == "DELETEWAITINGLIST") canDeleteWaitingList = true;
-                        if (permissionName == "DELETEOCCUBENTLETTER") canDeleteOCCUBENTLETTER = true;
-                        if (permissionName == "DELETEMOVEWAITINGLIST") candeleteMoveWaitingList = true;
-                        if (permissionName == "DELETERESIDENTALLWAITINGLIST") canDELETERESIDENTALLWAITINGLIST = true;
+                        if (permissionName == "ADDRENTEXEMPTION") canADDRENTEXEMPTION = true;
+                        if (permissionName == "EDITRENTEXEMPTION") canEDITRENTEXEMPTION = true;
+                        if (permissionName == "DELETERENTEXEMPTION") canDELETERENTEXEMPTION = true;
+
                     }
 
                     if (dt1 != null && dt1.Columns.Count > 0)
@@ -532,7 +522,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 PanelTitle = "بيانات المستفيد",
                 EnablePagination = false, // جديد
                 ShowPageSizeSelector = false, // جديد
-                ShowToolbar = residentInfoIdaraID == IdaraId,
+                ShowToolbar = false,
                 EnableCellCopy = false,
                 //RenderAsToggle = true,
                 //ToggleLabel = "بيانات المستفيد",
@@ -563,10 +553,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowColumns = true,
                     ShowExportCsv = false,
                     ShowExportExcel = false,
-                    ShowAdd = canInsertWaitingList && residentInfoIdaraID == IdaraId,
-                    ShowEdit = canDELETERESIDENTALLWAITINGLIST && residentInfoIdaraID == IdaraId,
-                    ShowEdit1 = canMoveWaitingList && residentInfoIdaraID == IdaraId,
-                    ShowDelete = canDeleteWaitingList && residentInfoIdaraID == IdaraId,
+                    ShowAdd = canADDRENTEXEMPTION,
+                    ShowEdit = canEDITRENTEXEMPTION ,
+                    ShowEdit1 = canDELETERENTEXEMPTION ,
+                    
                     ShowBulkDelete = false,
 
                 
@@ -575,7 +565,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             var dsModel1 = new SmartTableDsModel
             {
-                PageTitle = "إدارة سجلات الانتظار لمستفيد",
+                PageTitle = "اعفاء المستفيدين من الايجار",
                 Columns = dynamicColumns_dt2,
                 Rows = rowsList_dt2,
                 RowIdField = rowIdField_dt2,
@@ -585,26 +575,19 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 Searchable = false, // جديد
                 AllowExport = true,
                 ShowRowBorders = false, 
-                PanelTitle = "إدارة سجلات الانتظار لمستفيد",
+                PanelTitle = "اعفاء المستفيدين من الايجار",
                 EnablePagination = false, // جديد
                 ShowPageSizeSelector=false, // جديد
-                //TabelLabel= "قوائم الانتظار",
-                //TabelLabelIcon = "fa-solid fa-list",
-                ShowToolbar = residentInfoIdaraID == IdaraId,
+                ShowToolbar = true,
                 EnableCellCopy = false,
-                //RenderAsToggle = true,
-                //ToggleLabel = "عرض قوائم الانتظار للمستفيد بإدارتك",
-                //ToggleIcon = "fa-solid fa-list",
-                //ToggleDefaultOpen = residentInfoIdaraID == IdaraId,
-                //ShowToggleCount = true,
-
+               
                 RenderMode = SmartTableRenderMode.Tab,
                 RenderAsToggle = false,
                 RenderAsSection = false,
                 RenderAsTab = true,
                 TabGroupKey = "waiting-list-by-resident",
                 TabKey = "resident-waiting-lists",
-                TabLabel = "قوائم الانتظار",
+                TabLabel = "سجلات الاعفاء",
                 TabIcon = "fa-solid fa-list",
                 TabDefaultActive = false,
                 ShowTabCount = true,
@@ -619,10 +602,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowColumns = true,
                     ShowExportCsv = false,
                     ShowExportExcel = false,
-                    ShowAdd = canInsertWaitingList && residentInfoIdaraID == IdaraId,
-                    ShowEdit = canUpdateWaitingList && residentInfoIdaraID == IdaraId,
-                    ShowEdit1 = canMoveWaitingList && residentInfoIdaraID == IdaraId,
-                    ShowDelete = canDeleteWaitingList && residentInfoIdaraID == IdaraId,
+                    ShowAdd = canADDRENTEXEMPTION,
+                    ShowEdit = canEDITRENTEXEMPTION,
+                    ShowDelete = canDELETERENTEXEMPTION,
+                    
                     ShowBulkDelete = false,
                     
 
@@ -655,8 +638,36 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         MaxSelection = 1
                     },
 
-                 
-                    
+
+                    Add = new TableAction
+                    {
+                        Label = "الغاء بيانات انتظار",
+                        Icon = "fa fa-trash",
+                        Color = "danger",
+                        //Placement = TableActionPlacement.ActionsMenu,
+                        IsEdit = true,
+                        OpenModal = true,
+                        ModalTitle = "تحذير",
+                        ModalMessage = "هل أنت متأكد من الغاء بيانات الانتظار؟",
+                        ModalMessageIcon = "fa fa-exclamation-triangle text-red-600",
+                        ModalMessageClass = "bg-red-50 text-red-700",
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "BuildingTypeDeleteForm",
+                            Title = "تأكيد الغاء بيانات الانتظار",
+                            Method = "post",
+                            ActionUrl = "/crud/delete",
+                            Buttons = new List<FormButtonConfig>
+                            {
+                                new FormButtonConfig { Text = "حذف", Type = "submit", Color = "danger", },
+                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
+                            },
+                            Fields = deleteFieldsWaitingList
+                        },
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1
+                    },
 
                     Delete = new TableAction
                     {
