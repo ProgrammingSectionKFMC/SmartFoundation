@@ -31,19 +31,40 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
     private const int GeneralMaxAnswerLen = 1500;
 
     private static readonly (string Key, string Label, string[] Keywords)[] Entities =
-    {
-        ("Residents", "مستفيد", new[] { "مستفيد", "المستفيد", "المستفيدين", "ساكن", "Residents" }),
-        ("BuildingDetails", "مبنى" , new[] { "مبنى", "المباني", "Building", "BuildingDetails" }),
-        ("BuildingClass", "فئة مبنى" , new[] { "فئة مبنى", "فئات المباني", "تصنيف مبنى", "تصنيفات المباني", "نوع مبنى", "أنواع المباني", "BuildingClass" }),
-        ("ResidentClass", "فئة مستفيد" , new[] { "فئة مستفيد", "فئات المستفيدين", "تصنيف مستفيد", "تصنيفات المستفيدين", "نوع مستفيد", "أنواع المستفيدين", "ResidentClass" }),
-        ("WaitingListByResident", "قوائم الانتظار" , new[] {
-            "قوائم الانتظار", "قائمة الانتظار", "قائمة انتظار", "قوائم انتظار",
-            "سجل انتظار", "سجلات الانتظار", "سجلات انتظار",
-            "خطاب تسكين", "خطابات التسكين", "خطابات تسكين",
-            "نقل سجل", "نقل سجلات", "طلب نقل", "طلبات النقل",
-            "WaitingListByResident", "WaitingList"
-        }),
-    };
+ {
+    ("Residents", "مستفيد", new[] { "مستفيد", "المستفيد", "المستفيدين", "ساكن", "Residents" }),
+
+    ("BuildingDetails", "مبنى" , new[] { "مبنى", "المباني", "Building", "BuildingDetails" }),
+
+    ("BuildingClass", "فئة مبنى" , new[] {
+        "فئة مبنى", "فئات المباني", "تصنيف مبنى", "تصنيفات المباني",
+        "نوع مبنى", "أنواع المباني", "BuildingClass"
+    }),
+
+    ("ResidentClass", "فئة مستفيد" , new[] {
+        "فئة مستفيد", "فئات المستفيدين", "تصنيف مستفيد", "تصنيفات المستفيدين",
+        "نوع مستفيد", "أنواع المستفيدين", "ResidentClass"
+    }),
+
+    ("WaitingListByResident", "قوائم الانتظار" , new[] {
+        "قوائم الانتظار", "قائمة الانتظار", "قائمة انتظار", "قوائم انتظار",
+        "سجل انتظار", "سجلات الانتظار", "سجلات انتظار",
+        "خطاب تسكين", "خطابات التسكين", "خطابات تسكين",
+        "نقل سجل", "نقل سجلات", "طلب نقل", "طلبات النقل",
+        "WaitingListByResident", "WaitingList"
+    }),
+
+    // ✅ الجديد (أضفه هنا)
+    ("Regulations", "اللوائح والأنظمة", new[] {
+        "لائحة", "اللوائح",
+        "نظام", "الأنظمة",
+        "مادة", "المادة", "فقرة",
+        "تعميم", "تعليمات",
+        "ضوابط", "شروط", "استثناء", "استثناءات",
+        "آلية", "كيفية التطبيق",
+        "التأمين الاحترازي", "الإخلاء", "أحقية السكن"
+    }),
+};
 
     private sealed class PendingState
     {
@@ -299,7 +320,99 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
             if (!string.IsNullOrWhiteSpace(selectedEntityKey))
                 searchQuery = $"{msg} {GetEntityLabel(selectedEntityKey)}";
 
-            var citations = _kb.Search(searchQuery, topK);
+            //var citations = _kb.Search(searchQuery, topK);
+            var citations = _kb.Search(originalMsg + " لائحة نظام", topK);
+
+            // ✅ مسار خاص للأنظمة واللوائح
+            if (intent == "REGULATION")
+            {
+                var detected = DetectEntities(originalMsg);
+                var entityKey = detected.FirstOrDefault().Key ?? "Regulations";
+
+                if (citations.Count == 0)
+                {
+                    return await SaveAndReturn(
+                        request, startTime,
+                        "لم أجد نصًا نظاميًا مطابقًا لهذا السؤال.",
+                        citations, entityKey, intent
+                    );
+                }
+
+                var topic = ResolveRegulationTopic(originalMsg);
+
+                string result = "";
+                string sourceName = "مرجع غير معروف";
+
+                foreach (var citation in citations)
+                {
+                    var doc = _kb.GetDocumentBySource(citation.Source ?? "") ?? citation.Text ?? "";
+                    if (string.IsNullOrWhiteSpace(doc))
+                        continue;
+
+                    string extracted = "";
+
+                    // 1) نحاول استخراج قسم بعنوان واضح
+                    if (!string.IsNullOrWhiteSpace(topic))
+                    {
+                        extracted = ExtractSection(doc, $"## {topic}");
+                        extracted = TrimToSingleSection(RemoveKeywords(extracted)).Trim();
+                    }
+
+                    // 2) إذا فشل، نأخذ أفضل فقرة/مقطع من النص الكامل
+                    if (string.IsNullOrWhiteSpace(extracted))
+                    {
+                        var searchText = !string.IsNullOrWhiteSpace(topic) ? topic : originalMsg;
+                        extracted = ExtractBestRegulationPassage(doc, searchText); extracted = RemoveKeywords(extracted).Trim();
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(extracted))
+                    {
+                        // ❌ تجاهل نتائج النماذج أو الشاشات
+                        if (extracted.Contains("رقم الهوية") ||
+                            extracted.Contains("الرقم العام") ||
+                            extracted.Contains("اضغط زر"))
+                        {
+                            continue;
+                        }
+
+                        result = extracted;
+                        sourceName = citation.Source ?? "مرجع غير معروف";
+                        break;
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(result))
+                    result = "لم يتم العثور على نص واضح لهذا الموضوع. تأكد من أن ملف الـ MD يحتوي النص الفعلي وليس العنوان أو الهيكل فقط.";
+
+                if (!string.IsNullOrWhiteSpace(topic))
+                {
+                    result =
+            $@"📘 الموضوع: {topic}
+
+📄 النص:
+{result}
+
+📚 المرجع:
+دليل اجراءات الاسكان والممتلكات";
+                }
+                else
+                {
+                    result =
+            $@"📄 النص:
+{result}
+
+📚 المرجع:
+دليل اجراءات الاسكان والممتلكات";
+                }
+
+                return await SaveAndReturn(
+                    request, startTime,
+                    result,
+                    citations,
+                    entityKey,
+                    intent
+                );
+            }
 
             if (isProcedural)
             {
@@ -362,7 +475,7 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
                     );
                 }
 
-                var header = ResolveHeader(entityKey, intent);
+                var header = ResolveHeader(entityKey, intent, originalMsg);
                 if (string.IsNullOrWhiteSpace(header))
                 {
                     var suggestions = GetSuggestions(entityKey);
@@ -627,6 +740,7 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
             }
         }
     }
+
     private async Task<string> AskLlmWithCitationsAsync(string userMsg, string systemPrompt, CancellationToken ct)
     {
         var ctx = await AcquireContextAsync(ct);
@@ -634,25 +748,40 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
         {
             var executor = new InteractiveExecutor(ctx);
 
-            // ✅ قالب “سؤال/إجابة” أفضل مع Qwen من [System]/[User]
             var prompt = $"""
-أنت مساعد داخل نظام SmartFoundation.
-أجب بالعربية وباختصار ودقة.
-استخدم مقاطع المساعدة فقط إذا كانت مفيدة ولا تكرر تعليمات النظام.
+<|im_start|>system
+أنت مساعد ذكي داخل نظام SmartFoundation ومتخصص في أنظمة ولوائح الإسكان والممتلكات.
 
+تعليمات مهمة:
+- أجب بالعربية الفصحى المبسطة.
+- اعتمد فقط على مقاطع المساعدة المعطاة لك.
+- لا تخترع معلومات غير موجودة.
+- إذا لم تجد جوابًا واضحًا في النص، قل: لم يتم العثور على نص واضح لهذا الموضوع.
+- إذا كان السؤال عن تعريف، اذكر التعريف مباشرة.
+- إذا كان السؤال عن شروط، اذكر الشروط بنقاط.
+- إذا كان السؤال عن خطوات أو إجراء، اذكر الخطوات مرتبة.
+- إذا كان السؤال عن مقارنة، اذكر الطرفين بوضوح.
+- لا تكرر التعليمات.
+- لا تضف مقدمات طويلة.
+<|im_end|>
+<|im_start|>user
 مقاطع المساعدة:
 {systemPrompt}
 
 سؤال المستخدم:
 {userMsg}
-
-إجابتك:
+<|im_end|>
+<|im_start|>assistant
 """;
 
             var inferenceParams = new InferenceParams
             {
                 MaxTokens = Math.Min(_opt.MaxTokens, 320),
-                AntiPrompts = new List<string> { "سؤال المستخدم:", "مقاطع المساعدة:", "إجابتك:" },
+                AntiPrompts = new List<string>
+            {
+                "<|im_start|>",
+                "<|im_end|>"
+            },
                 SamplingPipeline = new LLama.Sampling.DefaultSamplingPipeline
                 {
                     Temperature = 0.25f,
@@ -674,6 +803,54 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
             ReleaseContext(ctx);
         }
     }
+
+    //    private async Task<string> AskLlmWithCitationsAsync(string userMsg, string systemPrompt, CancellationToken ct)
+    //    {
+    //        var ctx = await AcquireContextAsync(ct);
+    //        try
+    //        {
+    //            var executor = new InteractiveExecutor(ctx);
+
+    //            // ✅ قالب “سؤال/إجابة” أفضل مع Qwen من [System]/[User]
+    //            var prompt = $"""
+    //أنت مساعد داخل نظام SmartFoundation.
+    //أجب بالعربية وباختصار ودقة.
+    //استخدم مقاطع المساعدة فقط إذا كانت مفيدة ولا تكرر تعليمات النظام.
+
+    //مقاطع المساعدة:
+    //{systemPrompt}
+
+    //سؤال المستخدم:
+    //{userMsg}
+
+    //إجابتك:
+    //""";
+
+    //            var inferenceParams = new InferenceParams
+    //            {
+    //                MaxTokens = Math.Min(_opt.MaxTokens, 320),
+    //                AntiPrompts = new List<string> { "سؤال المستخدم:", "مقاطع المساعدة:", "إجابتك:" },
+    //                SamplingPipeline = new LLama.Sampling.DefaultSamplingPipeline
+    //                {
+    //                    Temperature = 0.25f,
+    //                    Seed = 1337
+    //                }
+    //            };
+
+    //            var sb = new StringBuilder();
+    //            await foreach (var piece in executor.InferAsync(prompt, inferenceParams, ct))
+    //            {
+    //                sb.Append(piece);
+    //                if (sb.Length > 2500) break;
+    //            }
+
+    //            return CleanLlmArtifacts(sb.ToString());
+    //        }
+    //        finally
+    //        {
+    //            ReleaseContext(ctx);
+    //        }
+    //    }
 
     private static bool IsTrivialGreeting(string msg)
     {
@@ -733,19 +910,35 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
         return parts.Length <= 2;
     }
 
+
     private static string CleanLlmArtifacts(string s)
     {
         if (string.IsNullOrWhiteSpace(s)) return "";
 
         s = s.Replace("[System]", "", StringComparison.OrdinalIgnoreCase)
              .Replace("[User]", "", StringComparison.OrdinalIgnoreCase)
-             .Replace("[Assistant]", "", StringComparison.OrdinalIgnoreCase);
+             .Replace("[Assistant]", "", StringComparison.OrdinalIgnoreCase)
+             .Replace("<|im_start|>", "", StringComparison.OrdinalIgnoreCase)
+             .Replace("<|im_end|>", "", StringComparison.OrdinalIgnoreCase);
 
         while (s.Contains("\n\n\n"))
             s = s.Replace("\n\n\n", "\n\n");
 
         return s.Trim();
     }
+    //private static string CleanLlmArtifacts(string s)
+    //{
+    //    if (string.IsNullOrWhiteSpace(s)) return "";
+
+    //    s = s.Replace("[System]", "", StringComparison.OrdinalIgnoreCase)
+    //         .Replace("[User]", "", StringComparison.OrdinalIgnoreCase)
+    //         .Replace("[Assistant]", "", StringComparison.OrdinalIgnoreCase);
+
+    //    while (s.Contains("\n\n\n"))
+    //        s = s.Replace("\n\n\n", "\n\n");
+
+    //    return s.Trim();
+    //}
 
     private static List<(string Key, string Label)> DetectEntities(string message)
     {
@@ -833,9 +1026,22 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
         };
     }
 
-    private static string ResolveHeader(string entityKey, string intent)
+    private static string ResolveHeader(string entityKey, string intent, string userQuery = "")
     {
         if (string.IsNullOrWhiteSpace(intent)) return "";
+
+        // ✅ دعم اللوائح والأنظمة بشكل عام
+        if (entityKey.Equals("Regulations", StringComparison.OrdinalIgnoreCase))
+        {
+            var topic = ResolveRegulationTopic(userQuery);
+
+            // إذا قدرنا نستخرج موضوع من السؤال نرجع عنوانه مباشرة
+            if (!string.IsNullOrWhiteSpace(topic))
+                return $"## {topic}";
+
+            // fallback عام: لا يوجد عنوان محدد
+            return "##";
+        }
 
         return (entityKey, intent) switch
         {
@@ -868,8 +1074,63 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
             ("WaitingListByResident", "PRINT") => "## التصدير",
             ("WaitingListByResident", "EXPORT") => "## التصدير",
 
+            ("Assign", "OPEN_ASSIGN") => "## إنشاء محضر تخصيص جديد",
+            ("Assign", "CLOSE_ASSIGN") => "## إغلاق محضر التخصيص",
+            ("Assign", "ASSIGN_HOUSE") => "## تخصيص منزل لمستفيد",
+            ("Assign", "UPDATE_ASSIGN") => "## تعديل تخصيص منزل",
+            ("Assign", "EXCLUDE_ASSIGN") => "## استبعاد مستفيد من محضر التخصيص",
+            ("Assign", "SEARCH") => "## البحث عن مستفيد",
+            ("Assign", "DETAILS") => "## عرض التفاصيل",
+            ("Assign", "PRINT") => "## طباعة خطاب",
+            ("Assign", "EXPORT") => "## تصدير البيانات",
+
             _ => ""
         };
+    }
+
+
+    private static string ResolveRegulationTopic(string query)
+    {
+        if (string.IsNullOrWhiteSpace(query)) return "";
+
+        query = query.Trim();
+
+        var knownTopics = new[]
+{
+    "العمر الافتراضي",
+    "المنشأة السكنية",
+    "المنشأة العسكرية",
+    "البند",
+    "الصنف",
+    "القوائم",
+    "المعاينة",
+    "اللائحة التنظيمية",
+    "الرسوم",
+    "الفترة الانتقالية",
+    "سكن العزاب",
+    "سكن العائلات",
+    "المعدات الثابتة",
+    "الغرامات",
+    "التلف الجزئي",
+    "التلف الكلي",
+    "الضياع",
+    "الصيانة",
+    "الإهمال",
+    "الإصلاح",
+    "الاستبدال",
+    "الإنهاء",
+    "الأحقية",
+    "التخصيص",
+    "الإخلاء"
+};
+
+        foreach (var topic in knownTopics.OrderByDescending(x => x.Length))
+        {
+            if (query.Contains(topic, StringComparison.OrdinalIgnoreCase))
+                return topic;
+        }
+
+        return "";
     }
 
     private static string ExtractSection(string text, string header)
@@ -880,10 +1141,15 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
         h = h.Replace("\\ ", "\\s+");
 
         var pattern = $"{h}\\s*\\r?\\n(?<body>[\\s\\S]*?)(?=\\r?\\n###?\\s|\\z)";
-        var m = System.Text.RegularExpressions.Regex.Match(text, pattern,
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        var m = System.Text.RegularExpressions.Regex.Match(
+            text,
+            pattern,
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase
+        );
 
-        if (!m.Success) return header;
+        // ✅ لا ترجع العنوان فقط عند الفشل
+        if (!m.Success) return "";
+
         return (header + "\n" + m.Groups["body"].Value).Trim();
     }
 
@@ -940,7 +1206,73 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
         if (ContainsAny(query, "اضافة", "إضافة", "اضف", "أضف", "اضيف", "أضيف", "تسجيل", "سجل", "انشاء", "إنشاء", "جديد"))
             return "ADD";
 
+        if (ContainsAny(query,
+    "أضيف", "اضافة", "إنشاء",
+    "تعديل", "احذف", "حذف",
+    "بحث", "طباعة", "تصدير",
+    "مستفيد", "مبنى", "قائمة الانتظار"
+))
+        {
+            return "SYSTEM";
+        }
+
+        if (ContainsAny(query,
+     "مادة", "نص المادة", "النص النظامي",
+     "لائحة", "اللوائح", "نظام", "الأنظمة", "تعليمات",
+     "شروط", "استثناء", "استثناءات", "ضوابط",
+     "آلية", "كيف يطبق", "كيفية التطبيق",
+     "التأمين الاحترازي", "الإخلاء", "أحقية السكن",
+     "الفترة الانتقالية", "الغرامات", "الصيانة", "الدفاع",
+     "التلف الجزئي", "التلف الكلي", "التخصيص", "إيجار السكن",
+     "سكن العزاب", "سكن العائلات", "الرسوم", "التجهيزات"))
+            return "REGULATION";
+
+        if (ContainsAny(query,
+   "ما هو", "ما هي", "وش", "عرف", "تعريف", "يعني", "المقصود"
+))
+        {
+            return "REGULATION";
+        }
+
+        if (ContainsAny(query,
+    "الأحقية", "التخصيص", "الإخلاء",
+    "الصيانة", "التلف", "الضياع",
+    "الرسوم", "الغرامات",
+    "المنشأة", "العمر الافتراضي",
+    "الإهمال", "الإصلاح", "الاستبدال",
+    "الإنهاء", "القوائم", "المعاينة",
+    "اللائحة", "الفترة الانتقالية"
+))
+        {
+            return "REGULATION";
+        }
+
+        if (
+    (query.StartsWith("كيف") || query.StartsWith("اذا") || query.StartsWith("وش"))
+    &&
+    ContainsAny(query,
+        "السكن",
+        "الأحقية",
+        "التخصيص",
+        "الإخلاء",
+        "الصيانة",
+        "التلف",
+        "الضياع",
+        "الغرامات",
+        "الرسوم",
+        "المستفيد",
+        "الوحدة",
+        "الفترة الانتقالية"
+    )
+)
+        {
+            return "REGULATION";
+        }
+
         return "";
+
+       
+
     }
 
     private static bool ContainsAny(string s, params string[] parts)
@@ -1074,4 +1406,149 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
         }
         return cleaned;
     }
+
+
+    private static string ExtractBestRegulationPassage(string text, string query, int maxLength = 1200)
+    {
+        if (string.IsNullOrWhiteSpace(text) || string.IsNullOrWhiteSpace(query))
+            return "";
+
+        var normalizedQuery = query.Trim();
+
+        var paragraphs = text.Replace("\r\n", "\n")
+            .Split("\n\n", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        if (paragraphs.Length == 0)
+            return "";
+
+        var scored = paragraphs
+            .Select(p => new
+            {
+                Text = p.Trim(),
+                Score = ScoreParagraph(p, normalizedQuery)
+            })
+            .Where(x =>
+                x.Score > 0 &&
+                !IsUiOrFormNoise(x.Text))
+            .OrderByDescending(x => x.Score)
+            .ToList();
+
+        if (scored.Count == 0)
+            return "";
+
+        var sb = new StringBuilder();
+
+        foreach (var item in scored.Take(3))
+        {
+            if (sb.Length + item.Text.Length + 2 > maxLength)
+                break;
+
+            if (sb.Length > 0)
+                sb.AppendLine().AppendLine();
+
+            sb.Append(item.Text);
+        }
+
+        return sb.ToString().Trim();
+    }
+
+    private static bool IsUiOrFormNoise(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return true;
+
+        return
+            text.Contains("رقم الهوية", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("الرقم العام", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("اضغط زر", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("إضافة مستفيد", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("إدخال بيانات", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("حفظ", StringComparison.OrdinalIgnoreCase) && text.Contains("نافذة", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("لا يعمل زر تعديل", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("تظهر رسالة حقول إلزامية", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static int ScoreParagraph(string paragraph, string query)
+    {
+        if (string.IsNullOrWhiteSpace(paragraph) || string.IsNullOrWhiteSpace(query))
+            return 0;
+
+        int score = 0;
+
+        var topics = new[]
+        {
+        "العمر الافتراضي",
+        "المنشأة السكنية",
+        "المنشأة العسكرية",
+        "البند",
+        "الصنف",
+        "القوائم",
+        "المعاينة",
+        "اللائحة التنظيمية",
+        "الرسوم",
+        "الفترة الانتقالية",
+        "سكن العزاب",
+        "سكن العائلات",
+        "المعدات الثابتة",
+        "الغرامات",
+        "التلف الجزئي",
+        "التلف الكلي",
+        "الضياع",
+        "الصيانة",
+        "الإهمال",
+        "الإصلاح",
+        "الاستبدال",
+        "الإنهاء",
+        "الأحقية",
+        "أحقية السكن",
+        "التخصيص",
+        "الإخلاء",
+        "مسؤولية المستفيد",
+        "مسؤولية الإدارة",
+        "المسؤوليات",
+        "واجبات المستفيد"
+    };
+
+        foreach (var topic in topics)
+        {
+            if (query.Contains(topic, StringComparison.OrdinalIgnoreCase) &&
+                paragraph.Contains(topic, StringComparison.OrdinalIgnoreCase))
+            {
+                score += 10;
+            }
+        }
+
+        var words = query.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        foreach (var word in words)
+        {
+            if (word.Length < 2) continue;
+
+            if (paragraph.Contains(word, StringComparison.OrdinalIgnoreCase))
+                score += 1;
+        }
+
+        if (paragraph.StartsWith("##"))
+            score += 2;
+
+        if (paragraph.StartsWith("###"))
+            score += 1;
+
+        if ((query.Contains("ما هو", StringComparison.OrdinalIgnoreCase) ||
+             query.Contains("ما هي", StringComparison.OrdinalIgnoreCase) ||
+             query.Contains("وش", StringComparison.OrdinalIgnoreCase) ||
+             query.Contains("يعني", StringComparison.OrdinalIgnoreCase) ||
+             query.Contains("تعريف", StringComparison.OrdinalIgnoreCase) ||
+             query.Contains("عرف", StringComparison.OrdinalIgnoreCase))
+             &&
+             (paragraph.Contains("تعريف", StringComparison.OrdinalIgnoreCase) ||
+              paragraph.Contains("يقصد به", StringComparison.OrdinalIgnoreCase) ||
+              paragraph.Contains("هي", StringComparison.OrdinalIgnoreCase)))
+        {
+            score += 3;
+        }
+
+        return score;
+    }
+
 }

@@ -460,3 +460,36 @@
     color: #0f172a;
     letter-spacing: -.02em;
 }
+.smart-execwatch__layout {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.smart-execwatch__panel--full {
+    width: 100%;
+}
+
+.smart-execwatch__grid--bottom {
+    display: grid;
+    grid-template-columns: 1fr 1.45fr;
+    gap: 14px;
+    width: 100%;
+}
+
+@media (max-width: 992px) {
+    .smart-execwatch__grid--bottom {
+        grid-template-columns: 1fr;
+    }
+}
+
+.smart-execwatch__layout {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 100%;
+}
+
+.smart-execwatch__panel--full {
+    width: 100%;
+}

@@ -23,6 +23,37 @@
             cursor: grabbing !important;
         }
 
+
+/* Markdown Styling */
+.sf-ai-bubble h2 {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.sf-ai-bubble h3 {
+    font-size: 16px;
+    margin-bottom: 6px;
+}
+
+.sf-ai-bubble p {
+    margin: 4px 0;
+    line-height: 1.8;
+}
+
+.sf-ai-bubble ol {
+    padding-right: 20px;
+    margin: 8px 0;
+}
+
+.sf-ai-bubble li {
+    margin-bottom: 4px;
+}
+
+.sf-ai-bubble strong {
+    font-weight: bold;
+}
+
 /* =========================
    Floating Button
    ========================= */
