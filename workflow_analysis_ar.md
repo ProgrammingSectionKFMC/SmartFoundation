@@ -79,11 +79,20 @@ graph TB
     B --> E
     D --> E
 
-    style P fill:#e1f5ff
-    style R fill:#fff4e1
-    style B fill:#ffe1f5
-    style D fill:#e1ffe1
-    style E fill:#f0f0f0
+    classDef clearFont fill:#e1f5ff,stroke:#000000,stroke-width:1px,color:#000000;
+    class P clearFont;
+
+    classDef readFont fill:#fff4e1,stroke:#000000,stroke-width:1px,color:#000000;
+    class R readFont;
+
+    classDef businessFont fill:#ffe1f5,stroke:#000000,stroke-width:1px,color:#000000;
+    class B businessFont;
+
+    classDef dataFont fill:#e1ffe1,stroke:#000000,stroke-width:1px,color:#000000;
+    class D dataFont;
+
+    classDef existingFont fill:#f0f0f0,stroke:#000000,stroke-width:1px,color:#000000;
+    class E existingFont;
 ```
 
 ---
@@ -92,7 +101,7 @@ graph TB
 
 ```mermaid
 graph TB
-    subgraph M0["<span style='color:black'المرحلة التمهيدية 0: المتطلبات الأساسية"]
+    subgraph M0["المرحلة التمهيدية 0: المتطلبات الأساسية"]
         PREREQ[توثيق المخططات الموجودة<br/>تحديد آلة الحالة<br/>إنشاء بيانات الاختبار]
     end
 
@@ -144,13 +153,26 @@ graph TB
     S10 --> S12
     S11 --> S12
 
-    style M0 fill:#fff0f0
-    style M1 fill:#f0fff0
-    style M2 fill:#f0f0ff
-    style M3 fill:#fff0ff
-    style M4 fill:#f0fff0
-    style M5 fill:#f0f0ff
-    style M6 fill:#fff0f0
+    classDef m0Font fill:#fff0f0,stroke:#000000,stroke-width:2px,color:#000000;
+    class M0 m0Font;
+
+    classDef m1Font fill:#f0fff0,stroke:#000000,stroke-width:1px,color:#000000;
+    class M1 m1Font;
+
+    classDef m2Font fill:#f0f0ff,stroke:#000000,stroke-width:1px,color:#000000;
+    class M2 m2Font;
+
+    classDef m3Font fill:#fff0ff,stroke:#000000,stroke-width:1px,color:#000000;
+    class M3 m3Font;
+
+    classDef m4Font fill:#f0fff0,stroke:#000000,stroke-width:1px,color:#000000;
+    class M4 m4Font;
+
+    classDef m5Font fill:#f0f0ff,stroke:#000000,stroke-width:1px,color:#000000;
+    class M5 m5Font;
+
+    classDef m6Font fill:#fff0f0,stroke:#000000,stroke-width:1px,color:#000000;
+    class M6 m6Font;
 ```
 
 ---
@@ -197,10 +219,17 @@ graph LR
     P2 --> P3
     P3 --> P4
 
-    style P1 fill:#e1f5ff
-    style P2 fill:#fff4e1
-    style P3 fill:#ffe1f5
-    style P4 fill:#e1ffe1
+    classDef p1Font fill:#e1f5ff,stroke:#000000,stroke-width:1px,color:#000000;
+    class P1 p1Font;
+
+    classDef p2Font fill:#fff4e1,stroke:#000000,stroke-width:1px,color:#000000;
+    class P2 p2Font;
+
+    classDef p3Font fill:#ffe1f5,stroke:#000000,stroke-width:1px,color:#000000;
+    class P3 p3Font;
+
+    classDef p4Font fill:#e1ffe1,stroke:#000000,stroke-width:1px,color:#000000;
+    class P4 p4Font;
 ```
 
 ---
@@ -285,8 +314,11 @@ graph TB
     TicketSLASP --> Svc
     TicketSLASP --> Lkp
 
-    style SPs fill:#ffe1f5
-    style Tables fill:#e1ffe1
+    classDef spFont fill:#ffe1f5,stroke:#000000,stroke-width:1px,color:#000000;
+    class SPs spFont;
+
+    classDef tableFont fill:#e1ffe1,stroke:#000000,stroke-width:1px,color:#000000;
+    class Tables tableFont;
 ```
 
 ---
@@ -336,20 +368,29 @@ graph LR
     CHECK4 --> TASK5 --> CHECK5
     CHECK5 --> TASK6 --> CHECK6
 
-    style TASK0 fill:#fff0f0
-    style TASK1 fill:#f0fff0
-    style TASK2 fill:#f0f0ff
-    style TASK3 fill:#fff0ff
-    style TASK4 fill:#f0fff0
-    style TASK5 fill:#f0f0ff
-    style TASK6 fill:#fff0f0
+    classDef task0Font fill:#fff0f0,stroke:#000000,stroke-width:1px,color:#000000;
+    class TASK0 task0Font;
 
-    style CHECK1 fill:#ffd700
-    style CHECK2 fill:#ffd700
-    style CHECK3 fill:#ffd700
-    style CHECK4 fill:#ffd700
-    style CHECK5 fill:#ffd700
-    style CHECK6 fill:#ffd700
+    classDef task1Font fill:#f0fff0,stroke:#000000,stroke-width:1px,color:#000000;
+    class TASK1 task1Font;
+
+    classDef task2Font fill:#f0f0ff,stroke:#000000,stroke-width:1px,color:#000000;
+    class TASK2 task2Font;
+
+    classDef task3Font fill:#fff0ff,stroke:#000000,stroke-width:1px,color:#000000;
+    class TASK3 task3Font;
+
+    classDef task4Font fill:#f0fff0,stroke:#000000,stroke-width:1px,color:#000000;
+    class TASK4 task4Font;
+
+    classDef task5Font fill:#f0f0ff,stroke:#000000,stroke-width:1px,color:#000000;
+    class TASK5 task5Font;
+
+    classDef task6Font fill:#fff0f0,stroke:#000000,stroke-width:1px,color:#000000;
+    class TASK6 task6Font;
+
+    classDef checkFont fill:#ffd700,stroke:#000000,stroke-width:2px,color:#000000;
+    class CHECK1,CHECK2,CHECK3,CHECK4,CHECK5,CHECK6 checkFont;
 ```
 
 ---
@@ -425,13 +466,26 @@ graph TB
 
     P0 --> P1 --> P2 --> P3 --> P4 --> P5 --> P6
 
-    style P0 fill:#ffcccc
-    style P1 fill:#ffddcc
-    style P2 fill:#ffeecc
-    style P3 fill:#ffffcc
-    style P4 fill:#ffffdd
-    style P5 fill:#ffffee
-    style P6 fill:#f0f0f0
+    classDef p0Font fill:#ffcccc,stroke:#000000,stroke-width:1px,color:#000000;
+    class P0 p0Font;
+
+    classDef p1Font fill:#ffddcc,stroke:#000000,stroke-width:1px,color:#000000;
+    class P1 p1Font;
+
+    classDef p2Font fill:#ffeecc,stroke:#000000,stroke-width:1px,color:#000000;
+    class P2 p2Font;
+
+    classDef p3Font fill:#ffffcc,stroke:#000000,stroke-width:1px,color:#000000;
+    class P3 p3Font;
+
+    classDef p4Font fill:#ffffdd,stroke:#000000,stroke-width:1px,color:#000000;
+    class P4 p4Font;
+
+    classDef p5Font fill:#ffffee,stroke:#000000,stroke-width:1px,color:#000000;
+    class P5 p5Font;
+
+    classDef p6Font fill:#f0f0f0,stroke:#000000,stroke-width:1px,color:#000000;
+    class P6 p6Font;
 ```
 
 ---
@@ -525,10 +579,17 @@ graph LR
     Done -->|استئناف| Resume[الأب يستأنف]
     Resume --> P3b[isParentBlocked: خطأ]
 
-    style Parent fill:#ffe1f5
-    style Child fill:#e1f5ff
-    style Pause fill:#fff4e1
-    style Done fill:#e1ffe1
+    classDef parentFont fill:#ffe1f5,stroke:#000000,stroke-width:1px,color:#000000;
+    class Parent parentFont;
+
+    classDef childFont fill:#e1f5ff,stroke:#000000,stroke-width:1px,color:#000000;
+    class Child childFont;
+
+    classDef pauseFont fill:#fff4e1,stroke:#000000,stroke-width:1px,color:#000000;
+    class Pause pauseFont;
+
+    classDef doneFont fill:#e1ffe1,stroke:#000000,stroke-width:2px,color:#000000;
+    class Done doneFont;
 ```
 
 ---
@@ -618,10 +679,17 @@ graph TB
         S12UI[4 شاشات لوحة معلومات]
     end
 
-    style LDB fill:#e1ffe1
-    style LSP fill:#ffe1f5
-    style LV fill:#fff4e1
-    style LUI fill:#e1f5ff
+    classDef dbFont fill:#e1ffe1,stroke:#000000,stroke-width:1px,color:#000000;
+    class LDB,S01DB,S03DB,S05DB,S06DB,S08DB,S09DB,S10DB,S11DB dbFont;
+
+    classDef spFont fill:#ffe1f5,stroke:#000000,stroke-width:1px,color:#000000;
+    class LSP,S02SP,S03SP,S04SP,S05SP,S06SP,S07SP,S08SP,S09SP,S10SP,S11SP spFont;
+
+    classDef viewFont fill:#fff4e1,stroke:#000000,stroke-width:1px,color:#000000;
+    class LV,S02R,S03R,S04R,S06R,S07R,S09R,S12R viewFont;
+
+    classDef uiFont fill:#e1f5ff,stroke:#000000,stroke-width:1px,color:#000000;
+    class LUI,S01T,S02UI,S03UI,S04UI,S05UI,S06UI,S07UI,S08UI,S09UI,S10UI,S11UI,S12UI uiFont;
 ```
 
 ---
