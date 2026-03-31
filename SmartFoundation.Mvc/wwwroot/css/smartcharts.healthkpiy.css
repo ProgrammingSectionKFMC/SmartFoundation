@@ -168,6 +168,22 @@
     line-height: 1;
 }
 
+
+.hkpa-panel__city {
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    /* لون خاص بالمدن (أزرق احترافي) */
+    background: radial-gradient( 120% 120% at 30% 20%, rgba(2,132,199,.28) 0%, rgba(2,132,199,.14) 55%, rgba(2,132,199,.08) 100% );
+    border: 1px solid rgba(2,132,199,.38);
+    color: #0284c7;
+    line-height: 1;
+}
+
+
     /* SVG */
     .hkpa-panel__heart svg {
         display: block;

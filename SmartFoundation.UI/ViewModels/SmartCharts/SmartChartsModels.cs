@@ -46,7 +46,8 @@ namespace SmartFoundation.UI.ViewModels.SmartCharts
         public string Icon { get; set; } = "";         // fontawesome
         public string Emoji { get; set; } = "";        // 🧠 🚲 💧 ...
         public string Tone { get; set; } = "info";     // info/warning/success/danger...
-
+        public string MainIcon { get; set; } = "";
+        public string MainIconExtra { get; set; } = "";
         public decimal? PlanGoal { get; set; }         // الهدف النهائي للمؤشر (اختياري)
         public string Hint { get; set; } = "";
         public string Href { get; set; } = "";
@@ -71,7 +72,10 @@ namespace SmartFoundation.UI.ViewModels.SmartCharts
         public string Emoji { get; set; } = "";
 
         public string Href { get; set; } = "";
-}
+
+        public string MainIcon { get; set; } = "";
+        public string MainIconExtra { get; set; } = "";
+    }
 
 
 
@@ -376,12 +380,16 @@ namespace SmartFoundation.UI.ViewModels.SmartCharts
         public string? ColCss { get; set; }           // نفس نظامك
         public string? ExtraCss { get; set; }
         public string Dir { get; set; } = "rtl";      // rtl/ltr
+       
 
         // Shell (مشترك لكل الشارتات)
         public bool ShowHeader { get; set; } = true;
         public string Title { get; set; } = "";
         public string? Subtitle { get; set; }
         public string? Icon { get; set; }             // FontAwesome
+
+        public string MainIcon { get; set; } = "";
+        public string MainIconExtra { get; set; } = "";
         public ChartTone Tone { get; set; } = ChartTone.Neutral;
         public ChartCardSize Size { get; set; } = ChartCardSize.Md;
         public ChartCardVariant Variant { get; set; } = ChartCardVariant.Outline;

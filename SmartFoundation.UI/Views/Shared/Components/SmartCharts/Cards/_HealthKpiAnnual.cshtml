@@ -17,6 +17,8 @@
             subtitle = k.Subtitle ?? "",
             unit = k.Unit ?? "",
             icon = k.Icon ?? "",
+            MainIcon = k.MainIcon ?? "",
+            MainIconExtra = k.MainIconExtra ?? "",
             emoji = k.Emoji ?? "",
             tone = (k.Tone ?? "info").ToLower(),
             planGoal = k.PlanGoal, // nullable
@@ -36,7 +38,9 @@
                     tone = (y.Tone ?? "info").ToLower(),
                     icon = y.Icon ?? "",
                     emoji = y.Emoji ?? "",
-                    href = y.Href ?? ""
+                    href = y.Href ?? "",
+                    MainIcon = y.MainIcon ?? "",
+                    MainIconExtra = y.MainIconExtra ?? "",
                 })
         }).ToList();
 
@@ -63,19 +67,45 @@
 <div class="hkpa-panel" dir="@Model.Dir">
     <!--  Panel Header (لهذا الشارت فقط) -->
     <div class="hkpa-panel__head">
-        <div class="hkpa-panel__title">
-            <span class="hkpa-panel__heart" aria-hidden="true">
-                <svg viewBox="0 0 64 64" width="22" height="22" aria-hidden="true" focusable="false">
-                    <!-- القلب -->
-                    <path class="hkpa-heart-shape"
-                          d="M32 56s-18-11.6-26-22C-2 24 4 8 18 8c6 0 10 3.6 14 8
-                 4-4.4 8-8 14-8 14 0 20 16 12 26-8 10.4-26 22-26 22z" />
-                    <!-- خط النبض -->
-                    <polyline class="hkpa-heart-pulse"
-                              points="12,34 20,34 24,26 30,42 36,30 40,34 52,34" />
-                </svg>
-            </span>
-            <span>@title</span>
+        @{
+            var panelMainIcon = (Model.MainIcon ?? "").Trim().ToLower();
+        }
+
+        <div class="hkpa-panel__title" >
+
+            @if (!string.IsNullOrWhiteSpace(panelMainIcon))
+            {
+                
+
+                    @if (panelMainIcon == "city")
+                    {
+                    <span class="hkpa-panel__heart" aria-hidden="true" style="color:#16a34a;background-color:#e3faeb">
+                        <!-- أيقونة بيت -->
+                        <svg viewBox="0 0 64 64" width="22" height="22" aria-hidden="true" focusable="false" >
+                            <path class="hkpa-heart-shape"
+                                  d="M10 28 L32 12 L54 28 V54 H40 V40 H24 V54 H10 Z" />
+                        </svg>
+                    </span>
+                    }
+                    else if (panelMainIcon == "heart")
+                    {
+                    <span class="hkpa-panel__city" aria-hidden="true">
+                        <!-- أيقونة القلب -->
+                        <svg viewBox="0 0 64 64" width="22" height="22" aria-hidden="true" focusable="false">
+                            <path class="hkpa-heart-shape"
+                                  d="M32 56s-18-11.6-26-22C-2 24 4 8 18 8c6 0 10 3.6 14 8
+                                  4-4.4 8-8 14-8 14 0 20 16 12 26-8 10.4-26 22-26 22z" />
+                            <polyline class="hkpa-heart-pulse"
+                                      points="12,34 20,34 24,26 30,42 36,30 40,34 52,34" />
+                        </svg>
+                        </span>
+                    }
+
+              
+            }
+
+            <span>@(Model.Title ?? "مؤشر أداء المدن الصحية")</span>
+
         </div>
 
         @if (!string.IsNullOrWhiteSpace(subtitle))
@@ -95,7 +125,7 @@
         <!-- Toolbar -->
         <div class="hkpa-toolbar" aria-label="خيارات العرض">
             <button type="button" class="hkpa-viewbtn is-on" data-view="matrix">عرض مختصر</button>
-            <button type="button" class="hkpa-viewbtn" data-view="detail">عرض مفصل</button>
+            @* <button type="button" class="hkpa-viewbtn" data-view="detail">عرض مفصل</button> *@
         </div>
 
         <!-- Row 1: 7 indicators injected by JS -->

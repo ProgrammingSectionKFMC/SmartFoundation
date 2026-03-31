@@ -156,6 +156,15 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             bool isLastActionID = c.ColumnName.Equals("LastActionID", StringComparison.OrdinalIgnoreCase);
                             bool isWaitingOrderTypeName = c.ColumnName.Equals("WaitingOrderTypeName", StringComparison.OrdinalIgnoreCase);
                             bool isWaitingListOrder = c.ColumnName.Equals("WaitingListOrder", StringComparison.OrdinalIgnoreCase);
+                            bool isInsuranceStatusName = c.ColumnName.Equals("InsuranceStatusName", StringComparison.OrdinalIgnoreCase);
+                            bool isInsuranceStatusNo = c.ColumnName.Equals("InsuranceStatusNo", StringComparison.OrdinalIgnoreCase);
+                            bool isExtendReasonTypeID = c.ColumnName.Equals("ExtendReasonTypeID", StringComparison.OrdinalIgnoreCase);
+                            bool isLastActionExtendReasonTypeID = c.ColumnName.Equals("LastActionExtendReasonTypeID", StringComparison.OrdinalIgnoreCase);
+                            bool isLastActionEntryDate = c.ColumnName.Equals("LastActionEntryDate", StringComparison.OrdinalIgnoreCase);
+                            bool isRemaining = c.ColumnName.Equals("Remaining", StringComparison.OrdinalIgnoreCase);
+                            bool isbuildingRentAmount = c.ColumnName.Equals("buildingRentAmount", StringComparison.OrdinalIgnoreCase);
+                            bool isInsuranceAmount = c.ColumnName.Equals("InsuranceAmount", StringComparison.OrdinalIgnoreCase);
+                            bool isInsuranceAmountWithRemaining = c.ColumnName.Equals("InsuranceAmountWithRemaining", StringComparison.OrdinalIgnoreCase);
 
 
 
@@ -190,7 +199,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                || isresidentInfoID || isIdaraId   || isAssignPeriodID  ||  isWaitingOrderTypeName || isWaitingListOrder ),
+                                || isresidentInfoID || isIdaraId   || isAssignPeriodID  ||  isWaitingOrderTypeName || isWaitingListOrder|| isLastActionID || isLastActionTypeID || isInsuranceStatusNo|| isInsuranceStatusName || isExtendReasonTypeID|| isbuildingDetailsID || isLastActionExtendReasonTypeID || isLastActionEntryDate || isRemaining || isbuildingRentAmount || isInsuranceAmount || isInsuranceAmountWithRemaining),
 
                             //  فلتر للرتبة + الوحدة + الجنسية
                                 Filter = (isbuildingActionTypeResidentAlias || isWaitingClassName )
@@ -263,7 +272,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 ViewBag.BuildingTypeDataSetError = ex.Message;
             }
 
-
+           
             var currentUrl = Request.Path;
 
 
@@ -1119,7 +1128,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
 
-                   dsModel.StyleRules = new List<TableStyleRule>
+            dsModel.StyleRules = new List<TableStyleRule>
                         {
                            
                             new TableStyleRule
@@ -1177,6 +1186,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 PillCssClass="pill pill-yellow",
                                 PillMode="replace"
                             },
+                             
                                  new TableStyleRule
                             {
                                 Target="row", Field="InsuranceStatusNo", Op="eq", Value="0", Priority=1,

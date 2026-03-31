@@ -1150,6 +1150,33 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 PillTextField="buildingActionTypeResidentAlias",
                                 PillCssClass="pill pill-red",
                                 PillMode="replace"
+                            },
+                               new TableStyleRule
+                            {
+                                Target="row", Field="LastActionTypeID", Op="eq", Value="59", Priority=1,
+                                PillEnabled=true,
+                                PillField="buildingActionTypeResidentAlias",
+                                PillTextField="buildingActionTypeResidentAlias",
+                                PillCssClass="pill pill-yellow",
+                                PillMode="replace"
+                            },
+                               new TableStyleRule
+                            {
+                                Target="row", Field="LastActionTypeID", Op="eq", Value="60", Priority=1,
+                                PillEnabled=true,
+                                PillField="buildingActionTypeResidentAlias",
+                                PillTextField="buildingActionTypeResidentAlias",
+                                PillCssClass="pill pill-grey",
+                                PillMode="replace"
+                            },
+                               new TableStyleRule
+                            {
+                                Target="row", Field="LastActionTypeID", Op="eq", Value="54", Priority=1,
+                                PillEnabled=true,
+                                PillField="buildingActionTypeResidentAlias",
+                                PillTextField="buildingActionTypeResidentAlias",
+                                PillCssClass="pill pill-red",
+                                PillMode="replace"
                             }
                         };
 
