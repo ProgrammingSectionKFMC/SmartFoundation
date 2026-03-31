@@ -179,7 +179,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             var addFields = new List<FieldConfig>
             {
                 new FieldConfig { Name = rowIdField, Type = "hidden" },
-                new FieldConfig { Name = "p01", Label = "رمز الموقع", Type = "text", ColCss = "6", Required = false},
+                new FieldConfig { Name = "p01", Label = "رمز الموقع", Type = "text", ColCss = "6", Required = true},
                 new FieldConfig { Name = "p02", Label = "المدينة", Type = "select",Options =CityOptions, ColCss = "6", Required = true,Select2 = true},
                 new FieldConfig {  Name = "p04", Label = "اسم الموقع بالعربي", Autocomplete = "off", Type = "text",  ColCss = "6",  Required = true, TextMode = "arabic", HelpText = "اكتب أحرف عربية فقط" },
                 new FieldConfig { Name = "p05", Label = "اسم الموقع بالانجليزي", Type = "text", ColCss = "6", Required = false,TextMode="english"},
@@ -231,7 +231,13 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = Request.Host.Value },
                 new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
                 new FieldConfig { Name = rowIdField, Type = "hidden" },
-                new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "militaryLocationID" }
+                new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "militaryLocationID" },
+                 new FieldConfig { Name = "p02", Label = "رمز الموقع",    Type = "text",  ColCss = "6", Readonly=true },
+                new FieldConfig { Name = "p04", Label = "المدينة", Type = "text", ColCss = "6", Readonly=true},
+                new FieldConfig { Name = "p05", Label = "اسم الموقع بالعربي", Type = "text",   Readonly=true, ColCss = "6", TextMode="arabic",HelpText = "اكتب أحرف عربية فقط",},
+                new FieldConfig { Name = "p06", Label = "اسم الموقع بالانجليزي", Type = "text",   Readonly=true, ColCss = "6", TextMode="english",HelpText = "اكتب أحرف انجليزية فقط",},
+                new FieldConfig { Name = "p07", Label = "احداثيات الموقع", Type = "text",   Readonly=true, ColCss = "6" },
+                new FieldConfig { Name = "p08", Label = "وصف الموقع", Type = "textarea",  Readonly=true, ColCss = "6" }
             };
 
             //  SmartTable model

@@ -270,6 +270,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             bool isAssignPeriodID = c.ColumnName.Equals("AssignPeriodID", StringComparison.OrdinalIgnoreCase);
                             bool isbuildingDetailsID = c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase);
                             bool isLastActionID = c.ColumnName.Equals("LastActionID", StringComparison.OrdinalIgnoreCase);
+                            bool isAssignStatus = c.ColumnName.Equals("AssignStatus", StringComparison.OrdinalIgnoreCase);
                             
                             
 
@@ -282,7 +283,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID || isLastActionTypeID || isAssignPeriodID || isbuildingDetailsID || isLastActionID)
+                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID || isLastActionTypeID || isAssignPeriodID || isbuildingDetailsID || isLastActionID|| isAssignStatus)
                             });
                         }
 
@@ -413,7 +414,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         SectionTitle="رفع صورة",
                         Name="Emg",
                         Label="اعتماد محضر التخصيص",
-                        Type="file",
+                        Type="hidden",
+                        //Type="file",
                         Required=true,
                         Icon="fa-solid fa-check",
                         ColCss="col-span-12 md:col-span-3"
@@ -576,6 +578,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p06", Label = "تاريخ الطلب", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p07", Label = "WaitingClassID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p19", Label = "المبنى", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 //  new FieldConfig
@@ -593,10 +596,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p19", Label = "المبنى", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
+                
                 new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p21", Label = "LastActionID", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true },
 
 
 
@@ -795,6 +798,22 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                     Value = "41",
                                     Message = "تجاوز المستفيد مرات التخصيص المسموحة نظاما",
                                     Priority = 3
+                                },
+                                  new TableActionRule
+                                {
+                                    Field = "LastActionTypeID",
+                                    Op = "eq",
+                                    Value = "42",
+                                    Message = "تجاوز المستفيد مرات التخصيص المسموحة نظاما",
+                                    Priority = 3
+                                },
+                                   new TableActionRule
+                                {
+                                    Field = "AssignStatus",
+                                    Op = "eq",
+                                    Value = "1",
+                                    Message = "تم التخصيص للمستفيد مسبقا",
+                                    Priority = 3
                                 }
                             }
                         }
@@ -803,7 +822,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                     Delete = new TableAction
                     {
-                        Label = "تعديل منزل",
+                        Label = "تعديل تخصيص منزل",
                         Icon = "fa fa-edit",
                         Color = "warning",
                         //Placement = TableActionPlacement.ActionsMenu, //   أي زر بعد ما نسويه ونبيه يظهر في الاجراءات نحط هذا السطر فقط عشان ما يصير زحمة في التيبل اكشن
@@ -832,55 +851,55 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         MaxSelection = 1,
 
 
-                        //Guards = new TableActionGuards
-                        //{
-                        //    AppliesTo = "any",
-                        //    DisableWhenAny = new List<TableActionRule>
-                        //    {
+                        Guards = new TableActionGuards
+                        {
+                            AppliesTo = "any",
+                            DisableWhenAny = new List<TableActionRule>
+                            {
 
-                        //          new TableActionRule
-                        //        {
-                        //            Field = "LastActionTypeID",
-                        //            Op = "eq",
-                        //            Value = "38",
-                        //            Message = "تم التخصيص للمستفيد مسبقا",
-                        //            Priority = 3
-                        //        },
-                        //         new TableActionRule
-                        //        {
-                        //            Field = "LastActionTypeID",
-                        //            Op = "eq",
-                        //            Value = "40",
-                        //            Message = "تم التخصيص للمستفيد مسبقا",
-                        //            Priority = 3
-                        //        },
-                        //         new TableActionRule
-                        //        {
-                        //            Field = "LastActionTypeID",
-                        //            Op = "eq",
-                        //            Value = "41",
-                        //            Message = "تجاوز المستفيد مرات التخصيص المسموحة نظاما",
-                        //            Priority = 3
-                        //        }
-                        //    }
-                        //}
+                                 new TableActionRule
+                                {
+                                    Field = "LastActionTypeID",
+                                    Op = "eq",
+                                    Value = "41",
+                                    Message = "تجاوز المستفيد مرات التخصيص المسموحة نظاما",
+                                    Priority = 3
+                                },
+                                  new TableActionRule
+                                {
+                                    Field = "LastActionTypeID",
+                                    Op = "eq",
+                                    Value = "42",
+                                    Message = "تجاوز المستفيد مرات التخصيص المسموحة نظاما",
+                                    Priority = 3
+                                },
+                                   new TableActionRule
+                                {
+                                    Field = "AssignStatus",
+                                    Op = "eq",
+                                    Value = "0",
+                                    Message = "لم يتم التخصيص للمستفيد",
+                                    Priority = 3
+                                }
+                            }
+                        }
                     },
 
                     Delete1 = new TableAction
                     {
-                        Label = "استبعاد من محضر التخصيص",
+                        Label = "الغاء تخصيص منزل",
                         Icon = "fa fa-trash",
                         Color = "danger",
                         //Placement = TableActionPlacement.ActionsMenu, //   أي زر بعد ما نسويه ونبيه يظهر في الاجراءات نحط هذا السطر فقط عشان ما يصير زحمة في التيبل اكشن
                         IsEdit = true,
                         OpenModal = true,
                         ModalTitle = "<i class='fa fa-exclamation-triangle text-red-600 text-xl mr-2'></i> تحذير",
-                        ModalMessage = "هل أنت متأكد من استبعاد المستفيد من محضر التخصيص؟",
+                        ModalMessage = "هل أنت متأكد من الغاء تخصيص منزل؟",
                         ModalMessageClass = "bg-red-50 text-red-700",
                         OpenForm = new FormConfig
                         {
                             FormId = "BuildingTypeDeleteForm",
-                            Title = "تأكيد استبعاد مستفيد من محضر التخصيص",
+                            Title = "تأكيد الغاء تخصيص منزل",
                             Method = "post",
                             ActionUrl = "/crud/delete",
                             Buttons = new List<FormButtonConfig>
@@ -892,7 +911,39 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         },
                         RequireSelection = true,
                         MinSelection = 1,
-                        MaxSelection = 1
+                        MaxSelection = 1,
+                        Guards = new TableActionGuards
+                        {
+                            AppliesTo = "any",
+                            DisableWhenAny = new List<TableActionRule>
+                            {
+
+                                 new TableActionRule
+                                {
+                                    Field = "LastActionTypeID",
+                                    Op = "eq",
+                                    Value = "41",
+                                    Message = "تجاوز المستفيد مرات التخصيص المسموحة نظاما",
+                                    Priority = 3
+                                },
+                                  new TableActionRule
+                                {
+                                    Field = "LastActionTypeID",
+                                    Op = "eq",
+                                    Value = "42",
+                                    Message = "تجاوز المستفيد مرات التخصيص المسموحة نظاما",
+                                    Priority = 3
+                                },
+                                  new TableActionRule
+                                {
+                                    Field = "AssignStatus",
+                                    Op = "eq",
+                                    Value = "0",
+                                    Message = "لم يتم التخصيص للمستفيد",
+                                    Priority = 3
+                                }
+                            }
+                        }
                     },
 
                     //Delete1 = new TableAction

@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using SmartFoundation.MVC.Reports;
 using SmartFoundation.UI.ViewModels.SmartForm;
 using SmartFoundation.UI.ViewModels.SmartPage;
 using SmartFoundation.UI.ViewModels.SmartTable;
@@ -11,7 +12,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 {
     public partial class HousingController : Controller
     {
-        public async Task<IActionResult> WaitingList()
+        public async Task<IActionResult> WaitingList(int pdf = 0)
         {
 
 
@@ -369,9 +370,22 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowExportCsv = false,
                     ShowExportExcel = false,
                     ShowDelete = canMOVETOASSIGNLIST,
+                    ShowPrint1 = false,
                     ShowBulkDelete = false,
 
-                   
+                    Print1 = new TableAction
+                    {
+                        Label = "طباعة تقرير",
+                        Icon = "fa fa-print",
+                        Color = "info",
+                        RequireSelection = false,
+                        OnClickJs = @"
+                                sfPrintWithBusy(table, {
+                                  pdf: 1,
+                                  busy: { title: 'طباعة سجلات انتظار'}
+                                });
+                              ",
+                    },
                     Delete = new TableAction
                     {
                         Label = "نقل لقائمة التخصيص",
@@ -424,7 +438,117 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             };
 
 
+            if (pdf == 1)
+            {
+                //var printTable = dt1;
+                //int start1Based = 1; // يبدأ من الصف 200
+                //int count = 100;       // يطبع 50 سجل
 
+                //int startIndex = start1Based - 1;
+                //int endIndex = Math.Min(dt1.Rows.Count, startIndex + dt1.Rows.Count);
+
+                // جدول خفيف للطباعة
+
+                string class_ = "";
+
+                if (dt1 != null && dt1.Rows.Count > 0)
+                {
+                    class_ = dt1.Rows[0]["WaitingClassName"]?.ToString() ?? "";
+                }
+
+
+                var printTable = new DataTable();
+                printTable.Columns.Add("WaitingListOrder", typeof(string));
+                printTable.Columns.Add("FullName_A", typeof(string));
+                printTable.Columns.Add("NationalID", typeof(string));
+                printTable.Columns.Add("GeneralNo", typeof(string));
+                printTable.Columns.Add("ActionDecisionNo", typeof(string));
+                printTable.Columns.Add("ActionDecisionDate", typeof(string));
+                printTable.Columns.Add("WaitingClassName", typeof(string));
+                printTable.Columns.Add("WaitingOrderTypeName", typeof(string));
+                printTable.Columns.Add("ActionNote", typeof(string));
+
+
+                //for (int i = startIndex; i < endIndex; i++)
+                foreach (DataRow r in dt1.Rows)
+                {
+                    //var r = dt1.Rows[i];
+
+                    printTable.Rows.Add(
+                        r["WaitingListOrder"],
+                        r["FullName_A"],
+                        r["NationalID"],
+                        r["GeneralNo"],
+                        r["ActionDecisionNo"],
+                        r["ActionDecisionDate"],
+                        r["WaitingClassName"],
+                        r["WaitingOrderTypeName"],
+                        r["ActionNote"]
+                    );
+                }
+
+
+
+                if (printTable == null || printTable.Rows.Count == 0)
+                    return Content("لا توجد بيانات للطباعة.");
+                var reportColumns = new List<ReportColumn>
+                    {
+                        new("WaitingListOrder", "الترتيب", Align:"center", Weight:2, FontSize:9),
+                        new("FullName_A", "الاسم", Align:"center", Weight:5, FontSize:9),
+                        new("NationalID", "رقم الهوية", Align:"center", Weight:2, FontSize:9),
+                        new("GeneralNo", "الرقم العام", Align:"center", Weight:2, FontSize:9),
+                        new("ActionDecisionNo", "رقم الطلب", Align:"center", Weight:3, FontSize:9),
+                        new("ActionDecisionDate", "تاريخ الطلب", Align:"center", Weight:3, FontSize:9),
+                        new("WaitingClassName", "فئة سجل الانتظار", Align:"center", Weight:2, FontSize:9),
+                        new("WaitingOrderTypeName", "نوع سجل الانتظار", Align:"center", Weight:2, FontSize:9),
+                        new("ActionNote", "ملاحظات", Align:"center", Weight:2, FontSize:9),
+
+                    };
+
+                var logo = Path.Combine(_env.WebRootPath, "img", "ppng.png");
+                var header = new Dictionary<string, string>
+                {
+                    ["no"] = usersId,//"١٢٣/٤٥",
+                    ["date"] = DateTime.Now.ToString("yyyy/MM/dd"),
+                    ["attach"] = "—",
+                    ["subject"] = "سجلات  الانتظار لفئة ",
+
+                    ["right1"] = "المملكة العربية السعودية",
+                    ["right2"] = "وزارة الدفاع",
+                    ["right3"] = "القوات البرية الملكية السعودية",
+                    ["right4"] = "الادارة الهندسية للتشغيل والصيانة",
+                    ["right5"] = "إدارة مدينة الملك فيصل العسكرية",
+
+                    //["bismillah"] = "بسم الله الرحمن الرحيم",
+                    ["midCaption"] = ""
+                };
+
+                var report = DataTableReportBuilder.FromDataTable(
+                    reportId: "BuildingType",
+                    title: "قائمة المستفيدين",
+                    table: printTable,
+                    columns: reportColumns,
+                    headerFields: header,
+                   //footerFields: new(),
+                   footerFields: new Dictionary<string, string>
+                   {
+                       ["تمت الطباعة بواسطة"] = FullName,
+                       ["ملاحظة"] = " هذا التقرير للاستخدام الرسمي",
+                       ["عدد السجلات"] = dt1.Rows.Count.ToString(),
+                       ["تاريخ ووقت الطباعة"] = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")
+                   },
+
+                    orientation: ReportOrientation.Landscape,
+                    headerType: ReportHeaderType.LetterOfficial,
+                    logoPath: logo,
+                    headerRepeat: ReportHeaderRepeat.FirstPageOnly
+                //headerRepeat: ReportHeaderRepeat.AllPages
+                );
+
+                var pdfBytes = QuestPdfReportRenderer.Render(report);
+                Response.Headers["Content-Disposition"] = "inline; filename=BuildingType.pdf";
+                return File(pdfBytes, "application/pdf");
+            }
 
 
 

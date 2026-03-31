@@ -292,6 +292,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             bool isAssignPeriodID = c.ColumnName.Equals("AssignPeriodID", StringComparison.OrdinalIgnoreCase);
                             bool isbuildingDetailsID = c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase);
                             bool isLastActionID = c.ColumnName.Equals("LastActionID", StringComparison.OrdinalIgnoreCase);
+                            bool isCount_ = c.ColumnName.Equals("Count_", StringComparison.OrdinalIgnoreCase);
                             
                             
 
@@ -304,7 +305,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID || isLastActionTypeID  || isbuildingDetailsID || isLastActionID)
+                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID || isLastActionTypeID  || isbuildingDetailsID || isLastActionID || isAssignPeriodID )
                             });
                         }
 
@@ -468,7 +469,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p18", Label = "buildingDetailsNo", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p18", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true },
 
@@ -500,6 +501,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowExportCsv = false,
                     ShowExportExcel = false,
                     ShowAdd1 = canENDASSIGNPERIOD,
+                    EnableAdd1 = (count == 0),
                     ShowEdit = canASSIGNSTATUS,
                     ShowPrint1 = false,
                     ShowPrint = false,
@@ -535,22 +537,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             }
                         },
 
-                        Guards = new TableActionGuards
-                        {
-                            AppliesTo = "all",
-                            DisableWhenAny = new List<TableActionRule>
-                            {
-
-                                new TableActionRule
-                                {
-                                    Field = "Count_",
-                                    Op = "neq",
-                                    Value = "0",
-                                    Message = "لايمكن انهاء المحضر لوجود مستفيدين لم يتم معالجتهم بهذا المحضر !!",
-                                    Priority = 3
-                                }
-                            }
-                        }
+                       
                     },
 
                    

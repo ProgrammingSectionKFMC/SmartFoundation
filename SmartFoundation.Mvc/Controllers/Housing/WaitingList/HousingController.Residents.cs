@@ -618,7 +618,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowAdd = canInsert,
                     ShowEdit = canUpdate,
                     ShowDelete = canDelete,
-                    ShowDelete1 = canDelete,
+                    ShowDelete1 = false,
                     ShowPrint1 = true,
                     ShowBulkDelete = false,
                     Print1 = new TableAction
@@ -629,7 +629,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         RequireSelection = false,
                         OnClickJs = @"
                                 sfPrintWithBusy(table, {
-                                  pdf: 2,
+                                  pdf: 1,
                                   busy: { title: 'طباعة بيانات المستفيدين'}
                                 });
                               ",
@@ -707,7 +707,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 Label = "عرض التفاصيل",
                                 ModalTitle = "<i class='fa-solid fa-circle-info text-emerald-600 text-xl mr-2'></i> تفاصيل المستفيد",
                                 Icon = "fa-regular fa-file",
-                                Placement = TableActionPlacement.ActionsMenu,
+                                Placement = TableActionPlacement.Button,
                                 OpenModal = true,
                                 RequireSelection = true,
                                 MinSelection = 1,
@@ -716,28 +716,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                             },
 
-                      new TableAction
-                        {
-                            Label = "بيانات إضافية",
-                            Icon = "fa-solid fa-database",
-                            Color = "secondary",
-                            OpenModal = true,
-                            Placement = TableActionPlacement.ActionsMenu,
-
-                            RequireSelection = false,
-                            MinSelection = 0,
-                            MaxSelection = 0,
-                        OpenForm = new FormConfig
-                        {
-                            FormId = "ResidentActionInsertFormnew",
-                            Title = "إضافة إجراء",
-                            Method = "post",
-                            ActionUrl = "/crud/insert",
-                            Fields = addFields
-                        },
-                        //Meta = extraMeta_TableAndForm_DependsOnSelect
-
-                          },
+                   
 
 
 
