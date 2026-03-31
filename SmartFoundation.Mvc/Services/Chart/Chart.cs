@@ -654,7 +654,7 @@ namespace SmartFoundation.Mvc.Services.Chart
                      new ExecWatchRisk
                     {
                         Title="تجاوز عدد الوحدات الجاهزة للتسكين الحد الطبيعي",
-                        Desc="131 منزلا تجاوزت الحد خلال 48هذا الشهر",
+                        Desc="131 منزلا تجاوزت الحد خلال هذا الشهر",
                         Tone="danger",
                         Time="الشهر الحالي"
                     },
@@ -1020,7 +1020,7 @@ namespace SmartFoundation.Mvc.Services.Chart
             return new ChartCardConfig
             {
                 Type = ChartCardType.Line,
-                Title = "مؤشر استهلاك الكهرباء بالواط",
+                Title = "مؤشر استهلاك الكهرباء بالكيلو وات",
                 Subtitle = "12 شهر لعام 2024",
                 Icon = "fa-solid fa-chart-line",
                 Tone = ChartTone.Info,
