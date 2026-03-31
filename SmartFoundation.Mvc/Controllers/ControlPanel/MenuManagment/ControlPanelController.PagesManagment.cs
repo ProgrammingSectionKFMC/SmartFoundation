@@ -30,6 +30,9 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
             var rowsListPrograms = new List<Dictionary<string, object?>>();
             var dynamicColumnsPrograms = new List<TableColumn>();
 
+            var rowsListSubPrograms = new List<Dictionary<string, object?>>();
+            var dynamicColumnsSubPrograms = new List<TableColumn>();
+
             var rowsListMenu = new List<Dictionary<string, object?>>();
             var dynamicColumnsMenu = new List<TableColumn>();
 
@@ -47,6 +50,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
             //}
 
             string? rowProgramsIdField = "";
+            string? rowSubProgramsIDField = "";
             string? rowmenuDistributorIDField = "";
             string? rowdistributorPermissionTypeIDField = "";
 
@@ -64,8 +68,9 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
             bool canDELETEPERMISSION = false;
 
             bool showPrograms = SearchID_ == "1";
-            bool showMenu = SearchID_ == "2";
-            bool showPermissions = SearchID_ == "3";
+            bool showSubPrograms = SearchID_ == "2";
+            bool showMenu = SearchID_ == "3";
+            bool showPermissions = SearchID_ == "4";
 
 
             List<OptionItem> ActiveOptions = new()
@@ -86,7 +91,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
 
             //// ---------------------- programOptions ----------------------
             result = await _CrudController.GetDDLValues(
-                "programName_A", "programID", "4", nameof(PagesManagment), usersId, IdaraId, HostName
+                "programName_A", "programID", "5", nameof(PagesManagment), usersId, IdaraId, HostName
            ) as JsonResult;
 
 
@@ -96,7 +101,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
 
             //// ---------------------- UsersAuthOptions ----------------------
             result = await _CrudController.GetDDLValues(
-                "UsersAuthTypeName_A", "UsersAuthTypeID", "5", nameof(PagesManagment), usersId, IdaraId, HostName
+                "UsersAuthTypeName_A", "UsersAuthTypeID", "6", nameof(PagesManagment), usersId, IdaraId, HostName
            ) as JsonResult;
 
 
@@ -118,8 +123,9 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 List<OptionItem> permissinTypeOptions = new()
                 {
                     new OptionItem { Value = "1", Text = "برنامج" },
-                    new OptionItem { Value = "2", Text = "صفحة" },
-                    new OptionItem { Value = "3", Text = "صلاحية" },
+                    new OptionItem { Value = "2", Text = "قائمة جانبية" },
+                    new OptionItem { Value = "3", Text = "صفحة" },
+                    new OptionItem { Value = "4", Text = "صلاحية" },
                 };
 
                
@@ -237,12 +243,12 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                         }
                     }
 
-                    // ========== dt2: Menu ==========
+                    // ========== dt2: SubPrograms ==========
                     if (dt2 != null && dt2.Columns.Count > 0)
                     {
-                        rowmenuDistributorIDField = "menuDistributorID";
-                        var possibleIdNames = new[] { "menuDistributorID", "menuDistributorID", "Id", "ID" };
-                        rowmenuDistributorIDField = possibleIdNames.FirstOrDefault(n => dt2.Columns.Contains(n))
+                        rowSubProgramsIDField = "menuID";
+                        var possibleIdNames = new[] { "menuID", "MenuID", "Id", "ID" };
+                        rowSubProgramsIDField = possibleIdNames.FirstOrDefault(n => dt2.Columns.Contains(n))
                                      ?? dt2.Columns[0].ColumnName;
 
                         var headerMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -258,7 +264,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                             ["menuLink"] = "الرابط",
                             ["programID_FK"] = "البرنامج",
                             ["menuSerial"] = "الترتيب",
-                            ["menuActive"] = "نشط",
+                            ["menuActive"] = "الحالة",
                             ["isDashboard"] = "لوحة تحكم",
                             ["PageLvl"] = "المستوى"
                         };
@@ -277,7 +283,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                             bool isHidden = c.ColumnName.Equals("programID_FK", StringComparison.OrdinalIgnoreCase) ||
                                             c.ColumnName.Equals("parentMenuID_FK", StringComparison.OrdinalIgnoreCase);
 
-                            dynamicColumnsMenu.Add(new TableColumn
+                            dynamicColumnsSubPrograms.Add(new TableColumn
                             {
                                 Field = c.ColumnName,
                                 Label = headerMap.TryGetValue(c.ColumnName, out var label) ? label : c.ColumnName,
@@ -304,18 +310,88 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                             dict["p05"] = Get("distributorID");
                             dict["p06"] = Get("menuLink");
 
+                            rowsListSubPrograms.Add(dict);
+                        }
+                    }
+                    // ========== dt3: Menu ==========
+                    if (dt3 != null && dt3.Columns.Count > 0)
+                    {
+                        rowmenuDistributorIDField = "menuDistributorID";
+                        var possibleIdNames = new[] { "menuDistributorID", "menuDistributorID", "Id", "ID" };
+                        rowmenuDistributorIDField = possibleIdNames.FirstOrDefault(n => dt3.Columns.Contains(n))
+                                     ?? dt3.Columns[0].ColumnName;
+
+                        var headerMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                        {
+                            ["menuDistributorID"] = "المعرف",
+                            ["menuID"] = "رقم القائمة",
+                            ["menuName_A"] = "اسم القائمة (عربي)",
+                            ["menuName_E"] = "اسم القائمة (إنجليزي)",
+                            ["distributorID"] = "رقم الموزع",
+                            ["distributorName_A"] = "اسم الموزع",
+                            ["menuDescription"] = "الوصف",
+                            ["parentMenuID_FK"] = "القائمة الأب",
+                            ["menuLink"] = "الرابط",
+                            ["programID_FK"] = "البرنامج",
+                            ["menuSerial"] = "الترتيب",
+                            ["menuActive"] = "الحالة",
+                            ["isDashboard"] = "لوحة تحكم",
+                            ["PageLvl"] = "المستوى"
+                        };
+
+                        foreach (DataColumn c in dt3.Columns)
+                        {
+                            string colType = "text";
+                            var t = c.DataType;
+                            if (t == typeof(bool)) colType = "bool";
+                            else if (t == typeof(DateTime)) colType = "date";
+                            else if (t == typeof(byte) || t == typeof(short) || t == typeof(int) || 
+                                     t == typeof(long) || t == typeof(float) || t == typeof(double) || 
+                                     t == typeof(decimal))
+                                colType = "number";
+
+                            bool isHidden = c.ColumnName.Equals("programID_FK", StringComparison.OrdinalIgnoreCase) ||
+                                            c.ColumnName.Equals("parentMenuID_FK", StringComparison.OrdinalIgnoreCase);
+
+                            dynamicColumnsMenu.Add(new TableColumn
+                            {
+                                Field = c.ColumnName,
+                                Label = headerMap.TryGetValue(c.ColumnName, out var label) ? label : c.ColumnName,
+                                Type = colType,
+                                Sortable = true,
+                                Visible = !isHidden
+                            });
+                        }
+
+                        foreach (DataRow r in dt3.Rows)
+                        {
+                            var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+                            foreach (DataColumn c in dt3.Columns)
+                            {
+                                var val = r[c];
+                                dict[c.ColumnName] = val == DBNull.Value ? null : val;
+                            }
+
+                            object? Get(string key) => dict.TryGetValue(key, out var v) ? v : null;
+                            dict["p01"] = Get("menuDistributorID");
+                            dict["p02"] = Get("menuID");
+                            dict["p03"] = Get("menuName_A");
+                            dict["p04"] = Get("menuName_E");
+                            dict["p05"] = Get("distributorID");
+                            dict["p06"] = Get("menuLink");
+
                             rowsListMenu.Add(dict);
                         }
                     }
 
-                    // ========== dt3: Permissions ==========
-                    if (dt3 != null && dt3.Columns.Count > 0)
+                    // ========== dt4: Permissions ==========
+                    if (dt4 != null && dt4.Columns.Count > 0)
                     {
 
                         rowdistributorPermissionTypeIDField = "distributorPermissionTypeID";
                         var possibleIdNames = new[] { "distributorPermissionTypeID", "distributorPermissionTypeID", "Id", "ID" };
-                        rowdistributorPermissionTypeIDField = possibleIdNames.FirstOrDefault(n => dt3.Columns.Contains(n))
-                                     ?? dt3.Columns[0].ColumnName;
+                        rowdistributorPermissionTypeIDField = possibleIdNames.FirstOrDefault(n => dt4.Columns.Contains(n))
+                                     ?? dt4.Columns[0].ColumnName;
 
                         var headerMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                         {
@@ -328,10 +404,10 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                             ["permissionTypeName_E"] = "Permission Name",
                             ["distributorPermissionTypeStartDate"] = "تاريخ البداية",
                             ["distributorPermissionTypeEndDate"] = "تاريخ النهاية",
-                            ["distributorPermissionTypeActive"] = "نشط"
+                            ["distributorPermissionTypeActive"] = "الحالة"
                         };
 
-                        foreach (DataColumn c in dt3.Columns)
+                        foreach (DataColumn c in dt4.Columns)
                         {
                             string colType = "text";
                             var t = c.DataType;
@@ -357,10 +433,10 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                             });
                         }
 
-                        foreach (DataRow r in dt3.Rows)
+                        foreach (DataRow r in dt4.Rows)
                         {
                             var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
-                            foreach (DataColumn c in dt3.Columns)
+                            foreach (DataColumn c in dt4.Columns)
                             {
                                 var val = r[c];
                                 dict[c.ColumnName] = val == DBNull.Value ? null : val;
@@ -387,31 +463,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
 
 
 
-             var AddMenuListFieldFields = new List<FieldConfig>
-            {
-
-                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "AddMenuList" },
-                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
-                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
-                new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
-                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
-                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
-                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
-
-
-                new FieldConfig { Name = rowProgramsIdField, Type = "hidden" },
-
-
-                new FieldConfig { Name = "p01", Label = "البرنامج التابع لها القائمة", Type = "select", ColCss = "3",Required = true,Options = programOptions},
-                new FieldConfig { Name = "p02", Label = "اسم القائمة (عربي)", Type = "text", TextMode = "arabic", ColCss = "3", Readonly = false ,Required = true },
-                new FieldConfig { Name = "p03", Label = "اسم القائمة (إنجليزي)", Type = "text", TextMode="english", ColCss = "3", Readonly = false ,Required = true },
-                new FieldConfig { Name = "p04", Label = "الوصف", Type = "text", ColCss = "3", Readonly = false ,Required = true },
-                new FieldConfig { Name = "p05", Label = "الترتيب", Type = "number", ColCss = "3", Readonly = false ,Required = true },
-
-
-            };
+            
 
 
 
@@ -440,7 +492,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 new FieldConfig { Name = "p05", Label = "programActive", Type = "hidden", ColCss = "3", Readonly = false ,Required = true },
                 new FieldConfig { Name = "p06", Label = "الرابط", Type = "text", ColCss = "3", Readonly = false ,Required = true },
                 new FieldConfig { Name = "p07", Label = "الأيقونة", Type = "text", TextMode="english", ColCss = "3", Readonly = false ,Required = true },
-                new FieldConfig { Name = "p08", Label = "الترتيب", Type = "text", ColCss = "3", Readonly = false ,Required = true },
+                new FieldConfig { Name = "p08", Label = "الترتيب", Type = "hidden", ColCss = "3", Readonly = false  },
                 new FieldConfig { Name = "p09", Label = "حالة البرنامج", Type = "select", ColCss = "3",Options=ActiveOptions ,Required = true },
 
 
@@ -506,6 +558,33 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 new FieldConfig { Name = "p09", Label = "حالة البرنامج", Type = "select", ColCss = "3",Options=ActiveOptions ,Required = true },
 
             };
+
+            var AddMenuListFieldFields = new List<FieldConfig>
+            {
+            
+                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "AddMenuList" },
+                new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
+                new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
+                new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
+                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+            
+            
+                new FieldConfig { Name = rowProgramsIdField, Type = "hidden" },
+            
+            
+                new FieldConfig { Name = "p01", Label = "البرنامج التابع لها القائمة", Type = "select", ColCss = "3",Required = true,Options = programOptions},
+                new FieldConfig { Name = "p02", Label = "اسم القائمة (عربي)", Type = "text", TextMode = "arabic", ColCss = "3", Readonly = false ,Required = true },
+                new FieldConfig { Name = "p03", Label = "اسم القائمة (إنجليزي)", Type = "text", TextMode="english", ColCss = "3", Readonly = false ,Required = true },
+                new FieldConfig { Name = "p04", Label = "الوصف", Type = "text", ColCss = "3", Readonly = false ,Required = true },
+                new FieldConfig { Name = "p05", Label = "الترتيب", Type = "number", ColCss = "3", Readonly = false ,Required = true },
+            
+            
+            };
+
 
 
 
@@ -678,6 +757,177 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
 
                 };
 
+          
+            var dsModelSubPrograms = new SmartTableDsModel
+            {
+                Columns = dynamicColumnsSubPrograms,
+                Rows = rowsListSubPrograms,
+                RowIdField = "menuID",  // ✅ ثابت
+                PageSize = 10,
+                PageSizes = new List<int> { 10, 25, 50, 100 },
+                QuickSearchFields = dynamicColumnsSubPrograms.Select(c => c.Field).Take(4).ToList(),
+                Searchable = true,
+                AllowExport = true,
+                PageTitle = "إدارة البرامج",
+                PanelTitle = "إدارة البرامج",
+                Toolbar = new TableToolbarConfig
+                {
+                    ShowRefresh = false,
+                    ShowColumns = true,
+                    ShowExportCsv = false,
+                    ShowExportExcel = false,
+                    ShowAdd = canADDPROGRAM,
+                    ShowAdd1 = canADDPROGRAM,
+                    ShowEdit = canEDITPPROGRAM,
+                    ShowDelete = canDELETEPROGRAM,
+                    ShowBulkDelete = false,
+
+
+                    Add = new TableAction
+                    {
+                        Label = "إضافة برنامج جديد",
+                        Icon = "fa fa-plus",
+                        Color = "success",
+                        OpenModal = true,
+                        ModalTitle = "إضافة برنامج جديد",
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "InsertForm",
+                            Title = "بيانات برنامج جديد",
+                            Method = "post",
+                            ActionUrl = "/crud/insert",
+                            Fields = AddProgramFieldFields,
+                            Buttons = new List<FormButtonConfig>
+                            {
+                                new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "success" /*Icon = "fa fa-save"*/ },
+                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", /*Icon = "fa fa-times",*/ OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" },
+
+                            }
+                        }
+                    },
+
+
+                    Add1 = new TableAction
+                    {
+                        Label = "إضافة قائمة جانبية جديد",
+                        Icon = "fa fa-list",
+                        Color = "success",
+                        OpenModal = true,
+                        ModalTitle = "إضافة برنامج جديد",
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "InsertForm",
+                            Title = "بيانات برنامج جديد",
+                            Method = "post",
+                            ActionUrl = "/crud/insert",
+                            Fields = AddMenuListFieldFields,
+                            Buttons = new List<FormButtonConfig>
+                            {
+                                new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "success" /*Icon = "fa fa-save"*/ },
+                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", /*Icon = "fa fa-times",*/ OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" },
+
+                            }
+                        }
+                    },
+
+
+
+                    // Edit: opens populated form for single selection and saves via SP
+                    Edit = new TableAction
+                    {
+                        Label = "تعديل برنامج",
+                        Icon = "fa fa-pen-to-square",
+                        Color = "info",
+                        IsEdit = true,
+                        OpenModal = true,
+                        ModalTitle = "تعديل بيانات الموظف",
+                        //ModalMessage = "بسم الله الرحمن الرحيم",
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "employeeEditForm",
+                            Title = "تعديل بيانات برنامج",
+                            Method = "post",
+                            ActionUrl = "/crud/update",
+                            SubmitText = "حفظ التعديلات",
+                            CancelText = "إلغاء",
+                            Fields = EditProgramFieldFields
+                        },
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1
+
+
+                    },
+
+                    Delete = new TableAction
+                    {
+                        Label = "ايقاف / تنشيط برنامج",
+                        Icon = "fa fa-recycle",
+                        Color = "warning",
+                        IsEdit = true,
+                        OpenModal = true,
+                        //ModalTitle = "رسالة تحذيرية",
+                        ModalTitle = "<i class='fa fa-exclamation-triangle text-red-600 text-xl mr-2'></i> تحذير",
+                        ModalMessage = "هل أنت متأكد من ايقاف / تنشيط البرنامج؟",
+                        OpenForm = new FormConfig
+                        {
+                            FormId = "employeeDeleteForm",
+                            Title = "تأكيد ايقاف / تنشيط البرنامج",
+                            Method = "post",
+                            ActionUrl = "/crud/delete",
+                            Buttons = new List<FormButtonConfig>
+                            {
+                                new FormButtonConfig { Text = "تنفيذ", Type = "submit", Color = "danger", Icon = "fa fa-save" },
+                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", Icon = "fa fa-times", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
+                            },
+                            Fields = DeleteProgramFieldFields
+                        },
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1
+                    },
+                }
+            };
+
+
+            dsModelSubPrograms.StyleRules = new List<TableStyleRule>
+                {
+
+                    new TableStyleRule
+                    {
+                        Target = "cell",
+                        Field = "programActive",
+                        Op = "eq",
+                        Value = "نشط",
+                        Priority = 1,
+                        PillEnabled=true,
+                        PillField="programActive",
+                        PillTextField="programActive",
+                        PillCssClass="pill pill-green",
+                        PillMode="replace"
+
+                    },
+                     new TableStyleRule
+                    {
+                        Target = "cell",
+                        Field = "programActive",
+                        Op = "neq",
+                        Value = "نشط",
+                        Priority = 1,
+                        PillEnabled=true,
+                        PillField="programActive",
+                        PillTextField="programActive",
+                        PillCssClass="pill pill-red",
+                        PillMode="replace"
+
+                    },
+                      
+
+
+                };
+
+          
+
 
 
 
@@ -827,8 +1077,9 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 PanelIcon = "fa-user-shield",
                 Form = form,
                 TableDS = showPrograms ? dsModelPrograms : null,
-                TableDS1 = showMenu ? dsModelMenu : null,
-                TableDS2 = showPermissions ? dsModelPermission : null
+                TableDS1 = showSubPrograms ? dsModelSubPrograms : null,
+                TableDS2 = showMenu ? dsModelMenu : null,
+                TableDS3 = showPermissions ? dsModelPermission : null
             };
 
 

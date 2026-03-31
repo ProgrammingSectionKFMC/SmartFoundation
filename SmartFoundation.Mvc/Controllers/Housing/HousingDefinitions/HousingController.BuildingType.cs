@@ -138,9 +138,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             {
                 new FieldConfig { Name = rowIdField, Type = "hidden" },
 
-                new FieldConfig { Name = "p01", Label = "رمز نوع المباني", Type ="text", ColCss ="3",Icon = "fa fa-building" },
-                new FieldConfig { Name = "p02", Label = "اسم نوع المباني بالعربي", Type = "text", Required = true,Placeholder = "حقل عربي فقط",Icon = "fa fa-home",ColCss = "3",MaxLength = 50,TextMode = "arabic",},
-                new FieldConfig { Name = "p03", Label = "اسم نوع المباني بالانجليزي", Type = "text", ColCss = "3" ,Icon = "fa fa-home", TextMode = "english",Placeholder = "حقل انجليزي فقط"},
+                new FieldConfig { Name = "p01", Label = "رمز نوع المباني", Type ="text", ColCss ="4",Icon = "fa fa-building", Required = true },
+                new FieldConfig { Name = "p02", Label = "اسم نوع المباني بالعربي", Type = "text", Required = true,Placeholder = "حقل عربي فقط",Icon = "fa fa-home",ColCss = "4",MaxLength = 50,TextMode = "arabic",},
+                new FieldConfig { Name = "p03", Label = "اسم نوع المباني بالانجليزي", Type = "text", ColCss = "4" ,Icon = "fa fa-home", TextMode = "english",Placeholder = "حقل انجليزي فقط"},
                 new FieldConfig { Name = "p04", Label = "ملاحظات", Type = "textarea", ColCss = "6", Required = false }
             };
 
@@ -167,10 +167,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
                 new FieldConfig { Name = rowIdField,            Type = "hidden" },
 
-                new FieldConfig { Name = "p01", Label = "الرقم المرجعي",Type ="hidden", Readonly = true, ColCss = "3" },
-                new FieldConfig { Name = "p02", Label = "رمز نوع المباني",Type ="text", Required = true,  ColCss = "3",Icon = "fa fa-building" },
-                new FieldConfig { Name = "p03", Label = "اسم نوع المباني بالعربي", Type ="text",ColCss = "3", Required = true, TextMode = "arabic",Icon = "fa fa-home" },
-                new FieldConfig { Name = "p04", Label = "اسم نوع المباني بالانجليزي", Type ="text", ColCss = "3",TextMode = "english",Icon = "fa fa-home" },
+                new FieldConfig { Name = "p01", Label = "الرقم المرجعي",Type ="hidden", Readonly = true, ColCss = "4" },
+                new FieldConfig { Name = "p02", Label = "رمز نوع المباني",Type ="text", Required = true,  ColCss = "4",Icon = "fa fa-building" },
+                new FieldConfig { Name = "p03", Label = "اسم نوع المباني بالعربي", Type ="text",ColCss = "4", Required = true, TextMode = "arabic",Icon = "fa fa-home" },
+                new FieldConfig { Name = "p04", Label = "اسم نوع المباني بالانجليزي", Type ="text", ColCss = "4",TextMode = "english",Icon = "fa fa-home" },
                 new FieldConfig { Name = "p10", Label = "ملاحظات",Type ="textarea",ColCss = "6" }
             };
 
@@ -186,7 +186,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = Request.Host.Value },
                 new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
                 new FieldConfig { Name = rowIdField, Type = "hidden" },
-                new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "BuildingTypeID" }
+                new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "BuildingTypeID" },
+
+                new FieldConfig { Name = "p02", Label = "رمز نوع المباني",Type ="text", Required = true,Readonly=true,  ColCss = "4",Icon = "fa fa-building" },
+                new FieldConfig { Name = "p03", Label = "اسم نوع المباني بالعربي", Type ="text",ColCss = "4", Required = true,Readonly=true, TextMode = "arabic",Icon = "fa fa-home" },
+                new FieldConfig { Name = "p04", Label = "اسم نوع المباني بالانجليزي", Type ="text", ColCss = "4",Readonly=true,TextMode = "english",Icon = "fa fa-home" },
+                
             };
 
             var dsModel = new SmartTableDsModel

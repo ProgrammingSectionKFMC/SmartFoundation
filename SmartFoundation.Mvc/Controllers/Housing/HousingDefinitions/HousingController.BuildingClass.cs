@@ -204,7 +204,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = Request.Host.Value },
                 new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
                 new FieldConfig { Name = rowIdField, Type = "hidden" },
-                new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "buildingClassID" }
+                new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "buildingClassID" },
+                 new FieldConfig { Name = "p02", Label = "اسم الفئة بالعربي",    Type = "text",   Required = true,Readonly=true,  ColCss = "6", TextMode = "arabic"  },
+                new FieldConfig { Name = "p03", Label = "اسم الفئة بالانجليزي", Type = "text",   Required = false,Readonly=true, ColCss = "6", TextMode="english" },
             };
 
             //  SmartTable model

@@ -668,7 +668,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = rowIdField, Type = "hidden" },
 
                 // hidden p01 actually posted to SP
-                new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "UtilityTypeID_" }
+                new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "UtilityTypeID_" },
+                new FieldConfig { Name = "p02", Label = "اسم المبنى", Type = "text",   ColCss = "6", Readonly = true ,Value =buildingUtilityIsRent.ToString()},
             };
 
 

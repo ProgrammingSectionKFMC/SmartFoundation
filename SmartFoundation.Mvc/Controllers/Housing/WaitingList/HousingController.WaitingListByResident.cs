@@ -208,7 +208,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                     Type="text",
                                     ColCss="3",
                                     Icon="fa-solid fa-address-card",
-                                    Placeholder="أدخل الرقم (مثال: 1xxxxxxxxx)",
+                                    Placeholder=" 1xxxxxxxxx",
                                     //HelpText="عشرةأرقام فقط*",
                                     Value= NationalID_,                 // القيمة الافتراضية (من السيرفر)
                                     MaxLength=10,
@@ -216,6 +216,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                     InputLang= "number",
                                     InputPattern= @"^[0-9]{10}$",
                                     PatternMsg= "رقم الهوية يجب أن يكون 10 أرقام",
+                                    HelpText= "رقم الهوية يجب أن يكون 10 أرقام",
                                     RequiredMsg= "الرجاء كتابة رقم الهوية الوطنية",
                                     IsNumericOnly=true,
                                     SubmitOnEnter =true,  // يفعل زر  Enter جديد
@@ -829,7 +830,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                 new FieldConfig { Name = "p07", Label = "فئة سجل الانتظار", Type = "hidden", ColCss = "3", Required = true, Options= waitingClassOptions },
                 new FieldConfig { Name = "p08", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Required = true, Options= waitingOrderTypeOptions,Select2=true },
-                new FieldConfig { Name = "p09", Label = "ملاحظات", Type = "textarea", ColCss = "3", Required = false },
+                new FieldConfig { Name = "p09", Label = "ملاحظات", Type = "textarea", ColCss = "6", Required = false },
             };
 
               var updateFieldsOccubentLetter = new List<FieldConfig>
@@ -943,9 +944,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
                 new FieldConfig { Name = rowIdField_dt4, Type = "hidden" },
                 new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "residentInfoID" },
-                new FieldConfig { Name = "p04", Label = "الاسم", Type = "text", ColCss = "3",Readonly =true},
-                new FieldConfig { Name = "p02", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3",Placeholder="1xxxxxxxxx",Readonly =true},
-                new FieldConfig { Name = "p03", Label = "الرقم العام", Type = "text", ColCss = "3", Required = true,Readonly =true},
+                new FieldConfig { Name = "p04", Label = "الاسم", Type = "text", ColCss = "4",Readonly =true},
+                new FieldConfig { Name = "p02", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "4",Placeholder="1xxxxxxxxx",Readonly =true},
+                new FieldConfig { Name = "p03", Label = "الرقم العام", Type = "text", ColCss = "4", Required = true,Readonly =true},
 
                 new FieldConfig { Name = "p05", Label = "رقم قرار النقل", Type = "text", ColCss = "6", MaxLength = 50, TextMode = "number",Required=true ,Readonly =true},
                 new FieldConfig { Name = "p06", Label = "تاريخ قرار النقل", Type = "text", ColCss = "6", MaxLength = 50, TextMode = "number",Required=true,Placeholder="YYYY-MM-DD" ,Readonly =true},
@@ -1051,6 +1052,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         //Placement = TableActionPlacement.ActionsMenu,
                         IsEdit = true,
                         OpenModal = true,
+                        ModalMessage = "عند طلب نقل سجلات انتظار مستفيد لادارة اخرى لايمكن اضافة او تعديل اي سجلات للمستفيد الا ان يتم الغاء الطلب او رفضه من الادارة المرسل اليها  ", 
+                        ModalMessageClass = "bg-blue-100 text-blue-700",
                         ModalTitle = "طلب نقل سجلات انتظار لادارة اخرى",
                         OpenForm = new FormConfig
                         {
@@ -1402,20 +1405,20 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                     Delete = new TableAction
                     {
-                        Label = "الغاء طلب نقل سجل انتظار",
+                        Label = "الغاء طلب نقل سجلات انتظار",
                         Icon = "fa fa-trash",
                         Color = "danger",
                         //Placement = TableActionPlacement.ActionsMenu,
                         IsEdit = true,
                         OpenModal = true,
                         ModalTitle = "تحذير",
-                        ModalMessage = "هل أنت متأكد من الغاء طلب نقل سجل انتظار؟",
+                        ModalMessage = "هل أنت متأكد من الغاء طلب نقل سجلات انتظار؟",
                         ModalMessageIcon = "fa fa-exclamation-triangle text-red-600",
                         ModalMessageClass = "bg-red-50 border border-red-200 text-red-700",
                         OpenForm = new FormConfig
                         {
                             FormId = "DeleteForm",
-                            Title = "تأكيد الغاء طلب نقل سجل انتظار",
+                            Title = "تأكيد الغاء طلب نقل سجلات انتظار",
                             Method = "post",
                             ActionUrl = "/crud/delete",
                             Buttons = new List<FormButtonConfig>
@@ -1427,7 +1430,25 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         },
                         RequireSelection = true,
                         MinSelection = 1,
-                        MaxSelection = 1
+                        MaxSelection = 1,
+                        Guards = new TableActionGuards
+                        {
+                            AppliesTo = "any",
+                            DisableWhenAny = new List<TableActionRule>
+                        {
+
+                              new TableActionRule
+                            {
+                                Field = "LastActionTypeID",
+                                Op = "neq",
+                                Value = "32",
+                                Message = "لايمكن الغاء الطلب",
+                                Priority = 3
+                            },
+
+
+                          }
+                        }
                     },
                 }
             };
