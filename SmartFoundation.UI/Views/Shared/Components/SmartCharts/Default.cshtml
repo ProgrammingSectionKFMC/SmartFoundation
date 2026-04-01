@@ -3,7 +3,9 @@
 @using Microsoft.AspNetCore.Html
 @using System.Text
 
-<div id="@Model.ChartsId" class="w-full rounded-xl bg-slate-50/70 p-6" dir="@Model.Dir">
+@* <div id="@Model.ChartsId" class="w-full rounded-xl bg-slate-50/70 p-6" dir="@Model.Dir"> *@
+
+<div id="@Model.ChartsId" class="w-full" dir="@Model.Dir">
 
 
     @* Header for whole charts block *@
@@ -244,7 +246,13 @@
                                     @await Html.PartialAsync("~/Views/Shared/Components/SmartCharts/Cards/_HealthKpiAnnual.cshtml", card)
                                     break;
 
+                                case ChartCardType.HousingCommandCenter:
+                                    @await Html.PartialAsync("~/Views/Shared/Components/SmartCharts/Cards/_HousingCommandCenter.cshtml", card)
+                                    break;
+
                                 default:
+
+
                                     <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
                                         <div class="text-sm font-semibold text-gray-700">��� ��� �����</div>
                                         <div class="mt-1 text-xs text-gray-500">ChartCardType: @card.Type</div>

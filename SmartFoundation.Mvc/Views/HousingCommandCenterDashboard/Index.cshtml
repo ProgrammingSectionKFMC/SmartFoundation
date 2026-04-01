@@ -1,0 +1,180 @@
+﻿@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@model SmartFoundation.UI.ViewModels.SmartPage.SmartPageViewModel
+
+@{
+    Layout = null;
+    ViewData["Title"] = Model.PageTitle ?? "لوحة الإسكان والمالي والطلبات";
+}
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"]</title>
+
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/statistics.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/Fontawesome6-5-0.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/smartcharts.housingcommandcenter.css" asp-append-version="true" />
+
+    <style>
+            *,
+            *::before,
+            *::after {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            :root {
+                --hcc-page-bg: #f3f6f8;
+                --hcc-radius-xl: 16px;
+                --hcc-footer-height: 36px;
+                --hcc-footer-bg: #f0f4f7;
+                --hcc-footer-color: #64748b;
+                --hcc-footer-font: 11.5px;
+            }
+
+            html,
+            body {
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+            }
+
+            body {
+                display: flex;
+                flex-direction: column;
+                background: var(--hcc-page-bg);
+                color: #0f172a;
+                font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+            }
+
+
+            /* ─── Main content area fills all remaining space ─── */
+            .hcc-content {
+                flex: 1 1 auto;
+                overflow: auto;
+                padding: 14px 14px 0;
+            }
+
+            /* ─── Charts container: no border, no shadow, no bg ─── */
+            .hcc-charts-wrap {
+                width: 100%;
+                height: 100%;
+            }
+
+                /* Override any inner gaps if needed */
+                .hcc-charts-wrap .sf-smartcharts,
+                .hcc-charts-wrap .sf-smartcharts-wrap,
+                .hcc-charts-wrap .sf-smartcharts-grid {
+                    gap: 12px !important;
+                }
+
+                .hcc-charts-wrap .sf-hcc {
+                    border-radius: var(--hcc-radius-xl) !important;
+                }
+
+            /* ─── Empty state ─── */
+            .hcc-empty {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                height: 100%;
+                gap: 8px;
+                color: #64748b;
+                font-size: 14px;
+                text-align: center;
+            }
+
+                .hcc-empty b {
+                    color: #334155;
+                }
+
+            /* ─── Slim footer ─── */
+            .hcc-footer {
+                flex: 0 0 var(--hcc-footer-height);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: var(--hcc-footer-bg);
+                border-top: 1px solid rgba(148, 163, 184, .15);
+                color: var(--hcc-footer-color);
+                font-size: var(--hcc-footer-font);
+                letter-spacing: .01em;
+                padding: 0 14px;
+                user-select: none;
+            }
+
+            /* ─── Responsive ─── */
+            @@media (max-width: 991.98px) {
+                .hcc-content {
+                    padding: 10px 10px 0;
+                }
+            }
+
+            @@media (max-width: 575.98px) {
+                .hcc-content {
+                    padding: 8px 8px 0;
+                }
+
+                :root {
+                    --hcc-footer-height: 32px;
+                    --hcc-footer-font: 10.5px;
+                }
+            }
+    </style>
+</head>
+
+<body>
+
+    <!-- ═══════════════════════════════════════════
+         Main scrollable content — no wrapper shell
+    ════════════════════════════════════════════ -->
+    <main class="hcc-content">
+        <div class="hcc-charts-wrap">
+            @if (Model?.Charts is not null)
+            {
+                @await Component.InvokeAsync(
+                    "SmartCharts",
+                    new { model = Model.Charts, embedded = true }
+                )
+            }
+            else
+            {
+                <div class="hcc-empty">
+                    <span>لا توجد بيانات لعرضها</span>
+                    <span>تأكد من تعبئة <b>Model.Charts</b> قبل استدعاء الصفحة.</span>
+                </div>
+            }
+        </div>
+    </main>
+
+    <!-- ═══════════════════════════════════════════
+         Slim sticky footer
+    ════════════════════════════════════════════ -->
+    <footer class="hcc-footer">
+        إدارة مدينة الملك فيصل العسكرية للتشغيل والصيانة &mdash; قسم الحاسب الآلي &copy; 2026
+    </footer>
+
+    <!-- ═══════════════════════════════════════════
+         Scripts
+    ════════════════════════════════════════════ -->
+    <script src="~/js/smartcharts.housingcommandcenter.js" asp-append-version="true"></script>
+
+    <script>
+            (function () {
+                document.querySelectorAll('.sf-hcc[id]').forEach(function (el) {
+                    var script = el.querySelector('script[type="application/json"]');
+                    if (!script) return;
+                    if (window.SmartCharts && window.SmartCharts.renderHousingCommandCenter) {
+                        window.SmartCharts.renderHousingCommandCenter(el.id, script.id);
+                    }
+                });
+            })();
+    </script>
+
+</body>
+</html>
