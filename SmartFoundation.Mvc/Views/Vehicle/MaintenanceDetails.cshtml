@@ -1,0 +1,39 @@
+﻿@model SmartFoundation.UI.ViewModels.SmartPage.SmartPageViewModel
+
+@{
+    ViewData["Title"] = Model.PageTitle;
+}
+
+@if (TempData["DataSetError"] != null)
+{
+    <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
+        <i class="fa fa-exclamation-circle me-2"></i>
+        @TempData["DataSetError"]
+    </div>
+}
+
+@if (TempData["Error"] != null)
+{
+    <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
+        <i class="fa fa-exclamation-circle me-2"></i>
+        @TempData["Error"]
+    </div>
+}
+
+@if (ViewBag.IsOrderOpen != null && !(bool)ViewBag.IsOrderOpen)
+{
+    <div class="mb-4 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-800">
+        <i class="fa fa-lock me-2"></i>
+        أمر الصيانة مقفل، العرض فقط متاح ولا يمكن الإضافة أو التعديل أو الحذف.
+    </div>
+}
+
+@await Component.InvokeAsync("SmartRenderer", new { model = Model })
+
+<script>
+    (function () {
+        if (location.search && location.search.length > 1) {
+            history.replaceState(null, "", location.pathname + location.hash);
+        }
+    })();
+</script>

@@ -1,0 +1,177 @@
+﻿@model SmartFoundation.UI.ViewModels.SmartPage.SmartPageViewModel
+@{
+    ViewData["Title"] = Model.PageTitle;
+}
+
+@if (TempData["DataSetError"] != null)
+{
+    <div class="mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-green-800">
+        <i class="fa fa-check-circle me-2"></i>
+        @TempData["DataSetError"]
+    </div>
+}
+
+<script>
+    (function () {
+        if (location.search && location.search.length > 1) {
+            history.replaceState(null, "", location.pathname + location.hash);
+        }
+    })();
+</script>
+
+<script>
+    window.sfVehicleOpenProfile = function (table) {
+        const row = table?.getSelectedRowFromCurrentData?.() || (table?.getSelectedRows?.()[0] ?? null);
+
+        if (!row) {
+            alert('اختر صف أولاً');
+            return false;
+        }
+
+        const id = row.chassisNumber;
+        window.location.href = '/Vehicle/Profile?id=' + encodeURIComponent(id);
+        return true;
+    };
+</script>
+
+@await Component.InvokeAsync("SmartRenderer", new { model = Model })
+
+<script>
+    window.printVehicleSelectedColumns = function () {
+        try {
+            const modal = document.querySelector('.sf-modal');
+            if (!modal) {
+                alert('لم يتم العثور على نافذة الطباعة');
+                return false;
+            }
+
+            const sourceTable = document.querySelector('.sf-table table') || document.querySelector('table');
+            if (!sourceTable) {
+                alert('لم يتم العثور على الجدول');
+                return false;
+            }
+
+            const selectedFields = [];
+
+            [
+                'print_vehicleID',
+                'print_chassisNumber',
+                'print_ownerID_FK',
+                'print_plateLetters',
+                'print_plateNumbers',
+                'print_armyNumber',
+                'print_yearModel',
+                'print_vehicleNote',
+                'print_entryDate'
+            ].forEach(function (key) {
+                const el = modal.querySelector('[name="' + key + '"]');
+                if (el && el.checked) {
+                    selectedFields.push(key.replace('print_', ''));
+                }
+            });
+
+            if (selectedFields.length === 0) {
+                alert('اختر عمودًا واحدًا على الأقل');
+                return false;
+            }
+
+            const clonedTable = sourceTable.cloneNode(true);
+            const headerRow = clonedTable.querySelector('thead tr');
+
+            if (!headerRow) {
+                alert('تعذر قراءة ترويسة الجدول');
+                return false;
+            }
+
+                const keepIndexes = [];
+
+    const headerCells = Array.from(headerRow.children);
+
+    headerCells.forEach(function (cell, index) {
+        const text = (cell.innerText || '').trim();
+
+        if (
+            (selectedFields.includes('vehicleID') && text.includes('رقم المركبة')) ||
+            (selectedFields.includes('chassisNumber') && text.includes('رقم الشاصي')) ||
+            (selectedFields.includes('ownerID_FK') && text.includes('المالك')) ||
+            (selectedFields.includes('plateLetters') && text.includes('حروف اللوحة')) ||
+            (selectedFields.includes('plateNumbers') && text.includes('أرقام اللوحة')) ||
+            (selectedFields.includes('armyNumber') && text.includes('الرقم العسكري')) ||
+            (selectedFields.includes('yearModel') && text.includes('الموديل')) ||
+            (selectedFields.includes('vehicleNote') && text.includes('ملاحظات المركبة')) ||
+            (selectedFields.includes('entryDate') && text.includes('تاريخ الإدخال'))
+        ) {
+            keepIndexes.push(index);
+        }
+    });
+
+            const keepIndexes = selectedFields
+                .map(function (x) { return map[x]; })
+                .filter(function (x) { return x !== undefined; });
+
+            if (keepIndexes.length === 0) {
+                alert('تعذر مطابقة الأعمدة المختارة مع الجدول');
+                return false;
+            }
+
+            clonedTable.querySelectorAll('tr').forEach(function (row) {
+                const cells = Array.from(row.children);
+                cells.forEach(function (cell, idx) {
+                    if (!keepIndexes.includes(idx)) {
+                        cell.remove();
+                    }
+                });
+            });
+
+            clonedTable.querySelectorAll('input, button, select, textarea').forEach(function (el) {
+                el.remove();
+            });
+
+            const frame = document.createElement('iframe');
+            frame.style.position = 'fixed';
+            frame.style.right = '0';
+            frame.style.bottom = '0';
+            frame.style.width = '0';
+            frame.style.height = '0';
+            frame.style.border = '0';
+            document.body.appendChild(frame);
+
+            const doc = frame.contentWindow.document;
+            doc.open();
+            doc.write('<html><head><title>تقرير المركبات</title>');
+            doc.write('<style>');
+            doc.write('body{font-family:Arial,Tahoma,sans-serif;direction:rtl;padding:24px;color:#000;}');
+            doc.write('.report-header{text-align:center;margin-bottom:20px;}');
+            doc.write('.report-title{font-size:28px;font-weight:bold;margin-bottom:8px;}');
+            doc.write('.report-date{font-size:14px;margin-bottom:18px;}');
+            doc.write('table{width:100%;border-collapse:collapse;table-layout:auto;font-size:13px;}');
+            doc.write('th,td{border:1px solid #000;padding:8px 6px;text-align:center;vertical-align:middle;word-break:break-word;}');
+            doc.write('th{background:#f2f2f2;font-weight:bold;}');
+            doc.write('</style>');
+            doc.write('</head><body>');
+            doc.write('<div class="report-header">');
+            doc.write('<div class="report-title">تقرير المركبات</div>');
+            doc.write('<div class="report-date">' + new Date().toLocaleString('ar-SA') + '</div>');
+            doc.write('</div>');
+            doc.write(clonedTable.outerHTML);
+            doc.write('</body></html>');
+            doc.close();
+
+            setTimeout(function () {
+                frame.contentWindow.focus();
+                frame.contentWindow.print();
+                setTimeout(function () {
+                    if (document.body.contains(frame)) {
+                        document.body.removeChild(frame);
+                    }
+                }, 1000);
+            }, 300);
+
+            return false;
+        } catch (e) {
+            console.error(e);
+            alert('خطأ في الطباعة');
+            return false;
+        }
+    };
+</script>
