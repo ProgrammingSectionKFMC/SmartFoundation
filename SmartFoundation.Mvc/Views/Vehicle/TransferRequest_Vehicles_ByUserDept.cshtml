@@ -1,0 +1,88 @@
+﻿@model SmartFoundation.UI.ViewModels.SmartPage.SmartPageViewModel
+@{
+    ViewData["Title"] = Model.PageTitle;
+    var eligibleUrl = (ViewBag.TransferEligibleUsersUrl?.ToString() ?? "");
+}
+
+@if (TempData["DataSetError"] != null)
+{
+    <div class="mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-green-800">
+        <i class="fa fa-check-circle me-2"></i>
+        @TempData["DataSetError"]
+    </div>
+}
+
+@await Component.InvokeAsync("SmartRenderer", new { model = Model })
+
+<script>
+    (function () {
+        if (location.search && location.search.length > 1) {
+            history.replaceState(null, "", location.pathname + location.hash);
+        }
+    })();
+
+    (function () {
+        const eligibleUrl = '@eligibleUrl';
+
+        function loadEligibleUsers(form) {
+            if (!form || !eligibleUrl) return;
+
+            const chassisInput = form.querySelector('[name="p02"]') || form.querySelector('[name="chassisNumber"]');
+            const fromUserText = form.querySelector('[name="UserFullName_Snapshot"]');
+            const fromUserId = form.querySelector('[name="p03"]');
+            const deptId = form.querySelector('[name="p05"]');
+            const toSelect = form.querySelector('[name="p04"]');
+
+            if (!chassisInput || !toSelect) return;
+
+            const chassisNumber = (chassisInput.value || '').trim();
+            if (!chassisNumber) return;
+
+            fetch(eligibleUrl + '?chassisNumber=' + encodeURIComponent(chassisNumber), {
+                method: 'GET',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (!data || !data.success) return;
+
+                toSelect.innerHTML = '<option value="">اختر المنقول إليه</option>';
+
+                if (data.from) {
+                    if (fromUserText) fromUserText.value = data.from.UserFullName_Snapshot || '';
+                    if (fromUserId) fromUserId.value = data.from.FromUserID || '';
+                    if (deptId) deptId.value = data.from.DeptID_Snapshot || '';
+                }
+
+                if (Array.isArray(data.to)) {
+                    data.to.forEach(function (item) {
+                        const opt = document.createElement('option');
+                        opt.value = item.ToUserID || '';
+                        opt.text = (item.UserFullName_A || '') + (item.GeneralNo ? ' - ' + item.GeneralNo : '');
+                        toSelect.appendChild(opt);
+                    });
+                }
+
+                if (window.jQuery && window.jQuery(toSelect).data('select2')) {
+                    window.jQuery(toSelect).trigger('change');
+                }
+            })
+            .catch(function (err) {
+                console.error(err);
+            });
+        }
+
+        const observer = new MutationObserver(function () {
+            const form = document.getElementById('transferRequestForm');
+            if (!form || form.dataset.eligibleBound === '1') return;
+
+            form.dataset.eligibleBound = '1';
+
+            setTimeout(function () {
+                loadEligibleUsers(form);
+            }, 150);
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+    })();
+</script>

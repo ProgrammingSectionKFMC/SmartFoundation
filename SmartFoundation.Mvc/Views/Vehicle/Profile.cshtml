@@ -1,0 +1,322 @@
+﻿@* @model SmartFoundation.Mvc.Models.VehicleProfileVM
+@using System.Data
+
+@{
+    ViewData["Title"] = "ملف المركبة";
+    DataRow? row = Model.Summary.Rows.Count > 0 ? Model.Summary.Rows[0] : null;
+
+    string SafeValue(object? value, string fallback = "-")
+    {
+        if (value == null || value == DBNull.Value) return fallback;
+        var text = value.ToString();
+        return string.IsNullOrWhiteSpace(text) ? fallback : text;
+    }
+}
+
+<style>
+    .vehicle-page {
+        direction: rtl;
+    }
+
+    .vehicle-box {
+        background: #fff;
+        border: 1px solid #e5e5e5;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .vehicle-title {
+        font-size: 28px;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    .vehicle-subtitle {
+        color: #777;
+        margin-bottom: 0;
+    }
+
+    .info-card, .stat-card {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+        margin-bottom: 15px;
+        min-height: 95px;
+    }
+
+    .info-label, .stat-label {
+        color: #666;
+        font-size: 14px;
+        margin-bottom: 8px;
+    }
+
+    .info-value {
+        font-size: 20px;
+        font-weight: bold;
+        color: #222;
+    }
+
+    .stat-value {
+        font-size: 30px;
+        font-weight: bold;
+        color: #0d6efd;
+    }
+
+    .section-title {
+        font-size: 22px;
+        font-weight: bold;
+        margin-bottom: 15px;
+    }
+
+    .custom-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #fff;
+    }
+
+    .custom-table th,
+    .custom-table td {
+        border: 1px solid #ddd;
+        padding: 10px;
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    .custom-table thead {
+        background: #f1f1f1;
+    }
+
+    .empty-box {
+        text-align: center;
+        background: #f8f9fa;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 15px;
+    }
+</style>
+
+<div class="container-fluid vehicle-page mt-4">
+
+    @if (row != null)
+    {
+        <div class="vehicle-box">
+            <div class="vehicle-title">ملف المركبة</div>
+            <p class="vehicle-subtitle">
+                رقم الهيكل:
+                <strong>@SafeValue(row["chassisNumber"])</strong>
+            </p>
+        </div>
+
+        <div class="vehicle-box">
+            <div class="section-title">البيانات الأساسية</div>
+
+            <div class="row">
+                <div class="col-md-3 col-sm-6">
+                    <div class="info-card">
+                        <div class="info-label">رقم الهيكل</div>
+                        <div class="info-value">@SafeValue(row["chassisNumber"])</div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 col-sm-6">
+                    <div class="info-card">
+                        <div class="info-label">الموديل</div>
+                        <div class="info-value">@SafeValue(row["yearModel"])</div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 col-sm-6">
+                    <div class="info-card">
+                        <div class="info-label">الرقم العسكري</div>
+                        <div class="info-value">@SafeValue(row["armyNumber"])</div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 col-sm-6">
+                    <div class="info-card">
+                        <div class="info-label">المستخدم الحالي</div>
+                        <div class="info-value">@SafeValue(row["CurrentUserID"], "غير محدد")</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="vehicle-box">
+            <div class="section-title">الإحصائيات</div>
+
+            <div class="row">
+                <div class="col-md-3 col-sm-6">
+                    <div class="stat-card">
+                        <div class="stat-label">عدد الوثائق</div>
+                        <div class="stat-value">@SafeValue(row["DocumentsCount"], "0")</div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 col-sm-6">
+                    <div class="stat-card">
+                        <div class="stat-label">عدد التأمينات</div>
+                        <div class="stat-value">@SafeValue(row["InsuranceCount"], "0")</div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 col-sm-6">
+                    <div class="stat-card">
+                        <div class="stat-label">عدد الصيانة</div>
+                        <div class="stat-value">@SafeValue(row["MaintenanceCount"], "0")</div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 col-sm-6">
+                    <div class="stat-card">
+                        <div class="stat-label">عدد المخالفات</div>
+                        <div class="stat-value">@SafeValue(row["ViolationsCount"], "0")</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="vehicle-box">
+        <div class="section-title">المخالفات</div>
+
+        @if (Model.Violations.Rows.Count == 0)
+        {
+            <div class="empty-box">لا توجد مخالفات على هذه المركبة</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>القيمة</th>
+                            <th>الموقع</th>
+                            <th>نوع المخالفة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (DataRow r in Model.Violations.Rows)
+                        {
+                            <tr>
+                                <td>@SafeValue(r["violationDate"]) </td>
+                                <td>@SafeValue(r["violationPrice"]) </td>
+                                <td>@SafeValue(r["violationLocation"]) </td>
+                                <td>@SafeValue(r["violationTypeID_FK"]) </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    <div class="vehicle-box">
+        <div class="section-title">الوثائق</div>
+
+        @if (Model.Documents.Rows.Count == 0)
+        {
+            <div class="empty-box">لا توجد وثائق</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            @foreach (DataColumn col in Model.Documents.Columns)
+                            {
+                                <th>@col.ColumnName</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (DataRow r in Model.Documents.Rows)
+                        {
+                            <tr>
+                                @foreach (DataColumn col in Model.Documents.Columns)
+                                {
+                                    <td>@SafeValue(r[col.ColumnName])</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    <div class="vehicle-box">
+        <div class="section-title">التأمين</div>
+
+        @if (Model.Insurance.Rows.Count == 0)
+        {
+            <div class="empty-box">لا توجد بيانات تأمين</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            @foreach (DataColumn col in Model.Insurance.Columns)
+                            {
+                                <th>@col.ColumnName</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (DataRow r in Model.Insurance.Rows)
+                        {
+                            <tr>
+                                @foreach (DataColumn col in Model.Insurance.Columns)
+                                {
+                                    <td>@SafeValue(r[col.ColumnName])</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    <div class="vehicle-box">
+        <div class="section-title">الصيانة</div>
+
+        @if (Model.Maintenance.Rows.Count == 0)
+        {
+            <div class="empty-box">لا توجد بيانات صيانة</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            @foreach (DataColumn col in Model.Maintenance.Columns)
+                            {
+                                <th>@col.ColumnName</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (DataRow r in Model.Maintenance.Rows)
+                        {
+                            <tr>
+                                @foreach (DataColumn col in Model.Maintenance.Columns)
+                                {
+                                    <td>@SafeValue(r[col.ColumnName])</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+</div> *@
