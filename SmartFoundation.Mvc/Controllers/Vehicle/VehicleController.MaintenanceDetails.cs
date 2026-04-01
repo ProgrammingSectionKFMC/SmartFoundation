@@ -6,9 +6,9 @@ using System.Data;
 using System.Linq;
 using System.Text.Json;
 
-namespace SmartFoundation.Mvc.Controllers.VIC
+namespace SmartFoundation.Mvc.Controllers.Vehicle
 {
-    public partial class VehiclesController : Controller
+    public partial class VehicleController : Controller
     {
         public async Task<IActionResult> MaintenanceDetails(int? maintOrdID = null)
         {

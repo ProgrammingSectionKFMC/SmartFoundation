@@ -9,9 +9,9 @@ using System.Linq;
 using System.Text.Json;
 using static LLama.Common.ChatHistory;
 
-namespace SmartFoundation.Mvc.Controllers.VIC
+namespace SmartFoundation.Mvc.Controllers.Vehicle
 {
-    public partial class VehiclesController : Controller
+    public partial class VehicleController : Controller
     {
         public async Task<IActionResult> Scrap(
               string? scrapID = null
@@ -31,7 +31,7 @@ namespace SmartFoundation.Mvc.Controllers.VIC
             if (string.IsNullOrWhiteSpace(usersId))
                 return RedirectToAction("Index", "Login", new { logout = 4 });
 
-            ControllerName = nameof(VehiclesController);
+            ControllerName = nameof(VehicleController);
             PageName = "Scrap";
 
             var spParameters = new object?[]
@@ -70,17 +70,11 @@ namespace SmartFoundation.Mvc.Controllers.VIC
 
             SplitDataSet(ds);
 
-            if (permissionTable is null || permissionTable.Rows.Count == 0)
-            {
-                TempData["Error"] = "تم رصد دخول غير مصرح به انت لاتملك صلاحية للوصول الى هذه الصفحة";
-                return RedirectToAction("Index", "Home");
-            }
-
-            if (permissionTable is null || permissionTable.Rows.Count == 0)
-            {
-                TempData["Error"] = "تم رصد دخول غير مصرح به انت لاتملك صلاحية للوصول الى هذه الصفحة";
-                return RedirectToAction("Index", "Home");
-            }
+            //if (permissionTable is null || permissionTable.Rows.Count == 0)
+            //{
+            //    TempData["Error"] = "تم رصد دخول غير مصرح به انت لاتملك صلاحية للوصول الى هذه الصفحة";
+            //    return RedirectToAction("Index", "Home");
+            //}
 
             bool canScrapList = false;
             bool canAddScrap = false;
@@ -103,11 +97,7 @@ namespace SmartFoundation.Mvc.Controllers.VIC
                     if (permissionName == "CANCELSCRAP") canCancelScrap = true;
                 }
 
-                if (!canScrapList)
-                {
-                    TempData["Error"] = "تم رصد دخول غير مصرح به انت لاتملك صلاحية للوصول الى هذه الصفحة";
-                    return RedirectToAction("Index", "Home");
-                }
+                
 
                 //مؤقتًا داخل الصفحة الرئيسية نفسها
                 //bool canInsert = true;
@@ -681,7 +671,7 @@ var r = rows[0];
 var id = r.ScrapID || r.scrapID || r.p01;
 if (!id) { alert('تعذر تحديد رقم المحضر'); return false; }
 
-var url = '/Vehicle/Scrap?scrapID=' + encodeURIComponent(id) + '&print=1';
+var url = '/Vehicles/Scrap?scrapID=' + encodeURIComponent(id) + '&print=1';
 window.open(url, '_blank');
 return false;"
                 };
@@ -732,9 +722,9 @@ return false;"
                 };
 
 
+            return View("Scrap", new SmartPageViewModel { PageTitle = "Test" });
+            //return View("Scrap", page);
 
-            return View("Scrap", page);
-           
         }
     }
 }

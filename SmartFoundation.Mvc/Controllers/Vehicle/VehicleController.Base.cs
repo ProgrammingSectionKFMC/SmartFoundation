@@ -1,10 +1,19 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using SmartFoundation.Application.Services;
+using SmartFoundation.Mvc.Models;
+using SmartFoundation.UI.ViewModels.SmartForm;
+using SmartFoundation.UI.ViewModels.SmartPage;
+using SmartFoundation.UI.ViewModels.SmartTable;
 using System.Data;
+using System.Linq;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using System.Net;
+using System.Net.Sockets;
 
-namespace SmartFoundation.Mvc.Controllers.VIC
+namespace SmartFoundation.Mvc.Controllers.Vehicle
 {
-    public partial class VehiclesController : Controller
+    public partial class VehicleController : Controller
     {
         private readonly MastersServies _mastersServies;
         private readonly CrudController _CrudController;
@@ -12,6 +21,7 @@ namespace SmartFoundation.Mvc.Controllers.VIC
 
         protected string? ControllerName;
         protected string? PageName;
+
 
         protected string? usersId;
         protected string? FullName;
@@ -45,6 +55,33 @@ namespace SmartFoundation.Mvc.Controllers.VIC
         protected DataTable? dt8;
         protected DataTable? dt9;
 
+
+        protected DataTable? dtExtra1;
+        protected DataTable? dtExtra2;
+        protected DataTable? dtExtra3;
+        protected DataTable? dtExtra4;
+        protected DataTable? dtExtra5;
+        protected DataTable? dtExtra6;
+        protected DataTable? dtExtra7;
+        protected DataTable? dtExtra8;
+        protected DataTable? dtExtra9;
+
+        public VehicleController(MastersServies mastersServies, CrudController crudController, IWebHostEnvironment env)
+        {
+            _mastersServies = mastersServies;
+            _CrudController = crudController;
+            _env = env;
+        }
+
+        public IActionResult Index()
+        {
+            return View();
+        }
+
+        /// <summary>
+        /// يقرأ بيانات السيشن ويعبّي المتغيّرات المشتركة
+        /// يرجع false لو ما فيه user ويضبط redirect
+        /// </summary>
         protected bool InitPageContext(out IActionResult? redirectResult)
         {
             redirectResult = null;
@@ -79,6 +116,9 @@ namespace SmartFoundation.Mvc.Controllers.VIC
             return true;
         }
 
+        /// <summary>
+        /// تقسيم الـ DataSet إلى جداول dt1..dt9 + جدول الصلاحيات
+        /// </summary>
         protected void SplitDataSet(DataSet ds)
         {
             permissionTable = (ds?.Tables?.Count ?? 0) > 0 ? ds.Tables[0] : null;
@@ -91,7 +131,21 @@ namespace SmartFoundation.Mvc.Controllers.VIC
             dt7 = (ds?.Tables?.Count ?? 0) > 7 ? ds.Tables[7] : null;
             dt8 = (ds?.Tables?.Count ?? 0) > 8 ? ds.Tables[8] : null;
             dt9 = (ds?.Tables?.Count ?? 0) > 9 ? ds.Tables[9] : null;
-            
+        }
+
+
+        protected void SplitExtraDataSet(DataSet dsExtra)
+        {
+            permissionTable = (dsExtra?.Tables?.Count ?? 0) > 0 ? dsExtra.Tables[0] : null;
+            dtExtra1 = (dsExtra?.Tables?.Count ?? 0) > 1 ? dsExtra.Tables[1] : null;
+            dtExtra2 = (dsExtra?.Tables?.Count ?? 0) > 2 ? dsExtra.Tables[2] : null;
+            dtExtra3 = (dsExtra?.Tables?.Count ?? 0) > 3 ? dsExtra.Tables[3] : null;
+            dtExtra4 = (dsExtra?.Tables?.Count ?? 0) > 4 ? dsExtra.Tables[4] : null;
+            dtExtra5 = (dsExtra?.Tables?.Count ?? 0) > 5 ? dsExtra.Tables[5] : null;
+            dtExtra6 = (dsExtra?.Tables?.Count ?? 0) > 6 ? dsExtra.Tables[6] : null;
+            dtExtra7 = (dsExtra?.Tables?.Count ?? 0) > 7 ? dsExtra.Tables[7] : null;
+            dtExtra8 = (dsExtra?.Tables?.Count ?? 0) > 8 ? dsExtra.Tables[8] : null;
+            dtExtra9 = (dsExtra?.Tables?.Count ?? 0) > 9 ? dsExtra.Tables[9] : null;
         }
     }
 }
