@@ -1,0 +1,35 @@
+﻿@model SmartFoundation.UI.ViewModels.SmartPage.SmartPageViewModel
+
+@{
+    ViewData["Title"] = Model.PageTitle;
+    var vehicleSearchUrl = (ViewBag.VehicleSearchUrl?.ToString() ?? "");
+}
+
+@if (TempData["DataSetError"] != null)
+{
+    <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
+        <i class="fa fa-exclamation-circle me-2"></i>
+        @TempData["DataSetError"]
+    </div>
+}
+
+@if (TempData["Error"] != null)
+{
+    <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
+        <i class="fa fa-exclamation-circle me-2"></i>
+        @TempData["Error"]
+    </div>
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-green-800">
+        <i class="fa fa-check-circle me-2"></i>
+        @TempData["Success"]
+    </div>
+}
+
+<input type="hidden" id="mp-vehicle-search-url" value="@vehicleSearchUrl" />
+<input type="hidden" id="mp-page-flag" value="MaintenancePlans" />
+
+@await Component.InvokeAsync("SmartRenderer", new { model = Model })

@@ -1008,5 +1008,19 @@ public async Task<DataSet> GetChangePasswordDataSetAsync(params object?[] args)
 
     return ConvertResponseToDataSet(response);
 }
+
+
+        ///start OF VehicleService
+        ///
+
+
+        //public async Task<string> GetVehicleList(Dictionary<string, object?> parameters)
+        //{
+        //    return await ExecuteOperation("vehicle", "list", parameters);
+        //}
+
+
+        //END OF VehicleService
+
     }
 }
