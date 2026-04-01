@@ -1,0 +1,213 @@
+﻿@model SmartFoundation.UI.ViewModels.SmartPage.SmartPageViewModel
+
+@{
+    ViewData["Title"] = Model.PageTitle;
+    var vehicleGetUrl = (ViewBag.VehicleGetUrl?.ToString() ?? "");
+    var typesRootLookupUrl = (ViewBag.TypesRootLookupUrl?.ToString() ?? "");
+    var vehicleSearchUrl = (ViewBag.VehicleSearchUrl?.ToString() ?? "");
+}
+
+@if (TempData["DataSetError"] != null)
+{
+    <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
+        <i class="fa fa-exclamation-circle me-2"></i>
+        @TempData["DataSetError"]
+    </div>
+}
+
+@if (TempData["Error"] != null)
+{
+    <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
+        <i class="fa fa-exclamation-circle me-2"></i>
+        @TempData["Error"]
+    </div>
+}
+
+@if (TempData["Success"] != null)
+{
+    <div class="mb-4 rounded-lg border border-green-200 bg-green-50 p-4 text-green-800">
+        <i class="fa fa-check-circle me-2"></i>
+        @TempData["Success"]
+    </div>
+}
+
+<input type="hidden" id="vehicle-get-url" value="@vehicleGetUrl" />
+<input type="hidden" id="vehicle-types-root-url" value="@typesRootLookupUrl" />
+<input type="hidden" id="vehicle-search-url" value="@vehicleSearchUrl" />
+<input type="hidden" id="vehicle-page-flag" value="Vehiclelist" />
+
+@await Component.InvokeAsync("SmartRenderer", new { model = Model })
+
+@* <script>
+    (function () {
+
+        function qs(root, selector) {
+            return root ? root.querySelector(selector) : null;
+        }
+
+        function qsa(root, selector) {
+            return root ? Array.from(root.querySelectorAll(selector)) : [];
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function getVehicleSearchUrl() {
+            return document.getElementById('vehicle-search-url')?.value || '';
+        }
+
+        function ensureResultsBox(input) {
+            let wrap = input.parentElement ? input.parentElement.querySelector('.vehicle-search-wrap') : null;
+            if (wrap) return wrap;
+
+            wrap = document.createElement('div');
+            wrap.className = 'vehicle-search-wrap mt-2';
+            wrap.style.position = 'relative';
+            wrap.style.width = '100%';
+
+            const box = document.createElement('div');
+            box.className = 'vehicle-search-results';
+            box.style.display = 'none';
+            box.style.position = 'absolute';
+            box.style.top = '100%';
+            box.style.left = '0';
+            box.style.right = '0';
+            box.style.background = '#fff';
+            box.style.border = '1px solid #ddd';
+            box.style.borderRadius = '6px';
+            box.style.boxShadow = '0 4px 12px rgba(0,0,0,.08)';
+            box.style.zIndex = '99999';
+            box.style.maxHeight = '240px';
+            box.style.overflowY = 'auto';
+
+            wrap.appendChild(box);
+
+            if (input.parentElement) {
+                input.parentElement.appendChild(wrap);
+            }
+
+            return wrap;
+        }
+
+        function hideResults(input) {
+            const wrap = input?.parentElement?.querySelector('.vehicle-search-wrap');
+            const box = qs(wrap, '.vehicle-search-results');
+            if (!box) return;
+
+            box.style.display = 'none';
+            box.innerHTML = '';
+        }
+
+        function showResults(input, items) {
+            const wrap = ensureResultsBox(input);
+            const box = qs(wrap, '.vehicle-search-results');
+            if (!box) return;
+
+            if (!items || !items.length) {
+                box.innerHTML = '<div style="padding:8px;color:#666;font-size:12px;">لا توجد نتائج</div>';
+                box.style.display = 'block';
+                return;
+            }
+
+            let html = '';
+            items.forEach(function (item) {
+                html += `
+                    <button type="button"
+                            class="vehicle-item"
+                            data-value="${escapeHtml(item.value || '')}"
+                            style="display:block;width:100%;text-align:right;background:#fff;border:0;border-bottom:1px solid #eee;padding:8px;cursor:pointer;">
+                        ${escapeHtml(item.label || item.value || '')}
+                    </button>
+                `;
+            });
+
+            box.innerHTML = html;
+            box.style.display = 'block';
+
+            qsa(box, '.vehicle-item').forEach(function (btn) {
+                btn.addEventListener('mousedown', function (e) {
+                    e.preventDefault();
+                    input.value = btn.getAttribute('data-value') || '';
+                    hideResults(input);
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+            });
+        }
+
+        function bindVehicleSearch(input) {
+            if (!input || input.dataset.vehicleBound === '1') return;
+
+            input.dataset.vehicleBound = '1';
+            let timer = null;
+
+            input.addEventListener('input', function () {
+                const vehicleSearchUrl = getVehicleSearchUrl();
+                const q = (input.value || '').trim();
+
+                if (timer) clearTimeout(timer);
+
+                if (!q || !vehicleSearchUrl) {
+                    hideResults(input);
+                    return;
+                }
+
+                timer = setTimeout(function () {
+                    fetch(vehicleSearchUrl + '?q=' + encodeURIComponent(q), {
+                        method: 'GET',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    })
+                    .then(function (r) { return r.json(); })
+                    .then(function (d) {
+                        if (!d || !d.success) {
+                            hideResults(input);
+                            return;
+                        }
+
+                        showResults(input, d.items || []);
+                    })
+                    .catch(function () {
+                        hideResults(input);
+                    });
+                }, 300);
+            });
+
+            input.addEventListener('focus', function () {
+                const q = (input.value || '').trim();
+                if (q) {
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            });
+
+            input.addEventListener('blur', function () {
+                setTimeout(function () {
+                    hideResults(input);
+                }, 200);
+            });
+        }
+
+        function bindAll() {
+            qsa(document, 'form input[name="p01"]').forEach(function (input) {
+                bindVehicleSearch(input);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            bindAll();
+        });
+
+        const observer = new MutationObserver(function () {
+            bindAll();
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    })();
+</script> *@

@@ -1,0 +1,255 @@
+﻿@model SmartFoundation.UI.ViewModels.SmartPage.SmartPageViewModel
+@using System.Data
+
+@{
+    ViewData["Title"] = "داش بورد الصيانة";
+    var table = ViewBag.Table as DataTable;
+    var selectedDays = ViewBag.DaysAhead?.ToString() ?? "30";
+}
+
+<style>
+    .maintenance-dashboard-wrap {
+        direction: rtl;
+    }
+
+    .maintenance-dashboard-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 18px;
+        padding: 14px 16px;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+    }
+
+    .maintenance-dashboard-toolbar label {
+        font-weight: 700;
+        color: #1f2937;
+        margin: 0;
+    }
+
+    .maintenance-dashboard-toolbar select {
+        min-width: 180px;
+        padding: 8px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 10px;
+        background: #fff;
+        font-size: 14px;
+    }
+
+    .maintenance-table-card {
+        margin-top: 20px;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        overflow: hidden;
+    }
+
+    .maintenance-table-header {
+        padding: 16px 18px;
+        border-bottom: 1px solid #eef2f7;
+    }
+
+    .maintenance-table-title {
+        font-size: 18px;
+        font-weight: 800;
+        color: #0f172a;
+        margin: 0;
+    }
+
+    .maintenance-table-subtitle {
+        font-size: 13px;
+        color: #64748b;
+        margin-top: 4px;
+    }
+
+    .maintenance-empty {
+        margin-top: 20px;
+        padding: 18px;
+        border-radius: 12px;
+        background: #fff5f5;
+        color: #b42318;
+        border: 1px solid #fecdca;
+        font-weight: 700;
+    }
+
+    .maintenance-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .maintenance-table thead th {
+        background: #f8fafc;
+        color: #0f172a;
+        font-size: 14px;
+        font-weight: 800;
+        padding: 14px 12px;
+        text-align: center;
+        border-bottom: 1px solid #e5e7eb;
+        white-space: nowrap;
+    }
+
+    .maintenance-table tbody td {
+        padding: 14px 12px;
+        text-align: center;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
+        font-size: 14px;
+        color: #111827;
+    }
+
+    .maintenance-table tbody tr:hover {
+        background: #fafafa;
+    }
+
+    .cell-chassis {
+        font-weight: 800;
+        color: #0f172a;
+        white-space: nowrap;
+    }
+
+    .cell-plate, .cell-period, .cell-date {
+        white-space: nowrap;
+    }
+
+    .badge-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 5px 12px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 800;
+        min-width: 72px;
+    }
+
+    .badge-overdue { background: #fee2e2; color: #b42318; }
+    .badge-near { background: #fef3c7; color: #b54708; }
+    .badge-normal { background: #dcfce7; color: #15803d; }
+    .badge-open-yes { background: #dbeafe; color: #1d4ed8; }
+    .badge-open-no { background: #e5e7eb; color: #374151; }
+
+    .days-overdue { color: #b42318; font-weight: 800; }
+    .days-near { color: #b54708; font-weight: 800; }
+    .days-normal { color: #15803d; font-weight: 800; }
+
+    @@media (max-width: 991px) {
+        .maintenance-dashboard-toolbar {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .maintenance-dashboard-toolbar select {
+            width: 100%;
+        }
+
+        .maintenance-table-card {
+            overflow-x: auto;
+        }
+
+        .maintenance-table {
+            min-width: 920px;
+        }
+    }
+</style>
+
+<div class="maintenance-dashboard-wrap">
+    <div class="maintenance-dashboard-toolbar">
+        <label for="daysAhead">عرض الاستحقاقات خلال:</label>
+
+        <form method="get" asp-action="MaintenanceDashboard" asp-controller="Vehicle" style="margin:0;">
+            <select id="daysAhead" name="daysAhead" onchange="this.form.submit()">
+                <option value="0" selected="@(selectedDays == "0" ? "selected" : null)">اليوم / متأخر</option>
+                <option value="7" selected="@(selectedDays == "7" ? "selected" : null)">خلال 7 أيام</option>
+                <option value="30" selected="@(selectedDays == "30" ? "selected" : null)">خلال 30 يوم</option>
+                <option value="60" selected="@(selectedDays == "60" ? "selected" : null)">خلال 60 يوم</option>
+                <option value="90" selected="@(selectedDays == "90" ? "selected" : null)">خلال 90 يوم</option>
+                <option value="120" selected="@(selectedDays == "120" ? "selected" : null)">خلال 120 يوم</option>
+            </select>
+        </form>
+    </div>
+
+    @if (Model?.Charts != null)
+    {
+        @await Component.InvokeAsync("SmartCharts", new { model = Model.Charts })
+    }
+
+    @if (table == null || table.Rows.Count == 0)
+    {
+        <div class="maintenance-empty">
+            لا توجد بيانات ضمن نطاق الفلتر الحالي.
+        </div>
+    }
+    else
+    {
+        <div class="maintenance-table-card">
+            <div class="maintenance-table-header">
+                <h3 class="maintenance-table-title">المركبات المستحقة للصيانة الدورية</h3>
+                <div class="maintenance-table-subtitle">عرض ومتابعة فقط بدون أي عمليات تعديل أو تنفيذ</div>
+            </div>
+
+            <table class="maintenance-table">
+                <thead>
+                    <tr>
+                        <th>رقم الهيكل</th>
+                        <th>اللوحة</th>
+                        <th>الدورية</th>
+                        <th>موعد الاستحقاق</th>
+                        <th>عدد الأيام</th>
+                        <th>حالة الاستحقاق</th>
+                        <th>أمر مفتوح</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (DataRow row in table.Rows)
+                    {
+                        var chassisNumber = row["chassisNumber"]?.ToString() ?? "";
+                        var plateLetters = row["plateLetters"]?.ToString() ?? "";
+                        var plateNumbers = row["plateNumbers"]?.ToString() ?? "";
+                        var periodMonths = row["periodMonths"]?.ToString() ?? "";
+                        var nextDueDate = row["nextDueDate"]?.ToString() ?? "";
+                        var dueStatus = row["DueStatus"]?.ToString()?.Trim() ?? "";
+                        var hasOpenOrder = row["HasOpenOrder"]?.ToString() == "1" ? "نعم" : "لا";
+
+                        int daysToDue = 0;
+                        int.TryParse(row["DaysToDue"]?.ToString(), out daysToDue);
+
+                        var plate = $"{plateLetters} {plateNumbers}".Trim();
+                        var periodText = $"كل {periodMonths} شهر";
+
+                        var statusClass = "badge-normal";
+                        var daysClass = "days-normal";
+
+                        if (dueStatus == "متأخرة")
+                        {
+                            statusClass = "badge-overdue";
+                            daysClass = "days-overdue";
+                        }
+                        else if (dueStatus == "قريبة")
+                        {
+                            statusClass = "badge-near";
+                            daysClass = "days-near";
+                        }
+
+                        var openOrderClass = hasOpenOrder == "نعم" ? "badge-open-yes" : "badge-open-no";
+
+                        <tr>
+                            <td class="cell-chassis">@chassisNumber</td>
+                            <td class="cell-plate">@plate</td>
+                            <td class="cell-period">@periodText</td>
+                            <td class="cell-date">@nextDueDate</td>
+                            <td class="@daysClass">@daysToDue</td>
+                            <td>
+                                <span class="badge-pill @statusClass">@dueStatus</span>
+                            </td>
+                            <td>
+                                <span class="badge-pill @openOrderClass">@hasOpenOrder</span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

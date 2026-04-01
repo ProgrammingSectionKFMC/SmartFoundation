@@ -1,0 +1,14 @@
+﻿@model SmartFoundation.UI.ViewModels.SmartPage.SmartPageViewModel
+@{
+    ViewData["Title"] = Model.PageTitle;
+}
+
+@if (TempData["DataSetError"] != null)
+{
+    <div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
+        <i class="fa fa-exclamation-circle me-2"></i>
+        @TempData["DataSetError"]
+    </div>
+}
+
+@await Component.InvokeAsync("SmartRenderer", new { model = Model })
