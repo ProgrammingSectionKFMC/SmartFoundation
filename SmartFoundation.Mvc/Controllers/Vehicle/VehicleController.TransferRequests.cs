@@ -5,9 +5,9 @@ using SmartFoundation.UI.ViewModels.SmartTable;
 using System.Data;
 using System.Linq;
 
-namespace SmartFoundation.Mvc.Controllers.VIC
+namespace SmartFoundation.Mvc.Controllers.Vehicle
 {
-    public partial class VehiclesController : Controller
+    public partial class VehicleController : Controller
     {
         public async Task<IActionResult> TransferRequest_Pending_ByDept()
         {
@@ -17,7 +17,7 @@ namespace SmartFoundation.Mvc.Controllers.VIC
             if (string.IsNullOrWhiteSpace(usersId))
                 return RedirectToAction("Index", "Login", new { logout = 4 });
 
-            ControllerName = nameof(VehiclesController);
+            ControllerName = nameof(VehicleController);
             PageName = string.IsNullOrWhiteSpace(PageName)
                 ? "TransferRequest_Pending_ByDept"
                 : PageName;

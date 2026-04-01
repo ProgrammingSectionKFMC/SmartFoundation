@@ -5,11 +5,11 @@ using SmartFoundation.UI.ViewModels.SmartTable;
 using System.Data;
 using System.Linq;
 
-namespace SmartFoundation.Mvc.Controllers.VIC
+namespace SmartFoundation.Mvc.Controllers.Vehicle
 {
-    public partial class VehiclesController : Controller
+    public partial class VehicleController : Controller
     {
-        public async Task<IActionResult> Custody_Current_List(
+        public async Task<IActionResult> CustodyCurrentList(
             string? userId,
             string? generalNo,
             string? chassisNumber,
@@ -23,8 +23,8 @@ namespace SmartFoundation.Mvc.Controllers.VIC
                 return RedirectToAction("Index", "Login", new { logout = 4 });
 
 
-            ControllerName = nameof(VehiclesController);
-            PageName = "Custody_Current_List";
+            ControllerName = nameof(VehicleController);
+            PageName = "CustodyCurrentList";
 
             var spParameters = new object?[]
             {
@@ -566,7 +566,7 @@ namespace SmartFoundation.Mvc.Controllers.VIC
                 TableDS1 = approvedDsModel
             };
 
-            return View("Custody_Current_List", page);
+            return View("CustodyCurrentList", page);
         }
     }
 }

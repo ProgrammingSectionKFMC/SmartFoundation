@@ -9,9 +9,9 @@ using SmartFoundation.UI.ViewModels.SmartTable;
 using System.Data;
 using System.Reflection.Metadata.Ecma335;
 
-namespace SmartFoundation.Mvc.Controllers.VIC
+namespace SmartFoundation.Mvc.Controllers.Vehicle
 {
-    public partial class VehiclesController : Controller
+    public partial class VehicleController : Controller
     {
         
 
