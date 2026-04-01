@@ -24,12 +24,276 @@ namespace SmartFoundation.UI.ViewModels.SmartCharts
         ExecWatch,
         HealthKpiRoadmap,
         HealthKpiPulse,
-        HealthKpiAnnual
+        HealthKpiAnnual,
+        HousingCommandCenter
     }
 
     public enum ChartTone { Neutral, Success, Warning, Danger, Info }
     public enum ChartCardSize { Sm, Md, Lg }
     public enum ChartCardVariant { Soft, Outline, Solid }
+
+
+
+    #region HousingCommandCenter
+
+    public class HousingCommandCenterTopStat
+    {
+        public string Key { get; set; } = Guid.NewGuid().ToString("N");
+        public string Label { get; set; } = "";
+        public string Value { get; set; } = "";
+        public string? Subvalue { get; set; }
+        public string? Icon { get; set; }
+        public string? Emoji { get; set; }
+        public string? Tone { get; set; }
+        public string? Href { get; set; }
+    }
+
+    public class HousingCommandCenterKpi
+    {
+        public string Key { get; set; } = Guid.NewGuid().ToString("N");
+        public string Label { get; set; } = "";
+        public string Value { get; set; } = "";
+        public string? Unit { get; set; }
+        public string? Icon { get; set; }
+        public string? Emoji { get; set; }
+        public string? Tone { get; set; }
+        public string? Hint { get; set; }
+        public string? Delta { get; set; }
+        public bool? DeltaPositive { get; set; }
+        public string? Href { get; set; }
+    }
+
+    public class HousingCommandCenterPipelineStage
+    {
+        public string Key { get; set; } = Guid.NewGuid().ToString("N");
+        public string Label { get; set; } = "";
+        public decimal Count { get; set; } = 0m;
+        public decimal Percent { get; set; } = 0m;
+        public string? Tone { get; set; }
+        public string? Icon { get; set; }
+        public string? Note { get; set; }
+        public string? Href { get; set; }
+    }
+
+    public class HousingCommandCenterStatusItem
+    {
+        public string Key { get; set; } = Guid.NewGuid().ToString("N");
+        public string Label { get; set; } = "";
+        public decimal Value { get; set; } = 0m;
+        public string? Color { get; set; }
+        public string? Icon { get; set; }
+        public string? Note { get; set; }
+        public string? Href { get; set; }
+    }
+
+    public class HousingCommandCenterFinancialCard
+    {
+        public string Key { get; set; } = Guid.NewGuid().ToString("N");
+        public string Label { get; set; } = "";
+        public decimal Amount { get; set; } = 0m;
+        public string? AmountText { get; set; }
+        public string? Tone { get; set; }
+        public string? Icon { get; set; }
+        public string? Note { get; set; }
+        public string? Href { get; set; }
+    }
+
+    public class HousingCommandCenterAlert
+    {
+        public string Key { get; set; } = Guid.NewGuid().ToString("N");
+        public string Title { get; set; } = "";
+        public string? Subtitle { get; set; }
+        public string? Tone { get; set; }
+        public string? Icon { get; set; }
+        public string? Time { get; set; }
+        public string? Href { get; set; }
+    }
+
+    public class HousingCommandCenterTargetCompare
+    {
+        public string Key { get; set; } = Guid.NewGuid().ToString("N");
+        public string Label { get; set; } = "";
+        public decimal Actual { get; set; } = 0m;
+        public decimal Target { get; set; } = 0m;
+        public decimal Max { get; set; } = 100m;
+        public decimal? GoodFrom { get; set; }
+        public decimal? WarnFrom { get; set; }
+        public string? Unit { get; set; }
+        public string? Color { get; set; }
+        public string? Hint { get; set; }
+        public string? Href { get; set; }
+    }
+
+    public class HousingCommandCenterRankedBarItem
+    {
+        public string Key { get; set; } = Guid.NewGuid().ToString("N");
+        public string Label { get; set; } = "";
+        public decimal Value { get; set; } = 0m;
+        public string? ValueText { get; set; }
+        public string? Color { get; set; }
+        public string? Hint { get; set; }
+        public string? Href { get; set; }
+    }
+
+    public class HousingCommandCenterSplitCompareItem
+    {
+        public string Key { get; set; } = Guid.NewGuid().ToString("N");
+        public string Label { get; set; } = "";
+        public decimal FirstValue { get; set; } = 0m;
+        public string FirstLabel { get; set; } = "الأول";
+        public decimal SecondValue { get; set; } = 0m;
+        public string SecondLabel { get; set; } = "الثاني";
+        public string? Color1 { get; set; }
+        public string? Color2 { get; set; }
+        public string? Href { get; set; }
+    }
+
+    public class HousingCommandCenterCompositionSlice
+    {
+        public string Key { get; set; } = Guid.NewGuid().ToString("N");
+        public string Label { get; set; } = "";
+        public decimal Value { get; set; } = 0m;
+        public string? ValueText { get; set; }
+        public string? Color { get; set; }
+        public string? Hint { get; set; }
+        public string? Href { get; set; }
+    }
+
+    public class HousingCommandCenterRadialMetric
+    {
+        public string Key { get; set; } = Guid.NewGuid().ToString("N");
+        public string Label { get; set; } = "";
+        public decimal Value { get; set; } = 0m;
+        public decimal Max { get; set; } = 100m;
+        public string? ValueText { get; set; }
+        public string? Color { get; set; }
+        public string? Href { get; set; }
+    }
+
+    public class HousingCommandCenterTreemapNode
+    {
+        public string Key { get; set; } = Guid.NewGuid().ToString("N");
+        public string Label { get; set; } = "";
+        public decimal Value { get; set; } = 0m;
+        public string? Color { get; set; }
+        public string? Href { get; set; }
+        public List<HousingCommandCenterTreemapNode> Children { get; set; } = new();
+    }
+
+    public class HousingCommandCenterFacilityStat
+    {
+        public string Key { get; set; } = Guid.NewGuid().ToString("N");
+        public string Label { get; set; } = "";
+        public string Value { get; set; } = "";
+        public string? Icon { get; set; }
+        public string? Tone { get; set; }
+        public string? Href { get; set; }
+    }
+
+    public class HousingCommandCenterFacilityGroup
+    {
+        public string Key { get; set; } = Guid.NewGuid().ToString("N");
+        public string Title { get; set; } = "";
+        public string? Subtitle { get; set; }
+        public string? Badge { get; set; }
+        public string? Icon { get; set; }
+        public string? Tone { get; set; }
+        public string? Href { get; set; }
+        public List<HousingCommandCenterFacilityStat> Stats { get; set; } = new();
+    }
+
+    public class HousingCommandCenterPanel
+    {
+        public string Key { get; set; } = Guid.NewGuid().ToString("N");
+        public string Title { get; set; } = "";
+        public string? Subtitle { get; set; }
+        public string? Icon { get; set; }
+        public string? Tone { get; set; }
+        public bool Show { get; set; } = true;
+    }
+
+    public class HousingCommandCenterMetric
+    {
+        public string Key { get; set; } = Guid.NewGuid().ToString("N");
+        public string Title { get; set; } = "";
+        public string? ShortTitle { get; set; }
+        public string? Subtitle { get; set; }
+
+        public decimal? Target { get; set; }
+        public decimal? Actual { get; set; }
+        public decimal? CompletionPercent { get; set; }   // إذا فاضي نحسبه من Actual / Target
+
+        public string? Unit { get; set; }
+        public string? Icon { get; set; }
+        public string? Emoji { get; set; }
+
+        public string? Tone { get; set; }                 // info/success/warning/danger/neutral
+        public string? Color { get; set; }
+
+        public string? Hint { get; set; }
+        public string? Href { get; set; }
+        public int SortOrder { get; set; } = 0;
+    }
+
+    public class HousingCommandCenterDepartmentMetric
+    {
+        public string MetricKey { get; set; } = "";       // يربط على HousingCommandCenterMetric.Key
+
+        public decimal? Target { get; set; }
+        public decimal? Actual { get; set; }
+        public decimal? CompletionPercent { get; set; }   // إذا فاضي نحسبه من Actual / Target
+
+        public string? DisplayText { get; set; }          // مثال: "82%" أو "41/50"
+        public string? Note { get; set; }
+
+        public string? Tone { get; set; }
+        public string? Color { get; set; }
+        public string? Href { get; set; }
+    }
+
+    public class HousingCommandCenterDepartment
+    {
+        public string Key { get; set; } = Guid.NewGuid().ToString("N");
+        public string Name { get; set; } = "";
+        public string? ShortName { get; set; }
+
+        public string? Icon { get; set; }
+        public string? Emoji { get; set; }
+        public string? Tone { get; set; }
+        public string? Color { get; set; }
+
+        public decimal? OverallCompletionPercent { get; set; } // اختياري
+        public string? Hint { get; set; }
+        public string? Href { get; set; }
+
+        public int SortOrder { get; set; } = 0;
+
+        public List<HousingCommandCenterDepartmentMetric> Metrics { get; set; } = new();
+    }
+
+    public class HousingCommandCenterSummaryRow
+    {
+        public string Label { get; set; } = "الإجمالي";
+        public List<HousingCommandCenterDepartmentMetric> Metrics { get; set; } = new();
+    }
+
+    public class HousingCommandCenterBoardOptions
+    {
+        public string? TitleText { get; set; }
+        public string? SubtitleText { get; set; }
+
+        public bool ShowHeader { get; set; } = true;
+        public bool ShowSummaryRow { get; set; } = true;
+        public bool ShowDepartmentRanking { get; set; } = false;
+        public bool ShowMetricProgressBar { get; set; } = true;
+        public bool ShowMetricTargetActual { get; set; } = true;
+        public bool AutoCalculatePercentages { get; set; } = true;
+
+        public int PreferredCardsPerRow { get; set; } = 5;
+        public string PercentFormat { get; set; } = "0.0";
+        public string NumberFormat { get; set; } = "0.##";
+    }
+    #endregion
 
 
 
@@ -567,6 +831,93 @@ namespace SmartFoundation.UI.ViewModels.SmartCharts
         public bool HealthKpiAnimate { get; set; } = true;
         // داخل ChartCardConfig (نفس مكان HealthKpiSummary / HealthKpiMilestones)
         public List<HealthKpiIndicator>? HealthKpiIndicators { get; set; }
+
+
+        // -------- HousingCommandCenter --------
+
+        // ===== Display Control =====
+        public bool HousingCommandCenterCompact { get; set; } = true;
+        public bool HousingCommandCenterShowMiniCharts { get; set; } = true;
+
+        public bool HousingCommandCenterShowTopStats { get; set; } = true;
+        public bool HousingCommandCenterShowKpis { get; set; } = true;
+        public bool HousingCommandCenterShowRequests { get; set; } = true;
+        public bool HousingCommandCenterShowHousing { get; set; } = true;
+        public bool HousingCommandCenterShowFinancials { get; set; } = true;
+        public bool HousingCommandCenterShowAlerts { get; set; } = true;
+        public bool HousingCommandCenterShowBreakdowns { get; set; } = true;
+        public bool HousingCommandCenterShowTrends { get; set; } = true;
+
+        // ===== Header / Titles =====
+        public string? HousingCommandCenterTitleText { get; set; }
+        public string? HousingCommandCenterSubtitleText { get; set; }
+
+        public string? HousingCommandCenterRequestsPanelTitle { get; set; }
+        public string? HousingCommandCenterRequestsPanelSubtitle { get; set; }
+
+        public string? HousingCommandCenterHousingPanelTitle { get; set; }
+        public string? HousingCommandCenterHousingPanelSubtitle { get; set; }
+
+        public string? HousingCommandCenterFinancialPanelTitle { get; set; }
+        public string? HousingCommandCenterFinancialPanelSubtitle { get; set; }
+
+        public string? HousingCommandCenterAlertsPanelTitle { get; set; }
+        public string? HousingCommandCenterAlertsPanelSubtitle { get; set; }
+
+        public string? HousingCommandCenterBreakdownPanelTitle { get; set; }
+        public string? HousingCommandCenterBreakdownPanelSubtitle { get; set; }
+
+        public string? HousingCommandCenterTrendPanelTitle { get; set; }
+        public string? HousingCommandCenterTrendPanelSubtitle { get; set; }
+
+        // ===== KPI Special Text =====
+        public string? HousingCommandCenterOccupancyRateText { get; set; }
+        public string? HousingCommandCenterCollectionRateText { get; set; }
+        public string? HousingCommandCenterAvgClosureTimeText { get; set; }
+
+        // ===== Core Data =====
+        public List<HousingCommandCenterTopStat> HousingCommandCenterTopStats { get; set; } = new();
+        public List<HousingCommandCenterKpi> HousingCommandCenterKpis { get; set; } = new();
+        public List<HousingCommandCenterAlert> HousingCommandCenterAlerts { get; set; } = new();
+
+        // ===== Specialized Widgets =====
+        public List<HousingCommandCenterPipelineStage> HousingCommandCenterRequestPipeline { get; set; } = new();
+        public List<HousingCommandCenterStatusItem> HousingCommandCenterHousingStatusItems { get; set; } = new();
+        public List<HousingCommandCenterFinancialCard> HousingCommandCenterFinancialCards { get; set; } = new();
+        public List<HousingCommandCenterTargetCompare> HousingCommandCenterTargetCompares { get; set; } = new();
+
+        public List<HousingCommandCenterRankedBarItem> HousingCommandCenterCategoryBars { get; set; } = new();
+        public List<HousingCommandCenterRankedBarItem> HousingCommandCenterDistrictBars { get; set; } = new();
+
+        public List<HousingCommandCenterSplitCompareItem> HousingCommandCenterWaitingVsResidents { get; set; } = new();
+
+        public List<HousingCommandCenterCompositionSlice> HousingCommandCenterRequestMix { get; set; } = new();
+        public List<HousingCommandCenterCompositionSlice> HousingCommandCenterAreaMix { get; set; } = new();
+        public List<HousingCommandCenterCompositionSlice> HousingCommandCenterRoomMix { get; set; } = new();
+
+        public List<HousingCommandCenterRadialMetric> HousingCommandCenterUtilities { get; set; } = new();
+
+        public HousingCommandCenterTreemapNode? HousingCommandCenterClaimsTreemap { get; set; }
+
+        public List<HousingCommandCenterFacilityGroup> HousingCommandCenterFacilityGroups { get; set; } = new();
+
+        // ===== Formatting =====
+        public string? HousingCommandCenterNumberFormat { get; set; } = "0";
+        public string? HousingCommandCenterPercentFormat { get; set; } = "0.0";
+        public string? HousingCommandCenterMoneyFormat { get; set; } = "0";
+        public string? HousingCommandCenterCurrencySuffix { get; set; } = "ر.س";
+
+        // ===== Panels Config =====
+        public List<HousingCommandCenterPanel> HousingCommandCenterPanels { get; set; } = new();
+
+        // ===== HousingCommandCenter V2 / Matrix Dashboard =====
+        public HousingCommandCenterBoardOptions? HousingCommandCenterBoardOptions { get; set; }
+
+        public List<HousingCommandCenterMetric> HousingCommandCenterMetrics { get; set; } = new();
+        public List<HousingCommandCenterDepartment> HousingCommandCenterDepartments { get; set; } = new();
+
+        public HousingCommandCenterSummaryRow? HousingCommandCenterSummaryRow { get; set; }
+
 
 
 
