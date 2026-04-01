@@ -171,6 +171,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             bool isbuildingDetailsID = c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase);
                             bool isLastActionID = c.ColumnName.Equals("LastActionID", StringComparison.OrdinalIgnoreCase);
                             bool isWaitingOrderTypeName = c.ColumnName.Equals("WaitingOrderTypeName", StringComparison.OrdinalIgnoreCase);
+                            bool ismeterscount = c.ColumnName.Equals("meterscount", StringComparison.OrdinalIgnoreCase);
 
 
 
@@ -183,7 +184,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID  || isAssignPeriodID || isbuildingDetailsID || isLastActionID || isLastActionTypeID || isWaitingOrderTypeName)
+                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID  || isAssignPeriodID || isbuildingDetailsID || isLastActionID || isLastActionTypeID || isWaitingOrderTypeName || ismeterscount)
                             });
                         }
 
@@ -350,7 +351,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowExportPdf = true,
                     ShowEdit = canHOUSINGESRESIDENTSCUSTDY,  // Button always visible
                     ShowEdit1 = canHOUSINGESRESIDENTS,  // Button always visible
-                    ShowPrint1 = true,
+                    ShowPrint1 = false,
                     ShowBulkDelete = false,
                     
                     Print1 = new TableAction
@@ -392,26 +393,26 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             CustomActions = new List<TableAction>
                             {
                             //  Excel "
-                            new TableAction
-                            {
-                                Label = "تصدير Excel",
-                                Icon = "fa-regular fa-file-excel",
-                                Color = "info",
-                                Placement = TableActionPlacement.ActionsMenu,
-                                RequireSelection = false,
-                                OnClickJs = "table.exportData('excel');"
-                            },
+                            //new TableAction
+                            //{
+                            //    Label = "تصدير Excel",
+                            //    Icon = "fa-regular fa-file-excel",
+                            //    Color = "info",
+                            //    Placement = TableActionPlacement.ActionsMenu,
+                            //    RequireSelection = false,
+                            //    OnClickJs = "table.exportData('excel');"
+                            //},
 
-                            //  PDF "
-                            new TableAction
-                            {
-                                Label = "تصدير PDF",
-                                Icon = "fa-regular fa-file-pdf",
-                                Color = "danger",
-                                Placement = TableActionPlacement.ActionsMenu,
-                                RequireSelection = false,
-                                OnClickJs = "table.exportData('pdf');"
-                            },
+                            ////  PDF "
+                            //new TableAction
+                            //{
+                            //    Label = "تصدير PDF",
+                            //    Icon = "fa-regular fa-file-pdf",
+                            //    Color = "danger",
+                            //    Placement = TableActionPlacement.ActionsMenu,
+                            //    RequireSelection = false,
+                            //    OnClickJs = "table.exportData('pdf');"
+                            //},
 
                              //  details "       
                             new TableAction
