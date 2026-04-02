@@ -4,6 +4,7 @@ using SmartFoundation.UI.ViewModels.SmartForm;
 using SmartFoundation.UI.ViewModels.SmartPage;
 using SmartFoundation.UI.ViewModels.SmartTable;
 using System.Data;
+using System.Data.Common;
 using System.Linq;
 using System.Text.Json;
 
@@ -61,19 +62,22 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             }
 
             string? AssignPeriodID = null;  // تعريف المتغير هنا
-
-            if (dt3 != null && dt3.Rows.Count > 0)
+            if (ready == true)
+            {
+            
+                if (dt3 != null && dt3.Rows.Count > 0 && ready == true)
             {
                 var value = dt3.Rows[0]["AssignPeriodID"];
                 AssignPeriodID = dt3.Rows[0]["AssignPeriodID"].ToString();
                 var AssignPeriodStartdate = dt3.Rows[0]["AssignPeriodStartdate"];
                 var FullName = dt3.Rows[0]["FullName"];
+                var waitingClassName_A = dt3.Rows[0]["waitingClassName_A"];
 
-                TempData["AssignPeriodAvaliable"] = $"محضر التخصيص منشئ بواسطة {FullName} نشط منذ {AssignPeriodStartdate} ";
+                TempData["AssignPeriodAvaliable"] = $"محضر التخصيص رقم {value} مخصص لـ {waitingClassName_A} منشئ بواسطة {FullName} نشط منذ {AssignPeriodStartdate} ";
             }
             else
             {
-                if(dt3.Rows.Count > 0)
+                if(dt3 != null && dt3.Rows.Count > 0)
                 {
                     AssignPeriodID = dt3.Rows[0]["AssignPeriodID"].ToString();
                 }
@@ -81,11 +85,17 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 {
                     AssignPeriodID = "0";
                 }
-                TempData["NoAssignPeriod"] = $"لا يوجد محضر تخصيص نشط {AssignPeriodID}";
+                TempData["NoAssignPeriod"] = $"لا يوجد محضر تخصيص نشط";
+            }
             }
 
+            bool AssignPeriodActive = false;
 
-
+            if(ready == true && Convert.ToInt32(AssignPeriodID) > 0)
+            {
+                AssignPeriodActive = true; 
+            }
+            
 
 
             string rowIdField = "";
@@ -123,7 +133,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                 //// ---------------------- WaitingListOptions ----------------------
                 result = await _CrudController.GetDDLValues(
-                    "waitingClassName_A", "waitingClassID", "2", PageName, usersId, IdaraId, HostName
+                    "waitingClassName_A", "waitingClassID", "2", PageName, usersId, IdaraId, HostName,null
                ) as JsonResult;
 
 
@@ -134,7 +144,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                 //// ---------------------- HousesType ----------------------
                 result = await _CrudController.GetDDLValues(
-                    "buildingDetailsNo", "buildingDetailsID", "4", PageName, usersId, IdaraId, HostName
+                    "buildingDetailsNo", "buildingDetailsID", "4", PageName, usersId, IdaraId, HostName,null
                ) as JsonResult;
 
 
@@ -152,6 +162,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             {
                                  Fields = new List<FieldConfig>
                                 {
+
                                     new FieldConfig
                                     {
                                         SectionTitle = "اختيار فئة قائمة الانتظار",
@@ -379,6 +390,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                
                 new FieldConfig { Name = "p01", Label = "وصف محضر التخصيص", Type = "textarea", ColCss = "6", Required = true },
                 new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "6",Value =AssignPeriodID },
+                new FieldConfig { Name = "p21", Label = "WaitingClassID_FK", Type = "hidden", ColCss = "6",Value =waitingClassID_ },
 
 
             };
@@ -408,18 +420,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 // hidden p01 actually posted to SP
                
                 new FieldConfig { Name = "p01", Label = "ملاحظات اغلاق محضر التخصيص", Type = "textarea", ColCss = "6", Required = true },
-                 new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "6",Value =AssignPeriodID },
-                new FieldConfig
-                    {
-                        SectionTitle="رفع صورة",
-                        Name="Emg",
-                        Label="اعتماد محضر التخصيص",
-                        Type="hidden",
-                        //Type="file",
-                        Required=true,
-                        Icon="fa-solid fa-check",
-                        ColCss="col-span-12 md:col-span-3"
-                    },
+                new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "6",Value =AssignPeriodID },
+                new FieldConfig { Name = "p21", Label = "WaitingClassID_FK", Type = "hidden", ColCss = "6",Value =waitingClassID_ },
 
             };
 
@@ -608,16 +610,22 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
 
+            int dt3rowcount = 0;
 
-
+            if (dt3 != null)
+            {
+                dt3rowcount = dt3.Rows.Count;
+            }
+            
 
 
             // then create dsModel (snippet shows toolbar parts that use the dynamic lists)
             var dsModel = new SmartTableDsModel
             {
 
-                Columns = dynamicColumns,
-                Rows = rowsList,
+                Columns = AssignPeriodActive ? dynamicColumns : null,
+                Rows = AssignPeriodActive ? rowsList : null,
+                //Rows = rowsList,
                 RowIdField = rowIdField,
                 PageSize = 10,
                 PageSizes = new List<int> { 10, 25, 50, 100 },
@@ -638,8 +646,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowDelete = canASSIGNHOUSE && Convert.ToInt32(AssignPeriodID) != 0,
                     ShowDelete1 = canCANCLEASSIGNHOUSE && Convert.ToInt32(AssignPeriodID) != 0,
                     ShowEdit = canUPDATEASSIGNHOUSE && Convert.ToInt32(AssignPeriodID) != 0,
-                    ShowAdd = canOPENASSIGNPERIOD && dt3.Rows.Count == 0,
-                    ShowAdd1 = canCLOSEASSIGNPERIOD && dt3.Rows.Count != 0,
+                    ShowAdd = canOPENASSIGNPERIOD && dt3rowcount == 0,
+                    ShowAdd1 = canCLOSEASSIGNPERIOD && dt3rowcount != 0,
                     ShowPrint1 = false,
                     ShowPrint = false,
                     ShowBulkDelete = false,

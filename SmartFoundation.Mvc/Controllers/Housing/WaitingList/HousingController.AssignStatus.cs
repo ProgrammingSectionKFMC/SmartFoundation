@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
 using SmartFoundation.MVC.Reports;
 using SmartFoundation.UI.ViewModels.SmartForm;
 using SmartFoundation.UI.ViewModels.SmartPage;
@@ -12,7 +14,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 {
     public partial class HousingController : Controller
     {
-        public async Task<IActionResult> AssignStatus(int pdf = 0)
+        public async Task<IActionResult> AssignStatus(int pdf = 0, int? rowId = null)
         {
 
             if (!InitPageContext(out IActionResult? redirectResult))
@@ -23,13 +25,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 return RedirectToAction("Index", "Login", new { logout = 4 });
             }
 
-            string? AssignPeriodOptionsID_ = Request.Query["U"].FirstOrDefault();
-
-            AssignPeriodOptionsID_ = string.IsNullOrWhiteSpace(AssignPeriodOptionsID_) ? null : AssignPeriodOptionsID_.Trim();
-
-            bool ready = false;
-
-            ready = !string.IsNullOrWhiteSpace(AssignPeriodOptionsID_);
+            string? AssignPeriodOptionsID_ = Request.Query["U"].FirstOrDefault()?.Trim();
+            bool ready = !string.IsNullOrWhiteSpace(AssignPeriodOptionsID_);
 
 
 
@@ -106,17 +103,17 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     });
             }
 
-            if (dt1 != null && dt1.Rows.Count > 0)
-            {
-                if (count > 0)
-                {
-                    TempData["countBiggerThanzero"] = $"متبقي لديك عدد {count} مستفيد في هذا المحضر لم تقم بإنهاء اجراءاتهم لحد الان !! ";
-                }
-                else if (count == 0)  // ✅ تصحيح: == بدلاً من =
-                {
-                    TempData["countEqualzero"] = "تم انهاء اجراءات جميع المستفيدين بنجاح قم باغلاق المحضر الان";
-                }
-            }
+            //if (dt1 != null && dt1.Rows.Count > 0)
+            //{
+            //    if (count > 0)
+            //    {
+            //        TempData["countBiggerThanzero"] = $"متبقي لديك عدد {count} مستفيد في هذا المحضر لم تقم بإنهاء اجراءاتهم لحد الان !! ";
+            //    }
+            //    else if (count == 0 && AssignPeriodOptionsID_ != null)  // ✅ تصحيح: == بدلاً من =
+            //    {
+            //        TempData["countEqualzero"] = "تم انهاء اجراءات جميع المستفيدين بنجاح قم باغلاق المحضر الان";
+            //    }
+            //}
 
 
 
@@ -153,7 +150,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                 //// ---------------------- AssignPeriodType ----------------------
                 result = await _CrudController.GetDDLValues(
-                    "AssignPeriodDescrption", "AssignPeriodID", "2", PageName, usersId, IdaraId, HostName
+                    "AssignPeriodDescrptionText", "AssignPeriodID", "2", PageName, usersId, IdaraId, HostName
                ) as JsonResult;
 
 
@@ -266,6 +263,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ["FullName_A"] = "الاسم",
                             ["buildingActionTypeResidentAlias"] = "الحالة",
                             ["buildingDetailsNo"] = "رقم المنزل",
+                            ["rankNameA"] = "الرتبة",
                             ["WaitingListOrder"] = "ترتيب الانتظار حسب الفئة"
                         };
 
@@ -293,6 +291,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             bool isbuildingDetailsID = c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase);
                             bool isLastActionID = c.ColumnName.Equals("LastActionID", StringComparison.OrdinalIgnoreCase);
                             bool isCount_ = c.ColumnName.Equals("Count_", StringComparison.OrdinalIgnoreCase);
+                            bool isrankNameA = c.ColumnName.Equals("rankNameA", StringComparison.OrdinalIgnoreCase);
+                            bool ismilitaryUnitName_A = c.ColumnName.Equals("militaryUnitName_A", StringComparison.OrdinalIgnoreCase);
                             
                             
 
@@ -305,7 +305,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID || isLastActionTypeID  || isbuildingDetailsID || isLastActionID || isAssignPeriodID )
+                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID || isLastActionTypeID  || isbuildingDetailsID || isLastActionID || isAssignPeriodID || isCount_ || ismilitaryUnitName_A)
                             });
                         }
 
@@ -503,7 +503,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowAdd1 = canENDASSIGNPERIOD,
                     EnableAdd1 = (count == 0),
                     ShowEdit = canASSIGNSTATUS,
-                    ShowPrint1 = false,
+                    ShowPrint1 = true,
                     ShowPrint = false,
                     ShowBulkDelete = false,
                     ShowExportPdf = false,
@@ -536,8 +536,24 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
                             }
                         },
+                        Guards = new TableActionGuards
+                        {
+                            AppliesTo = "any",
+                            DisableWhenAny = new List<TableActionRule>
+                            {
 
-                       
+                                  new TableActionRule
+                                {
+                                    Field = "Count_",
+                                    Op = "neq",
+                                    Value = "0",
+                                    Message = "لايمكن انهاء معالجة محضر التخصيص لوجود مستفيدين لم يتم معالجة طلباتهم",
+                                    Priority = 3
+                                }
+
+                            }
+
+                        },
                     },
 
                    
@@ -617,17 +633,60 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                     Print1 = new TableAction
                     {
-                        Label = "طباعة خطاب",
+                        Label = "طباعة تقرير",
                         Icon = "fa fa-print",
-                        Color = "primary",
-                        //Placement = TableActionPlacement.ActionsMenu,
-                        RequireSelection = false,
+                        Color = "info",
                         OnClickJs = @"
-                                sfPrintWithBusy(table, {
-                                  pdf: 2,
-                                  busy: { title: 'طباعة خطاب تجريبي'}
-                                });
-                                "
+    const selectedRows = table.getSelectedRows();
+    if (selectedRows.length === 1) {
+        const row = selectedRows[0];
+        const rowId = row.p01 || row.ActionID;
+        const assignPeriodId = row.p20 || row.AssignPeriodID;
+
+        if (!rowId) {
+            alert('خطأ: لا يمكن العثور على معرف السجل');
+            return;
+        }
+
+        if (!assignPeriodId) {
+            alert('خطأ: لا يمكن العثور على رقم محضر التخصيص');
+            return;
+        }
+
+        sfPrintWithBusy(table, {
+            pdf: 2,
+            extraParams: {
+                rowId: rowId,
+                U: assignPeriodId
+            },
+            busy: { title: 'طباعة اشعار مراجعة' }
+        });
+    }
+",
+
+
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1,
+                        Guards = new TableActionGuards
+                        {
+                            AppliesTo = "any",
+                            DisableWhenAny = new List<TableActionRule>
+                           {
+
+                                new TableActionRule
+                              {
+                                  Field = "LastActionTypeID",
+                                  Op = "notin",
+                                  Value = "38,40",
+                                  Message = "لايمكن طباعة الاشعار لاتخاذ اجراء مسبق لهذا المستفيد",
+                                  Priority = 3
+                              },
+
+
+
+                           }
+                        }
 
                     },
 
@@ -779,33 +838,186 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             if (pdf == 2)
             {
+                if (!rowId.HasValue)
+                {
+                    return Content("خطأ: لم يتم استلام معرف السجل");
+                }
+
+                if (dt1 == null || dt1.Rows.Count == 0)
+                {
+                    return Content($"لا توجد بيانات للطباعة. rowId = {rowId}, U = {AssignPeriodOptionsID_}");
+                }
+
+                var selectedRow = dt1.AsEnumerable()
+                    .FirstOrDefault(r => Convert.ToInt32(r["ActionID"]) == rowId.Value);
+
+                if (selectedRow == null)
+                {
+                    return Content($"لم يتم العثور على السجل المطلوب. rowId = {rowId}, dt1 rows = {dt1.Rows.Count}");
+                }
+
+                string residentName = selectedRow["FullName_A"]?.ToString() ?? "";
+                string nationalId = selectedRow["NationalID"]?.ToString() ?? "";
+                string generalNo = selectedRow["GeneralNo"]?.ToString() ?? "";
+                string buildingNo = selectedRow["buildingDetailsNo"]?.ToString() ?? "";
+                string decisionNo = selectedRow["ActionDecisionNo"]?.ToString() ?? "";
+                string actionNote = selectedRow["ActionNote"]?.ToString() ?? "";
+                string waitingClass = selectedRow["WaitingClassName"]?.ToString() ?? "";
+                string orderTypeName = selectedRow["WaitingOrderTypeName"]?.ToString() ?? "";
+                string rankNameA = selectedRow["rankNameA"]?.ToString() ?? "";
+                string militaryUnitName_A = selectedRow["militaryUnitName_A"]?.ToString() ?? "";
+
+                string decisionDateStr = "";
+                if (selectedRow["ActionDecisionDate"] != DBNull.Value)
+                {
+                    decisionDateStr = Convert.ToDateTime(selectedRow["ActionDecisionDate"]).ToString("yyyy/MM/dd");
+                }
+
+                //selectedRow["residentName"]?.ToString() ?? "";
+                // Extract data from selected row
+
+                //string decisionNo = selectedRow.GetValueOrDefault("p23")?.ToString() ?? "";
+                //string extendReason = selectedRow.GetValueOrDefault("p32")?.ToString() ?? "";
+
+                // Parse dates
+                //DateTime? decisionDate = selectedRow.GetValueOrDefault("p22") as DateTime?;
+                //DateTime? extendFromDate = selectedRow.GetValueOrDefault("p24") as DateTime?;
+                //DateTime? extendToDate = selectedRow.GetValueOrDefault("p25") as DateTime?;
+
+                //string decisionDateStr = decisionDate?.ToString("yyyy/MM/dd") ?? "";
+                //string extendFromDateStr = extendFromDate?.ToString("yyyy/MM/dd") ?? "";
+                //string extendToDateStr = extendToDate?.ToString("yyyy/MM/dd") ?? "";
+
                 var logo = Path.Combine(_env.WebRootPath, "img", "ppng.png");
 
                 var header = new Dictionary<string, string>
                 {
-                    ["no"] = AssignPeriodOptionsID_ ?? "",
+                    ["no"] = rowId?.ToString() ?? "",
                     ["date"] = DateTime.Now.ToString("yyyy/MM/dd"),
-                    ["attach"] = "بيان بأسماء المستفيدين المخصص لهم",
-                    ["subject"] = "محضر تخصيص مساكن",
+                    ["attach"] = "",
+                    ["subject"] = "اشعار مراجعة قسم الاسكان",
 
                     ["right1"] = "المملكة العربية السعودية",
                     ["right2"] = "وزارة الدفاع",
                     ["right3"] = "القوات البرية الملكية السعودية",
-                    ["right4"] = "الادارة الهندسية للتشغيل والصيانة",
+                    ["right4"] = "الإدارة الهندسية للتشغيل والصيانة",
                     ["right5"] = "إدارة مدينة الملك فيصل العسكرية",
 
                     ["bismillah"] = "بسم الله الرحمن الرحيم",
                     ["midCaption"] = ""
                 };
 
+                // =========================
+                // جدول 1: بيانات أساسية
+                // =========================
+                var personInfoTable = ReportTableFactory.CreateOfficialTable(new List<float> { 2, 2, 4 });
+
+                personInfoTable.HeaderRows.Add(new LetterTableRow
+                {
+                    Cells = new List<LetterTableCell>
+        {
+            ReportTableFactory.HeaderCell("الرتبة"),
+            ReportTableFactory.HeaderCell("الرقم العام"),
+            ReportTableFactory.HeaderCell("اسم المستفيد")
+        }
+                });
+
+                personInfoTable.Rows.Add(new LetterTableRow
+                {
+                    Cells = new List<LetterTableCell>
+        {
+            ReportTableFactory.ValueCell(rankNameA),
+            ReportTableFactory.ValueCell(generalNo),
+            ReportTableFactory.ValueCell(residentName)
+        }
+                });
+
+                // =========================
+                // جدول 2: صف مدموج ColumnSpan
+                // =========================
+                var mergedTable = ReportTableFactory.CreateOfficialTable(new List<float> { 2, 6 });
+
+                mergedTable.Rows.Add(new LetterTableRow
+                {
+                    Cells = new List<LetterTableCell>
+        {
+            new LetterTableCell
+            {
+                Text = "الجهة",
+                Bold = true,
+                Align = TextAlign.Center,
+                BackgroundColor = "#F3F3F3",
+                FontSize = 11
+            },
+            new LetterTableCell
+            {
+                Text = "إدارة مدينة الملك فيصل العسكرية",
+                Align = TextAlign.Center,
+                BackgroundColor = "#FFFFFF",
+                FontSize = 11
+            }
+        }
+                });
+
+                // =========================
+                // جدول 3: أكثر من صف
+                // =========================
+                var extendTable = ReportTableFactory.CreateOfficialTable(new List<float> { 2, 2, 2, 2 });
+
+                extendTable.Rows.Add(new LetterTableRow
+                {
+                    Cells = new List<LetterTableCell>
+        {
+            ReportTableFactory.HeaderCell("رقم القرار"),
+            ReportTableFactory.ValueCell(decisionNo),
+
+            ReportTableFactory.HeaderCell("تاريخ القرار"),
+            ReportTableFactory.ValueCell(decisionDateStr)
+        }
+                });
+
+                extendTable.Rows.Add(new LetterTableRow
+                {
+                    Cells = new List<LetterTableCell>
+        {
+            ReportTableFactory.HeaderCell("من تاريخ"),
+            ReportTableFactory.ValueCell(decisionNo),
+
+            ReportTableFactory.HeaderCell("إلى تاريخ"),
+            ReportTableFactory.ValueCell(decisionDateStr)
+        }
+                });
+
+                extendTable.Rows.Add(new LetterTableRow
+                {
+                    Cells = new List<LetterTableCell>
+        {
+            new LetterTableCell
+            {
+                Text = "سبب الإمهال",
+                Bold = true,
+                Align = TextAlign.Center,
+                BackgroundColor = "#F3F3F3",
+                FontSize = 11,
+                ColumnSpan = 1
+            },
+            new LetterTableCell
+            {
+                Text = string.IsNullOrWhiteSpace(decisionDateStr) ? "لا يوجد" : decisionDateStr,
+                Align = TextAlign.Right,
+                BackgroundColor = "#FFFFFF",
+                FontSize = 11,
+                ColumnSpan = 3
+            }
+        }
+                });
+
                 var report = new ReportResult
                 {
                     ReportId = "OfficialLetter01",
-                    Title = "خطاب رسمي",
+                    Title = "خطاب رسمي تجريبي",
                     Kind = ReportKind.Letter,
-
-                    // هنا اختَر الاتجاه اللي تبيه للخطاب
-                    Orientation = ReportOrientation.Portrait, // أو Landscape
+                    Orientation = ReportOrientation.Portrait,
 
                     HeaderType = ReportHeaderType.LetterOfficial,
                     LogoPath = logo,
@@ -813,52 +1025,131 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                     HeaderFields = header,
 
+                    //LetterTitle = "نموذج تجريبي لاختبار خصائص الخطابات",
+                    //LetterTitleFontSize = 14,
+
                     LetterBlocks = new List<LetterBlock>
         {
-            new LetterBlock
-            {
-                Text = "سعادة قائد إدارة مدينة الملك فيصل العسكرية حفظه الله",
-                FontSize = 13,
-                Bold = true,
-                PaddingBottom = 12,
-                PaddingTop = 30,
-                Align = TextAlign.Center
-            },
+            // Spacer
+            LetterBlockFactory.Spacer(6),
 
-            new LetterBlock
-            {
-                Text = "السلام عليكم ورحمة الله وبركاته،",
-                FontSize = 12,
-                PaddingBottom = 10,
-                PaddingTop = 15,
-                Align = TextAlign.Right
-            },
+            // Table 1
+            LetterBlockFactory.TableBlock(
+                personInfoTable,
+                paddingTop: 8,
+                paddingBottom: 8,
+                paddingRight: 0,
+                paddingLeft: 0),
 
-            new LetterBlock
-            {
-                Text = "نفيد سعادتكم بأنه بناءً على توجيهاتكم الكريمة ...",
-                FontSize = 12,
-                Align = TextAlign.Justify,
-                LineHeight = 1.8f,
-                PaddingBottom = 16
-            },
+            // Table 2
+            //LetterBlockFactory.TableBlock(
+            //    mergedTable,
+            //    paddingTop: 0,
+            //    paddingBottom: 8),
 
-            new LetterBlock
-            {
-                Text = "وتفضلوا بقبول فائق الاحترام والتقدير،",
-                FontSize = 12,
-                PaddingTop = 20,
-                Align = TextAlign.Right
-            },
+            // Table 3
+            //LetterBlockFactory.TableBlock(
+            //    extendTable,
+            //    paddingTop: 0,
+            //    paddingBottom: 12),
 
-            new LetterBlock
-            {
-                Text = "مدير الإدارة الهندسية\nالاسم / ..................\nالتوقيع / ...............",
-                FontSize = 11,
-                Align = TextAlign.Left,
-                PaddingTop = 30,
-                PaddingLeft = 120
-            }
+            // Divider
+           // LetterBlockFactory.Divider(paddingTop: 4, paddingBottom: 10),
+
+            // Text Center + Bold
+            LetterBlockFactory.TextBlock(
+                "سعادة قائد "+militaryUnitName_A,
+                fontSize: 13,
+                bold: true,
+                align: TextAlign.Center,
+                paddingTop: 8,
+                paddingBottom: 12),
+
+            // Text Right
+            LetterBlockFactory.TextBlock(
+                "السلام عليكم ورحمة الله وبركاته",
+                fontSize: 12,
+                bold: false,
+                align: TextAlign.Right,
+                paddingTop: 4,
+                paddingBottom: 10),
+
+            // Text Justify + LineHeight
+            LetterBlockFactory.TextBlock(
+                 $"بناء على نظام الاسكان في المدن العسكرية والمعتمد من مقام صاحب السمو الملكي ولي العهد ورئيس مجلس الوزراء وزير الدفاع رقم (12100/1/1) وتاريخ 1440/05/15 هـ\n" +
+                  $"\n" +
+                 $"يقرر مايلي :\n"+
+                  $"\n" +
+                 $" أ. إسكان الموضح هويته بعاليه بالسكن رقم {buildingNo} بحي {buildingNo} وحسم عائدات السكن اعتبارا من تاريخ السكن.\n"+
+                  $"\n" +
+                 $"ب. في حال عدم استلام الوحدة السكنية خلال شهر من تاريخه سيتم تسليمه لمن يليه في قائمة الانتظار.\n"+
+                  $"\n" +
+                 $"ج. على قائد الوحدة تكليف المذكور بمراجعة قسم الاسكان او الرد بخطاب في حال كان مكلف بمهمة خارجية او ابتعاث للدراسة. \n"+
+                 $"\n" +
+                $"والسلام عليكم " ,
+
+                fontSize: 12,
+                bold: false,
+                align: TextAlign.Justify,
+                paddingTop: 0,
+                paddingBottom: 12,
+                paddingRight: 0,
+                paddingLeft: 0,
+                lineHeight: 1.8f),
+
+            // Text Underline
+            //LetterBlockFactory.TextBlock(
+            //    "ملاحظات:",
+            //    fontSize: 12,
+            //    bold: true,
+            //    underline: true,
+            //    align: TextAlign.Right,
+            //    paddingTop: 6,
+            //    paddingBottom: 6),
+
+            // Text with left/right padding
+            //LetterBlockFactory.TextBlock(
+            //    $"سبب الإمهال المسجل بالنظام: {(string.IsNullOrWhiteSpace(residentName) ? "لا يوجد" : residentName)}",
+            //    fontSize: 11,
+            //    align: TextAlign.Right,
+            //    paddingTop: 0,
+            //    paddingBottom: 12,
+            //    paddingRight: 10,
+            //    paddingLeft: 10,
+            //    lineHeight: 1.6f),
+
+            // Spacer
+            LetterBlockFactory.Spacer(8),
+
+            // Divider
+            //LetterBlockFactory.Divider(paddingTop: 4, paddingBottom: 8),
+
+            // Closing
+            //LetterBlockFactory.TextBlock(
+            //    "وتفضلوا بقبول فائق الاحترام والتقدير،",
+            //    fontSize: 12,
+            //    align: TextAlign.Right,
+            //    paddingTop: 10,
+            //    paddingBottom: 20),
+
+            // Signature block
+            LetterBlockFactory.TextBlock(
+                "العميد ركن \n\n\n ",
+                fontSize: 13,
+                align: TextAlign.Left,
+                paddingTop: 10,
+                bold:true,
+                paddingLeft: 70,
+                lineHeight: 2.7f),
+
+            LetterBlockFactory.TextBlock(
+                " بندر أحمد راشد الأحمري",
+                fontSize: 13,
+                align: TextAlign.Left,
+                paddingTop: 10,
+                bold:true,
+                paddingLeft: 40,
+                lineHeight: 2.7f)
         }
                 };
 
@@ -866,7 +1157,6 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 Response.Headers["Content-Disposition"] = "inline; filename=Letter.pdf";
                 return File(pdfBytes, "application/pdf");
             }
-
 
 
             return View("WaitingList/AssignStatus", vm);

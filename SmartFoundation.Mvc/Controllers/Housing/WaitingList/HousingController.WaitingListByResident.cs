@@ -490,7 +490,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             bool isWaitingClassID = c.ColumnName.Equals("WaitingClassID", StringComparison.OrdinalIgnoreCase);
                             bool isWaitingOrderTypeID = c.ColumnName.Equals("WaitingOrderTypeID", StringComparison.OrdinalIgnoreCase);
                             bool iswaitingClassSequence = c.ColumnName.Equals("waitingClassSequence", StringComparison.OrdinalIgnoreCase);
-                            bool isresidentInfoID_FK = c.ColumnName.Equals("residentInfoID_FK", StringComparison.OrdinalIgnoreCase);
+                            bool isresidentInfoID = c.ColumnName.Equals("residentInfoID", StringComparison.OrdinalIgnoreCase);
                             bool isActionID = c.ColumnName.Equals("ActionID", StringComparison.OrdinalIgnoreCase);
                             bool isNationalID = c.ColumnName.Equals("NationalID", StringComparison.OrdinalIgnoreCase);
                             bool isWaitingClassName = c.ColumnName.Equals("WaitingClassName", StringComparison.OrdinalIgnoreCase);
@@ -507,7 +507,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 Type = colType,
                                 Sortable = true
                                  ,
-                                Visible = !(isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence || isresidentInfoID_FK || isActionID || isNationalID || isWaitingClassName || isWaitingOrderTypeName || isFullName_A)
+                                Visible = !(isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence  || isActionID || isNationalID || isWaitingClassName || isWaitingOrderTypeName || isFullName_A || isresidentInfoID || isLastActionTypeID)
                             });
                         }
 
