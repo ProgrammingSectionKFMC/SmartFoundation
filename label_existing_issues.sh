@@ -82,7 +82,7 @@ echo ""
 echo "--- Labeling issues ---"
 
 # Get all issues as JSON
-ISSUES=$(gh issue list --repo "$REPO" --state open --limit 500 --json number,title,body)
+ISSUES=$(gh issue list --repo "$REPO" --state open --limit 1000 --json number,title,body)
 
 echo "$ISSUES" | jq -c '.[]' | while read -r issue; do
   NUMBER=$(echo "$issue" | jq -r '.number')
@@ -108,27 +108,12 @@ echo "$ISSUES" | jq -c '.[]' | while read -r issue; do
   fi
 
   # Category label from body
-  if echo "$BODY" | grep -qi '\*\*Category:\*\* DB-Structure'; then
-    LABELS_TO_ADD+=("DB-Structure")
-  fi
-  if echo "$BODY" | grep -qi '\*\*Category:\*\* DB-SP'; then
-    LABELS_TO_ADD+=("DB-SP")
-  fi
-  if echo "$BODY" | grep -qi '\*\*Category:\*\* DB-DL-View'; then
-    LABELS_TO_ADD+=("DB-DL-View")
-  fi
-  if echo "$BODY" | grep -qi '\*\*Category:\*\* UI'; then
-    LABELS_TO_ADD+=("UI")
-  fi
-  if echo "$BODY" | grep -qi '\*\*Category:\*\* Test'; then
-    LABELS_TO_ADD+=("Test")
-  fi
-  if echo "$BODY" | grep -qi '\*\*Category:\*\* Docs'; then
-    LABELS_TO_ADD+=("Docs")
-  fi
-  if echo "$BODY" | grep -qi '\*\*Category:\*\* Setup'; then
-    LABELS_TO_ADD+=("Setup")
-  fi
+  CATEGORIES=("DB-Structure" "DB-SP" "DB-DL-View" "UI" "Test" "Docs" "Setup")
+  for cat in "${CATEGORIES[@]}"; do
+    if echo "$BODY" | grep -qi "\*\*Category:\*\* ${cat}"; then
+      LABELS_TO_ADD+=("$cat")
+    fi
+  done
 
   if [ ${#LABELS_TO_ADD[@]} -eq 0 ]; then
     echo "  ⏭️  #${NUMBER}: No matching prefixes - ${TITLE}"

@@ -1,4 +1,4 @@
-name: Auto-Label Issues by Title Prefix
+name: Auto-Label Issues
 
 on:
   issues:
