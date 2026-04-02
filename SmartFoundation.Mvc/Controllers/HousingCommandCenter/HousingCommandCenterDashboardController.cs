@@ -2,7 +2,7 @@
 using SmartFoundation.UI.ViewModels.SmartCharts;
 using SmartFoundation.UI.ViewModels.SmartPage;
 using System.Globalization;
-
+//test
 namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
 {
     public class HousingCommandCenterDashboardController : Controller
