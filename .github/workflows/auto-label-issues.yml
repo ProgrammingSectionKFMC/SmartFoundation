@@ -1,0 +1,119 @@
+name: Auto-Label Issues by Title Prefix
+
+on:
+  issues:
+    types: [opened, edited, transferred]
+
+permissions:
+  issues: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Auto-assign labels based on title
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = context.payload.issue;
+            const title = issue.title;
+
+            // ── Team labels ──────────────────────────────────────
+            const teamLabels = {
+              'Backend':  /^\[Backend\]/i,
+              'Frontend': /^\[Frontend\]/i,
+            };
+
+            // ── Category labels (parsed from the body **Category:** field) ──
+            const categoryLabels = {
+              'DB-Structure': /\*\*Category:\*\*\s*DB-Structure/i,
+              'DB-SP':        /\*\*Category:\*\*\s*DB-SP/i,
+              'DB-DL-View':   /\*\*Category:\*\*\s*DB-DL-View/i,
+              'UI':           /\*\*Category:\*\*\s*UI/i,
+              'Test':         /\*\*Category:\*\*\s*Test/i,
+              'Docs':         /\*\*Category:\*\*\s*Docs/i,
+              'Setup':        /\*\*Category:\*\*\s*Setup/i,
+            };
+
+            // ── Spec labels (parsed from title) ─────────────────
+            const specMatch = title.match(/\[Spec-(\d+)\]/i);
+
+            // Collect labels to add
+            const labelsToAdd = [];
+
+            // Check team prefix in title
+            for (const [label, pattern] of Object.entries(teamLabels)) {
+              if (pattern.test(title)) {
+                labelsToAdd.push(label);
+              }
+            }
+
+            // Check category in body
+            const body = issue.body || '';
+            for (const [label, pattern] of Object.entries(categoryLabels)) {
+              if (pattern.test(body)) {
+                labelsToAdd.push(label);
+              }
+            }
+
+            // Add spec label if found
+            if (specMatch) {
+              labelsToAdd.push(`Spec-${specMatch[1].padStart(2, '0')}`);
+            }
+
+            if (labelsToAdd.length === 0) {
+              console.log('No matching prefixes found in title: ' + title);
+              return;
+            }
+
+            console.log(`Issue #${issue.number}: "${title}"`);
+            console.log(`Labels to add: ${labelsToAdd.join(', ')}`);
+
+            // Ensure all labels exist (create if missing)
+            const labelColors = {
+              'Backend':      '0E8A16',
+              'Frontend':     '1D76DB',
+              'DB-Structure': 'D93F0B',
+              'DB-SP':        'E4E669',
+              'DB-DL-View':   'F9D0C4',
+              'UI':           'BFD4F2',
+              'Test':         'C5DEF5',
+              'Docs':         '0075CA',
+              'Setup':        'FBCA04',
+            };
+
+            for (const label of labelsToAdd) {
+              try {
+                await github.rest.issues.getLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label,
+                });
+              } catch (e) {
+                // Label doesn't exist — create it
+                const color = labelColors[label]
+                  || (label.startsWith('Spec-') ? '6F42C1' : 'EDEDED');
+                const description = label.startsWith('Spec-')
+                  ? `Tasks belonging to Spec ${label.replace('Spec-', '')}`
+                  : '';
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label,
+                  color: color,
+                  description: description,
+                });
+                console.log(`Created label: ${label}`);
+              }
+            }
+
+            // Add labels to the issue
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              labels: labelsToAdd,
+            });
+
+            console.log('Labels applied successfully.');
