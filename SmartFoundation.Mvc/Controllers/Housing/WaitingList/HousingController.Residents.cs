@@ -288,7 +288,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             {
                 new FieldConfig { Name = rowIdField, Type = "hidden" },
 
-                new FieldConfig { Name = "p01", Label = "رقم الهوية", Type = "select", ColCss = "6",Icon = "fa-solid fa-address-card", Required = true,Options =residentOptions  },
+                new FieldConfig { Name = "p01", Label = "رقم الهوية", Type = "number", ColCss = "6",Icon = "fa-solid fa-address-card", Required = true},
                 new FieldConfig { Name = "p02", Label = "الرقم العام", Type = "number", ColCss = "6", Required = true , Icon = "fa-solid fa-user-tag",Autocomplete="off" },
                 
 

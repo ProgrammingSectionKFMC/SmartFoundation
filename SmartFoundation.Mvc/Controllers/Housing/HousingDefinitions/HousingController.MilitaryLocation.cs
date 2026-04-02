@@ -243,7 +243,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             //  SmartTable model
             var dsModel = new SmartFoundation.UI.ViewModels.SmartTable.SmartTableDsModel
             {
-                PageTitle = "المواقع",
+                PageTitle = "المواقع والاحياء السكنية",
                 Columns = dynamicColumns,
                 Rows = rowsList,
                 RowIdField = rowIdField,
@@ -252,7 +252,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 QuickSearchFields = dynamicColumns.Select(c => c.Field).Take(4).ToList(),
                 Searchable = true,
                 AllowExport = true,
-                PanelTitle = "المواقع ",
+                PanelTitle = "المواقع والاحياء السكنية ",
                 Toolbar = new TableToolbarConfig
                 {
                     ShowRefresh = false,

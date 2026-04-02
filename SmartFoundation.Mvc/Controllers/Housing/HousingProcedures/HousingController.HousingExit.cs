@@ -52,7 +52,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             if (!string.IsNullOrWhiteSpace(NationalID_) && (dt1 == null || dt1.Rows.Count == 0))
             {
-                TempData["Error"] = "لم يتم العثور على نتائج لرقم الهوية: " + NationalID_;
+                TempData["Error"] = "لم يتم العثور على ساكن برقم الهوية: " + NationalID_;
 
             }
 
