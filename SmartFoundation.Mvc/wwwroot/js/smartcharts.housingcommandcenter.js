@@ -404,6 +404,87 @@
 </td>`;
     }
 
+   function buildGaugeSvg(percent, accent) {
+        const p = clamp(num(percent), 0, 100);
+        const trackColor = p >= 85 ? '#15803d' : p >= 70 ? '#d97706' : '#dc2626';
+        const W = 120, H = 88;
+        const cx = W / 2, cy = 62;
+        const r = 46;
+        const totalLen = Math.PI * r;
+        const filled = (p / 100) * totalLen;
+        const track = `M ${cx - r},${cy} a ${r},${r} 0 0,1 ${r * 2},0`;
+        const gid = `hg${Math.round(p * 10)}`;
+
+        // زاوية العقرب: 0% = يسار (180°) ، 100% = يمين (0°)
+        const angle = Math.PI - (p / 100) * Math.PI;
+        const needleLen = r * 0.74;
+        const nx = cx + needleLen * Math.cos(angle);
+        const ny = cy - needleLen * Math.sin(angle);
+
+        // علامات التدريج
+        const ticks = [0, 25, 50, 75, 100].map(v => {
+            const a = Math.PI - (v / 100) * Math.PI;
+            const x1 = cx + (r - 6) * Math.cos(a);
+            const y1 = cy - (r - 6) * Math.sin(a);
+            const x2 = cx + (r + 2) * Math.cos(a);
+            const y2 = cy - (r + 2) * Math.sin(a);
+            return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#cbd5e1" stroke-width="1.2"/>`;
+        }).join('');
+
+        return `
+<svg viewBox="0 0 ${W} ${H}" class="sf-hccm-gauge-svg" aria-hidden="true">
+  <defs>
+    <linearGradient id="${gid}" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#dc2626"/>
+      <stop offset="38%"  stop-color="#f59e0b"/>
+      <stop offset="68%"  stop-color="#84cc16"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Track رمادي -->
+  <path d="${track}"
+    fill="none" stroke="#e8edf0" stroke-width="10"
+    stroke-linecap="round"/>
+
+  <!-- Fill ملون بتدرج -->
+  <path d="${track}"
+    fill="none" stroke="url(#${gid})" stroke-width="10"
+    stroke-linecap="round"
+    stroke-dasharray="${filled.toFixed(2)} ${totalLen.toFixed(2)}"
+    pathLength="${totalLen.toFixed(2)}"/>
+
+  <!-- علامات التدريج -->
+  ${ticks}
+
+  <!-- ظل العقرب -->
+  <line x1="${cx}" y1="${cy}"
+        x2="${(nx + 0.6).toFixed(1)}" y2="${(ny + 0.6).toFixed(1)}"
+        stroke="rgba(0,0,0,0.13)" stroke-width="3.2"
+        stroke-linecap="round"/>
+
+  <!-- العقرب -->
+  <line x1="${cx}" y1="${cy}"
+        x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}"
+        stroke="#1e293b" stroke-width="2.4"
+        stroke-linecap="round"/>
+
+  <!-- مركز العقرب - الطبقات -->
+  <circle cx="${cx}" cy="${cy}" r="6.5" fill="rgba(0,0,0,0.1)"/>
+  <circle cx="${cx}" cy="${cy}" r="6" fill="#1e293b"/>
+  <circle cx="${cx}" cy="${cy}" r="3.5" fill="#f8fafc"/>
+  <circle cx="${cx}" cy="${cy}" r="1.5" fill="#1e293b"/>
+
+  <!-- النسبة -->
+  <text x="${cx}" y="${cy + 15}"
+        text-anchor="middle"
+        font-size="12.5" font-weight="900"
+        fill="${trackColor}">${fmtPercent(p, 1)}</text>
+</svg>`;
+    }
+
+
+
     function buildMatrixOverallCell(dep, metricMap, opts, depIndex) {
         const depTone = toneStyle(dep?.tone, dep?.color, depIndex);
         const overall = calcDepartmentOverall(dep, metricMap, opts);
@@ -412,11 +493,8 @@
         return `
 <td class="sf-hccm-matrix-td is-overall-col">
     <div class="sf-hccm-overall-cell ${perfCls}"
-         style="--oc-bg:${depTone.bg};--oc-soft:${depTone.soft};--oc-border:${depTone.border};--oc-text:${depTone.text};--oc-accent:${depTone.accent}">
-        <div class="sf-hccm-overall-percent">${esc(fmtPercent(overall, 1))}</div>
-        <div class="sf-hccm-overall-progress">
-            <div class="sf-hccm-overall-progress-fill" style="width:${overall.toFixed(2)}%;background:${depTone.accent};"></div>
-        </div>
+         style="--oc-bg:${depTone.bg};--oc-border:${depTone.border};--oc-accent:${depTone.accent}">
+        ${buildGaugeSvg(overall, depTone.accent)}
         <div class="sf-hccm-overall-caption">متوسط أداء الإدارة</div>
     </div>
 </td>`;

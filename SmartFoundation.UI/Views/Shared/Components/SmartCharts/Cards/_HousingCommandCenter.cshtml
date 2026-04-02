@@ -123,14 +123,14 @@
         <section class="sf-hccm-header" data-hccm-header>
             <div class="sf-hccm-header-main">
                 <div class="sf-hccm-header-icon">
-                    @if (!string.IsNullOrWhiteSpace(Model.Icon))
-                    {
-                        <i class="@Model.Icon"></i>
-                    }
-                    else
-                    {
-                        <span>📊</span>
-                    }
+                    <svg viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:36px;height:36px">
+                        <rect x="16" y="40" width="8" height="14" rx="4" fill="rgba(255,255,255,0.45)" />
+                        <rect x="28" y="32" width="8" height="22" rx="4" fill="rgba(255,255,255,0.7)" />
+                        <rect x="40" y="22" width="8" height="32" rx="4" fill="rgba(255,255,255,0.95)" />
+                        <line x1="12" y1="54" x2="60" y2="54" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" />
+                        <polyline points="16,16 28,10 40,16 54,10" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <polygon points="54,10 46,12 48,18" fill="white" />
+                    </svg>
                 </div>
 
                 <div class="sf-hccm-header-copy">
@@ -152,9 +152,21 @@
         <section class="sf-hccm-matrix-panel">
             <div class="sf-hccm-matrix-head">
                 <div class="sf-hccm-matrix-head-copy">
-                    <div class="sf-hccm-matrix-title"> الأداء التنفيذي للإدارات</div>
+                    <div class="sf-hccm-matrix-title-wrap">
+                        <svg class="sf-hccm-matrix-title-svg" viewBox="0 0 36 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <!-- قاعدة -->
+                            <rect x="0" y="29" width="36" height="2" rx="1" fill="#e2e8f0" />
+                            <!-- عمود 1 -->
+                            <rect x="1" y="14" width="9" height="15" rx="4.5" fill="#0f766e" opacity="0.92" />
+                            <!-- عمود 2 -->
+                            <rect x="13" y="6" width="9" height="23" rx="4.5" fill="#2563eb" opacity="0.92" />
+                            <!-- عمود 3 -->
+                            <rect x="25" y="0" width="9" height="29" rx="4.5" fill="#d97706" opacity="0.92" />
+                        </svg>
+                        <div class="sf-hccm-matrix-title">الأداء التنفيذي للإدارات</div>
+                    </div>
                     <div class="sf-hccm-matrix-note">
-                        قراءة موحدة للإدارات حسب المعايير  مع النسب والرسوم المختصرة والمستهدف والمنجز والمتبقي
+                        قراءة موحدة للإدارات حسب المعايير مع النسب والرسوم المختصرة والمستهدف والمنجز والمتبقي
                     </div>
                 </div>
             </div>

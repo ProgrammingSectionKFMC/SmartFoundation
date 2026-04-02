@@ -456,6 +456,19 @@
     text-align: center;
 }
 
+.sf-hccm-matrix-title-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 6px;
+}
+
+.sf-hccm-matrix-title-svg {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+}
 
 .sf-hccm-matrix-title {
     margin: 0;
@@ -980,12 +993,20 @@
     border: 1px solid var(--oc-border, #d7e3db);
     background: var(--oc-bg, #fff);
     border-radius: var(--hccm-r-lg);
-    padding: 12px 10px;
+    padding: 8px 6px 6px;
     display: grid;
     align-content: center;
-    gap: 8px;
+    gap: 4px;
     text-align: center;
     box-shadow: inset 0 1px 0 rgba(255,255,255,.55);
+    overflow: hidden;
+}
+
+.sf-hccm-gauge-svg {
+    width: 100%;
+    max-width: 110px;
+    margin: 0 auto;
+    display: block;
 }
 
     .sf-hccm-overall-cell.is-summary {
