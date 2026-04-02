@@ -146,7 +146,10 @@
     }
 
     function calcDepartmentOverall(dep, metricMap, opts) {
-        if (dep?.overallCompletionPercent !== null && dep?.overallCompletionPercent !== undefined && dep?.overallCompletionPercent !== '') {
+        if (dep?.overallCompletionPercent !== null && 
+            dep?.overallCompletionPercent !== undefined && 
+            dep?.overallCompletionPercent !== '' &&
+            num(dep.overallCompletionPercent) > 0) {
             return clamp(num(dep.overallCompletionPercent), 0, 100);
         }
 
@@ -231,6 +234,24 @@
     </div>` : ''}
 
     ${has(metric?.hint) ? `<div class="sf-hccm-metric-hint">${esc(metric.hint)}</div>` : ''}
+
+    ${(metric?.__best || metric?.__worst) ? `
+    <div class="sf-hccm-metric-ranking">
+        ${metric.__best ? `
+        <div class="sf-hccm-ranking-row is-best">
+            <span class="sf-hccm-ranking-icon">🏆</span>
+            <span class="sf-hccm-ranking-label">الأعلى:</span>
+            <span class="sf-hccm-ranking-name">${esc(metric.__best.name)}</span>
+            <span class="sf-hccm-ranking-val">${esc(fmtPercent(metric.__best.percent, 1))}</span>
+        </div>` : ''}
+        ${metric.__worst ? `
+        <div class="sf-hccm-ranking-row is-worst">
+            <span class="sf-hccm-ranking-icon">⚠️</span>
+            <span class="sf-hccm-ranking-label">الأدنى:</span>
+            <span class="sf-hccm-ranking-name">${esc(metric.__worst.name)}</span>
+            <span class="sf-hccm-ranking-val">${esc(fmtPercent(metric.__worst.percent, 1))}</span>
+        </div>` : ''}
+    </div>` : ''}
 </div>`;
     }
 
@@ -269,6 +290,21 @@
         const target = depMetric?.target;
         const remaining = Math.max(num(target) - num(actual), 0);
         const displayText = has(depMetric.displayText) ? depMetric.displayText : fmtPercent(percent, 1);
+        const noteHtml = has(depMetric?.note)
+                        ? `<div class="sf-hccm-tcell-tooltip">
+        <div class="sf-hccm-tooltip-title">${esc(metric?.shortTitle || metric?.title || '')}</div>
+        <div class="sf-hccm-tooltip-body">
+            ${depMetric.note.split('|').map(s => s.trim()).filter(s => s).map(s =>
+                            `<div class="sf-hccm-tooltip-row">
+    <div class="sf-hccm-tooltip-dot"></div>
+    <span>${esc(s)}</span>
+ </div>`
+                        ).join('')}
+        </div>
+       </div>`
+                        : '';
+                        
+
         const hrefOpen = has(depMetric?.href)
             ? `<a class="sf-hccm-tcell-link-cover" href="${esc(depMetric.href)}" aria-label="${esc(metric?.title || '')}"></a>`
             : '';
@@ -278,8 +314,12 @@
     <div class="sf-hccm-tcell ${perfCls}"
          style="--tc-bg:${s.bg};--tc-soft:${s.soft};--tc-border:${s.border};--tc-text:${s.text};--tc-accent:${s.accent}">
         ${hrefOpen}
+        ${noteHtml}
         <div class="sf-hccm-tcell-top">
             <div class="sf-hccm-tcell-percent">${esc(displayText)}</div>
+            <div class="sf-hccm-tcell-badge ${perfCls}">
+                ${percent >= 85 ? '✓' : percent >= 70 ? '!' : '✕'}
+            </div>
         </div>
 
         ${opts.showMetricProgressBar ? buildCellProgress(percent, s.accent) : ''}
@@ -324,34 +364,43 @@
         const remaining = Math.max(num(target) - num(actual), 0);
         const displayText = has(summaryMetric.displayText) ? summaryMetric.displayText : fmtPercent(percent, 1);
 
+        // الأعلى والأدنى من الـ metric
+        const bestHtml = '';
+            const worstHtml = '';
+
         return `
 <td class="sf-hccm-matrix-td">
     <div class="sf-hccm-tcell is-summary ${perfCls}"
          style="--tc-bg:${s.bg};--tc-soft:${s.soft};--tc-border:${s.border};--tc-text:${s.text};--tc-accent:${s.accent}">
+
         <div class="sf-hccm-tcell-top">
             <div class="sf-hccm-tcell-percent">${esc(displayText)}</div>
         </div>
 
         ${opts.showMetricProgressBar ? buildCellProgress(percent, s.accent) : ''}
 
-        <div class="sf-hccm-tcell-stats">
-    <div class="sf-hccm-tcell-stat-line is-actual-target">
-        <span class="sf-hccm-tcell-stat-label">
-            <span class="is-actual">منجز</span>
-            <span class="slash"> / </span>
-            <span class="is-target">مستهدف</span>
-        </span>
-        <strong>
-            <span class="is-actual">${esc(fmtNumber(actual, 0))}</span>
-            <span class="slash"> / </span>
-            <span class="is-target">${esc(fmtNumber(target, 0))}</span>
-        </strong>
+        <div class="sf-hccm-sum-stats">
+            <div class="sf-hccm-sum-stat">
+                <span class="sf-hccm-sum-stat-label">منجز</span>
+                <strong class="is-actual">${esc(fmtNumber(actual, 0))}</strong>
+            </div>
+            <div class="sf-hccm-sum-stat">
+                <span class="sf-hccm-sum-stat-label">مستهدف</span>
+                <strong class="is-target">${esc(fmtNumber(target, 0))}</strong>
+            </div>
+            <div class="sf-hccm-sum-stat">
+                <span class="sf-hccm-sum-stat-label">متبقي</span>
+                <strong class="is-remaining">${esc(fmtNumber(remaining, 0))}</strong>
+            </div>
+        </div>
+
+        ${(bestHtml || worstHtml) ? `
+        <div class="sf-hccm-sum-ranking">
+            ${bestHtml}
+            ${worstHtml}
+        </div>` : ''}
+
     </div>
-    <div class="sf-hccm-tcell-stat-line is-remaining">
-        <span class="sf-hccm-tcell-stat-label">المتبقي</span>
-        <strong>${esc(fmtNumber(remaining, 0))}</strong>
-    </div>
-</div>
 </td>`;
     }
 
@@ -534,7 +583,27 @@
             return;
         }
 
-        metricsBox.innerHTML = metrics.map((metric, i) => buildMetricCard(metric, opts, i)).join('');
+                    // احسب الأعلى والأدنى لكل معيار
+                    metrics.forEach(metric => {
+                        const vals = departments
+                            .map(dep => {
+                                const dm = findDepartmentMetric(dep, metric.key);
+                                if (!dm) return null;
+                                return {
+                                    name: dep.shortName || dep.name || '',
+                                    percent: resolvePercent(dm, opts)
+                                };
+                            })
+                            .filter(x => x !== null);
+
+                        if (vals.length) {
+                            vals.sort((a, b) => b.percent - a.percent);
+                            metric.__best = vals[0];
+                            metric.__worst = vals[vals.length - 1];
+                        }
+                    });
+
+                    metricsBox.innerHTML = metrics.map((metric, i) => buildMetricCard(metric, opts, i)).join('');
         matrixHead.innerHTML = buildDynamicHead(metrics);
 
         if (!departments.length) {
@@ -560,6 +629,28 @@
             }
         }
     }
+
+    // Tooltip follow mouse
+    document.addEventListener('mousemove', function(e) {
+        const tooltip = document.querySelector('.sf-hccm-tcell:hover .sf-hccm-tcell-tooltip');
+        if (!tooltip) return;
+
+        const tw = 360;
+        const margin = 12;
+        let left = e.clientX - tw - margin;
+        let top = e.clientY - margin;
+
+        
+        if (left < margin) left = e.clientX + margin;
+
+        // لو خرج من الأسفل
+        if (top + tooltip.offsetHeight > window.innerHeight - margin) {
+            top = window.innerHeight - tooltip.offsetHeight - margin;
+        }
+
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = top + 'px';
+    });
 
     window.SmartCharts.renderHousingCommandCenter = renderHousingCommandCenter;
 
