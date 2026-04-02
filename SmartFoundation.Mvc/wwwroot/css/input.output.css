@@ -1057,12 +1057,6 @@ body {
   .ml-auto {
     margin-left: auto;
   }
-  .line-clamp-1 {
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 1;
-  }
   .line-clamp-2 {
     overflow: hidden;
     display: -webkit-box;
@@ -1074,12 +1068,6 @@ body {
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 3;
-  }
-  .line-clamp-4 {
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 4;
   }
   .block {
     display: block;
@@ -1694,15 +1682,6 @@ body {
   }
   .gap-y-3 {
     row-gap: calc(var(--spacing) * 3);
-  }
-  .divide-y {
-    :where(& > :not(:last-child)) {
-      --tw-divide-y-reverse: 0;
-      border-bottom-style: var(--tw-border-style);
-      border-top-style: var(--tw-border-style);
-      border-top-width: calc(1px * var(--tw-divide-y-reverse));
-      border-bottom-width: calc(1px * calc(1 - var(--tw-divide-y-reverse)));
-    }
   }
   .place-self-center {
     place-self: center;
@@ -3391,6 +3370,9 @@ body {
   }
   .text-orange-600 {
     color: var(--color-orange-600);
+  }
+  .text-orange-700 {
+    color: var(--color-orange-700);
   }
   .text-orange-800 {
     color: var(--color-orange-800);
@@ -12595,6 +12577,11 @@ body {
   inherits: false;
   initial-value: 0;
 }
+@property --tw-divide-y-reverse {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
 @property --tw-content {
   syntax: "*";
   inherits: false;
@@ -15355,6 +15342,10 @@ input[readonly], textarea[readonly] {
 .sf-modal textarea.sf-modal-input ~ .sf-input-icon {
   top: 14px;
   transform: none;
+}
+.sf-modal textarea.sf-modal-input {
+  padding: 8px 12px;
+  line-height: 1.6;
 }
 .sf-form .pointer-events-none.absolute.inset-y-0.left-0 {
   left: auto !important;
@@ -18129,11 +18120,6 @@ html, body {
   inherits: false;
   initial-value: 0;
 }
-@property --tw-divide-y-reverse {
-  syntax: "*";
-  inherits: false;
-  initial-value: 0;
-}
 @property --tw-border-style {
   syntax: "*";
   inherits: false;
@@ -18438,7 +18424,6 @@ html, body {
       --tw-skew-y: initial;
       --tw-space-y-reverse: 0;
       --tw-space-x-reverse: 0;
-      --tw-divide-y-reverse: 0;
       --tw-border-style: solid;
       --tw-gradient-position: initial;
       --tw-gradient-from: #0000;
@@ -18501,6 +18486,7 @@ html, body {
       --tw-contain-paint: initial;
       --tw-contain-style: initial;
       --tw-divide-x-reverse: 0;
+      --tw-divide-y-reverse: 0;
       --tw-content: "";
     }
   }
