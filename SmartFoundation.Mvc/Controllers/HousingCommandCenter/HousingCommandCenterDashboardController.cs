@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using CommunityToolkit.HighPerformance;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using Microsoft.AspNetCore.Mvc;
 using SmartFoundation.UI.ViewModels.SmartCharts;
 using SmartFoundation.UI.ViewModels.SmartPage;
 using System.Globalization;
@@ -34,6 +36,30 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
                     Dir = "rtl",
                     Cards = new List<ChartCardConfig> { card }
                 }
+            };
+
+            return View(vm);
+        }
+
+        public IActionResult Department(string id)
+        {
+            var metrics = BuildMetrics();
+            var departments = BuildDepartments();
+            var department = departments.FirstOrDefault(d => d.Key == id);
+
+            if (department == null)
+                return RedirectToAction("Index");
+
+            var vm = new DepartmentDetailViewModel
+            {
+                Department = department,
+                Metrics = metrics,
+
+                HousingDetail = BuildHousingDetail(id),
+                AllocationDetail = BuildAllocationDetail(id),
+                RequestsDetail = BuildRequestsDetail(id),
+                FinanceDetail = BuildFinanceDetail(id),
+                MaintenanceDetail = BuildMaintenanceDetail(id)
             };
 
             return View(vm);
@@ -175,7 +201,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
         key: "dep_01",
         sortOrder: 1,
         name: "إدارة مدينة الملك فيصل العسكرية للتشغيل والصيانة",
-            shortName: "مدينة الملك فيصل",      
+            shortName: "مدينة الملك فيصل",
 
         icon: "fa-solid fa-city",
         emoji: "🏙️",
@@ -215,7 +241,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
         key: "dep_02",
         sortOrder: 2,
         name: "إدارة مدينة الملك عبدالعزيز العسكرية للتشغيل والصيانة",
-            shortName: "مدينة الملك عبدالعزيز", 
+            shortName: "مدينة الملك عبدالعزيز",
 
         icon: "fa-solid fa-fort-awesome",
         emoji: "🏰",
@@ -255,7 +281,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
         key: "dep_03",
         sortOrder: 3,
         name: "إدارة التشغيل والصيانة للمنشآت العسكرية بالرياض",
-            shortName: "منشآت الرياض",        
+            shortName: "منشآت الرياض",
 
         icon: "fa-solid fa-building",
         emoji: "🏢",
@@ -295,7 +321,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
         key: "dep_04",
         sortOrder: 4,
         name: "إدارة التشغيل والصيانة للمنشآت العسكرية بجازان",
-            shortName: "منشآت جازان",          
+            shortName: "منشآت جازان",
 
         icon: "fa-solid fa-water",
         emoji: "🌊",
@@ -335,7 +361,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
         key: "dep_05",
         sortOrder: 5,
         name: "إدارة مدينة الملك خالد العسكرية للتشغيل والصيانة",
-            shortName: "مدينة الملك خالد",      
+            shortName: "مدينة الملك خالد",
 
         icon: "fa-solid fa-shield-halved",
         emoji: "🛡️",
@@ -375,7 +401,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
         key: "dep_06",
         sortOrder: 6,
         name: "إدارة التشغيل والصيانة للمنشآت العسكرية بالقصيم",
-            shortName: "منشآت القصيم",         
+            shortName: "منشآت القصيم",
 
         icon: "fa-solid fa-solar-panel",
         emoji: "🏜️",
@@ -415,7 +441,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
         key: "dep_07",
         sortOrder: 7,
         name: "إدارة التشغيل وصيانة المنشآت العسكرية بالطائف",
-            shortName: "منشآت الطائف",          
+            shortName: "منشآت الطائف",
 
         icon: "fa-solid fa-mountain-city",
         emoji: "⛰️",
@@ -461,7 +487,6 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
             string emoji,
             string tone,
             string color,
-            //string hint,
             List<HousingCommandCenterDepartmentMetric> items)
         {
             var overall = items.Any()
@@ -481,7 +506,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
                 Emoji = emoji,
                 Tone = tone,
                 Color = color,
-                //Hint = hint,
+                Href = $"/HousingCommandCenterDashboard/Department?id={key}",
                 OverallCompletionPercent = Math.Round(overall, 1),
                 Metrics = items
             };
@@ -497,15 +522,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
             var remaining = Math.Max(target - actual, 0m);
             var percent = target <= 0 ? 0m : Math.Round((actual / target) * 100m, 1);
 
-            //return new HousingCommandCenterDepartmentMetric
-            //{
-            //    MetricKey = metricKey,
-            //    Target = target,
-            //    Actual = actual,
-            //    CompletionPercent = percent,
-            //    DisplayText = percent.ToString("0.0", CultureInfo.InvariantCulture) + "%",
-            //    Note = $"{noteTitle} | Target {target.ToString("0", CultureInfo.InvariantCulture)} | Actual {actual.ToString("0", CultureInfo.InvariantCulture)} | Remaining {remaining.ToString("0", CultureInfo.InvariantCulture)}. {detail}"
-            //};
+            
             return new HousingCommandCenterDepartmentMetric
             {
                 MetricKey = metricKey,
@@ -553,5 +570,215 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
 
             return summary;
         }
-    }
-}
+    
+
+    private static DepHousingDetail BuildHousingDetail(string depId) => depId switch
+    {
+        "dep_01" => new DepHousingDetail
+        {
+            TotalUnits = 1482,
+            Occupied = 1355,
+            Vacant = 67,
+            UnderMaintenance = 28,
+            ReferredQuality = 14,
+            ReferredServices = 10,
+            ReadyToAllocate = 8,
+            AreaDistribution = new()
+        {
+            new() { Label = "أقل من 120م²", Value = 164, Color = "#0f766e" },
+            new() { Label = "120-180م²",    Value = 492, Color = "#2563eb" },
+            new() { Label = "181-250م²",    Value = 418, Color = "#d97706" },
+            new() { Label = "251-350م²",    Value = 267, Color = "#7c3aed" },
+            new() { Label = "أكثر من 350م²",Value = 141, Color = "#dc2626" },
+        },
+            RoomDistribution = new()
+        {
+            new() { Label = "غرفة واحدة", Value = 42,  Color = "#0f766e" },
+            new() { Label = "غرفتان",      Value = 154, Color = "#2563eb" },
+            new() { Label = "3 غرف",       Value = 386, Color = "#d97706" },
+            new() { Label = "4 غرف",       Value = 471, Color = "#7c3aed" },
+            new() { Label = "5 غرف",       Value = 294, Color = "#0891b2" },
+            new() { Label = "6+ غرف",      Value = 135, Color = "#dc2626" },
+        },
+            FacilityTypes = new()
+        {
+            new() { Label = "منازل عائلية",  Value = 1248, Color = "#0f766e" },
+            new() { Label = "وحدات عسكرية", Value = 214,  Color = "#2563eb" },
+            new() { Label = "وحدات عزاب",   Value = 81,   Color = "#d97706" },
+            new() { Label = "حدائق",         Value = 26,   Color = "#16a34a" },
+            new() { Label = "مبانٍ خدمية",  Value = 17,   Color = "#64748b" },
+        }
+        },
+        _ => new DepHousingDetail
+        {
+            TotalUnits = 900,
+            Occupied = 800,
+            Vacant = 60,
+            UnderMaintenance = 25,
+            ReferredQuality = 10,
+            ReferredServices = 5,
+            ReadyToAllocate = 5,
+            AreaDistribution = new()
+        {
+            new() { Label = "أقل من 120م²", Value = 120, Color = "#0f766e" },
+            new() { Label = "120-250م²",    Value = 500, Color = "#2563eb" },
+            new() { Label = "أكثر من 250م²",Value = 280, Color = "#d97706" },
+        },
+            RoomDistribution = new()
+        {
+            new() { Label = "1-2 غرف", Value = 150, Color = "#0f766e" },
+            new() { Label = "3-4 غرف", Value = 500, Color = "#2563eb" },
+            new() { Label = "5+ غرف",  Value = 250, Color = "#d97706" },
+        },
+            FacilityTypes = new()
+        {
+            new() { Label = "منازل عائلية",  Value = 700, Color = "#0f766e" },
+            new() { Label = "وحدات عسكرية", Value = 150, Color = "#2563eb" },
+            new() { Label = "مرافق أخرى",   Value = 50,  Color = "#d97706" },
+        }
+        }
+    };
+
+        private static DepAllocationDetail BuildAllocationDetail(string depId) => depId switch
+        {
+            "dep_01" => new DepAllocationDetail
+            {
+                Categories = new()
+        {
+            new() { Label = "ضباط كبار",  Residents = 92,  Waiting = 12, Color = "#0f766e" },
+            new() { Label = "ضباط",        Residents = 214, Waiting = 38, Color = "#2563eb" },
+            new() { Label = "ضباط صف",    Residents = 276, Waiting = 54, Color = "#d97706" },
+            new() { Label = "أفراد",       Residents = 418, Waiting = 71, Color = "#dc2626" },
+            new() { Label = "مدنيون",      Residents = 165, Waiting = 29, Color = "#7c3aed" },
+            new() { Label = "متعاقدون",    Residents = 38,  Waiting = 14, Color = "#0891b2" },
+        },
+                Districts = new()
+        {
+            new() { Label = "القادسية", Value = 224, Color = "#0f766e" },
+            new() { Label = "النخيل",   Value = 205, Color = "#2563eb" },
+            new() { Label = "الربوة",   Value = 198, Color = "#d97706" },
+            new() { Label = "اليرموك", Value = 190, Color = "#7c3aed" },
+            new() { Label = "الفيصلية",Value = 183, Color = "#0891b2" },
+            new() { Label = "الورود",   Value = 176, Color = "#16a34a" },
+            new() { Label = "الصفا",    Value = 162, Color = "#dc2626" },
+            new() { Label = "الأندلس", Value = 144, Color = "#64748b" },
+        }
+            },
+            _ => new DepAllocationDetail
+            {
+                Categories = new()
+        {
+            new() { Label = "ضباط",     Residents = 150, Waiting = 25, Color = "#2563eb" },
+            new() { Label = "ضباط صف", Residents = 200, Waiting = 40, Color = "#d97706" },
+            new() { Label = "أفراد",    Residents = 300, Waiting = 55, Color = "#dc2626" },
+            new() { Label = "مدنيون",   Residents = 100, Waiting = 20, Color = "#7c3aed" },
+        },
+                Districts = new()
+        {
+            new() { Label = "الحي الأول",  Value = 180, Color = "#0f766e" },
+            new() { Label = "الحي الثاني", Value = 160, Color = "#2563eb" },
+            new() { Label = "الحي الثالث", Value = 140, Color = "#d97706" },
+            new() { Label = "الحي الرابع", Value = 120, Color = "#7c3aed" },
+        }
+            }
+        };
+
+        private static DepRequestsDetail BuildRequestsDetail(string depId) => depId switch
+        {
+            "dep_01" => new DepRequestsDetail
+            {
+                OpenRequests = new()
+        {
+            new() { Label = "تسكين",      Value = 84, Color = "#0f766e" },
+            new() { Label = "إمهال",       Value = 42, Color = "#d97706" },
+            new() { Label = "إخلاء",       Value = 31, Color = "#dc2626" },
+            new() { Label = "صيانة",       Value = 36, Color = "#2563eb" },
+            new() { Label = "نقل داخلي",  Value = 12, Color = "#7c3aed" },
+        },
+                SlaComparison = new()
+        {
+            new() { Label = "الإمهال",  Actual = 5.7m, Target = 4.0m, Color = "#d97706" },
+            new() { Label = "الإخلاء",  Actual = 4.9m, Target = 3.0m, Color = "#dc2626" },
+            new() { Label = "التسكين",  Actual = 3.8m, Target = 2.5m, Color = "#0f766e" },
+        }
+            },
+            _ => new DepRequestsDetail
+            {
+                OpenRequests = new()
+        {
+            new() { Label = "تسكين", Value = 55, Color = "#0f766e" },
+            new() { Label = "إمهال",  Value = 30, Color = "#d97706" },
+            new() { Label = "إخلاء",  Value = 25, Color = "#dc2626" },
+        },
+                SlaComparison = new()
+        {
+            new() { Label = "الإمهال", Actual = 5.5m, Target = 4.0m, Color = "#d97706" },
+            new() { Label = "الإخلاء", Actual = 4.5m, Target = 3.0m, Color = "#dc2626" },
+            new() { Label = "التسكين", Actual = 3.6m, Target = 2.5m, Color = "#0f766e" },
+        }
+            }
+        };
+
+        private static DepFinanceDetail BuildFinanceDetail(string depId) => depId switch
+        {
+            "dep_01" => new DepFinanceDetail
+            {
+                RentLastMonth = 412000,
+                RentLast3Months = 1189000,
+                RentLast12Months = 4538000,
+                Collected = 3941000,
+                Uncollected = 597000,
+                UtilityEfficiency = new()
+        {
+            new() { Label = "الكهرباء",      Value = 78, Color = "#d97706" },
+            new() { Label = "الماء",          Value = 64, Color = "#2563eb" },
+        }
+            },
+            _ => new DepFinanceDetail
+            {
+                RentLastMonth = 250000,
+                RentLast3Months = 720000,
+                RentLast12Months = 2800000,
+                Collected = 2400000,
+                Uncollected = 400000,
+                UtilityEfficiency = new()
+        {
+            new() { Label = "الكهرباء", Value = 75, Color = "#d97706" },
+            new() { Label = "الماء",     Value = 62, Color = "#2563eb" },
+        }
+            }
+        };
+
+        private static DepMaintenanceDetail BuildMaintenanceDetail(string depId) => depId switch
+        {
+            "dep_01" => new DepMaintenanceDetail
+            {
+                PlannedJobs = 260,
+                CompletedJobs = 221,
+                FleetReadiness = 86,
+                QualityRefs = 14,
+                ServicesRefs = 10,
+                FacilityStatus = new()
+        {
+            new() { Label = "السلامة",  Value = 87, Color = "#16a34a" },
+            new() { Label = "الغاز",    Value = 91, Color = "#0f766e" },
+            new() { Label = "الإنترنت", Value = 55, Color = "#d97706" },
+        }
+            },
+            _ => new DepMaintenanceDetail
+            {
+                PlannedJobs = 180,
+                CompletedJobs = 150,
+                FleetReadiness = 82,
+                QualityRefs = 10,
+                ServicesRefs = 7,
+                FacilityStatus = new()
+        {
+            new() { Label = "السلامة",  Value = 84, Color = "#16a34a" },
+            new() { Label = "الغاز",    Value = 88, Color = "#0f766e" },
+            new() { Label = "الإنترنت", Value = 60, Color = "#d97706" },
+        }
+            },
+
+        };
+    } }
