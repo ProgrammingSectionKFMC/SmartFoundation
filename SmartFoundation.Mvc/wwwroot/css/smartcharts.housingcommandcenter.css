@@ -1347,3 +1347,35 @@
         overflow: visible !important;
     }
 }
+
+
+.sf-hccm-dep-details-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 11px;
+    border-radius: 8px;
+    background: rgba(255,255,255,.85);
+    color: var(--dc-accent, var(--hccm-brand));
+    font-size: .72rem;
+    font-weight: 800;
+    text-decoration: none;
+    border: 1px solid color-mix(in srgb, var(--dc-accent, var(--hccm-brand)) 28%, transparent);
+    transition: background .15s, box-shadow .15s;
+    cursor: pointer;
+    position: relative;
+    z-index: 4;
+    white-space: nowrap;
+}
+
+    .sf-hccm-dep-details-btn:hover {
+        background: rgba(255,255,255,1);
+        box-shadow: 0 2px 8px rgba(15,23,42,.10);
+    }
+
+    .sf-hccm-dep-details-btn.is-disabled {
+        background: transparent;
+        color: #94a3b8;
+        border-color: #e2e8f0;
+        cursor: default;
+    }

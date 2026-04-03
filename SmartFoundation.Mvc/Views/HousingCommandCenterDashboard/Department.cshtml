@@ -1,0 +1,864 @@
+﻿@model SmartFoundation.UI.ViewModels.SmartCharts.DepartmentDetailViewModel
+@using System.Text.Json
+@using System.Text.Encodings.Web
+@{
+    Layout = null;
+    var dep = Model.Department;
+    var housing = Model.HousingDetail;
+    var alloc = Model.AllocationDetail;
+    var req = Model.RequestsDetail;
+    var fin = Model.FinanceDetail;
+    var maint = Model.MaintenanceDetail;
+
+    var depColor = dep?.Color ?? "#0f766e";
+    var depName = dep?.Name ?? "تفاصيل الإدارة";
+    var depOverall = dep?.OverallCompletionPercent?.ToString("0.0") ?? "—";
+
+    string Fmt(decimal v) => v.ToString("N0", System.Globalization.CultureInfo.InvariantCulture);
+    string FmtSar(decimal v) => v.ToString("N0", System.Globalization.CultureInfo.InvariantCulture) + " ر.س";
+
+    var jsonOpts = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+
+    string J(object o) => JsonSerializer.Serialize(o, jsonOpts);
+
+    var occPct = housing != null && housing.TotalUnits > 0 ? Math.Round((decimal)housing.Occupied / housing.TotalUnits * 100, 1) : 0m;
+    var vacPct = housing != null && housing.TotalUnits > 0 ? Math.Round((decimal)housing.Vacant / housing.TotalUnits * 100, 1) : 0m;
+    var collPct = fin != null && (fin.Collected + fin.Uncollected) > 0 ? Math.Round(fin.Collected / (fin.Collected + fin.Uncollected) * 100, 1) : 0m;
+    var mPct = maint != null && maint.PlannedJobs > 0 ? Math.Round((decimal)maint.CompletedJobs / maint.PlannedJobs * 100, 1) : 0m;
+    var totReq = req?.OpenRequests.Sum(r => (int)r.Value) ?? 0;
+}
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>@depName</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='2' y='18' width='7' height='12' rx='3.5' fill='%230f766e'/><rect x='12' y='10' width='7' height='20' rx='3.5' fill='%232563eb'/><rect x='22' y='4' width='7' height='26' rx='3.5' fill='%23d97706'/></svg>" />
+    <link rel="stylesheet" href="~/css/Fontawesome6-5-0.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/statistics.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/smartcharts.housingcommandcenter.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/smartcharts.housingdepartment.css" asp-append-version="true" />
+</head>
+<body>
+
+    @if (dep != null)
+    {
+        <!-- HEADER -->
+        <header class="dep-hdr">
+            <div class="dep-hdr-bg"></div>
+            <div class="dep-hdr-grid"></div>
+            <a href="/HousingCommandCenterDashboard/Index" class="dep-hdr-back">
+                <i class="fa-solid fa-arrow-right"></i> العودة
+            </a>
+            <div class="dep-hdr-body">
+                <div class="dep-hdr-main">
+                    <div class="dep-hdr-icon">
+                        @if (!string.IsNullOrWhiteSpace(dep.Emoji))
+                        {
+                            <span>@dep.Emoji</span>
+                        }
+                        else
+                        {
+                            <i class="@(dep.Icon ?? "fa-solid fa-building")"></i>
+                        }
+                    </div>
+                    <div class="dep-hdr-copy">
+                        <div class="dep-hdr-label"><span class="dep-hdr-dot"></span>تقرير الأداء التشغيلي</div>
+                        <div class="dep-hdr-name">@depName</div>
+                    </div>
+                </div>
+                <div class="dep-hdr-stats">
+                    <div class="dep-hdr-stat"><span class="dep-hdr-stat-val">@depOverall%</span><span class="dep-hdr-stat-lbl">الأداء</span></div>
+                    <div class="dep-hdr-stat"><span class="dep-hdr-stat-val">5</span><span class="dep-hdr-stat-lbl">معايير</span></div>
+                    <div class="dep-hdr-stat"><span class="dep-hdr-stat-val">@DateTime.Now.ToString("MM/dd")</span><span class="dep-hdr-stat-lbl">اليوم</span></div>
+                </div>
+            </div>
+            <div class="dep-hdr-bar"><div class="dep-hdr-bar-fill" style="width:@depOverall%"></div></div>
+        </header>
+
+        <!-- TABS NAV -->
+        <div class="dep-wrap">
+            <nav class="dep-tabs">
+                <button class="dep-tab is-active" data-tab="t1"><i class="fa-solid fa-house-circle-check"></i><span>جاهزية السكن</span></button>
+                <button class="dep-tab" data-tab="t2"><i class="fa-solid fa-people-roof"></i><span>الإشغال</span></button>
+                <button class="dep-tab" data-tab="t3"><i class="fa-solid fa-stopwatch"></i><span>الطلبات</span></button>
+                <button class="dep-tab" data-tab="t4"><i class="fa-solid fa-money-bill-wave"></i><span>الماليات</span></button>
+                <button class="dep-tab" data-tab="t5"><i class="fa-solid fa-screwdriver-wrench"></i><span>الصيانة</span></button>
+            </nav>
+
+            <!-- TAB 1 — جاهزية السكن -->
+            @if (housing != null)
+            {
+                <div class="dep-panel is-active" id="t1">
+                    <div class="krow">
+                        <div class="kc" style="--ka:rgba(30,58,95,.06);--kt:#1e3a5f"><i class="fa-solid fa-building"></i><div><strong>@Fmt(housing.TotalUnits)</strong><span>إجمالي الوحدات</span></div></div>
+                        <div class="kc" style="--ka:rgba(39,103,73,.06);--kt:#276749"><i class="fa-solid fa-check-circle"></i><div><strong>@Fmt(housing.Occupied)</strong><span>مشغولة <em>@occPct.ToString("0.0")%</em></span></div></div>
+                        <div class="kc" style="--ka:rgba(43,108,176,.06);--kt:#2b6cb0"><i class="fa-solid fa-door-open"></i><div><strong>@Fmt(housing.Vacant)</strong><span>شاغرة <em>@vacPct.ToString("0.0")%</em></span></div></div>
+                        <div class="kc" style="--ka:rgba(192,86,33,.06);--kt:#c05621"><i class="fa-solid fa-wrench"></i><div><strong>@Fmt(housing.UnderMaintenance)</strong><span>تحت الصيانة</span></div></div>
+                        <div class="kc" style="--ka:rgba(155,44,44,.06);--kt:#9b2c2c"><i class="fa-solid fa-triangle-exclamation"></i><div><strong>@Fmt(housing.ReferredQuality)</strong><span>إحالة جودة</span></div></div>
+                        <div class="kc" style="--ka:rgba(85,60,154,.06);--kt:#553c9a"><i class="fa-solid fa-tools"></i><div><strong>@Fmt(housing.ReferredServices)</strong><span>إحالة خدمات</span></div></div>
+                        <div class="kc" style="--ka:rgba(8,111,131,.06);--kt:#086f83"><i class="fa-solid fa-key"></i><div><strong>@Fmt(housing.ReadyToAllocate)</strong><span>جاهزة للتخصيص</span></div></div>
+                    </div>
+
+                    <!-- Row 1: Main status chart + Summary -->
+                    <div class="cgrid cgrid-2-1" style="margin-bottom:16px">
+                        <div class="ccard">
+                            <div class="ccard-hdr">
+                                <div class="ccard-title"><i class="fa-solid fa-chart-pie"></i> حالة الوحدات السكنية</div>
+                                <span class="ccard-badge success"><i class="fa-solid fa-arrow-up"></i> @occPct.ToString("0.0")% إشغال</span>
+                            </div>
+                            <div class="ch-wrap ch250">
+                                <canvas id="c-unit-status"></canvas>
+                                <div class="ch-center" style="color:#1e3a5f"><strong>@occPct.ToString("0.0")%</strong><small>نسبة الإشغال</small></div>
+                            </div>
+                        </div>
+                        <div class="summary-card">
+                            <div class="summary-title"><i class="fa-solid fa-list-check"></i> ملخص الحالة</div>
+                            <ul class="summary-list">
+                                <li class="summary-item">
+                                    <span class="summary-label"><i style="background:rgba(39,103,73,.08);color:#276749" class="fa-solid fa-check"></i> مشغولة</span>
+                                    <span class="summary-value">@Fmt(housing.Occupied)</span>
+                                </li>
+                                <li class="summary-item">
+                                    <span class="summary-label"><i style="background:rgba(43,108,176,.08);color:#2b6cb0" class="fa-solid fa-door-open"></i> شاغرة</span>
+                                    <span class="summary-value">@Fmt(housing.Vacant)</span>
+                                </li>
+                                <li class="summary-item">
+                                    <span class="summary-label"><i style="background:rgba(192,86,33,.08);color:#c05621" class="fa-solid fa-wrench"></i> صيانة</span>
+                                    <span class="summary-value">@Fmt(housing.UnderMaintenance)</span>
+                                </li>
+                                <li class="summary-item">
+                                    <span class="summary-label"><i style="background:rgba(8,111,131,.08);color:#086f83" class="fa-solid fa-key"></i> جاهزة</span>
+                                    <span class="summary-value">@Fmt(housing.ReadyToAllocate)</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Row 2: Distribution charts -->
+                    <div class="cgrid cgrid-2">
+                        <div class="ccard">
+                            <div class="ccard-hdr">
+                                <div class="ccard-title"><i class="fa-solid fa-ruler-combined"></i> توزيع المساحات (م²)</div>
+                                <span class="ccard-badge">@housing.AreaDistribution.Count() فئة</span>
+                            </div>
+                            <div class="ch-wrap ch220"><canvas id="c-areas"></canvas></div>
+                        </div>
+                        <div class="ccard">
+                            <div class="ccard-hdr">
+                                <div class="ccard-title"><i class="fa-solid fa-bed"></i> توزيع الغرف</div>
+                                <span class="ccard-badge">@housing.RoomDistribution.Count() نوع</span>
+                            </div>
+                            <div class="ch-wrap ch220"><canvas id="c-rooms"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- TAB 2 — الإشغال -->
+            @if (alloc != null)
+            {
+                var totalResidents = alloc.Categories.Sum(c => c.Residents);
+                var totalWaiting = alloc.Categories.Sum(c => c.Waiting);
+                <div class="dep-panel" id="t2">
+                    <div class="krow">
+                        <div class="kc" style="--ka:rgba(43,108,176,.06);--kt:#2b6cb0"><i class="fa-solid fa-users"></i><div><strong>@Fmt(totalResidents)</strong><span>إجمالي الساكنين</span></div></div>
+                        <div class="kc" style="--ka:rgba(155,44,44,.06);--kt:#9b2c2c"><i class="fa-solid fa-clock"></i><div><strong>@Fmt(totalWaiting)</strong><span>قائمة الانتظار</span></div></div>
+                        <div class="kc" style="--ka:rgba(30,58,95,.06);--kt:#1e3a5f"><i class="fa-solid fa-map-location-dot"></i><div><strong>@alloc.Districts.Count()</strong><span>عدد الأحياء</span></div></div>
+                        <div class="kc" style="--ka:rgba(192,86,33,.06);--kt:#c05621"><i class="fa-solid fa-layer-group"></i><div><strong>@alloc.Categories.Count()</strong><span>فئات التخصيص</span></div></div>
+                    </div>
+
+                    <!-- Categories Chart - Full Width -->
+                    <div class="cgrid" style="margin-bottom:16px">
+                        <div class="ccard">
+                            <div class="ccard-hdr">
+                                <div class="ccard-title"><i class="fa-solid fa-users-viewfinder"></i> توزيع الفئات — الساكنين مقابل قائمة الانتظار</div>
+                                <span class="ccard-badge">@alloc.Categories.Count() فئة</span>
+                            </div>
+                            <div class="ch-wrap ch280"><canvas id="c-categories"></canvas></div>
+                        </div>
+                    </div>
+
+                    <!-- Districts Chart + Summary -->
+                    <div class="cgrid cgrid-2">
+                        <div class="ccard">
+                            <div class="ccard-hdr">
+                                <div class="ccard-title"><i class="fa-solid fa-map"></i> توزيع السكان على الأحياء</div>
+                            </div>
+                            <div class="ch-wrap ch250"><canvas id="c-districts"></canvas></div>
+                        </div>
+                        <div class="ccard">
+                            <div class="ccard-hdr">
+                                <div class="ccard-title"><i class="fa-solid fa-chart-simple"></i> إحصائيات سريعة</div>
+                            </div>
+                            <div class="mini-stats" style="margin-bottom:16px">
+                                <div class="mini-stat">
+                                    <span class="mini-stat-val" style="color:#2b6cb0">@Fmt(totalResidents)</span>
+                                    <span class="mini-stat-lbl">ساكن حالي</span>
+                                </div>
+                                <div class="mini-stat">
+                                    <span class="mini-stat-val" style="color:#9b2c2c">@Fmt(totalWaiting)</span>
+                                    <span class="mini-stat-lbl">بالانتظار</span>
+                                </div>
+                                <div class="mini-stat">
+                                    <span class="mini-stat-val" style="color:#1e3a5f">@(totalResidents > 0 ? Math.Round((decimal)totalWaiting / totalResidents * 100, 1) : 0)%</span>
+                                    <span class="mini-stat-lbl">نسبة الانتظار</span>
+                                </div>
+                            </div>
+                            <div class="progress-list">
+                                @foreach (var cat in alloc.Categories.Take(4))
+                                {
+                                    var catTotal = cat.Residents + cat.Waiting;
+                                    var catPct = catTotal > 0 ? Math.Round((decimal)cat.Residents / catTotal * 100, 0) : 0;
+                                    <div class="progress-item">
+                                        <div class="progress-header">
+                                            <span class="progress-label">@cat.Label</span>
+                                            <span class="progress-value">@cat.Residents / @catTotal</span>
+                                        </div>
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width:@catPct%;background:linear-gradient(90deg,#2b6cb0,#4299e1)"></div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- TAB 3 — الطلبات -->
+            @if (req != null)
+            {
+                <div class="dep-panel" id="t3">
+                    <div class="krow">
+                        <div class="kc" style="--ka:rgba(192,86,33,.06);--kt:#c05621"><i class="fa-solid fa-list-check"></i><div><strong>@totReq</strong><span>إجمالي الطلبات المفتوحة</span></div></div>
+                        @foreach (var r in req.OpenRequests.Take(3))
+                        {
+                            <div class="kc" style="--ka:rgba(192,86,33,.04);--kt:#c05621"><i class="fa-solid fa-file-alt"></i><div><strong>@((int)r.Value)</strong><span>@r.Label</span></div></div>
+                        }
+                        @foreach (var s in req.SlaComparison.Take(2))
+                        {
+                            var over = s.Actual > s.Target;
+                            <div class="kc" style="--ka:@(over ? "rgba(155,44,44,.06)" : "rgba(39,103,73,.06)");--kt:@(over ? "#9b2c2c" : "#276749")"><i class="fa-solid fa-stopwatch"></i><div><strong>@s.Actual.ToString("0.0") يوم</strong><span>@s.Label <em>هدف: @s.Target.ToString("0.0")</em></span></div></div>
+                        }
+                    </div>
+
+                    <div class="cgrid cgrid-2" style="margin-bottom:16px">
+                        <div class="ccard">
+                            <div class="ccard-hdr">
+                                <div class="ccard-title"><i class="fa-solid fa-chart-pie"></i> توزيع الطلبات المفتوحة</div>
+                                <span class="ccard-badge warning">@totReq طلب</span>
+                            </div>
+                            <div class="ch-wrap ch280">
+                                <canvas id="c-open-req"></canvas>
+                                <div class="ch-center" style="color:#c05621"><strong>@totReq</strong><small>طلب مفتوح</small></div>
+                            </div>
+                        </div>
+                        <div class="ccard">
+                            <div class="ccard-hdr">
+                                <div class="ccard-title"><i class="fa-solid fa-clock"></i> مدد الإنجاز — الفعلي مقابل الهدف</div>
+                                <span class="ccard-badge">بالأيام</span>
+                            </div>
+                            <div class="ch-wrap ch280"><canvas id="c-sla"></canvas></div>
+                        </div>
+                    </div>
+
+                    <!-- SLA Progress Summary -->
+                    <div class="ccard">
+                        <div class="ccard-hdr">
+                            <div class="ccard-title"><i class="fa-solid fa-gauge-high"></i> أداء مستوى الخدمة (SLA)</div>
+                        </div>
+                        <div class="progress-list">
+                            @foreach (var s in req.SlaComparison)
+                            {
+                                var over = s.Actual > s.Target;
+                                var pct = s.Target > 0 ? Math.Min(100, Math.Round(s.Actual / s.Target * 100, 0)) : 0;
+                                <div class="progress-item">
+                                    <div class="progress-header">
+                                        <span class="progress-label">@s.Label</span>
+                                        <span class="progress-value" style="color:@(over ? "#9b2c2c" : "#276749")">@s.Actual.ToString("0.0") / @s.Target.ToString("0.0") يوم</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width:@pct%;background:@(over ? "linear-gradient(90deg,#9b2c2c,#c53030)" : "linear-gradient(90deg,#276749,#38a169)")"></div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- TAB 4 — الماليات -->
+            @if (fin != null)
+            {
+                var totalRent = fin.Collected + fin.Uncollected;
+                <div class="dep-panel" id="t4">
+                    <div class="krow">
+                        <div class="kc" style="--ka:rgba(39,103,73,.06);--kt:#276749"><i class="fa-solid fa-money-bill"></i><div><strong>@FmtSar(fin.RentLastMonth)</strong><span>إيجارات الشهر الماضي</span></div></div>
+                        <div class="kc" style="--ka:rgba(43,108,176,.06);--kt:#2b6cb0"><i class="fa-solid fa-calendar"></i><div><strong>@FmtSar(fin.RentLast3Months)</strong><span>إيجارات آخر 3 أشهر</span></div></div>
+                        <div class="kc" style="--ka:rgba(30,58,95,.06);--kt:#1e3a5f"><i class="fa-solid fa-hand-holding-dollar"></i><div><strong>@FmtSar(fin.Collected)</strong><span>المبالغ المحصّلة <em>@collPct.ToString("0.0")%</em></span></div></div>
+                        <div class="kc" style="--ka:rgba(155,44,44,.06);--kt:#9b2c2c"><i class="fa-solid fa-circle-xmark"></i><div><strong>@FmtSar(fin.Uncollected)</strong><span>المبالغ المتأخرة</span></div></div>
+                    </div>
+
+                    <div class="cgrid cgrid-2" style="margin-bottom:16px">
+                        <div class="ccard">
+                            <div class="ccard-hdr">
+                                <div class="ccard-title"><i class="fa-solid fa-chart-pie"></i> نسبة التحصيل المالي</div>
+                                <span class="ccard-badge success">@collPct.ToString("0.0")%</span>
+                            </div>
+                            <div class="ch-wrap ch280">
+                                <canvas id="c-collection"></canvas>
+                                <div class="ch-center" style="color:#276749"><strong>@collPct.ToString("0.0")%</strong><small>نسبة التحصيل</small></div>
+                            </div>
+                        </div>
+                        <div class="ccard">
+                            <div class="ccard-hdr">
+                                <div class="ccard-title"><i class="fa-solid fa-bolt"></i> كفاءة استهلاك المرافق</div>
+                            </div>
+                            <div class="ch-wrap ch280"><canvas id="c-utility"></canvas></div>
+                        </div>
+                    </div>
+
+                    <!-- Financial Summary -->
+                    <div class="ccard">
+                        <div class="ccard-hdr">
+                            <div class="ccard-title"><i class="fa-solid fa-coins"></i> ملخص الإيرادات</div>
+                        </div>
+                        <div class="mini-stats">
+                            <div class="mini-stat">
+                                <span class="mini-stat-val" style="color:#276749">@FmtSar(fin.RentLastMonth)</span>
+                                <span class="mini-stat-lbl">الشهر الماضي</span>
+                            </div>
+                            <div class="mini-stat">
+                                <span class="mini-stat-val" style="color:#2b6cb0">@FmtSar(fin.RentLast3Months)</span>
+                                <span class="mini-stat-lbl">آخر 3 أشهر</span>
+                            </div>
+                            <div class="mini-stat">
+                                <span class="mini-stat-val" style="color:#1e3a5f">@FmtSar(fin.Collected)</span>
+                                <span class="mini-stat-lbl">تم تحصيله</span>
+                            </div>
+                            <div class="mini-stat">
+                                <span class="mini-stat-val" style="color:#9b2c2c">@FmtSar(fin.Uncollected)</span>
+                                <span class="mini-stat-lbl">متأخرات</span>
+                            </div>
+                            <div class="mini-stat">
+                                <span class="mini-stat-val" style="color:#553c9a">@FmtSar(totalRent)</span>
+                                <span class="mini-stat-lbl">الإجمالي</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- TAB 5 — الصيانة -->
+            @if (maint != null)
+            {
+                var remainingJobs = maint.PlannedJobs - maint.CompletedJobs;
+                <div class="dep-panel" id="t5">
+                    <div class="krow">
+                        <div class="kc" style="--ka:rgba(85,60,154,.06);--kt:#553c9a"><i class="fa-solid fa-gears"></i><div><strong>@maint.CompletedJobs / @maint.PlannedJobs</strong><span>أعمال منجزة <em>@mPct.ToString("0.0")%</em></span></div></div>
+                        <div class="kc" style="--ka:rgba(85,60,154,.04);--kt:#553c9a"><i class="fa-solid fa-car-side"></i><div><strong>@maint.FleetReadiness%</strong><span>جاهزية الأسطول</span></div></div>
+                        <div class="kc" style="--ka:rgba(192,86,33,.06);--kt:#c05621"><i class="fa-solid fa-star-half-stroke"></i><div><strong>@maint.QualityRefs</strong><span>إحالات الجودة</span></div></div>
+                        <div class="kc" style="--ka:rgba(8,111,131,.06);--kt:#086f83"><i class="fa-solid fa-tools"></i><div><strong>@maint.ServicesRefs</strong><span>إحالات الخدمات</span></div></div>
+                    </div>
+
+                    <div class="cgrid cgrid-2" style="margin-bottom:16px">
+                        <div class="ccard">
+                            <div class="ccard-hdr">
+                                <div class="ccard-title"><i class="fa-solid fa-chart-pie"></i> الصيانة الوقائية</div>
+                                <span class="ccard-badge" style="background:rgba(85,60,154,.08);color:#553c9a;border-color:rgba(85,60,154,.2)">@mPct.ToString("0.0")% منجز</span>
+                            </div>
+                            <div class="ch-wrap ch280">
+                                <canvas id="c-maintenance"></canvas>
+                                <div class="ch-center" style="color:#553c9a"><strong>@mPct.ToString("0.0")%</strong><small>نسبة الإنجاز</small></div>
+                            </div>
+                        </div>
+                        <div class="ccard">
+                            <div class="ccard-hdr">
+                                <div class="ccard-title"><i class="fa-solid fa-building-circle-check"></i> جاهزية المرافق الرئيسية</div>
+                            </div>
+                            <div class="ch-wrap ch280"><canvas id="c-facility"></canvas></div>
+                        </div>
+                    </div>
+
+                    <!-- Maintenance Summary -->
+                    <div class="cgrid cgrid-2">
+                        <div class="ccard">
+                            <div class="ccard-hdr">
+                                <div class="ccard-title"><i class="fa-solid fa-clipboard-list"></i> ملخص أعمال الصيانة</div>
+                            </div>
+                            <div class="mini-stats">
+                                <div class="mini-stat">
+                                    <span class="mini-stat-val" style="color:#553c9a">@maint.PlannedJobs</span>
+                                    <span class="mini-stat-lbl">مخطط لها</span>
+                                </div>
+                                <div class="mini-stat">
+                                    <span class="mini-stat-val" style="color:#276749">@maint.CompletedJobs</span>
+                                    <span class="mini-stat-lbl">منجزة</span>
+                                </div>
+                                <div class="mini-stat">
+                                    <span class="mini-stat-val" style="color:#c05621">@remainingJobs</span>
+                                    <span class="mini-stat-lbl">متبقية</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ccard">
+                            <div class="ccard-hdr">
+                                <div class="ccard-title"><i class="fa-solid fa-arrow-right-arrow-left"></i> الإحالات</div>
+                            </div>
+                            <div class="progress-list">
+                                <div class="progress-item">
+                                    <div class="progress-header">
+                                        <span class="progress-label">إحالات الجودة</span>
+                                        <span class="progress-value">@maint.QualityRefs</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width:@(maint.QualityRefs > 0 ? Math.Min(100, maint.QualityRefs * 10) : 0)%;background:linear-gradient(90deg,#c05621,#dd6b20)"></div>
+                                    </div>
+                                </div>
+                                <div class="progress-item">
+                                    <div class="progress-header">
+                                        <span class="progress-label">إحالات الخدمات</span>
+                                        <span class="progress-value">@maint.ServicesRefs</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width:@(maint.ServicesRefs > 0 ? Math.Min(100, maint.ServicesRefs * 10) : 0)%;background:linear-gradient(90deg,#086f83,#0987a0)"></div>
+                                    </div>
+                                </div>
+                                <div class="progress-item">
+                                    <div class="progress-header">
+                                        <span class="progress-label">جاهزية الأسطول</span>
+                                        <span class="progress-value">@maint.FleetReadiness%</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width:@maint.FleetReadiness%;background:linear-gradient(90deg,#553c9a,#6b46c1)"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+        </div>
+
+        <!-- /dep-wrap -->
+    }
+
+    <footer class="dep-footer">
+        إدارة مدينة الملك فيصل العسكرية للتشغيل والصيانة — قسم الحاسب الآلي © 2026
+    </footer>
+
+    <!-- Data islands -->
+    @if (housing != null)
+    {
+        var jsonOpts2 = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+        <script id="d-unit-status" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = new[] { "مشغولة", "شاغرة", "تحت الصيانة", "إحالة جودة", "إحالة خدمات", "جاهزة" }, values = new[] { housing.Occupied, housing.Vacant, housing.UnderMaintenance, housing.ReferredQuality, housing.ReferredServices, housing.ReadyToAllocate } }, jsonOpts2))</script>
+        <script id="d-areas" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = housing.AreaDistribution.Select(s => s.Label).ToArray(), values = housing.AreaDistribution.Select(s => (double)s.Value).ToArray() }, jsonOpts2))</script>
+        <script id="d-rooms" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = housing.RoomDistribution.Select(s => s.Label).ToArray(), values = housing.RoomDistribution.Select(s => (double)s.Value).ToArray() }, jsonOpts2))</script>
+    }
+    @if (alloc != null)
+    {
+        var jsonOpts2 = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+        <script id="d-categories" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = alloc.Categories.Select(c => c.Label).ToArray(), residents = alloc.Categories.Select(c => c.Residents).ToArray(), waiting = alloc.Categories.Select(c => c.Waiting).ToArray() }, jsonOpts2))</script>
+        <script id="d-districts" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = alloc.Districts.Select(d => d.Label).ToArray(), values = alloc.Districts.Select(d => (double)d.Value).ToArray() }, jsonOpts2))</script>
+    }
+    @if (req != null)
+    {
+        var jsonOpts2 = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+        <script id="d-open-req" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = req.OpenRequests.Select(r => r.Label).ToArray(), values = req.OpenRequests.Select(r => (int)r.Value).ToArray(), colors = req.OpenRequests.Select(r => r.Color ?? "#d97706").ToArray(), total = req.OpenRequests.Sum(r => (int)r.Value) }, jsonOpts2))</script>
+        <script id="d-sla" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = req.SlaComparison.Select(s => s.Label).ToArray(), actual = req.SlaComparison.Select(s => (double)s.Actual).ToArray(), target = req.SlaComparison.Select(s => (double)s.Target).ToArray() }, jsonOpts2))</script>
+    }
+    @if (fin != null)
+    {
+        var jsonOpts2 = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+        var cPct = fin.Collected + fin.Uncollected > 0 ? Math.Round(fin.Collected / (fin.Collected + fin.Uncollected) * 100, 1) : 0m;
+        <script id="d-collection" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { collected = (long)fin.Collected, uncollected = (long)fin.Uncollected, pct = cPct }, jsonOpts2))</script>
+        <script id="d-utility" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = fin.UtilityEfficiency.Select(u => u.Label).ToArray(), values = fin.UtilityEfficiency.Select(u => (double)u.Value).ToArray(), colors = fin.UtilityEfficiency.Select(u => u.Color ?? "#0f766e").ToArray() }, jsonOpts2))</script>
+    }
+    @if (maint != null)
+    {
+        var jsonOpts2 = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+        var mp = maint.PlannedJobs > 0 ? Math.Round((decimal)maint.CompletedJobs / maint.PlannedJobs * 100, 1) : 0m;
+        <script id="d-maintenance" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { completed = maint.CompletedJobs, remaining = maint.PlannedJobs - maint.CompletedJobs, pct = mp }, jsonOpts2))</script>
+        <script id="d-facility" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = maint.FacilityStatus.Select(f => f.Label).ToArray(), values = maint.FacilityStatus.Select(f => (double)f.Value).ToArray(), colors = maint.FacilityStatus.Select(f => f.Color ?? "#7c3aed").ToArray() }, jsonOpts2))</script>
+    }
+
+    <script src="~/lib/chartjs/chart.umd.js" asp-append-version="true"></script>
+    <script src="~/lib/chartjs/chartjs-plugin-datalabels.min.js" asp-append-version="true"></script>
+    <script>
+        (function(){
+        'use strict';
+
+        /* ── Global Chart Settings — Official Style ── */
+        var F = "'Segoe UI', 'Cairo', Tahoma, Arial, sans-serif";
+        Chart.defaults.font.family = F;
+        Chart.defaults.font.size = 12;
+        Chart.defaults.animation.duration = 600;
+        Chart.defaults.animation.easing = 'easeOutQuart';
+        Chart.defaults.plugins.legend.labels.usePointStyle = true;
+        Chart.defaults.plugins.legend.labels.pointStyle = 'circle';
+        Chart.defaults.plugins.legend.labels.boxWidth = 8;
+        Chart.defaults.plugins.legend.labels.boxHeight = 8;
+        Chart.defaults.plugins.legend.labels.padding = 14;
+        Chart.defaults.plugins.legend.labels.font = { size: 11, weight: '600' };
+
+        /* ── Official Government Color Palette ── */
+        var COLORS = {
+            primary: '#1e3a5f',
+            primaryLight: '#2c5282',
+            accent: '#c9a227',
+            success: '#276749',
+            successLight: '#38a169',
+            info: '#2b6cb0',
+            infoLight: '#4299e1',
+            warning: '#c05621',
+            warningLight: '#dd6b20',
+            danger: '#9b2c2c',
+            dangerLight: '#c53030',
+            purple: '#553c9a',
+            purpleLight: '#6b46c1',
+            cyan: '#086f83',
+            cyanLight: '#0987a0',
+            gray: '#4a5568',
+            grayLight: '#a0aec0'
+        };
+
+        var PAL = [COLORS.primary, COLORS.info, COLORS.warning, COLORS.danger, COLORS.purple, COLORS.cyan, COLORS.success, COLORS.accent];
+
+        /* ── Helpers ── */
+        function get(id) {
+            var e = document.getElementById(id);
+            if (!e) return null;
+            try { return JSON.parse(e.textContent); } catch(x) { return null; }
+        }
+
+        function mk(id, cfg) {
+            var c = document.getElementById(id);
+            if (!c) return;
+            cfg.options = cfg.options || {};
+            cfg.options.responsive = true;
+            cfg.options.maintainAspectRatio = false;
+            new Chart(c, cfg);
+        }
+
+        /* ── Doughnut Chart — Official Style ── */
+        function donut(labels, data, colors, cut) {
+            var tot = data.reduce(function(a,b){ return a+b; }, 0);
+            return {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: '#fff',
+                        hoverOffset: 6,
+                        hoverBorderWidth: 3,
+                        hoverBorderColor: '#fff'
+                    }]
+                },
+                options: {
+                    cutout: cut || '65%',
+                    spacing: 1,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { font: { size: 11 }, padding: 16 }
+                        },
+                        datalabels: { display: false },
+                        tooltip: {
+                            backgroundColor: '#1a1a2e',
+                            titleFont: { size: 13, weight: '700' },
+                            bodyFont: { size: 12 },
+                            padding: 12,
+                            cornerRadius: 6,
+                            callbacks: {
+                                label: function(c) {
+                                    var p = tot > 0 ? Math.round(c.parsed/tot*100) : 0;
+                                    return ' ' + c.label + ': ' + c.parsed.toLocaleString('en-US') + ' (' + p + '%)';
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+        }
+
+        /* ── Horizontal Bar Chart — Official Style ── */
+        function hbar(labels, data, colors) {
+            return {
+                type: 'bar',
+                plugins: [ChartDataLabels],
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors || PAL,
+                        borderRadius: 4,
+                        borderSkipped: false,
+                        barThickness: 18,
+                        maxBarThickness: 22
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: false },
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'start',
+                            offset: 8,
+                            color: '#2d3748',
+                            font: { weight: '700', size: 11 },
+                            formatter: function(v) { return v.toLocaleString('en-US'); }
+                        },
+                        tooltip: {
+                            backgroundColor: '#1a1a2e',
+                            padding: 12,
+                            cornerRadius: 6,
+                            callbacks: {
+                                label: function(c) { return ' ' + c.parsed.x.toLocaleString('en-US'); }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(0,0,0,.04)', drawBorder: false },
+                            ticks: { font: { size: 11 }, color: '#718096' }
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: { font: { size: 12, weight: '600' }, color: '#2d3748' }
+                        }
+                    }
+                }
+            };
+        }
+
+        /* ══ 1 — حالة الوحدات ══ */
+        var d1 = get('d-unit-status');
+        if (d1) mk('c-unit-status', donut(d1.labels, d1.values, [COLORS.success, COLORS.info, COLORS.warning, COLORS.danger, COLORS.purple, COLORS.cyan]));
+
+        /* ══ 1b — مساحات ══ */
+        var dA = get('d-areas');
+        if (dA) mk('c-areas', hbar(dA.labels, dA.values, [COLORS.primary, COLORS.info, COLORS.warning, COLORS.purple, COLORS.danger]));
+
+        /* ══ 1c — غرف ══ */
+        var dR = get('d-rooms');
+        if (dR) mk('c-rooms', hbar(dR.labels, dR.values, [COLORS.info, COLORS.primary, COLORS.warning, COLORS.purple, COLORS.danger, COLORS.cyan]));
+
+        /* ══ 2 — فئات ══ */
+        var d2 = get('d-categories');
+        if (d2) mk('c-categories', {
+            type: 'bar',
+            plugins: [ChartDataLabels],
+            data: {
+                labels: d2.labels,
+                datasets: [
+                    {
+                        label: 'ساكنين',
+                        data: d2.residents,
+                        backgroundColor: COLORS.info,
+                        borderRadius: 4,
+                        borderSkipped: false,
+                        barThickness: 16
+                    },
+                    {
+                        label: 'انتظار',
+                        data: d2.waiting,
+                        backgroundColor: COLORS.danger,
+                        borderRadius: 4,
+                        borderSkipped: false,
+                        barThickness: 16
+                    }
+                ]
+            },
+            options: {
+                plugins: {
+                    legend: { position: 'top', labels: { font: { size: 12, weight: '600' } } },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'top',
+                        offset: 2,
+                        color: '#2d3748',
+                        font: { weight: '700', size: 10 },
+                        formatter: function(v) { return v > 0 ? v.toLocaleString('en-US') : ''; }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1a1a2e',
+                        padding: 12,
+                        cornerRadius: 6
+                    }
+                },
+                scales: {
+                    x: { ticks: { font: { size: 11 } }, grid: { display: false } },
+                    y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,.04)' }, ticks: { font: { size: 11 } } }
+                }
+            }
+        });
+
+        /* ══ 2b — أحياء ══ */
+        var dD = get('d-districts');
+        if (dD) mk('c-districts', hbar(dD.labels, dD.values, PAL));
+
+        /* ══ 3 — طلبات ══ */
+        var d3 = get('d-open-req');
+        if (d3) mk('c-open-req', donut(d3.labels, d3.values, d3.colors.map(function(c) {
+            return c === '#d97706' ? COLORS.warning : c;
+        }), '62%'));
+
+        /* ══ 3b — SLA ══ */
+        var dS = get('d-sla');
+        if (dS) mk('c-sla', {
+            type: 'bar',
+            plugins: [ChartDataLabels],
+            data: {
+                labels: dS.labels,
+                datasets: [
+                    {
+                        label: 'فعلي',
+                        data: dS.actual,
+                        backgroundColor: dS.actual.map(function(v, i) {
+                            return v > dS.target[i] ? COLORS.danger : COLORS.success;
+                        }),
+                        borderRadius: 4,
+                        borderSkipped: false,
+                        barThickness: 16
+                    },
+                    {
+                        label: 'هدف',
+                        data: dS.target,
+                        backgroundColor: 'rgba(43,108,176,.25)',
+                        borderRadius: 4,
+                        borderSkipped: false,
+                        barThickness: 16
+                    }
+                ]
+            },
+            options: {
+                plugins: {
+                    legend: { position: 'top', labels: { font: { size: 12, weight: '600' } } },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'top',
+                        offset: 2,
+                        color: '#2d3748',
+                        font: { weight: '700', size: 10 },
+                        formatter: function(v) { return v.toFixed(1); }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1a1a2e',
+                        padding: 12,
+                        cornerRadius: 6,
+                        callbacks: {
+                            label: function(c) { return ' ' + c.dataset.label + ': ' + c.parsed.y.toFixed(1) + ' يوم'; }
+                        }
+                    }
+                },
+                scales: {
+                    x: { ticks: { font: { size: 11 } }, grid: { display: false } },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0,0,0,.04)' },
+                        ticks: { font: { size: 11 }, callback: function(v) { return v + 'د'; } }
+                    }
+                }
+            }
+        });
+
+        /* ══ 4 — تحصيل ══ */
+        var d4 = get('d-collection');
+        if (d4) {
+            var c4 = donut(['محصّل', 'غير محصّل'], [d4.collected, d4.uncollected], [COLORS.success, COLORS.danger], '65%');
+            c4.options.plugins.tooltip.callbacks.label = function(c) {
+                return ' ' + c.label + ': ' + Number(c.parsed).toLocaleString('en-US') + ' ر.س';
+            };
+            mk('c-collection', c4);
+        }
+
+        /* ══ 4b — مرافق ══ */
+        var dU = get('d-utility');
+        if (dU) mk('c-utility', {
+            type: 'bar',
+            plugins: [ChartDataLabels],
+            data: {
+                labels: dU.labels,
+                datasets: [{
+                    data: dU.values,
+                    backgroundColor: dU.colors.map(function(c) {
+                        return c === '#0f766e' ? COLORS.primary : c;
+                    }),
+                    borderRadius: 4,
+                    borderSkipped: false,
+                    barThickness: 18
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'start',
+                        offset: 8,
+                        color: '#2d3748',
+                        font: { weight: '700', size: 11 },
+                        formatter: function(v) { return v.toFixed(0) + '%'; }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1a1a2e',
+                        padding: 12,
+                        cornerRadius: 6,
+                        callbacks: {
+                            label: function(c) { return ' ' + c.parsed.x.toFixed(1) + '%'; }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        min: 0,
+                        max: 100,
+                        grid: { color: 'rgba(0,0,0,.04)' },
+                        ticks: { font: { size: 11 }, callback: function(v) { return v + '%'; } }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { font: { size: 12, weight: '600' }, color: '#2d3748' }
+                    }
+                }
+            }
+        });
+
+        /* ══ 5 — صيانة ══ */
+        var d5 = get('d-maintenance');
+        if (d5) mk('c-maintenance', donut(['منجزة', 'متبقية'], [d5.completed, d5.remaining], [COLORS.purple, '#e2e8f0'], '65%'));
+
+        /* ══ 5b — مرافق ══ */
+        var dF = get('d-facility');
+        if (dF) mk('c-facility', hbar(dF.labels, dF.values, dF.colors.map(function(c) {
+            return c === '#7c3aed' ? COLORS.purple : c;
+        })));
+
+        /* ── TABS ── */
+        document.querySelectorAll('.dep-tab').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.dep-tab').forEach(function(b) { b.classList.remove('is-active'); });
+                document.querySelectorAll('.dep-panel').forEach(function(p) { p.classList.remove('is-active'); });
+                btn.classList.add('is-active');
+                var p = document.getElementById(btn.dataset.tab);
+                if (p) {
+                    p.classList.add('is-active');
+                    window.dispatchEvent(new Event('resize'));
+                }
+            });
+        });
+
+        })();
+    </script>
+</body>
+</html>
