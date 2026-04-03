@@ -293,6 +293,102 @@ namespace SmartFoundation.UI.ViewModels.SmartCharts
         public string PercentFormat { get; set; } = "0.0";
         public string NumberFormat { get; set; } = "0.##";
     }
+
+    // ===== Department Detail Models =====
+
+    public class DepHousingDetail
+    {
+        public int TotalUnits { get; set; }
+        public int Occupied { get; set; }
+        public int Vacant { get; set; }
+        public int UnderMaintenance { get; set; }
+        public int ReferredQuality { get; set; }
+        public int ReferredServices { get; set; }
+        public int ReadyToAllocate { get; set; }
+
+        // توزيع المساحات
+        public List<ChartSlice> AreaDistribution { get; set; } = new();
+        // توزيع الغرف
+        public List<ChartSlice> RoomDistribution { get; set; } = new();
+        // المرافق
+        public List<ChartSlice> FacilityTypes { get; set; } = new();
+    }
+
+    public class DepAllocationDetail
+    {
+        // فئات السكان: ساكنين
+        public List<DepCategoryItem> Categories { get; set; } = new();
+        // توزيع الأحياء
+        public List<ChartSlice> Districts { get; set; } = new();
+    }
+
+    public class DepCategoryItem
+    {
+        public string Label { get; set; } = "";
+        public int Residents { get; set; }
+        public int Waiting { get; set; }
+        public string? Color { get; set; }
+    }
+
+    public class DepRequestsDetail
+    {
+        // الطلبات المفتوحة
+        public List<ChartSlice> OpenRequests { get; set; } = new();
+        // مقارنة المدد: فعلي vs هدف
+        public List<DepSlaItem> SlaComparison { get; set; } = new();
+    }
+
+    public class DepSlaItem
+    {
+        public string Label { get; set; } = "";
+        public decimal Actual { get; set; }
+        public decimal Target { get; set; }
+        public string? Color { get; set; }
+    }
+
+    public class DepFinanceDetail
+    {
+        public decimal RentLastMonth { get; set; }
+        public decimal RentLast3Months { get; set; }
+        public decimal RentLast12Months { get; set; }
+        public decimal Collected { get; set; }
+        public decimal Uncollected { get; set; }
+
+        // استهلاك الكهرباء والماء
+        public List<ChartSlice> UtilityEfficiency { get; set; } = new();
+    }
+
+    public class DepMaintenanceDetail
+    {
+        public int PlannedJobs { get; set; }
+        public int CompletedJobs { get; set; }
+        public int FleetReadiness { get; set; }
+        public int QualityRefs { get; set; }
+        public int ServicesRefs { get; set; }
+
+        // حالة المرافق
+        public List<ChartSlice> FacilityStatus { get; set; } = new();
+    }
+
+    public class ChartSlice
+    {
+        public string Label { get; set; } = "";
+        public decimal Value { get; set; }
+        public string? Color { get; set; }
+    }
+
+    public class DepartmentDetailViewModel
+    {
+        public HousingCommandCenterDepartment Department { get; set; } = new();
+        public List<HousingCommandCenterMetric> Metrics { get; set; } = new();
+
+        public DepHousingDetail? HousingDetail { get; set; }
+        public DepAllocationDetail? AllocationDetail { get; set; }
+        public DepRequestsDetail? RequestsDetail { get; set; }
+        public DepFinanceDetail? FinanceDetail { get; set; }
+        public DepMaintenanceDetail? MaintenanceDetail { get; set; }
+    }
+
     #endregion
 
 
