@@ -125,6 +125,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             bool isMainActionEntryData = c.ColumnName.Equals("MainActionEntryData", StringComparison.OrdinalIgnoreCase);
                             bool isLastActionEntryData = c.ColumnName.Equals("LastActionEntryData", StringComparison.OrdinalIgnoreCase);
                             bool isActionDate = c.ColumnName.Equals("ActionDate", StringComparison.OrdinalIgnoreCase);
+                            bool isActionNote = c.ColumnName.Equals("ActionNote", StringComparison.OrdinalIgnoreCase);
+                            bool isLastActionIdaraName = c.ColumnName.Equals("LastActionIdaraName", StringComparison.OrdinalIgnoreCase);
+                            bool isLastActionTypeName = c.ColumnName.Equals("LastActionTypeName", StringComparison.OrdinalIgnoreCase);
+                            bool isLastActionEntryDate = c.ColumnName.Equals("LastActionEntryDate", StringComparison.OrdinalIgnoreCase);
+                            bool isMainActionEntryDate = c.ColumnName.Equals("MainActionEntryDate", StringComparison.OrdinalIgnoreCase);
+                            
 
                             dynamicColumns.Add(new TableColumn
                             {
@@ -133,10 +139,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 Type = colType,
                                 Sortable = true,
                                 // ✅ اخفي IDs و metadata فقط
-                                Visible = !(isActionID || isresidentInfoID || isNationalID || isIdaraId || 
+                                Visible = !(isActionID || isresidentInfoID  || isIdaraId || 
                                            isToIdaraID || isLastActionID || isLastActionTypeID || 
                                            isLastActionIdaraID || isMainActionEntryData || 
-                                           isLastActionEntryData || isActionDate)
+                                           isLastActionEntryData || isActionDate || isActionNote || isLastActionIdaraName || isLastActionTypeName || isLastActionEntryDate || isMainActionEntryDate)
                             });
                         }
 

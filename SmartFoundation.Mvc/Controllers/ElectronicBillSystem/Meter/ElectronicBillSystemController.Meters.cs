@@ -177,7 +177,26 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                           || c.ColumnName.Equals("meterServicePriceID", StringComparison.OrdinalIgnoreCase);
 
                             // Add filter for meter type if needed
+                            bool ismeterServiceTypeName_A = c.ColumnName.Equals("meterServiceTypeName_A", StringComparison.OrdinalIgnoreCase);
+                            bool ismeterTypeName_A = c.ColumnName.Equals("meterTypeName_A", StringComparison.OrdinalIgnoreCase);
 
+
+                            List<OptionItem> filterOpts = new();
+                            if (ismeterServiceTypeName_A || ismeterTypeName_A)
+                            {
+                                var field = c.ColumnName;
+
+                                var distinctVals = dt1.AsEnumerable()
+                                    .Select(r => (r[field] == DBNull.Value ? "" : r[field]?.ToString())?.Trim())
+                                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                                    .Distinct()
+                                    .OrderBy(s => s)
+                                    .ToList();
+
+                                filterOpts = distinctVals
+                                    .Select(s => new OptionItem { Value = s!, Text = s! })
+                                    .ToList();
+                            }
 
                             dynamicColumns.Add(new TableColumn
                             {
@@ -185,8 +204,19 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                 Label = headerMap.TryGetValue(c.ColumnName, out var label) ? label : c.ColumnName,
                                 Type = colType,
                                 Sortable = true,
-                                Visible = !(isHidden),  // Hide FK columns only
-                              
+                                Visible = !(isHidden),
+                                Filter = (ismeterServiceTypeName_A || ismeterTypeName_A)
+                                    ? new TableColumnFilter
+                                    {
+                                        Enabled = true,
+                                        Type = "select",
+                                        Options = filterOpts,
+                                    }
+                                    : new TableColumnFilter
+                                    {
+                                        Enabled = false
+                                    }
+
                             });
                         }
 
@@ -293,7 +323,25 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                            || c.ColumnName.Equals("hostName", StringComparison.OrdinalIgnoreCase);
 
                             // Add filter for meter type if needed
+                            bool ismeterServiceTypeName_A = c.ColumnName.Equals("meterServiceTypeName_A", StringComparison.OrdinalIgnoreCase);
 
+
+                            List<OptionItem> filterOpts = new();
+                            if (ismeterServiceTypeName_A)
+                            {
+                                var field = c.ColumnName;
+
+                                var distinctVals = dt2.AsEnumerable()
+                                    .Select(r => (r[field] == DBNull.Value ? "" : r[field]?.ToString())?.Trim())
+                                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                                    .Distinct()
+                                    .OrderBy(s => s)
+                                    .ToList();
+
+                                filterOpts = distinctVals
+                                    .Select(s => new OptionItem { Value = s!, Text = s! })
+                                    .ToList();
+                            }
 
                             dynamicmeterTypeColumns.Add(new TableColumn
                             {
@@ -301,7 +349,18 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                 Label = headerMapmeterType.TryGetValue(c.ColumnName, out var label) ? label : c.ColumnName,
                                 Type = colType,
                                 Sortable = true,
-                                Visible = !(isHidden),  // Hide FK columns only
+                                Visible = !(isHidden),
+                                Filter = (ismeterServiceTypeName_A)
+                                    ? new TableColumnFilter
+                                    {
+                                        Enabled = true,
+                                        Type = "select",
+                                        Options = filterOpts,
+                                    }
+                                    : new TableColumnFilter
+                                    {
+                                        Enabled = false
+                                    }
 
                             });
                         }
@@ -393,7 +452,27 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                             || c.ColumnName.Equals("BuildingIdaraName", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("BuildingIdaraID", StringComparison.OrdinalIgnoreCase);
 
-                            // Add filter for meter type if needed
+                            bool isbuildingClassName_A = c.ColumnName.Equals("buildingClassName_A", StringComparison.OrdinalIgnoreCase);
+                            bool isbuildingTypeName_A = c.ColumnName.Equals("buildingTypeName_A", StringComparison.OrdinalIgnoreCase);
+                            bool ismilitaryLocationName_A = c.ColumnName.Equals("militaryLocationName_A", StringComparison.OrdinalIgnoreCase);
+
+
+                            List<OptionItem> filterOpts = new();
+                            if (isbuildingClassName_A || isbuildingTypeName_A || ismilitaryLocationName_A)
+                            {
+                                var field = c.ColumnName;
+
+                                var distinctVals = dt3.AsEnumerable()
+                                    .Select(r => (r[field] == DBNull.Value ? "" : r[field]?.ToString())?.Trim())
+                                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                                    .Distinct()
+                                    .OrderBy(s => s)
+                                    .ToList();
+
+                                filterOpts = distinctVals
+                                    .Select(s => new OptionItem { Value = s!, Text = s! })
+                                    .ToList();
+                            }
 
 
                             dynamicmeterlinkToBuildingColumns.Add(new TableColumn
@@ -402,7 +481,18 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                 Label = headerMapmeterlinkToBuilding.TryGetValue(c.ColumnName, out var label) ? label : c.ColumnName,
                                 Type = colType,
                                 Sortable = true,
-                                Visible = !(isHidden),  // Hide FK columns only
+                                Visible = !(isHidden),
+                                Filter = (isbuildingClassName_A || isbuildingTypeName_A || ismilitaryLocationName_A)
+                                    ? new TableColumnFilter
+                                    {
+                                        Enabled = true,
+                                        Type = "select",
+                                        Options = filterOpts,
+                                    }
+                                    : new TableColumnFilter
+                                    {
+                                        Enabled = false
+                                    }
 
                             });
                         }

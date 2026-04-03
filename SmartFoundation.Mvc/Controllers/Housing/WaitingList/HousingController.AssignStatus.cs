@@ -264,6 +264,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ["buildingActionTypeResidentAlias"] = "الحالة",
                             ["buildingDetailsNo"] = "رقم المنزل",
                             ["rankNameA"] = "الرتبة",
+                            ["militaryLocationName_A"] = "الحي",
                             ["WaitingListOrder"] = "ترتيب الانتظار حسب الفئة"
                         };
 
@@ -293,6 +294,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             bool isCount_ = c.ColumnName.Equals("Count_", StringComparison.OrdinalIgnoreCase);
                             bool isrankNameA = c.ColumnName.Equals("rankNameA", StringComparison.OrdinalIgnoreCase);
                             bool ismilitaryUnitName_A = c.ColumnName.Equals("militaryUnitName_A", StringComparison.OrdinalIgnoreCase);
+                            bool isWaitingOrderTypeName = c.ColumnName.Equals("WaitingOrderTypeName", StringComparison.OrdinalIgnoreCase);
                             
                             
 
@@ -305,7 +307,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID || isLastActionTypeID  || isbuildingDetailsID || isLastActionID || isAssignPeriodID || isCount_ || ismilitaryUnitName_A)
+                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID || isLastActionTypeID  || isbuildingDetailsID || isLastActionID || isAssignPeriodID || isCount_ || ismilitaryUnitName_A || isWaitingOrderTypeName)
                             });
                         }
 
@@ -633,7 +635,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                     Print1 = new TableAction
                     {
-                        Label = "طباعة تقرير",
+                        Label = "طباعة اشعار مراجعة",
                         Icon = "fa fa-print",
                         Color = "info",
                         OnClickJs = @"
@@ -866,6 +868,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 string orderTypeName = selectedRow["WaitingOrderTypeName"]?.ToString() ?? "";
                 string rankNameA = selectedRow["rankNameA"]?.ToString() ?? "";
                 string militaryUnitName_A = selectedRow["militaryUnitName_A"]?.ToString() ?? "";
+                string militaryLocationName_A = selectedRow["militaryLocationName_A"]?.ToString() ?? "";
 
                 string decisionDateStr = "";
                 if (selectedRow["ActionDecisionDate"] != DBNull.Value)
@@ -1080,7 +1083,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                   $"\n" +
                  $"يقرر مايلي :\n"+
                   $"\n" +
-                 $" أ. إسكان الموضح هويته بعاليه بالسكن رقم {buildingNo} بحي {buildingNo} وحسم عائدات السكن اعتبارا من تاريخ السكن.\n"+
+                 $" أ. إسكان الموضح هويته بعاليه بالسكن رقم {buildingNo} - {militaryLocationName_A} وحسم عائدات السكن اعتبارا من تاريخ السكن.\n"+
                   $"\n" +
                  $"ب. في حال عدم استلام الوحدة السكنية خلال شهر من تاريخه سيتم تسليمه لمن يليه في قائمة الانتظار.\n"+
                   $"\n" +
@@ -1134,7 +1137,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             // Signature block
             LetterBlockFactory.TextBlock(
-                "العميد ركن \n\n\n ",
+                "العميد المهندس \n\n ",
                 fontSize: 13,
                 align: TextAlign.Left,
                 paddingTop: 10,
@@ -1148,7 +1151,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 align: TextAlign.Left,
                 paddingTop: 10,
                 bold:true,
-                paddingLeft: 40,
+                paddingLeft: 55,
                 lineHeight: 2.7f)
         }
                 };
