@@ -248,7 +248,7 @@
         <div class="sf-hccm-ranking-row is-worst">
             <span class="sf-hccm-ranking-icon">⚠️</span>
             <span class="sf-hccm-ranking-label">الأدنى:</span>
-            <span class="sf-hccm-ranking-name">${esc(metric.__worst.name)}</span>
+            <span class="sf-hccm-ranking-name">-</span>
             <span class="sf-hccm-ranking-val">${esc(fmtPercent(metric.__worst.percent, 1))}</span>
         </div>` : ''}
     </div>` : ''}
@@ -257,6 +257,7 @@
 
     /* =========================================================
        Matrix table helpers
+       <span class="sf-hccm-ranking-name">${esc(metric.__worst.name)}</span>
     ========================================================= */
     function getPerfClass(percent) {
         const p = num(percent);

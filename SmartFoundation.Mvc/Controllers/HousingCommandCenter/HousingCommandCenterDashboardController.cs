@@ -90,7 +90,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
                     TitleText = "لوحة قيادة الإدارات التشغيلية والصيانة",
                     SubtitleText = "خمسة معايير قرار رئيسية تعكس الجاهزية السكنية، كفاءة التخصيص، أداء الطلبات، الكفاءة المالية، والصيانة والجودة",
                     ShowHeader = false,
-                    ShowSummaryRow = true,
+                    ShowSummaryRow = false,
                     ShowDepartmentRanking = false,
                     ShowMetricProgressBar = true,
                     ShowMetricTargetActual = true,
@@ -244,7 +244,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
             shortName: "مدينة الملك عبدالعزيز",
 
         icon: "fa-solid fa-fort-awesome",
-        emoji: "🏰",
+        emoji: "🏙️",
         tone: "success",
         color: Color.Blue,
        // hint: "إدارة كبيرة مستقرة نسبيًا، لكنها ما زالت تتحمل ضغطًا واضحًا في الإحالات والزمن التنفيذي.",
@@ -284,7 +284,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
             shortName: "منشآت الرياض",
 
         icon: "fa-solid fa-building",
-        emoji: "🏢",
+        emoji: "🏙️",
         tone: "success",
         color: Color.Green,
        // hint: "إدارة متوازنة في أغلب المؤشرات، وأداؤها مناسب كنموذج تشغيلي مستقر مع فرص محددة في تقليل زمن الإنجاز.",
@@ -324,7 +324,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
             shortName: "منشآت جازان",
 
         icon: "fa-solid fa-water",
-        emoji: "🌊",
+        emoji: "🏙️",
         tone: "warning",
         color: Color.Sky,
         //hint: "البيئة الساحلية تزيد من تآكل الأصول وأعطال الشبكات، وتظهر الحساسية بوضوح في SLA والصيانة الوقائية.",
@@ -364,7 +364,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
             shortName: "مدينة الملك خالد",
 
         icon: "fa-solid fa-shield-halved",
-        emoji: "🛡️",
+        emoji: "🏙️",
         tone: "success",
         color: Color.Violet,
         //hint: "إدارة قوية في الاستقرار التشغيلي والوقائي، لكن ما زال عندها مجال لتحسين توازن الانتظار والملف المالي.",
@@ -404,7 +404,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
             shortName: "منشآت القصيم",
 
         icon: "fa-solid fa-solar-panel",
-        emoji: "🏜️",
+        emoji: "🏙️",
         tone: "info",
         color: Color.Amber,
        // hint: "إدارة متوسطة الأداء، ويظهر فيها أثر تأخر الجاهزية على التخصيص والطلبات أكثر من أثر الماليات.",
@@ -444,7 +444,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
             shortName: "منشآت الطائف",
 
         icon: "fa-solid fa-mountain-city",
-        emoji: "⛰️",
+        emoji: "🏙️",
         tone: "info",
         color: Color.Purple,
         //hint: "إدارة ذات أساس جيد في الجودة والاستقرار العام، لكنها تحتاج تحسينًا في المسار المالي وبعض مدد الإمهال.",

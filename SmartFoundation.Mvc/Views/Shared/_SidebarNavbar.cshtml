@@ -61,6 +61,16 @@
 
             <!-- جهة اليمين -->
             <div class="flex items-center gap-0">
+
+
+                <!-- روابط سريعة -->
+                <nav class="me-4 flex flex-none items-center gap-0.5" dir="rtl" aria-label="روابط سريعة">
+                    <a href="/HousingCommandCenterDashboard/Index" target="_blank" class="sf-header-action-btn" style="background:#f5f5fa; color:#034f0b; border-color:#034f0b;">
+                        <i class="fa-solid fa-tachometer"></i>
+                        <span>الشاشة التفاعلية</span>
+                    </a>
+                </nav>
+
                 <!-- روابط سريعة -->
                 <nav class="me-4 flex flex-none items-center gap-0.5" dir="rtl" aria-label="روابط سريعة">
                     <a href="/Home" class="sf-header-action-btn">
@@ -68,6 +78,7 @@
                         <span>الصفحة الرئيسية</span>
                     </a>
                 </nav>
+
 
                 <!-- روابط سريعة -->
                 <nav class="me-4 flex flex-none items-center gap-0.5" dir="rtl" aria-label="روابط سريعة">
@@ -83,6 +94,9 @@
 
                 <!-- الإشعارات -->
                 @await Component.InvokeAsync("Notification")
+
+
+
 
 
                 <!-- المستخدم -->
