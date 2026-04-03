@@ -267,7 +267,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p12", Label = "تسجيل العهد والملاحظات على المنزل", Type = "textarea", ColCss = "12",Required = true,HelpText="لايجب ان يتجاوز النص 4000 حرف*",MaxLength=3900 },
+                new FieldConfig { Name = "p12", Label = "تسجيل الملاحظات", Type = "textarea", ColCss = "12",Required = true,HelpText="لايجب ان يتجاوز النص 4000 حرف*",MaxLength=3900 },
                 new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
@@ -308,10 +308,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
 
-                new FieldConfig { Name = "p25", Label = "تاريخ التسكين", Type = "date", ColCss = "3", Required = true,Icon = "fa fa-calendar" },
-                new FieldConfig { Name = "p23", Label = "رقم الخطاب الصادر", Type = "text", ColCss = "3", Required = true },
-                new FieldConfig { Name = "p24", Label = "تاريخ الخطاب الصادر", Type = "date", ColCss = "3", Required = true,Icon = "fa fa-calendar" },
-                new FieldConfig { Name = "p12", Label = "ملاحظات التسكين", Type = "textarea", ColCss = "3",Required = true,HelpText="لايجب ان يتجاوز النص 4000 حرف*",MaxLength=3900 },
+                new FieldConfig { Name = "p25", Label = "تاريخ التسكين", Type = "date", ColCss = "4", Required = true,Icon = "fa fa-calendar" },
+                new FieldConfig { Name = "p23", Label = "رقم الخطاب الصادر", Type = "text", ColCss = "4", Required = true },
+                new FieldConfig { Name = "p24", Label = "تاريخ الخطاب الصادر", Type = "date", ColCss = "4", Required = true,Icon = "fa fa-calendar" },
+                new FieldConfig { Name = "p12", Label = "ملاحظات التسكين", Type = "textarea", ColCss = "6",Required = true,HelpText="لايجب ان يتجاوز النص 4000 حرف*",MaxLength=3900 },
 
                 new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },

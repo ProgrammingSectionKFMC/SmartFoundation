@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using SmartFoundation.MVC.Reports;
 using SmartFoundation.UI.ViewModels.SmartForm;
 using SmartFoundation.UI.ViewModels.SmartPage;
 using SmartFoundation.UI.ViewModels.SmartTable;
@@ -11,7 +12,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 {
     public partial class HousingController : Controller
     {
-        public async Task<IActionResult> OtherWaitingList()
+        public async Task<IActionResult> OtherWaitingList(int pdf = 0)
         {
 
 
@@ -54,8 +55,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
            
                 SplitDataSet(ds);
-            
 
+            bool printdthasvalue = dt1 != null && dt1.Rows.Count > 0;
 
 
             if (permissionTable is null || permissionTable.Rows.Count == 0)
@@ -210,6 +211,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ["WaitingOrderTypeName"] = "نوع سجل الانتظار",
                             ["ActionNote"] = "ملاحظات",
                             ["FullName_A"] = "الاسم",
+                            ["rankNameA"] = "الرتبة",
                             ["WaitingListOrder"] = "الترتيب"
                         };
 
@@ -234,8 +236,26 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             bool isresidentInfoID = c.ColumnName.Equals("residentInfoID", StringComparison.OrdinalIgnoreCase);
                             bool isLastActionTypeID = c.ColumnName.Equals("LastActionTypeID", StringComparison.OrdinalIgnoreCase);
                             bool isLastActionID = c.ColumnName.Equals("LastActionID", StringComparison.OrdinalIgnoreCase);
-                            
-                            
+
+                            bool isWaitingOrderTypeName = c.ColumnName.Equals("WaitingOrderTypeName", StringComparison.OrdinalIgnoreCase);
+                            bool isrankNameA = c.ColumnName.Equals("rankNameA", StringComparison.OrdinalIgnoreCase);
+
+                            List<OptionItem> filterOpts = new();
+                            if (isWaitingOrderTypeName || isrankNameA)
+                            {
+                                var field = c.ColumnName;
+
+                                var distinctVals = dt1.AsEnumerable()
+                                    .Select(r => (r[field] == DBNull.Value ? "" : r[field]?.ToString())?.Trim())
+                                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                                    .Distinct()
+                                    .OrderBy(s => s)
+                                    .ToList();
+
+                                filterOpts = distinctVals
+                                    .Select(s => new OptionItem { Value = s!, Text = s! })
+                                    .ToList();
+                            }
 
                             dynamicColumns.Add(new TableColumn
                             {
@@ -246,7 +266,19 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                 || isIdaraId || isresidentInfoID || isLastActionTypeID || isLastActionID)
+                                 || isIdaraId || isresidentInfoID || isLastActionTypeID || isLastActionID),
+
+                                   Filter = (isWaitingOrderTypeName || isrankNameA)
+                                    ? new TableColumnFilter
+                                    {
+                                        Enabled = true,
+                                        Type = "select",
+                                        Options = filterOpts,
+                                    }
+                                    : new TableColumnFilter
+                                    {
+                                        Enabled = false
+                                    }
                             });
                         }
 
@@ -369,11 +401,16 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 PageSize = 10,
                 PageSizes = new List<int> { 10, 25, 50, 100 },
                 QuickSearchFields = dynamicColumns.Select(c => c.Field).Take(4).ToList(),
-                Searchable = true,
+                Searchable = printdthasvalue,
                 AllowExport = true,
-                PageTitle = "قوائم الانتظار",
-                PanelTitle = "قوائم الانتظار",
+                PageTitle = "قوائم الانتظار الجانبية",
+                PanelTitle = "قوائم الانتظار الجانبية",
                 EnableCellCopy = true,
+                ShowColumnVisibility = printdthasvalue,
+                ShowFilter = printdthasvalue,
+                FilterRow = printdthasvalue,
+                FilterDebounce = 250,
+                ShowPageSizeSelector = printdthasvalue,
 
                 Toolbar = new TableToolbarConfig
                 {
@@ -381,10 +418,34 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowColumns = true,
                     ShowExportCsv = false,
                     ShowExportExcel = false,
-                    ShowDelete = canMOVETOOCCUPENTPROCEDURES,
+                    ShowDelete = canMOVETOOCCUPENTPROCEDURES && printdthasvalue,
+                    ShowPrint1 = canMOVETOOCCUPENTPROCEDURES && printdthasvalue,
                     ShowBulkDelete = false,
 
-                   
+                    Print1 = new TableAction
+                    {
+                        Label = "طباعة تقرير",
+                        Icon = "fa fa-print",
+                        Color = "info",
+                        RequireSelection = false,
+                        OnClickJs = @"
+                        (function () {
+                            var u = window.waitingClassID_ || '';
+                        
+                            sfPrintWithBusy(table, {
+                              pdf: 1,
+                              extraParams: { U: u },
+                              busy: { title: 'طباعة سجلات انتظار' }
+                            });
+                        })();
+                        ",
+                        //OnClickJs = @"
+                        //        sfPrintWithBusy(table, {
+                        //          pdf: 1,
+                        //          busy: { title: 'طباعة سجلات انتظار'}
+                        //        });
+                        //      ",
+                    },
                     Delete = new TableAction
                     {
                         Label = "نقل لاجراءات التسكين",
@@ -413,7 +474,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         },
                         RequireSelection = true,
                         MinSelection = 1,
-                        MaxSelection = 1,
+                        MaxSelection = 1
 
 
                         //Guards = new TableActionGuards
@@ -437,7 +498,96 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             };
 
 
+            if (pdf == 1)
+            {
 
+                if (dt1 == null || dt1.Rows.Count == 0)
+                    return Content("لا توجد بيانات للطباعة." + dt1.Rows.Count.ToString());
+
+                string class_ = dt1.Rows[0]["WaitingClassName"]?.ToString() ?? "";
+
+                // جدول جديد خفيف للطباعة
+                var printTable = new DataTable();
+                printTable.Columns.Add("WaitingListOrder", typeof(string));
+                printTable.Columns.Add("FullName_A", typeof(string));
+                printTable.Columns.Add("NationalID", typeof(string));
+                printTable.Columns.Add("GeneralNo", typeof(string));
+                printTable.Columns.Add("rankNameA", typeof(string));
+                printTable.Columns.Add("ActionDecisionNo", typeof(string));
+                printTable.Columns.Add("ActionDecisionDate", typeof(string));
+                printTable.Columns.Add("WaitingClassName", typeof(string));
+                //printTable.Columns.Add("WaitingOrderTypeName", typeof(string));
+
+                foreach (DataRow r in dt1.Rows)
+                {
+                    printTable.Rows.Add(
+                        r["WaitingListOrder"]?.ToString() ?? "",
+                        r["FullName_A"]?.ToString() ?? "",
+                        r["NationalID"]?.ToString() ?? "",
+                        r["GeneralNo"]?.ToString() ?? "",
+                        r["rankNameA"]?.ToString() ?? "",
+                        r["ActionDecisionNo"]?.ToString() ?? "",
+                        r["ActionDecisionDate"]?.ToString() ?? "",
+                        r["WaitingClassName"]?.ToString() ?? ""
+                    //,
+                    //r["WaitingOrderTypeName"]?.ToString() ?? ""
+                    );
+                }
+
+                if (printTable.Rows.Count == 0)
+                    return Content("لا توجد بيانات للطباعة.");
+
+                var reportColumns = new List<ReportColumn>
+    {
+        new("WaitingListOrder", "الترتيب", Align:"center", Weight:1, FontSize:9),
+        new("FullName_A", "الاسم", Align:"center", Weight:4, FontSize:9),
+        new("NationalID", "رقم الهوية", Align:"center", Weight:2, FontSize:9),
+        new("GeneralNo", "الرقم العام", Align:"center", Weight:2, FontSize:9),
+        new("rankNameA", "الرتبة", Align:"center", Weight:2, FontSize:9),
+        new("ActionDecisionNo", "رقم الطلب", Align:"center", Weight:2, FontSize:9),
+        new("ActionDecisionDate", "تاريخ الطلب", Align:"center", Weight:2, FontSize:9),
+        new("WaitingClassName", "فئة الانتظار", Align:"center", Weight:3, FontSize:9),
+        //new("WaitingOrderTypeName", "نوع سجل الانتظار", Align:"center", Weight:2, FontSize:9),
+    };
+
+                var logo = Path.Combine(_env.WebRootPath, "img", "ppng.png");
+                var header = new Dictionary<string, string>
+                {
+                    ["no"] = "",
+                    ["date"] = DateTime.Now.ToString("yyyy/MM/dd"),
+                    ["attach"] = "—",
+                    ["subject"] = "سجلات الانتظار" + class_,
+                    ["right1"] = "المملكة العربية السعودية",
+                    ["right2"] = "وزارة الدفاع",
+                    ["right3"] = "القوات البرية الملكية السعودية",
+                    ["right4"] = "الادارة الهندسية للتشغيل والصيانة",
+                    ["right5"] = "إدارة مدينة الملك فيصل العسكرية",
+                    ["midCaption"] = ""
+                };
+
+                var report = DataTableReportBuilder.FromDataTable(
+                    reportId: "BuildingType",
+                    title: "سجلات الانتظار لفئة " + class_,
+                    table: printTable,
+                    columns: reportColumns,
+                    headerFields: header,
+                    footerFields: new Dictionary<string, string>
+                    {
+                        ["تمت الطباعة بواسطة"] = FullName ?? "",
+                        ["ملاحظة"] = "هذا التقرير للاستخدام الرسمي",
+                        ["عدد السجلات"] = printTable.Rows.Count.ToString(),
+                        ["تاريخ ووقت الطباعة"] = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")
+                    },
+                    orientation: ReportOrientation.Landscape,
+                    headerType: ReportHeaderType.LetterOfficial,
+                    logoPath: logo,
+                    headerRepeat: ReportHeaderRepeat.FirstPageOnly
+                );
+
+                var pdfBytes = QuestPdfReportRenderer.Render(report);
+                Response.Headers["Content-Disposition"] = "inline; filename=BuildingType.pdf";
+                return File(pdfBytes, "application/pdf");
+            }
 
 
 
@@ -449,6 +599,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 Form = form,
                 TableDS = ready ? dsModel : null
             };
+
+
+            ViewBag.WaitingClassID = waitingClassID_;
 
             return View("WaitingList/OtherWaitingList", vm);
         }

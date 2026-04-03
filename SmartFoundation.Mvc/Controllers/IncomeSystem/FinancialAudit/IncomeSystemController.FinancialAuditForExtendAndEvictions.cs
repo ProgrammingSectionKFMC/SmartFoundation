@@ -266,6 +266,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             List<OptionItem> PayPaymentTypeOptions = new();
             List<OptionItem> RefundPaymentTypeOptions = new();
             List<OptionItem> BillChargeTypeOptions = new();
+            List<OptionItem> BillChargeTypeSattlmentOptions = new();
             List<OptionItem> billPaymentTypeOptions = new();
             List<OptionItem> SETTLEMENTOptions = new();
 
@@ -336,15 +337,17 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
                 billPaymentTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
-                //// ---------------------- SETTLEMENTOptions ----------------------
-                result = await _CrudController.GetDDLValues(
-                    "billPaymentTypeName_A", "billPaymentTypeID", "11", nameof(FinancialAuditForExtendAndEvictions), usersId, IdaraId, HostName
-               ) as JsonResult;
+               
 
+                //// ---------------------- BillChargeTypeOptions ----------------------
+
+                result = await _CrudController.GetDDLValues(
+                         "BillChargeTypeName_A", "BillChargeTypeID", "8", PageName, usersId, IdaraId, HostName
+                    ) as JsonResult;
 
                 json = JsonSerializer.Serialize(result!.Value);
 
-                SETTLEMENTOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+                BillChargeTypeSattlmentOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
 
                 //// ---------------------- END DDL ----------------------
@@ -727,7 +730,8 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
                             bool isHidden =  c.ColumnName.Equals("BillChargeTypeID", StringComparison.OrdinalIgnoreCase)
                                            || c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase)
-                                           || c.ColumnName.Equals("BillsStatusID", StringComparison.OrdinalIgnoreCase);
+                                           || c.ColumnName.Equals("BillsStatusID", StringComparison.OrdinalIgnoreCase)
+                                           || c.ColumnName.Equals("residentInfoID", StringComparison.OrdinalIgnoreCase);
 
 
 
@@ -1005,7 +1009,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p03", Label = "BillChargeTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p04", Label = "الرصيد المسحوب منه", Type = "text", ColCss = "4", Readonly = true, },
-                new FieldConfig { Name = "p30", Label = "الرصيد المسحوب اليه", Type = "select", ColCss = "4", Readonly = true,Required = true,Options = BillChargeTypeOptions },
+                new FieldConfig { Name = "p30", Label = "الرصيد المسحوب اليه", Type = "select", ColCss = "4", Readonly = true,Required = true,Options = BillChargeTypeSattlmentOptions },
                 new FieldConfig { Name = "p05", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p06", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsNovalue },
                 new FieldConfig { Name = "p07", Label = "SumBillsTotalPrice", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsIDvalue },
@@ -1211,13 +1215,14 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 ["showRowNumbers"] = true,
                 ["visibleFields"] = new List<string>
     {
-       "BillChargeTypeName_A","FullName_A","buildingDetailsNo","amount"
+       "BillChargeTypeName_A","deductName","FullName_A","buildingDetailsNo","amount"
     },
                
 
                 ["headerMap"] = new Dictionary<string, string>
                 {
                     ["FullName_A"] = "الاسم",
+                    ["deductName"] = "نوع السداد",
                     ["buildingDetailsNo"] = "المبنى",
                     ["BillChargeTypeName_A"] = "الخدمة",
                     ["amount"] = "المبلغ"

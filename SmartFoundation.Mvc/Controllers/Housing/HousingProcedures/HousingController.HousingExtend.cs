@@ -131,6 +131,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ["buildingActionTypeResidentAlias"] = "الحالة",
                             ["buildingDetailsNo"] = "رقم المنزل",
                             ["ExtendReasonTypeName_A"] = "سبب الامهال",
+                            ["InsuranceStatusName"] = "حالة التأمين",
+                            ["rankNameA"] = "الرتبة",
                             ["WaitingListOrder"] = "الترتيب"
                         };
 
@@ -156,7 +158,6 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             bool isLastActionID = c.ColumnName.Equals("LastActionID", StringComparison.OrdinalIgnoreCase);
                             bool isWaitingOrderTypeName = c.ColumnName.Equals("WaitingOrderTypeName", StringComparison.OrdinalIgnoreCase);
                             bool isWaitingListOrder = c.ColumnName.Equals("WaitingListOrder", StringComparison.OrdinalIgnoreCase);
-                            bool isInsuranceStatusName = c.ColumnName.Equals("InsuranceStatusName", StringComparison.OrdinalIgnoreCase);
                             bool isInsuranceStatusNo = c.ColumnName.Equals("InsuranceStatusNo", StringComparison.OrdinalIgnoreCase);
                             bool isExtendReasonTypeID = c.ColumnName.Equals("ExtendReasonTypeID", StringComparison.OrdinalIgnoreCase);
                             bool isLastActionExtendReasonTypeID = c.ColumnName.Equals("LastActionExtendReasonTypeID", StringComparison.OrdinalIgnoreCase);
@@ -170,10 +171,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                             bool isbuildingActionTypeResidentAlias = c.ColumnName.Equals("buildingActionTypeResidentAlias", StringComparison.OrdinalIgnoreCase);
                             bool isWaitingClassName = c.ColumnName.Equals("WaitingClassName", StringComparison.OrdinalIgnoreCase);
+                            bool isrankNameA = c.ColumnName.Equals("rankNameA", StringComparison.OrdinalIgnoreCase);
+                            bool isInsuranceStatusName = c.ColumnName.Equals("InsuranceStatusName", StringComparison.OrdinalIgnoreCase);
                             
                             //  جهز خيارات الفلتر من نفس بيانات الجدول (عشان التطابق يكون صحيح)
                             List<OptionItem> filterOpts = new();
-                            if (isbuildingActionTypeResidentAlias || isWaitingClassName )
+                            if (isbuildingActionTypeResidentAlias || isWaitingClassName || isrankNameA || isInsuranceStatusName)
                             {
                                 var field = c.ColumnName;
 
@@ -199,15 +202,17 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                || isresidentInfoID || isIdaraId   || isAssignPeriodID  ||  isWaitingOrderTypeName || isWaitingListOrder|| isLastActionID || isLastActionTypeID || isInsuranceStatusNo|| isInsuranceStatusName || isExtendReasonTypeID|| isbuildingDetailsID || isLastActionExtendReasonTypeID || isLastActionEntryDate || isRemaining || isbuildingRentAmount || isInsuranceAmount || isInsuranceAmountWithRemaining),
+                                ||  isIdaraId   || isAssignPeriodID  ||  isWaitingOrderTypeName || isWaitingListOrder|| isLastActionID || isLastActionTypeID || isExtendReasonTypeID||  isLastActionExtendReasonTypeID || isLastActionEntryDate || isRemaining || isbuildingRentAmount || isInsuranceAmount  || isInsuranceStatusNo || isbuildingDetailsID ||  isInsuranceAmountWithRemaining || isresidentInfoID ),
 
-                            //  فلتر للرتبة + الوحدة + الجنسية
-                                Filter = (isbuildingActionTypeResidentAlias || isWaitingClassName )
+                                //
+
+                                //  فلتر للرتبة + الوحدة + الجنسية
+                                Filter = (isbuildingActionTypeResidentAlias || isWaitingClassName || isrankNameA || isInsuranceStatusName)
                                     ? new TableColumnFilter
                                     {
                                         Enabled = true,
                                         Type = "select",
-                                        Options = filterOpts
+                                        Options = filterOpts,
                                     }
                                     : new TableColumnFilter
                                     {
@@ -254,12 +259,28 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             dict["p24"] = Get("ExtendFromDate");
                             dict["p25"] = Get("ExtendToDate");
                             dict["p27"] = Get("LastActionExtendReasonTypeID");
-                            dict["p28"] = Get("Remaining");
+
+                            // Ensure numeric zeros render: convert numeric values to strings (but keep null when DBNull)
+                            object? rem = Get("Remaining");
+                            dict["p28"] = rem == null ? null : rem.ToString();
+
+                            //object? rent = Get("buildingRentAmount");
+                            //dict["p29"] = rent == null ? null : rent.ToString();
+
+                            //object? ins = Get("InsuranceAmount");
+                            //dict["p30"] = ins == null ? null : ins.ToString();
+
+                            //object? insWithRem = Get("InsuranceAmountWithRemaining");
+                            //dict["p31"] = insWithRem == null ? null : insWithRem.ToString();
+
+                            //dict["p32"] = Get("ExtendReasonTypeName_A");
+
+                            //dict["p28"] = Get("Remaining");
                             dict["p29"] = Get("buildingRentAmount");
                             dict["p30"] = Get("InsuranceAmount");
                             dict["p31"] = Get("InsuranceAmountWithRemaining");
                             dict["p32"] = Get("ExtendReasonTypeName_A");
-                            
+
 
 
                             rowsList.Add(dict);
@@ -605,7 +626,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowDelete = canSENDHOUSINGEXTENDTOFINANCE,
                     ShowDelete1 = canEXTENDINSURANCE,
                     ShowDelete2 = canAPPROVEEXTEND,
-                    ShowPrint1 = true,
+                    ShowPrint1 = canHOUSINGEXTEND,
                     ShowBulkDelete = false,
                     
                     
@@ -616,50 +637,58 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         Icon = "fa fa-print",
                         Color = "info",
                         OnClickJs = @"
-                            const selectedRows = table.getSelectedRows();
-                            if (selectedRows.length === 1) {
-                                const row = selectedRows[0];
-                                const rowId = row.p01 || row.ActionID;
-                        
-                                if (!rowId) {
-                                    alert('خطأ: لا يمكن العثور على معرف السجل');
-                                    return;
-                                }
-                        
                                 sfPrintWithBusy(table, {
-                                    pdf: 2,
-                                    extraParams: {
-                                        rowId: rowId
-                                    },
-                                    busy: { title: 'طباعة بيانات المستفيدين' }
+                                  pdf: 1,
+                                  busy: { title: 'طباعة بيانات المستفيدين'}
                                 });
-                            }
-                        ",
-                       
+                              "
+                        //OnClickJs = @"
+                        //    const selectedRows = table.getSelectedRows();
+                        //    if (selectedRows.length === 1) {
+                        //        const row = selectedRows[0];
+                        //        const rowId = row.p01 || row.ActionID;
 
-                        RequireSelection = true,
-                        MinSelection = 1,
-                        MaxSelection = 1,
+                        //        if (!rowId) {
+                        //            alert('خطأ: لا يمكن العثور على معرف السجل');
+                        //            return;
+                        //        }
 
-                        Guards = new TableActionGuards
-                        {
-                            AppliesTo = "any",
-                            DisableWhenAny = new List<TableActionRule>
-                           {
-
-                                new TableActionRule
-                              {
-                                  Field = "LastActionTypeID",
-                                  Op = "neq",
-                                  Value = "24",
-                                  Message = "لايمكن طباعة الطلب لعدم انتهاء امهال الساكن",
-                                  Priority = 3
-                              },
+                        //        sfPrintWithBusy(table, {
+                        //            pdf: 1,
+                        //            extraParams: {
+                        //                rowId: rowId
+                        //            },
+                        //            busy: { title: 'طباعة بيانات المستفيدين' }
+                        //        });
+                        //    }
+                        //"
+                        //,
 
 
+                        //RequireSelection = true,
+                        //MinSelection = 1,
+                        //MaxSelection = 1
+                        //,
 
-                           }
-                        }
+                        //Guards = new TableActionGuards
+                        //{
+                        //    AppliesTo = "any",
+                        //    DisableWhenAny = new List<TableActionRule>
+                        //   {
+
+                        //        new TableActionRule
+                        //      {
+                        //          Field = "LastActionTypeID",
+                        //          Op = "neq",
+                        //          Value = "24",
+                        //          Message = "لايمكن طباعة الطلب لعدم انتهاء امهال الساكن",
+                        //          Priority = 3
+                        //      },
+
+
+
+                        //   }
+                        //}
                     },
 
 
@@ -1230,26 +1259,29 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             if (pdf == 1)
             {
-                //var printTable = dt1;
-                //int start1Based = 1; // يبدأ من الصف 200
-                //int count = 100;       // يطبع 50 سجل
+            //var printTable = dt1;
+            //int start1Based = 1; // يبدأ من الصف 200
+            //int count = 100;       // يطبع 50 سجل
 
-                //int startIndex = start1Based - 1;
-                //int endIndex = Math.Min(dt1.Rows.Count, startIndex + dt1.Rows.Count);
+            //int startIndex = start1Based - 1;
+            //int endIndex = Math.Min(dt1.Rows.Count, startIndex + dt1.Rows.Count);
 
-                // جدول خفيف للطباعة
+            // جدول خفيف للطباعة
+
+
                 var printTable = new DataTable();
                 printTable.Columns.Add("NationalID", typeof(string));
                 printTable.Columns.Add("FullName_A", typeof(string));
-                printTable.Columns.Add("generalNo_FK", typeof(string));
+                printTable.Columns.Add("GeneralNo", typeof(string));
                 printTable.Columns.Add("rankNameA", typeof(string));
-                printTable.Columns.Add("militaryUnitName_A", typeof(string));
-                printTable.Columns.Add("maritalStatusName_A", typeof(string));
-                printTable.Columns.Add("dependinceCounter", typeof(string));
-                printTable.Columns.Add("nationalityName_A", typeof(string));
-                printTable.Columns.Add("genderName_A", typeof(string));
-                printTable.Columns.Add("birthdate", typeof(string));
-                printTable.Columns.Add("residentcontactDetails", typeof(string));
+                printTable.Columns.Add("WaitingClassName", typeof(string));
+                printTable.Columns.Add("LastActionDecisionNo", typeof(string));
+                printTable.Columns.Add("LastActionDecisionDate", typeof(string));
+                printTable.Columns.Add("ExtendFromDate", typeof(string));
+                printTable.Columns.Add("ExtendToDate", typeof(string));
+                printTable.Columns.Add("buildingDetailsNo", typeof(string));
+                printTable.Columns.Add("buildingActionTypeResidentAlias", typeof(string));
+                
 
                 //for (int i = startIndex; i < endIndex; i++)
                 foreach (DataRow r in dt1.Rows)
@@ -1259,15 +1291,15 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     printTable.Rows.Add(
                         r["NationalID"],
                         r["FullName_A"],
-                        r["generalNo_FK"],
+                        r["GeneralNo"],
                         r["rankNameA"],
-                        r["militaryUnitName_A"],
-                        r["maritalStatusName_A"],
-                        r["dependinceCounter"],
-                        r["nationalityName_A"],
-                        r["genderName_A"],
-                        r["birthdate"],
-                        r["residentcontactDetails"]
+                        r["WaitingClassName"],
+                        r["LastActionDecisionNo"],
+                        r["LastActionDecisionDate"],
+                        r["ExtendFromDate"],
+                        r["ExtendToDate"],
+                        r["buildingDetailsNo"],
+                        r["buildingActionTypeResidentAlias"]
                     );
                 }
 
@@ -1277,16 +1309,19 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     {
                         new("NationalID", "رقم الهوية", Align:"center", Weight:2, FontSize:9),
                         new("FullName_A", "الاسم", Align:"center", Weight:5, FontSize:9),
-                        new("generalNo_FK", "الرقم العام", Align:"center", Weight:2, FontSize:9),
+                        new("GeneralNo", "الرقم العام", Align:"center", Weight:2, FontSize:9),
                         new("rankNameA", "الرتبة", Align:"center", Weight:2, FontSize:9),
-                        new("militaryUnitName_A", "الوحدة", Align:"center", Weight:3, FontSize:9),
-                        new("maritalStatusName_A", "الحالة الاجتماعية", Align:"center", Weight:3, FontSize:9),
-                        new("dependinceCounter", "عدد التابعين", Align:"center", Weight:2, FontSize:9),
-                        new("nationalityName_A", "الجنسية", Align:"center", Weight:2, FontSize:9),
-                        new("genderName_A", "الجنس", Align:"center", Weight:2, FontSize:9),
-                        new("birthdate", "تاريخ الميلاد", Align:"center", Weight:2, FontSize:9),
-                        new("residentcontactDetails", "رقم الجوال", Align:"center", Weight:2, FontSize:9),
+                        new("WaitingClassName", "فئة سجل الانتظار", Align:"center", Weight:3, FontSize:9),
+                        new("LastActionDecisionNo", "رقم الموافقة", Align:"center", Weight:2, FontSize:9),
+                        new("LastActionDecisionDate", "تاريخ الموافقة", Align:"center", Weight:2, FontSize:9),
+                        new("ExtendFromDate", "بداية الامهال", Align:"center", Weight:2, FontSize:9),
+                        new("ExtendToDate", "نهاية الامهال", Align:"center", Weight:2, FontSize:9),
+                        new("buildingDetailsNo", "رقم المنزل", Align:"center", Weight:2, FontSize:9),
+                        new("buildingActionTypeResidentAlias", "حالة الامهال", Align:"center", Weight:4, FontSize:9),
+                        
                     };
+
+ 
 
                 var logo = Path.Combine(_env.WebRootPath, "img", "ppng.png");
                 var header = new Dictionary<string, string>
@@ -1294,7 +1329,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ["no"] = usersId,//"١٢٣/٤٥",
                     ["date"] = DateTime.Now.ToString("yyyy/MM/dd"),
                     ["attach"] = "—",
-                    ["subject"] = "قائمة المستفيدين",
+                    ["subject"] = "قوائم الامهال",
 
                     ["right1"] = "المملكة العربية السعودية",
                     ["right2"] = "وزارة الدفاع",
@@ -1308,7 +1343,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                 var report = DataTableReportBuilder.FromDataTable(
                     reportId: "BuildingType",
-                    title: "قائمة المستفيدين",
+                    title: "قائمة المستفيدينقوائم الامهال",
                     table: printTable,
                     columns: reportColumns,
                     headerFields: header,

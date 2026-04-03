@@ -6328,37 +6328,36 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
         }));
 
-        // دالة عامة للطباعة مع Busy modal
+
         window.sfPrintWithBusy = window.sfPrintWithBusy || function (table, options) {
             options = options || {};
 
             if (!table) return false;
 
             const defaultHtml = `
-                    <div class="space-y-3 text-center">
-                      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-400 text-white text-sm">
-                        جاري تجهيز البيانات للطباعة الرجاء الانتظار
-                        <i class="fa fa-spinner animate-spin"></i>
-                      </div>
+        <div class="space-y-3 text-center">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-400 text-white text-sm">
+            جاري تجهيز البيانات للطباعة الرجاء الانتظار
+            <i class="fa fa-spinner animate-spin"></i>
+          </div>
 
-                      <div class="text-base">
-                        <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-400 text-white text-sm">
-                          وقت الطباعة يعتمد على عدد السجلات المراد طباعتها وسرعة الاتصال
-                          <i class="fa fa-bolt"></i>
-                        </span>
-                      </div>
+          <div class="text-base">
+            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-400 text-white text-sm">
+              وقت الطباعة يعتمد على عدد السجلات المراد طباعتها وسرعة الاتصال
+              <i class="fa fa-bolt"></i>
+            </span>
+          </div>
 
-                      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-50 text-green-700 text-sm">
-                        حفاظًا على البيئة وتماشياً مع مستهدفات رؤية 2030 نأمل تقليل الطباعة
-                        <i class="fa fa-leaf"></i>
-                      </div>
-                    </div>
-                  `;
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-50 text-green-700 text-sm">
+            حفاظًا على البيئة وتماشياً مع مستهدفات رؤية 2030 نأمل تقليل الطباعة
+            <i class="fa fa-leaf"></i>
+          </div>
+        </div>
+    `;
 
             const busy = options.busy || {};
             const pdfVal = (options.pdf ?? options.pdfVal ?? 1);
 
-            // ✅ افتح مودال الـ Busy
             if (options.messageText) {
                 table.showBusyPrint(options.messageText, {
                     isHtml: false,
@@ -6375,13 +6374,12 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 });
             }
 
-            // ✅ كوّن رابط الطباعة من نفس الصفحة
             let url;
             try {
                 const u = new URL(window.location.href);
                 u.searchParams.set('pdf', String(pdfVal));
 
-                // أي بارامترات إضافية
+                // بارامترات إضافية من extraParams
                 if (options.extraParams && typeof options.extraParams === "object") {
                     Object.keys(options.extraParams).forEach(k => {
                         const v = options.extraParams[k];
@@ -6390,6 +6388,25 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     });
                 }
 
+                // بارامترات إضافية مرسلة مباشرة داخل options
+                const reservedKeys = new Set([
+                    "pdf",
+                    "pdfVal",
+                    "busy",
+                    "messageText",
+                    "messageHtml",
+                    "extraParams"
+                ]);
+
+                Object.keys(options).forEach(k => {
+                    if (reservedKeys.has(k)) return;
+
+                    const v = options[k];
+                    if (v === null || v === undefined) return;
+
+                    u.searchParams.set(k, String(v));
+                });
+
                 url = u.toString();
             } catch (e) {
                 table.hideBusyPrint();
@@ -6397,10 +6414,9 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 return false;
             }
 
-            // ✅ ابدأ الطباعة عبر iframe
             table.__printHandle = sfOpenPrint(url, {
                 onBeforePrint: () => table.hideBusyPrint(),
-                onAfterPrint: () => table.hideBusyPrint(), // احتياط
+                onAfterPrint: () => table.hideBusyPrint(),
                 onError: (e) => {
                     table.hideBusyPrint();
                     table.showToast('تعذر فتح الطباعة: ' + (e?.message || e), 'error');
@@ -6415,6 +6431,95 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
             return true;
         };
+
+
+        //// دالة عامة للطباعة مع Busy modal
+        //window.sfPrintWithBusy = window.sfPrintWithBusy || function (table, options) {
+        //    options = options || {};
+
+        //    if (!table) return false;
+
+        //    const defaultHtml = `
+        //            <div class="space-y-3 text-center">
+        //              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-400 text-white text-sm">
+        //                جاري تجهيز البيانات للطباعة الرجاء الانتظار
+        //                <i class="fa fa-spinner animate-spin"></i>
+        //              </div>
+
+        //              <div class="text-base">
+        //                <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-400 text-white text-sm">
+        //                  وقت الطباعة يعتمد على عدد السجلات المراد طباعتها وسرعة الاتصال
+        //                  <i class="fa fa-bolt"></i>
+        //                </span>
+        //              </div>
+
+        //              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-50 text-green-700 text-sm">
+        //                حفاظًا على البيئة وتماشياً مع مستهدفات رؤية 2030 نأمل تقليل الطباعة
+        //                <i class="fa fa-leaf"></i>
+        //              </div>
+        //            </div>
+        //          `;
+
+        //    const busy = options.busy || {};
+        //    const pdfVal = (options.pdf ?? options.pdfVal ?? 1);
+
+        //    // ✅ افتح مودال الـ Busy
+        //    if (options.messageText) {
+        //        table.showBusyPrint(options.messageText, {
+        //            isHtml: false,
+        //            title: busy.title || "الطباعة",
+        //            icon: (busy.icon === undefined) ? "fa fa-print" : busy.icon,
+        //            className: busy.className || "border border-sky-200 bg-sky-50 text-sky-700"
+        //        });
+        //    } else {
+        //        table.showBusyPrint(options.messageHtml || defaultHtml, {
+        //            isHtml: true,
+        //            title: busy.title || "الطباعة",
+        //            icon: (busy.icon === undefined) ? "fa fa-print" : busy.icon,
+        //            className: busy.className || "border border-sky-200 bg-sky-50 text-sky-700"
+        //        });
+        //    }
+
+        //    // ✅ كوّن رابط الطباعة من نفس الصفحة
+        //    let url;
+        //    try {
+        //        const u = new URL(window.location.href);
+        //        u.searchParams.set('pdf', String(pdfVal));
+
+        //        // أي بارامترات إضافية
+        //        if (options.extraParams && typeof options.extraParams === "object") {
+        //            Object.keys(options.extraParams).forEach(k => {
+        //                const v = options.extraParams[k];
+        //                if (v === null || v === undefined) return;
+        //                u.searchParams.set(k, String(v));
+        //            });
+        //        }
+
+        //        url = u.toString();
+        //    } catch (e) {
+        //        table.hideBusyPrint();
+        //        table.showToast("تعذر تجهيز رابط الطباعة", "error");
+        //        return false;
+        //    }
+
+        //    // ✅ ابدأ الطباعة عبر iframe
+        //    table.__printHandle = sfOpenPrint(url, {
+        //        onBeforePrint: () => table.hideBusyPrint(),
+        //        onAfterPrint: () => table.hideBusyPrint(), // احتياط
+        //        onError: (e) => {
+        //            table.hideBusyPrint();
+        //            table.showToast('تعذر فتح الطباعة: ' + (e?.message || e), 'error');
+        //        }
+        //    });
+
+        //    if (!table.__printHandle) {
+        //        table.hideBusyPrint();
+        //        table.showToast('تعذر بدء الطباعة', 'error');
+        //        return false;
+        //    }
+
+        //    return true;
+        //};
 
     };
 

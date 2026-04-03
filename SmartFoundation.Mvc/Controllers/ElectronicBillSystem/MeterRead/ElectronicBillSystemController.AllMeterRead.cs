@@ -315,8 +315,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                             || c.ColumnName.Equals("ClosedBy", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("billPeriodName_E", StringComparison.OrdinalIgnoreCase);
 
-
-
+                          
 
                             dynamicColumns.Add(new TableColumn
                             {
@@ -424,7 +423,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                 isHidden = c.ColumnName.Equals("meterID", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("idaraID_FK", StringComparison.OrdinalIgnoreCase)
-                                           // || c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("entryData", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("avrageNo", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("entryDate", StringComparison.OrdinalIgnoreCase)
@@ -713,7 +712,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 new FieldConfig { Name = "p41", Label = "MeterServiceTypeID_", Type = "hidden", Value=MeterServiceTypeID_ },
                 new FieldConfig { Name = "p01", Label = "BillsID", Type = "hidden" },
                 new FieldConfig { Name = "p05", Label = "MeterID", Type = "hidden", ColCss = "3", Required = true },
-                new FieldConfig { Name = "p09", Label = "ReadID", Type = "hidden", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p09", Label = "ReadID", Type = "text", ColCss = "3", Required = true },
                 new FieldConfig { Name = "p10", Label = "القراءة الحالية", Type = "number", ColCss = "3", Required = true },
                 new FieldConfig { Name = "p39", Label = "PeriodID_", Type = "hidden", ColCss = "3", Required = true, Value = PeriodID_ },
 

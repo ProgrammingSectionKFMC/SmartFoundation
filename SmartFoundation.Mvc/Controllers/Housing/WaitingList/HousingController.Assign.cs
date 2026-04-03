@@ -3,6 +3,7 @@ using SmartFoundation.MVC.Reports;
 using SmartFoundation.UI.ViewModels.SmartForm;
 using SmartFoundation.UI.ViewModels.SmartPage;
 using SmartFoundation.UI.ViewModels.SmartTable;
+using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
@@ -282,8 +283,25 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             bool isbuildingDetailsID = c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase);
                             bool isLastActionID = c.ColumnName.Equals("LastActionID", StringComparison.OrdinalIgnoreCase);
                             bool isAssignStatus = c.ColumnName.Equals("AssignStatus", StringComparison.OrdinalIgnoreCase);
-                            
-                            
+                            bool isbuildingActionTypeResidentAlias = c.ColumnName.Equals("buildingActionTypeResidentAlias", StringComparison.OrdinalIgnoreCase);
+
+
+                            List<OptionItem> filterOpts = new();
+                            if (isbuildingActionTypeResidentAlias)
+                            {
+                                var field = c.ColumnName;
+
+                                var distinctVals = dt1.AsEnumerable()
+                                    .Select(r => (r[field] == DBNull.Value ? "" : r[field]?.ToString())?.Trim())
+                                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                                    .Distinct()
+                                    .OrderBy(s => s)
+                                    .ToList();
+
+                                filterOpts = distinctVals
+                                    .Select(s => new OptionItem { Value = s!, Text = s! })
+                                    .ToList();
+                            }
 
                             dynamicColumns.Add(new TableColumn
                             {
@@ -294,7 +312,21 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID || isLastActionTypeID || isAssignPeriodID || isbuildingDetailsID || isLastActionID|| isAssignStatus)
+                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID || isLastActionTypeID || isAssignPeriodID || isbuildingDetailsID || isLastActionID|| isAssignStatus),
+                                truncate = isbuildingActionTypeResidentAlias,
+
+                                //  فلتر للرتبة + الوحدة + الجنسية
+                                Filter = (isbuildingActionTypeResidentAlias)
+                                    ? new TableColumnFilter
+                                    {
+                                        Enabled = true,
+                                        Type = "select",
+                                        Options = filterOpts
+                                    }
+                                    : new TableColumnFilter
+                                    {
+                                        Enabled = false
+                                    }
                             });
                         }
 
@@ -636,6 +668,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 PanelTitle = "اجراءات التخصيص",
                 EnableCellCopy = true,
                 ShowColumnVisibility = true,
+                ShowFilter = true,
+                FilterRow = true,
+                FilterDebounce = 250,
 
                 Toolbar = new TableToolbarConfig
                 {
