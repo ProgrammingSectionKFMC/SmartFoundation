@@ -510,15 +510,10 @@
                 ? `<i class="${esc(dep.icon)}"></i>`
                 : `<span class="sf-hccm-dep-chip-emoji">🏢</span>`;
 
-        const hrefOpen = has(dep?.href)
-            ? `<a class="sf-hccm-dep-cell-link-cover" href="${esc(dep.href)}" aria-label="${esc(dep?.name || '')}"></a>`
-            : '';
-
         return `
 <td class="sf-hccm-matrix-td is-sticky-col is-department-col">
     <div class="sf-hccm-dep-cell"
          style="--dc-bg:${depTone.bg};--dc-soft:${depTone.soft};--dc-border:${depTone.border};--dc-text:${depTone.text};--dc-accent:${depTone.accent}">
-        ${hrefOpen}
         <div class="sf-hccm-dep-cell-top">
             <div class="sf-hccm-dep-chip">${iconHtml}</div>
             <div class="sf-hccm-dep-cell-copy">
@@ -528,8 +523,13 @@
         </div>
 
         <div class="sf-hccm-dep-cell-foot">
-            <span class="sf-hccm-dep-cell-foot-label">الإجمالي الحالي</span>
-            <strong>${esc(fmtPercent(overall, 1))}</strong>
+            <span class="sf-hccm-dep-cell-foot-label">الإجمالي: ${esc(fmtPercent(overall, 1))}</span>
+            ${has(dep?.href)
+                ? `<a class="sf-hccm-dep-details-btn" href="${esc(dep.href)}">
+                       <i class="fa-solid fa-chart-column"></i> التفاصيل
+                   </a>`
+                : `<span class="sf-hccm-dep-details-btn is-disabled">لا يوجد رابط</span>`
+            }
         </div>
     </div>
 </td>`;
