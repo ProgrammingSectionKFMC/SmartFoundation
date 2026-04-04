@@ -1,0 +1,336 @@
+﻿/* =========================================================
+   HousingCommandCenter — Page Layout & Header
+   hcc-page.css
+   ========================================================= */
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --page-bg: #f0f3f7;
+    --nav-from: #1e3a5f;
+    --nav-mid: #2d4a6f;
+    --nav-to: #3d5a80;
+    --nav-gold: #c9a227;
+    --nav-text: #ffffff;
+    --nav-text-muted: rgba(255,255,255,.65);
+    --nav-border: rgba(201,162,39,.25);
+    --nav-chip-bg: rgba(255,255,255,.09);
+    --nav-chip-border: rgba(255,255,255,.14);
+    --page-footer-bg: #dde3ec;
+    --page-footer-color: #4a5a6e;
+    --page-footer-border: rgba(100,120,150,.18);
+    --page-footer-height: 48px;
+    /* Scrollbar colors */
+    --scroll-track: rgba(30, 58, 95, 0.06);
+    --scroll-thumb: rgba(30, 58, 95, 0.25);
+    --scroll-thumb-hover: rgba(30, 58, 95, 0.4);
+    --scroll-thumb-active: var(--nav-gold);
+}
+
+/* ══════════════════════════════════════════════════════
+   MODERN SCROLLBAR STYLES
+══════════════════════════════════════════════════════ */
+
+/* WebKit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--scroll-track);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #a8b8c8 0%, #8fa3b8 100%);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, var(--nav-to) 0%, var(--nav-mid) 100%);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:active {
+    background: linear-gradient(180deg, var(--nav-mid) 0%, var(--nav-from) 100%);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+    background: var(--scroll-track);
+}
+
+/* Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #a8b8c8 var(--scroll-track);
+}
+
+/* Slim scrollbar for inner containers */
+.hcc-content::-webkit-scrollbar,
+.sf-hccm-matrix-wrap::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.hcc-content::-webkit-scrollbar-thumb,
+.sf-hccm-matrix-wrap::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #a8b8c8 0%, #8fa3b8 100%);
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background-clip: padding-box;
+}
+
+.hcc-content::-webkit-scrollbar-thumb:hover,
+.sf-hccm-matrix-wrap::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, var(--nav-to) 0%, var(--nav-mid) 100%);
+}
+
+html, body {
+    width: 100%;
+    min-height: 100%;
+    overflow: auto;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    background: var(--page-bg);
+    color: #0e1e30;
+    font-family: "Segoe UI", Arial, Tahoma, sans-serif;
+}
+
+/* ══════════════════════════════════════════════════════
+   STICKY HEADER
+══════════════════════════════════════════════════════ */
+.hcc-header {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    flex: 0 0 auto;
+    background: linear-gradient(135deg, var(--nav-from) 0%, var(--nav-mid) 50%, var(--nav-to) 100%);
+    border-bottom: 1px solid rgba(10,22,40,.5);
+    box-shadow: 0 4px 20px rgba(10,22,40,.28);
+    overflow: hidden;
+}
+
+    .hcc-header::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(ellipse at 90% 0%, rgba(255,255,255,.04) 0%, transparent 40%), radial-gradient(ellipse at 10% 100%, rgba(255,255,255,.02) 0%, transparent 40%);
+        pointer-events: none;
+    }
+
+/* ── الحاوية الرئيسية — position relative لتمكين absolute للعنوان ── */
+.hcc-header-inner {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px 16px;
+    min-height: 80px;
+    direction: rtl;
+    z-index: 1;
+}
+
+.hcc-chart-icon {
+    flex-shrink: 0;
+    opacity: .88;
+}
+
+/* ── الشعار — أقصى اليمين ── */
+.hcc-header-logo {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+}
+
+.hcc-header-brand {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+.hcc-header-title {
+    font-size: 1.08rem;
+    font-weight: 800;
+    color: var(--nav-text);
+    line-height: 1.3;
+    letter-spacing: -.1px;
+    pointer-events: auto;
+}
+
+.hcc-header-chips {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+    pointer-events: auto;
+}
+
+.hcc-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--nav-chip-bg);
+    border: 1px solid var(--nav-chip-border);
+    font-size: .68rem;
+    font-weight: 700;
+    color: var(--nav-text-muted);
+    white-space: nowrap;
+    line-height: 1.5;
+}
+
+.hcc-chip-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+    .hcc-chip-dot.is-live {
+        background: #4ade80;
+        box-shadow: 0 0 0 2px rgba(74,222,128,.25);
+        animation: livePulse 2s ease-in-out infinite;
+    }
+
+@keyframes livePulse {
+    0%, 100% {
+        box-shadow: 0 0 0 2px rgba(74,222,128,.25);
+    }
+
+    50% {
+        box-shadow: 0 0 0 5px rgba(74,222,128,.0);
+    }
+}
+
+/* ── التاريخ والساعة — أقصى اليسار ── */
+.hcc-header-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    direction: ltr;
+    flex-shrink: 0;
+}
+
+.hcc-datetime {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    padding: 5px 12px;
+    border-radius: 9px;
+    background: rgba(255,255,255,.07);
+    border: 1px solid var(--nav-chip-border);
+    min-width: 88px;
+}
+
+.hcc-time {
+    font-size: .96rem;
+    font-weight: 800;
+    color: var(--nav-text);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .04em;
+    line-height: 1;
+}
+
+.hcc-date {
+    font-size: .61rem;
+    color: var(--nav-text-muted);
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+/* ── Main Content ── */
+.hcc-content {
+    flex: 1 1 auto;
+    overflow: auto;
+    padding: 14px 14px 0;
+}
+
+.hcc-charts-wrap {
+    width: 100%;
+}
+
+    .hcc-charts-wrap .sf-smartcharts,
+    .hcc-charts-wrap .sf-smartcharts-wrap,
+    .hcc-charts-wrap .sf-smartcharts-grid {
+        gap: 12px !important;
+    }
+
+/* ── Empty ── */
+.hcc-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    gap: 8px;
+    color: #64748b;
+    font-size: 14px;
+    text-align: center;
+}
+
+    .hcc-empty b {
+        color: #334155;
+    }
+
+/* ── Footer ── */
+.hcc-footer {
+    flex: 0 0 var(--page-footer-height);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--nav-from) 0%, var(--nav-mid) 100%);
+    border-top: 1px solid rgba(10,22,40,.3);
+    color: rgba(255,255,255,.8);
+    font-size: 11.5px;
+    padding: 10px 14px;
+    user-select: none;
+    margin-top: 20px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 700px) {
+    .hcc-header-inner {
+        padding: 9px 14px 11px;
+        min-height: 56px;
+    }
+
+    .hcc-header-title {
+        font-size: .92rem;
+    }
+
+    .hcc-header-chips {
+        display: none;
+    }
+}
+
+@media (max-width: 500px) {
+    .hcc-header-meta {
+        display: none;
+    }
+}
