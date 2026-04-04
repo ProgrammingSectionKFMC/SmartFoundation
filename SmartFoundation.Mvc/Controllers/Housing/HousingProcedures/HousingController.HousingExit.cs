@@ -13,7 +13,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 {
     public partial class HousingController : Controller
     {
-        public async Task<IActionResult> HousingExit(int pdf = 0)
+        public async Task<IActionResult> HousingExit(int pdf = 0, int? rowId = null)
         {
             //  قراءة السيشن والكونتكست
             if (!InitPageContext(out var redirect))
@@ -623,6 +623,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowDelete = canCANCELHOUSINGHousingExit,
                     ShowDelete1 = canSENDHOUSINGHousingExitTOFINANCE,
                     ShowDelete2 = canAPPROVEHousingExit,
+                    ShowPrint1 = true,
 
                     ShowBulkDelete = false,
                     
@@ -691,7 +692,63 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         },
 
 
-                    Edit = new TableAction
+                    Print1 = new TableAction
+                    {
+                        Label = "طباعة اشعار مراجعة",
+                        Icon = "fa fa-print",
+                        Color = "info",
+                        OnClickJs = @"
+    const selectedRows = table.getSelectedRows();
+    if (selectedRows.length === 1) {
+        const row = selectedRows[0];
+        const rowId = row.p01 || row.ActionID;
+        const nid = row.p03 || row.NationalID;
+
+        if (!rowId) {
+            alert('خطأ: لا يمكن العثور على معرف السجل');
+            return;
+        }
+
+        sfPrintWithBusy(table, {
+            pdf: 2,
+            extraParams: {
+                rowId: rowId,
+                NID: nid
+            },
+            busy: { title: 'طباعة بيانات المستفيدين' }
+        });
+    }
+"
+                        ,
+
+
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1
+                        //,
+
+                        //Guards = new TableActionGuards
+                        //{
+                        //    AppliesTo = "any",
+                        //    DisableWhenAny = new List<TableActionRule>
+                        //   {
+
+                        //        new TableActionRule
+                        //      {
+                        //          Field = "LastActionTypeID",
+                        //          Op = "neq",
+                        //          Value = "24",
+                        //          Message = "لايمكن طباعة الطلب لعدم انتهاء امهال الساكن",
+                        //          Priority = 3
+                        //      },
+
+
+
+                        //   }
+                        //}
+                    },
+
+                        Edit = new TableAction
                     {
                         Label = "اخلاء مستفيد واستلام المفاتيح",
                         Icon = "fa-solid fa-key",
@@ -1297,6 +1354,329 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 Response.Headers["Content-Disposition"] = "inline; filename=BuildingType.pdf";
                 return File(pdfBytes, "application/pdf");
             }
+
+            if (pdf == 2)
+            {
+                if (!rowId.HasValue)
+                {
+                    return Content("خطأ: لم يتم استلام معرف السجل");
+                }
+
+                var selectedRow = rowsList.FirstOrDefault(r =>
+                    r.TryGetValue("p01", out var id) &&
+                    id != null &&
+                    Convert.ToInt32(id) == rowId.Value);
+
+                if (selectedRow == null)
+                {
+                    return Content($"لم يتم العثور على البيانات المطلوبة. معرف السجل: {rowId}, عدد السجلات: {rowsList.Count}");
+                }
+
+                // Extract data from selected row
+                string residentName = selectedRow.GetValueOrDefault("p15")?.ToString() ?? "";
+                string nationalId = selectedRow.GetValueOrDefault("p03")?.ToString() ?? "";
+                string generalNo = selectedRow.GetValueOrDefault("p04")?.ToString() ?? "";
+                string buildingNo = selectedRow.GetValueOrDefault("p19")?.ToString() ?? "";
+                string decisionNo = selectedRow.GetValueOrDefault("p23")?.ToString() ?? "";
+                string extendReason = selectedRow.GetValueOrDefault("p32")?.ToString() ?? "";
+
+                // Parse dates
+                DateTime? decisionDate = selectedRow.GetValueOrDefault("p22") as DateTime?;
+                DateTime? extendFromDate = selectedRow.GetValueOrDefault("p24") as DateTime?;
+                DateTime? extendToDate = selectedRow.GetValueOrDefault("p25") as DateTime?;
+
+                string decisionDateStr = decisionDate?.ToString("yyyy/MM/dd") ?? "";
+                string extendFromDateStr = extendFromDate?.ToString("yyyy/MM/dd") ?? "";
+                string extendToDateStr = extendToDate?.ToString("yyyy/MM/dd") ?? "";
+
+                var logo = Path.Combine(_env.WebRootPath, "img", "ppng.png");
+
+                var header = new Dictionary<string, string>
+                {
+                    ["no"] = rowId?.ToString() ?? "",
+                    ["date"] = DateTime.Now.ToString("yyyy/MM/dd"),
+                    ["attach"] = "-",
+                    ["subject"] = "ايقاف الحسم",
+
+                    ["right1"] = "المملكة العربية السعودية",
+                    ["right2"] = "وزارة الدفاع",
+                    ["right3"] = "القوات البرية الملكية السعودية",
+                    ["right4"] = "الإدارة الهندسية للتشغيل والصيانة",
+                    ["right5"] = "إدارة مدينة الملك فيصل العسكرية",
+
+                    ["bismillah"] = "بسم الله الرحمن الرحيم",
+                    ["midCaption"] = ""
+                };
+
+                // =========================
+                // جدول 1: بيانات أساسية
+                // =========================
+                var personInfoTable = ReportTableFactory.CreateOfficialTable(new List<float> { 2, 2, 4, 2 });
+
+                personInfoTable.HeaderRows.Add(new LetterTableRow
+                {
+                    Cells = new List<LetterTableCell>
+        {
+            ReportTableFactory.HeaderCell("الرقم العام"),
+            ReportTableFactory.HeaderCell("رقم الهوية"),
+            ReportTableFactory.HeaderCell("اسم المستفيد"),
+            ReportTableFactory.HeaderCell("رقم المبنى")
+        }
+                });
+
+                personInfoTable.Rows.Add(new LetterTableRow
+                {
+                    Cells = new List<LetterTableCell>
+        {
+            ReportTableFactory.ValueCell(generalNo),
+            ReportTableFactory.ValueCell(nationalId),
+            ReportTableFactory.ValueCell(residentName),
+            ReportTableFactory.ValueCell(buildingNo)
+        }
+                });
+
+                // =========================
+                // جدول 2: صف مدموج ColumnSpan
+                // =========================
+                var mergedTable = ReportTableFactory.CreateOfficialTable(new List<float> { 2, 6 });
+
+                mergedTable.Rows.Add(new LetterTableRow
+                {
+                    Cells = new List<LetterTableCell>
+        {
+            new LetterTableCell
+            {
+                Text = "الجهة",
+                Bold = true,
+                Align = TextAlign.Center,
+                BackgroundColor = "#F3F3F3",
+                FontSize = 11
+            },
+            new LetterTableCell
+            {
+                Text = "إدارة مدينة الملك فيصل العسكرية",
+                Align = TextAlign.Center,
+                BackgroundColor = "#FFFFFF",
+                FontSize = 11
+            }
+        }
+                });
+
+                // =========================
+                // جدول 3: أكثر من صف
+                // =========================
+                var extendTable = ReportTableFactory.CreateOfficialTable(new List<float> { 2, 2, 2, 2 });
+
+                extendTable.Rows.Add(new LetterTableRow
+                {
+                    Cells = new List<LetterTableCell>
+        {
+            ReportTableFactory.HeaderCell("رقم القرار"),
+            ReportTableFactory.ValueCell(decisionNo),
+
+            ReportTableFactory.HeaderCell("تاريخ القرار"),
+            ReportTableFactory.ValueCell(decisionDateStr)
+        }
+                });
+
+                extendTable.Rows.Add(new LetterTableRow
+                {
+                    Cells = new List<LetterTableCell>
+        {
+            ReportTableFactory.HeaderCell("من تاريخ"),
+            ReportTableFactory.ValueCell(extendFromDateStr),
+
+            ReportTableFactory.HeaderCell("إلى تاريخ"),
+            ReportTableFactory.ValueCell(extendToDateStr)
+        }
+                });
+
+                extendTable.Rows.Add(new LetterTableRow
+                {
+                    Cells = new List<LetterTableCell>
+        {
+            new LetterTableCell
+            {
+                Text = "سبب الإمهال",
+                Bold = true,
+                Align = TextAlign.Center,
+                BackgroundColor = "#F3F3F3",
+                FontSize = 11,
+                ColumnSpan = 1
+            },
+            new LetterTableCell
+            {
+                Text = string.IsNullOrWhiteSpace(extendReason) ? "لا يوجد" : extendReason,
+                Align = TextAlign.Right,
+                BackgroundColor = "#FFFFFF",
+                FontSize = 11,
+                ColumnSpan = 3
+            }
+        }
+                });
+
+                var report = new ReportResult
+                {
+                    ReportId = "OfficialLetter01",
+                    Title = "خطاب رسمي تجريبي",
+                    Kind = ReportKind.Letter,
+                    Orientation = ReportOrientation.Portrait,
+
+                    HeaderType = ReportHeaderType.LetterOfficial,
+                    LogoPath = logo,
+                    ShowFooter = false,
+
+                    HeaderFields = header,
+
+                    //LetterTitle = "نموذج تجريبي لاختبار خصائص الخطابات",
+                    //LetterTitleFontSize = 14,
+
+                    LetterBlocks = new List<LetterBlock>
+        {
+            // Spacer
+            LetterBlockFactory.Spacer(9),
+
+            // Table 1
+            LetterBlockFactory.TableBlock(
+                personInfoTable,
+                paddingTop: 8,
+                paddingBottom: 8,
+                paddingRight: 0,
+                paddingLeft: 0),
+
+            // Table 2
+            //LetterBlockFactory.TableBlock(
+            //    mergedTable,
+            //    paddingTop: 0,
+            //    paddingBottom: 8),
+
+            //// Table 3
+            //LetterBlockFactory.TableBlock(
+            //    extendTable,
+            //    paddingTop: 0,
+            //    paddingBottom: 12),
+
+            //// Divider
+            //LetterBlockFactory.Divider(paddingTop: 4, paddingBottom: 10),
+
+            // Text Center + Bold
+
+            LetterBlockFactory.Spacer(15),
+
+            LetterBlockFactory.TextBlock(
+                "مدير فرع الشؤون الإدارية والمالية للقوات البرية بالمنطقة الجنوبية",
+                fontSize: 13,
+                bold: true,
+                align: TextAlign.Center,
+                paddingTop: 8,
+                paddingBottom: 12),
+
+
+             LetterBlockFactory.Spacer(15),
+
+            // Text Right
+            LetterBlockFactory.TextBlock(
+                "السلام عليكم ورحمة الله وبركاته،",
+                fontSize: 12,
+                bold: false,
+                align: TextAlign.Right,
+                paddingTop: 4,
+                paddingBottom: 10),
+
+            // Text Justify + LineHeight
+             LetterBlockFactory.TextBlock(
+                 $"الموضح  هويته بعاليه قام بإخلاء الوحدة السكنية الموضحة اعلاه اعتبارا من 1447/10/07 هـ موافق 2025-03-26 م\n" +
+                  $"\n" +
+                 $"لذا نأمل ايقاف حسم قيمة الإيجار والخدمات الخاصة بالوحدة السكنية اعتبارا من تاريخ اخلاء الوحدة السكنية وإكمال اللازم من قبلكم , \n"+
+                  $"\n" +
+                $"والسلام عليكم " ,
+
+                fontSize: 12,
+                bold: false,
+                align: TextAlign.Justify,
+                paddingTop: 0,
+                paddingBottom: 12,
+                paddingRight: 0,
+                paddingLeft: 0,
+                lineHeight: 1.8f),
+
+            // Text Underline
+            //LetterBlockFactory.TextBlock(
+            //    "ملاحظات:",
+            //    fontSize: 12,
+            //    bold: true,
+            //    underline: true,
+            //    align: TextAlign.Right,
+            //    paddingTop: 6,
+            //    paddingBottom: 6),
+
+            //// Text with left/right padding
+            //LetterBlockFactory.TextBlock(
+            //    $"سبب الإمهال المسجل بالنظام: {(string.IsNullOrWhiteSpace(extendReason) ? "لا يوجد" : extendReason)}",
+            //    fontSize: 11,
+            //    align: TextAlign.Right,
+            //    paddingTop: 0,
+            //    paddingBottom: 12,
+            //    paddingRight: 10,
+            //    paddingLeft: 10,
+            //    lineHeight: 1.6f),
+
+            // Spacer
+            LetterBlockFactory.Spacer(10),
+
+            // Divider
+            //LetterBlockFactory.Divider(paddingTop: 4, paddingBottom: 8),
+
+            //// Closing
+            //LetterBlockFactory.TextBlock(
+            //    "وتفضلوا بقبول فائق الاحترام والتقدير،",
+            //    fontSize: 12,
+            //    align: TextAlign.Right,
+            //    paddingTop: 10,
+            //    paddingBottom: 20),
+
+            // Signature block
+             LetterBlockFactory.TextBlock(
+                "العميد المهندس \n\n ",
+                fontSize: 13,
+                align: TextAlign.Left,
+                paddingTop: 10,
+                bold:true,
+                paddingLeft: 90,
+                lineHeight: 2.7f),
+
+            LetterBlockFactory.TextBlock(
+                " بندر أحمد راشد الأحمري ",
+                fontSize: 13,
+                align: TextAlign.Left,
+                paddingTop: 10,
+                bold:true,
+                paddingLeft: 75,
+                lineHeight: 2.7f),
+            LetterBlockFactory.TextBlock(
+                " مدير إدارة مدينة الملك فيصل العسكرية",
+                fontSize: 13,
+                align: TextAlign.Left,
+                paddingTop: 10,
+                bold:true,
+                paddingLeft: 35,
+                lineHeight: 2.7f),
+            LetterBlockFactory.TextBlock(
+                " للتشغيل والصيانة بالمنطقة الجنوبية",
+                fontSize: 13,
+                align: TextAlign.Left,
+                paddingTop: 10,
+                bold:true,
+                paddingLeft: 45,
+                lineHeight: 2.7f)
+        }
+                };
+
+                var pdfBytes = QuestPdfReportRenderer.Render(report);
+                Response.Headers["Content-Disposition"] = "inline; filename=Letter.pdf";
+                return File(pdfBytes, "application/pdf");
+            }
+
             return View("HousingProcedures/HousingExit", page);
         }
     }
