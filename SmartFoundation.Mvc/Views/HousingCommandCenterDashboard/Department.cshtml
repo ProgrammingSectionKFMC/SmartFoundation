@@ -15,11 +15,9 @@
     var depOverall = dep?.OverallCompletionPercent?.ToString("0.0") ?? "—";
 
     string Fmt(decimal v) => v.ToString("N0", System.Globalization.CultureInfo.InvariantCulture);
-    string FmtSar(decimal v) => v.ToString("N0", System.Globalization.CultureInfo.InvariantCulture) + " ر.س";
+    string FmtSar(decimal v) => v.ToString("N0", System.Globalization.CultureInfo.InvariantCulture) + " <span class=\"sar-icon\"></span>";
 
     var jsonOpts = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
-
-    string J(object o) => JsonSerializer.Serialize(o, jsonOpts);
 
     var occPct = housing != null && housing.TotalUnits > 0 ? Math.Round((decimal)housing.Occupied / housing.TotalUnits * 100, 1) : 0m;
     var vacPct = housing != null && housing.TotalUnits > 0 ? Math.Round((decimal)housing.Vacant / housing.TotalUnits * 100, 1) : 0m;
@@ -72,7 +70,7 @@
                 <div class="dep-hdr-stats">
                     <div class="dep-hdr-stat"><span class="dep-hdr-stat-val">@depOverall%</span><span class="dep-hdr-stat-lbl">الأداء</span></div>
                     <div class="dep-hdr-stat"><span class="dep-hdr-stat-val">5</span><span class="dep-hdr-stat-lbl">معايير</span></div>
-                    <div class="dep-hdr-stat"><span class="dep-hdr-stat-val">@DateTime.Now.ToString("MM/dd")</span><span class="dep-hdr-stat-lbl">اليوم</span></div>
+                    <div class="dep-hdr-stat"><span class="dep-hdr-stat-val">@DateTime.Now.ToString("yyyy-MM-dd")</span><span class="dep-hdr-stat-lbl">@DateTime.Now.ToString("dddd", new System.Globalization.CultureInfo("ar-SA"))</span></div>
                 </div>
             </div>
             <div class="dep-hdr-bar"><div class="dep-hdr-bar-fill" style="width:@depOverall%"></div></div>
@@ -296,10 +294,10 @@
                 var totalRent = fin.Collected + fin.Uncollected;
                 <div class="dep-panel" id="t4">
                     <div class="krow">
-                        <div class="kc" style="--ka:rgba(39,103,73,.06);--kt:#276749"><i class="fa-solid fa-money-bill"></i><div><strong>@FmtSar(fin.RentLastMonth)</strong><span>إيجارات الشهر الماضي</span></div></div>
-                        <div class="kc" style="--ka:rgba(43,108,176,.06);--kt:#2b6cb0"><i class="fa-solid fa-calendar"></i><div><strong>@FmtSar(fin.RentLast3Months)</strong><span>إيجارات آخر 3 أشهر</span></div></div>
-                        <div class="kc" style="--ka:rgba(30,58,95,.06);--kt:#1e3a5f"><i class="fa-solid fa-hand-holding-dollar"></i><div><strong>@FmtSar(fin.Collected)</strong><span>المبالغ المحصّلة <em>@collPct.ToString("0.0")%</em></span></div></div>
-                        <div class="kc" style="--ka:rgba(155,44,44,.06);--kt:#9b2c2c"><i class="fa-solid fa-circle-xmark"></i><div><strong>@FmtSar(fin.Uncollected)</strong><span>المبالغ المتأخرة</span></div></div>
+                        <div class="kc" style="--ka:rgba(39,103,73,.06);--kt:#276749"><i class="fa-solid fa-money-bill"></i><div><strong>@Html.Raw(FmtSar(fin.RentLastMonth))</strong><span>إيجارات الشهر الماضي</span></div></div>
+                        <div class="kc" style="--ka:rgba(43,108,176,.06);--kt:#2b6cb0"><i class="fa-solid fa-calendar"></i><div><strong>@Html.Raw(FmtSar(fin.RentLast3Months))</strong><span>إيجارات آخر 3 أشهر</span></div></div>
+                        <div class="kc" style="--ka:rgba(30,58,95,.06);--kt:#1e3a5f"><i class="fa-solid fa-hand-holding-dollar"></i><div><strong>@Html.Raw(FmtSar(fin.Collected))</strong><span>المبالغ المحصّلة <em>@collPct.ToString("0.0")%</em></span></div></div>
+                        <div class="kc" style="--ka:rgba(155,44,44,.06);--kt:#9b2c2c"><i class="fa-solid fa-circle-xmark"></i><div><strong>@Html.Raw(FmtSar(fin.Uncollected))</strong><span>المبالغ المتأخرة</span></div></div>
                     </div>
 
                     <div class="cgrid cgrid-2" style="margin-bottom:16px">
@@ -328,23 +326,23 @@
                         </div>
                         <div class="mini-stats">
                             <div class="mini-stat">
-                                <span class="mini-stat-val" style="color:#276749">@FmtSar(fin.RentLastMonth)</span>
+                                <span class="mini-stat-val" style="color:#276749">@Html.Raw(FmtSar(fin.RentLastMonth))</span>
                                 <span class="mini-stat-lbl">الشهر الماضي</span>
                             </div>
                             <div class="mini-stat">
-                                <span class="mini-stat-val" style="color:#2b6cb0">@FmtSar(fin.RentLast3Months)</span>
+                                <span class="mini-stat-val" style="color:#2b6cb0">@Html.Raw(FmtSar(fin.RentLast3Months))</span>
                                 <span class="mini-stat-lbl">آخر 3 أشهر</span>
                             </div>
                             <div class="mini-stat">
-                                <span class="mini-stat-val" style="color:#1e3a5f">@FmtSar(fin.Collected)</span>
+                                <span class="mini-stat-val" style="color:#1e3a5f">@Html.Raw(FmtSar(fin.Collected))</span>
                                 <span class="mini-stat-lbl">تم تحصيله</span>
                             </div>
                             <div class="mini-stat">
-                                <span class="mini-stat-val" style="color:#9b2c2c">@FmtSar(fin.Uncollected)</span>
+                                <span class="mini-stat-val" style="color:#9b2c2c">@Html.Raw(FmtSar(fin.Uncollected))</span>
                                 <span class="mini-stat-lbl">متأخرات</span>
                             </div>
                             <div class="mini-stat">
-                                <span class="mini-stat-val" style="color:#553c9a">@FmtSar(totalRent)</span>
+                                <span class="mini-stat-val" style="color:#553c9a">@Html.Raw(FmtSar(totalRent))</span>
                                 <span class="mini-stat-lbl">الإجمالي</span>
                             </div>
                         </div>
@@ -612,7 +610,7 @@
                             anchor: 'end',
                             align: 'start',
                             offset: 8,
-                            color: '#2d3748',
+                            color: '#ffffff',
                             font: { weight: '700', size: 11 },
                             formatter: function(v) { return v.toLocaleString('en-US'); }
                         },
@@ -806,7 +804,7 @@
                         anchor: 'end',
                         align: 'start',
                         offset: 8,
-                        color: '#2d3748',
+                        color: '#ffffff',
                         font: { weight: '700', size: 11 },
                         formatter: function(v) { return v.toFixed(0) + '%'; }
                     },
