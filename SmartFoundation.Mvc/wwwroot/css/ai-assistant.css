@@ -286,11 +286,40 @@
 
 /* ✅ "جاري التفكير..." مع زر الإيقاف */
 .sf-ai-msg.thinking .sf-ai-bubble {
-    display: flex;
+    display: inline-flex !important;
     align-items: center;
-    gap: 8px;
-    background: #fef3c7;
-    border-color: #fbbf24;
+    gap: 6px;
+    /* نفس لون المستخدم */
+    background: #f0fdf4;
+    border: 1px solid rgba(20, 83, 45, 0.15);
+    color: #14532d;
+    padding: 5px 8px !important;
+    font-size: 11px !important;
+    max-width: max-content !important;
+    width: auto !important;
+    border-radius: 10px;
+    height: auto;
+    min-height: 0;
+    align-self: flex-start;
+}
+
+/*.sf-ai-msg.thinking .sf-ai-bubble {
+    all: unset;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 8px;
+    font-size: 11px;*/
+    /*background: #fef3c7;
+    border: 1px solid #fbbf24;*/
+    /*background: #ecfdf5;*/ /* أخضر فاتح */
+    /*border: 1px solid #86efac;*/ /* أخضر ناعم */
+    /*color: #14532d;
+    border-radius: 10px;
+}*/
+
+.sf-ai-msg.thinking {
+    align-items: center; /* يخليها ما تتمدد */
 }
 
 .sf-ai-thinking-indicator {
@@ -299,13 +328,17 @@
     align-items: center;
 }
 
-.sf-ai-thinking-indicator span {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #f59e0b;
-    animation: sf-ai-bounce 1.4s infinite ease-in-out both;
-}
+    .sf-ai-thinking-indicator span {
+        background: #22c55e;
+        width: 3px;
+        height: 3px;
+        /* width: 6px;
+    height: 6px;*/
+        /*border-radius: 50%;
+        background: #0f172a;*/ /* نفس الهيدر */
+        /*opacity: 0.7;
+        animation: sf-ai-bounce 1.4s infinite ease-in-out both;*/
+    }
 
 .sf-ai-thinking-indicator span:nth-child(1) {
     animation-delay: -0.32s;
@@ -327,48 +360,58 @@
 }
 
 .sf-ai-thinking-text {
-    font-size: 13px;
-    color: #92400e;
+    /*font-size: 12px;*/
+    /*font-size: 13px;*/
+    /*color: #0f172a;
+    font-weight: 500;*/
+
+    color: #14532d;
+    font-size: 11px;
 }
 
 .sf-ai-thinking-timer {
-    font-size: 11px;
-    color: #92400e;
-    font-family: monospace;
-    min-width: 30px;
-    opacity: 0.7;
+    color: #14532d;
+    font-size: 10px;
+    opacity: 0.6;
 }
 
 /* ✅ زر الإيقاف */
+/* زر الإيقاف - أحمر ناعم */
 .sf-ai-stop-btn {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 4px 10px;
-    background: #ef4444;
-    color: white;
-    border: none;
+    justify-content: center;
+    padding: 2px 4px;
+    font-size: 9px;
+    line-height: 1;
+    height: 20px;
+    min-height: 20px;
     border-radius: 6px;
-    font-size: 11px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-right: auto;
+    background: #fee2e2; /* أحمر فاتح */
+    color: #991b1b; /* نص أحمر غامق */
+    border: 1px solid #fecaca; /* حدود خفيفة */
 }
 
-.sf-ai-stop-btn:hover {
-    background: #dc2626;
-    transform: scale(1.05);
-}
+    /*.sf-ai-stop-btn:hover {*/
+        /*background: #dc2626;*/
+        /*background: rgba(15, 23, 42, 0.15);
+        transform: scale(1.05);
+    }*/
+
+    .sf-ai-stop-btn:hover {
+        background: #fee2e2;
+        color: #7f1d1d;
+        border: 1px solid #fca5a5;
+    }
 
 .sf-ai-stop-btn:active {
     transform: scale(0.95);
 }
 
-.sf-ai-stop-btn svg {
-    width: 12px;
-    height: 12px;
-}
+    .sf-ai-stop-btn svg {
+        width: 8px;
+        height: 8px;
+    }
 
 /* citations */
 .sf-ai-citations {
