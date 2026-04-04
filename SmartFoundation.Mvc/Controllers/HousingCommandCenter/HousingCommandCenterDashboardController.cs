@@ -645,11 +645,12 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
             {
                 Categories = new()
         {
-            new() { Label = "ضباط كبار",  Residents = 92,  Waiting = 12, Color = "#0f766e" },
-            new() { Label = "ضباط",        Residents = 214, Waiting = 38, Color = "#2563eb" },
-            new() { Label = "ضباط صف",    Residents = 276, Waiting = 54, Color = "#d97706" },
-            new() { Label = "أفراد",       Residents = 418, Waiting = 71, Color = "#dc2626" },
-            new() { Label = "مدنيون",      Residents = 165, Waiting = 29, Color = "#7c3aed" },
+            new() { Label = "القادة",  Residents = 8,  Waiting = 0, Color = "#0f766e" },
+            new() { Label = "كيار الضباط",  Residents = 92,  Waiting = 12, Color = "#0f766e" },
+            new() { Label = "ضباط",        Residents = 214, Waiting = 612, Color = "#2563eb" },
+            new() { Label = "ضباط صف",       Residents = 1204, Waiting = 7410, Color = "#dc2626" },
+            new() { Label = "جنود",    Residents = 276, Waiting = 2108, Color = "#d97706" },
+            new() { Label = "مدنيون",      Residents = 165, Waiting = 315, Color = "#7c3aed" },
             new() { Label = "متعاقدون",    Residents = 38,  Waiting = 14, Color = "#0891b2" },
         },
                 Districts = new()
@@ -697,9 +698,9 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
         },
                 SlaComparison = new()
         {
-            new() { Label = "الإمهال",  Actual = 5.7m, Target = 4.0m, Color = "#d97706" },
+            new() { Label = "الإمهال",  Actual = 1.6m, Target = 3.0m, Color = "#d97706" },
             new() { Label = "الإخلاء",  Actual = 4.9m, Target = 3.0m, Color = "#dc2626" },
-            new() { Label = "التسكين",  Actual = 3.8m, Target = 2.5m, Color = "#0f766e" },
+            new() { Label = "التسكين",  Actual = 3.8m, Target = 2.0m, Color = "#0f766e" },
         }
             },
             _ => new DepRequestsDetail
@@ -728,10 +729,18 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
                 RentLast12Months = 4538000,
                 Collected = 3941000,
                 Uncollected = 597000,
+
+                PaidFromSallary = 3211252,
+                PaidByATM = 521589,
+                PaidByCash = 208159,
+
+
                 UtilityEfficiency = new()
         {
+            new() { Label = "الايجار",      Value = 89, Color = "#0f766e" },
             new() { Label = "الكهرباء",      Value = 78, Color = "#d97706" },
             new() { Label = "الماء",          Value = 64, Color = "#2563eb" },
+            new() { Label = "الغاز",          Value = 97, Color = "#7c3aed" },
         }
             },
             _ => new DepFinanceDetail
@@ -741,10 +750,18 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
                 RentLast12Months = 2800000,
                 Collected = 2400000,
                 Uncollected = 400000,
+
+
+                PaidFromSallary = 2211252,
+                PaidByATM =  165852,
+                PaidByCash = 22896,
+
                 UtilityEfficiency = new()
         {
-            new() { Label = "الكهرباء", Value = 75, Color = "#d97706" },
-            new() { Label = "الماء",     Value = 62, Color = "#2563eb" },
+              new() { Label = "الايجار",      Value = 84, Color = "#0f766e" },
+            new() { Label = "الكهرباء",      Value = 78, Color = "#d97706" },
+            new() { Label = "الماء",          Value = 64, Color = "#2563eb" },
+            new() { Label = "الغاز",          Value = 90, Color = "#7c3aed" },
         }
             }
         };
@@ -761,8 +778,8 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
                 FacilityStatus = new()
         {
             new() { Label = "السلامة",  Value = 87, Color = "#16a34a" },
-            new() { Label = "الغاز",    Value = 91, Color = "#0f766e" },
-            new() { Label = "الإنترنت", Value = 55, Color = "#d97706" },
+            new() { Label = "الماء",    Value = 91, Color = "#0f766e" },
+            new() { Label = "الغاز", Value = 55, Color = "#d97706" },
         }
             },
             _ => new DepMaintenanceDetail
@@ -774,9 +791,9 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
                 ServicesRefs = 7,
                 FacilityStatus = new()
         {
-            new() { Label = "السلامة",  Value = 84, Color = "#16a34a" },
-            new() { Label = "الغاز",    Value = 88, Color = "#0f766e" },
-            new() { Label = "الإنترنت", Value = 60, Color = "#d97706" },
+            new() { Label = "السلامة",  Value = 87, Color = "#16a34a" },
+            new() { Label = "الماء",    Value = 91, Color = "#0f766e" },
+            new() { Label = "الغاز", Value = 55, Color = "#d97706" },
         }
             },
 

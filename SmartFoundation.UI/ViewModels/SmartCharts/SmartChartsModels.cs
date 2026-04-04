@@ -354,6 +354,10 @@ namespace SmartFoundation.UI.ViewModels.SmartCharts
         public decimal Collected { get; set; }
         public decimal Uncollected { get; set; }
 
+        public decimal PaidFromSallary { get; set; }
+        public decimal PaidByATM { get; set; }
+        public decimal PaidByCash { get; set; }
+
         // استهلاك الكهرباء والماء
         public List<ChartSlice> UtilityEfficiency { get; set; } = new();
     }
@@ -387,6 +391,7 @@ namespace SmartFoundation.UI.ViewModels.SmartCharts
         public DepRequestsDetail? RequestsDetail { get; set; }
         public DepFinanceDetail? FinanceDetail { get; set; }
         public DepMaintenanceDetail? MaintenanceDetail { get; set; }
+        public DepMaintenanceDetail? CarsDetail { get; set; }
     }
 
     #endregion

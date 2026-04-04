@@ -9,6 +9,7 @@
     var req = Model.RequestsDetail;
     var fin = Model.FinanceDetail;
     var maint = Model.MaintenanceDetail;
+    var car = Model.CarsDetail;
 
     var depColor = dep?.Color ?? "#0f766e";
     var depName = dep?.Name ?? "تفاصيل الإدارة";
@@ -81,9 +82,11 @@
             <nav class="dep-tabs">
                 <button class="dep-tab is-active" data-tab="t1"><i class="fa-solid fa-house-circle-check"></i><span>جاهزية السكن</span></button>
                 <button class="dep-tab" data-tab="t2"><i class="fa-solid fa-people-roof"></i><span>الإشغال</span></button>
-                <button class="dep-tab" data-tab="t3"><i class="fa-solid fa-stopwatch"></i><span>الطلبات</span></button>
+                <button class="dep-tab" data-tab="t3"><i class="fa-solid fa-stopwatch"></i><span>اجراءات الاسكان</span></button>
                 <button class="dep-tab" data-tab="t4"><i class="fa-solid fa-money-bill-wave"></i><span>الماليات</span></button>
                 <button class="dep-tab" data-tab="t5"><i class="fa-solid fa-screwdriver-wrench"></i><span>الصيانة</span></button>
+                <button class="dep-tab" data-tab="t6"><i class="fa-solid fa-car"></i><span>صيانة العربات</span></button>
+                <button class="dep-tab" data-tab="t7"><i class="fa-solid fa-screwdriver-wrench"></i><span>برنامج طلبات الصيانة</span></button>
             </nav>
 
             <!-- TAB 1 — جاهزية السكن -->
@@ -165,7 +168,7 @@
                         <div class="kc" style="--ka:rgba(43,108,176,.06);--kt:#2b6cb0"><i class="fa-solid fa-users"></i><div><strong>@Fmt(totalResidents)</strong><span>إجمالي الساكنين</span></div></div>
                         <div class="kc" style="--ka:rgba(155,44,44,.06);--kt:#9b2c2c"><i class="fa-solid fa-clock"></i><div><strong>@Fmt(totalWaiting)</strong><span>قائمة الانتظار</span></div></div>
                         <div class="kc" style="--ka:rgba(30,58,95,.06);--kt:#1e3a5f"><i class="fa-solid fa-map-location-dot"></i><div><strong>@alloc.Districts.Count()</strong><span>عدد الأحياء</span></div></div>
-                        <div class="kc" style="--ka:rgba(192,86,33,.06);--kt:#c05621"><i class="fa-solid fa-layer-group"></i><div><strong>@alloc.Categories.Count()</strong><span>فئات التخصيص</span></div></div>
+                        @* <div class="kc" style="--ka:rgba(192,86,33,.06);--kt:#c05621"><i class="fa-solid fa-layer-group"></i><div><strong>@alloc.Categories.Count()</strong><span>فئات التخصيص</span></div></div> *@
                     </div>
 
                     <!-- Categories Chart - Full Width -->
@@ -206,7 +209,7 @@
                                 </div>
                             </div>
                             <div class="progress-list">
-                                @foreach (var cat in alloc.Categories.Take(4))
+                                @foreach (var cat in alloc.Categories.Take(5))
                                 {
                                     var catTotal = cat.Residents + cat.Waiting;
                                     var catPct = catTotal > 0 ? Math.Round((decimal)cat.Residents / catTotal * 100, 0) : 0;
@@ -226,7 +229,7 @@
                 </div>
             }
 
-            <!-- TAB 3 — الطلبات -->
+            <!-- TAB 3 — اجراءات الاسكان -->
             @if (req != null)
             {
                 <div class="dep-panel" id="t3">
@@ -236,7 +239,7 @@
                         {
                             <div class="kc" style="--ka:rgba(192,86,33,.04);--kt:#c05621"><i class="fa-solid fa-file-alt"></i><div><strong>@((int)r.Value)</strong><span>@r.Label</span></div></div>
                         }
-                        @foreach (var s in req.SlaComparison.Take(2))
+                        @foreach (var s in req.SlaComparison.Take(3))
                         {
                             var over = s.Actual > s.Target;
                             <div class="kc" style="--ka:@(over ? "rgba(155,44,44,.06)" : "rgba(39,103,73,.06)");--kt:@(over ? "#9b2c2c" : "#276749")"><i class="fa-solid fa-stopwatch"></i><div><strong>@s.Actual.ToString("0.0") يوم</strong><span>@s.Label <em>هدف: @s.Target.ToString("0.0")</em></span></div></div>
@@ -294,8 +297,9 @@
                 var totalRent = fin.Collected + fin.Uncollected;
                 <div class="dep-panel" id="t4">
                     <div class="krow">
-                        <div class="kc" style="--ka:rgba(39,103,73,.06);--kt:#276749"><i class="fa-solid fa-money-bill"></i><div><strong>@Html.Raw(FmtSar(fin.RentLastMonth))</strong><span>إيجارات الشهر الماضي</span></div></div>
-                        <div class="kc" style="--ka:rgba(43,108,176,.06);--kt:#2b6cb0"><i class="fa-solid fa-calendar"></i><div><strong>@Html.Raw(FmtSar(fin.RentLast3Months))</strong><span>إيجارات آخر 3 أشهر</span></div></div>
+                        <div class="kc" style="--ka:rgba(39,103,73,.06);--kt:#276749"><i class="fa-solid fa-money-bill"></i><div><strong>@Html.Raw(FmtSar(fin.RentLastMonth))</strong><span>مطالبات الشهر الماضي</span></div></div>
+                        <div class="kc" style="--ka:rgba(43,108,176,.06);--kt:#2b6cb0"><i class="fa-solid fa-calendar"></i><div><strong>@Html.Raw(FmtSar(fin.RentLast3Months))</strong><span>مطالبات آخر 3 أشهر</span></div></div>
+                        <div class="kc" style="--ka:rgba(43,108,176,.06);--kt:#2b6cb0"><i class="fa-solid fa-calendar"></i><div><strong>@Html.Raw(FmtSar(fin.RentLast12Months))</strong><span>مطالبات آخر 12 أشهر</span></div></div>
                         <div class="kc" style="--ka:rgba(30,58,95,.06);--kt:#1e3a5f"><i class="fa-solid fa-hand-holding-dollar"></i><div><strong>@Html.Raw(FmtSar(fin.Collected))</strong><span>المبالغ المحصّلة <em>@collPct.ToString("0.0")%</em></span></div></div>
                         <div class="kc" style="--ka:rgba(155,44,44,.06);--kt:#9b2c2c"><i class="fa-solid fa-circle-xmark"></i><div><strong>@Html.Raw(FmtSar(fin.Uncollected))</strong><span>المبالغ المتأخرة</span></div></div>
                     </div>
@@ -313,7 +317,7 @@
                         </div>
                         <div class="ccard">
                             <div class="ccard-hdr">
-                                <div class="ccard-title"><i class="fa-solid fa-bolt"></i> كفاءة استهلاك المرافق</div>
+                                <div class="ccard-title"><i class="fa-solid fa-bolt"></i> كفاءة التحصيل حسب التصنيف</div>
                             </div>
                             <div class="ch-wrap ch280"><canvas id="c-utility"></canvas></div>
                         </div>
@@ -322,10 +326,10 @@
                     <!-- Financial Summary -->
                     <div class="ccard">
                         <div class="ccard-hdr">
-                            <div class="ccard-title"><i class="fa-solid fa-coins"></i> ملخص الإيرادات</div>
+                            <div class="ccard-title"><i class="fa-solid fa-coins"></i> ملخص التحصيل حسب نوع السداد</div>
                         </div>
                         <div class="mini-stats">
-                            <div class="mini-stat">
+                           @*  <div class="mini-stat">
                                 <span class="mini-stat-val" style="color:#276749">@Html.Raw(FmtSar(fin.RentLastMonth))</span>
                                 <span class="mini-stat-lbl">الشهر الماضي</span>
                             </div>
@@ -333,17 +337,22 @@
                                 <span class="mini-stat-val" style="color:#2b6cb0">@Html.Raw(FmtSar(fin.RentLast3Months))</span>
                                 <span class="mini-stat-lbl">آخر 3 أشهر</span>
                             </div>
+ *@
                             <div class="mini-stat">
-                                <span class="mini-stat-val" style="color:#1e3a5f">@Html.Raw(FmtSar(fin.Collected))</span>
-                                <span class="mini-stat-lbl">تم تحصيله</span>
+                                <span class="mini-stat-val" style="color:#2b6cb0">@Html.Raw(FmtSar(fin.Collected))</span>
+                                <span class="mini-stat-lbl">آخر 12 أشهر</span>
                             </div>
                             <div class="mini-stat">
-                                <span class="mini-stat-val" style="color:#9b2c2c">@Html.Raw(FmtSar(fin.Uncollected))</span>
-                                <span class="mini-stat-lbl">متأخرات</span>
+                                <span class="mini-stat-val" style="color:#1e3a5f">@Html.Raw(FmtSar(fin.PaidFromSallary))</span>
+                                <span class="mini-stat-lbl">حسم من الراتب</span>
                             </div>
                             <div class="mini-stat">
-                                <span class="mini-stat-val" style="color:#553c9a">@Html.Raw(FmtSar(totalRent))</span>
-                                <span class="mini-stat-lbl">الإجمالي</span>
+                                <span class="mini-stat-val" style="color:#9b2c2c">@Html.Raw(FmtSar(fin.PaidByATM))</span>
+                                <span class="mini-stat-lbl">نقاط بيع</span>
+                            </div>
+                            <div class="mini-stat">
+                                <span class="mini-stat-val" style="color:#553c9a">@Html.Raw(FmtSar(fin.PaidByCash))</span>
+                                <span class="mini-stat-lbl">دفع نقدي</span>
                             </div>
                         </div>
                     </div>
@@ -357,7 +366,8 @@
                 <div class="dep-panel" id="t5">
                     <div class="krow">
                         <div class="kc" style="--ka:rgba(85,60,154,.06);--kt:#553c9a"><i class="fa-solid fa-gears"></i><div><strong>@maint.CompletedJobs / @maint.PlannedJobs</strong><span>أعمال منجزة <em>@mPct.ToString("0.0")%</em></span></div></div>
-                        <div class="kc" style="--ka:rgba(85,60,154,.04);--kt:#553c9a"><i class="fa-solid fa-car-side"></i><div><strong>@maint.FleetReadiness%</strong><span>جاهزية الأسطول</span></div></div>
+                        @* <div class="kc" style="--ka:rgba(85,60,154,.04);--kt:#553c9a"><i class="fa-solid fa-car-side"></i><div><strong>@maint.FleetReadiness%</strong><span>معدل الوقت للانجاز</span></div></div> *@
+                        <div class="kc" style="--ka:rgba(85,60,154,.04);--kt:#553c9a"><i class="fa-solid fa-car-side"></i><div><strong>13 يوم</strong><span>معدل الوقت للانجاز</span></div></div>
                         <div class="kc" style="--ka:rgba(192,86,33,.06);--kt:#c05621"><i class="fa-solid fa-star-half-stroke"></i><div><strong>@maint.QualityRefs</strong><span>إحالات الجودة</span></div></div>
                         <div class="kc" style="--ka:rgba(8,111,131,.06);--kt:#086f83"><i class="fa-solid fa-tools"></i><div><strong>@maint.ServicesRefs</strong><span>إحالات الخدمات</span></div></div>
                     </div>
@@ -390,7 +400,7 @@
                             <div class="mini-stats">
                                 <div class="mini-stat">
                                     <span class="mini-stat-val" style="color:#553c9a">@maint.PlannedJobs</span>
-                                    <span class="mini-stat-lbl">مخطط لها</span>
+                                    <span class="mini-stat-lbl">الاجمالي</span>
                                 </div>
                                 <div class="mini-stat">
                                     <span class="mini-stat-val" style="color:#276749">@maint.CompletedJobs</span>
@@ -427,7 +437,7 @@
                                 </div>
                                 <div class="progress-item">
                                     <div class="progress-header">
-                                        <span class="progress-label">جاهزية الأسطول</span>
+                                        <span class="progress-label">معدل الإنجاز</span>
                                         <span class="progress-value">@maint.FleetReadiness%</span>
                                     </div>
                                     <div class="progress-bar">
@@ -439,6 +449,292 @@
                     </div>
                 </div>
             }
+
+
+            <!-- TAB 6 — صيانة العربات -->
+            <div class="dep-panel" id="t6">
+                <div class="krow">
+                    <div class="kc" style="--ka:rgba(30,58,95,.06);--kt:#1e3a5f">
+                        <i class="fa-solid fa-car-side"></i>
+                        <div><strong>822</strong><span>إجمالي العربات</span></div>
+                    </div>
+
+                    <div class="kc" style="--ka:rgba(39,103,73,.06);--kt:#276749">
+                        <i class="fa-solid fa-check-circle"></i>
+                        <div><strong>655</strong><span>العربات المسلمة <em>81.87%</em></span></div>
+                    </div>
+
+                    <div class="kc" style="--ka:rgba(192,86,33,.06);--kt:#c05621">
+                        <i class="fa-solid fa-screwdriver-wrench"></i>
+                        <div><strong>22</strong><span>تحت الصيانة <em>2.67%</em></span></div>
+                    </div>
+
+                    <div class="kc" style="--ka:rgba(155,44,44,.06);--kt:#9b2c2c">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <div><strong>41</strong><span>بانتظار قطع <em>4.98%</em></span></div>
+                    </div>
+
+                    <div class="kc" style="--ka:rgba(85,60,154,.06);--kt:#553c9a">
+                        <i class="fa-solid fa-medal"></i>
+                        <div><strong>9</strong><span>محالة للجودة <em>1.09%</em></span></div>
+                    </div>
+
+                    <div class="kc" style="--ka:rgba(8,111,131,.06);--kt:#086f83">
+                        <i class="fa-solid fa-key"></i>
+                        <div><strong>85</strong><span>جاهزة للتسليم <em>10.34%</em></span></div>
+                    </div>
+                </div>
+
+                <!-- Row 1 -->
+                <div class="cgrid cgrid-2-1" style="margin-bottom:16px">
+                    <div class="ccard">
+                        <div class="ccard-hdr">
+                            <div class="ccard-title"><i class="fa-solid fa-chart-pie"></i> حالة العربات</div>
+                            <span class="ccard-badge success"><i class="fa-solid fa-arrow-up"></i> 81.87% العربات المسلمة</span>
+                        </div>
+                        <div class="ch-wrap ch250">
+                            <canvas id="c-car-status"></canvas>
+                            <div class="ch-center" style="color:#1e3a5f">
+                                <strong>81.87%</strong>
+                                <small>نسبة العربات المسلمة</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="summary-card">
+                        <div class="summary-title">
+                            <i class="fa-solid fa-screwdriver-wrench"></i> توزيع العربات تحت الصيانة حسب الورش
+                        </div>
+
+                        <ul class="summary-list">
+
+                            <!-- 🛢️ ورشة الزيت -->
+                            <li class="summary-item">
+                                <span class="summary-label">
+                                    <i style="background:rgba(202,138,4,.08);color:#ca8a04" class="fa-solid fa-oil-can"></i>
+                                    ورشة الزيت
+                                </span>
+                                <span class="summary-value">9</span>
+                            </li>
+
+                            <!-- ⚡ ورشة الكهرباء -->
+                            <li class="summary-item">
+                                <span class="summary-label">
+                                    <i style="background:rgba(245,158,11,.08);color:#f59e0b" class="fa-solid fa-bolt"></i>
+                                    ورشة الكهرباء
+                                </span>
+                                <span class="summary-value">3</span>
+                            </li>
+
+                            <!-- 🔧 ورشة الميكانيكا -->
+                            <li class="summary-item">
+                                <span class="summary-label">
+                                    <i style="background:rgba(39,103,73,.08);color:#276749" class="fa-solid fa-gear"></i>
+                                    ورشة الميكانيكا
+                                </span>
+                                <span class="summary-value">5</span>
+                            </li>
+
+                            <!-- 🧰 ورشة التوظيب -->
+                            <li class="summary-item">
+                                <span class="summary-label">
+                                    <i style="background:rgba(85,60,154,.08);color:#553c9a" class="fa-solid fa-toolbox"></i>
+                                    ورشة التوظيب
+                                </span>
+                                <span class="summary-value">2</span>
+                            </li>
+
+                            <!-- 🔄 الصيانة الوقائية -->
+                            <li class="summary-item">
+                                <span class="summary-label">
+                                    <i style="background:rgba(8,111,131,.08);color:#086f83" class="fa-solid fa-arrows-rotate"></i>
+                                    ورشة الصيانة الوقائية
+                                </span>
+                                <span class="summary-value">3</span>
+                            </li>
+
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Row 2 -->
+                <div class="cgrid cgrid-2">
+                    <div class="ccard">
+                        <div class="ccard-hdr">
+                            <div class="ccard-title"><i class="fa-solid fa-car-side"></i> توزيع أنواع العربات</div>
+                            <span class="ccard-badge">5 أنواع</span>
+                        </div>
+                        <div class="ch-wrap ch220">
+                            <canvas id="c-cars"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="ccard">
+                        <div class="ccard-hdr">
+                            <div class="ccard-title"><i class="fa-solid fa-users"></i> الفئات المستلمة للعربات</div>
+                            <span class="ccard-badge">3 فئات</span>
+                        </div>
+                        <div class="ch-wrap ch220">
+                            <canvas id="c-car-operational"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- TAB 7 — برنامج طلبات الصيانة -->
+            <div class="dep-panel" id="t7">
+                <div class="krow">
+                    <div class="kc" style="--ka:rgba(155,44,44,.06);--kt:#9b2c2c">
+                        <i class="fa-solid fa-bell"></i>
+                        <div><strong>38</strong><span>بلاغات طارئة</span></div>
+                    </div>
+
+                    <div class="kc" style="--ka:rgba(43,108,176,.06);--kt:#2b6cb0">
+                        <i class="fa-solid fa-clipboard-list"></i>
+                        <div><strong>124</strong><span>بلاغات عادية</span></div>
+                    </div>
+
+                    <div class="kc" style="--ka:rgba(39,103,73,.06);--kt:#276749">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <div><strong>109</strong><span>منجز</span></div>
+                    </div>
+
+                    <div class="kc" style="--ka:rgba(192,86,33,.06);--kt:#c05621">
+                        <i class="fa-solid fa-hourglass-half"></i>
+                        <div><strong>53</strong><span>متبقي</span></div>
+                    </div>
+
+                    <div class="kc" style="--ka:rgba(85,60,154,.06);--kt:#553c9a">
+                        <i class="fa-solid fa-percent"></i>
+                        <div><strong>67.3%</strong><span>نسبة الإنجاز</span></div>
+                    </div>
+                </div>
+
+                <div class="cgrid cgrid-2-1" style="margin-bottom:16px">
+                    <div class="ccard">
+                        <div class="ccard-hdr">
+                            <div class="ccard-title"><i class="fa-solid fa-chart-pie"></i> توزيع البلاغات حسب الأولوية</div>
+                            <span class="ccard-badge warning">162 بلاغ</span>
+                        </div>
+                        <div class="ch-wrap ch250">
+                            <canvas id="c-maint-requests-priority"></canvas>
+                            <div class="ch-center" style="color:#1e3a5f">
+                                <strong>162</strong>
+                                <small>إجمالي البلاغات</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="summary-card">
+                        <div class="summary-title"><i class="fa-solid fa-list-check"></i> أكثر أنواع البلاغات</div>
+                        <ul class="summary-list">
+                            <li class="summary-item">
+                                <span class="summary-label">
+                                    <i style="background:rgba(245,158,11,.08);color:#f59e0b" class="fa-solid fa-bolt"></i>
+                                    كهرباء
+                                </span>
+                                <span class="summary-value">42</span>
+                            </li>
+                            <li class="summary-item">
+                                <span class="summary-label">
+                                    <i style="background:rgba(8,111,131,.08);color:#086f83" class="fa-solid fa-faucet-drip"></i>
+                                    سباكة
+                                </span>
+                                <span class="summary-value">31</span>
+                            </li>
+                            <li class="summary-item">
+                                <span class="summary-label">
+                                    <i style="background:rgba(192,86,33,.08);color:#c05621" class="fa-solid fa-hammer"></i>
+                                    نجارة
+                                </span>
+                                <span class="summary-value">18</span>
+                            </li>
+                            <li class="summary-item">
+                                <span class="summary-label">
+                                    <i style="background:rgba(85,60,154,.08);color:#553c9a" class="fa-solid fa-wind"></i>
+                                    تكييف
+                                </span>
+                                <span class="summary-value">27</span>
+                            </li>
+                            <li class="summary-item">
+                                <span class="summary-label">
+                                    <i style="background:rgba(74,85,104,.08);color:#4a5568" class="fa-solid fa-ellipsis"></i>
+                                    أخرى
+                                </span>
+                                <span class="summary-value">44</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="cgrid cgrid-2">
+                    <div class="ccard">
+                        <div class="ccard-hdr">
+                            <div class="ccard-title"><i class="fa-solid fa-layer-group"></i> أنواع البلاغات</div>
+                            <span class="ccard-badge">5 أنواع</span>
+                        </div>
+                        <div class="ch-wrap ch220">
+                            <canvas id="c-maint-requests-types"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="ccard">
+                        <div class="ccard-hdr">
+                            <div class="ccard-title"><i class="fa-solid fa-chart-simple"></i> حالة التنفيذ</div>
+                            <span class="ccard-badge success">67.3% منجز</span>
+                        </div>
+
+                        <div class="mini-stats" style="margin-bottom:16px">
+                            <div class="mini-stat">
+                                <span class="mini-stat-val" style="color:#276749">109</span>
+                                <span class="mini-stat-lbl">منجز</span>
+                            </div>
+                            <div class="mini-stat">
+                                <span class="mini-stat-val" style="color:#c05621">53</span>
+                                <span class="mini-stat-lbl">متبقي</span>
+                            </div>
+                            <div class="mini-stat">
+                                <span class="mini-stat-val" style="color:#9b2c2c">38</span>
+                                <span class="mini-stat-lbl">طارئ</span>
+                            </div>
+                        </div>
+
+                        <div class="progress-list">
+                            <div class="progress-item">
+                                <div class="progress-header">
+                                    <span class="progress-label">معدل الإنجاز العام</span>
+                                    <span class="progress-value">109 / 162</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width:67.3%;background:linear-gradient(90deg,#276749,#38a169)"></div>
+                                </div>
+                            </div>
+
+                            <div class="progress-item">
+                                <div class="progress-header">
+                                    <span class="progress-label">البلاغات الطارئة</span>
+                                    <span class="progress-value">38</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width:23.5%;background:linear-gradient(90deg,#9b2c2c,#c53030)"></div>
+                                </div>
+                            </div>
+
+                            <div class="progress-item">
+                                <div class="progress-header">
+                                    <span class="progress-label">البلاغات العادية</span>
+                                    <span class="progress-value">124</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width:76.5%;background:linear-gradient(90deg,#2b6cb0,#4299e1)"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
         </div>
 
@@ -456,6 +752,49 @@
         <script id="d-unit-status" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = new[] { "مشغولة", "شاغرة", "تحت الصيانة", "إحالة جودة", "إحالة خدمات", "جاهزة" }, values = new[] { housing.Occupied, housing.Vacant, housing.UnderMaintenance, housing.ReferredQuality, housing.ReferredServices, housing.ReadyToAllocate } }, jsonOpts2))</script>
         <script id="d-areas" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = housing.AreaDistribution.Select(s => s.Label).ToArray(), values = housing.AreaDistribution.Select(s => (double)s.Value).ToArray() }, jsonOpts2))</script>
         <script id="d-rooms" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = housing.RoomDistribution.Select(s => s.Label).ToArray(), values = housing.RoomDistribution.Select(s => (double)s.Value).ToArray() }, jsonOpts2))</script>
+
+        <script id="d-cars" type="application/json">
+            @Html.Raw(JsonSerializer.Serialize(new
+            {
+                    labels = new[] { "الشاحنات", "العربات الثقيلة", "العربات الخفيفة", "عربات النقل", "العربات الخدمية" },
+                        values = new[] { 72, 152, 412, 89, 97 }
+                }, jsonOpts2))
+    </script>
+
+    <script id="d-car-status" type="application/json">
+        @Html.Raw(JsonSerializer.Serialize(new
+                {
+                    labels = new[] { "مسلمة", "تحت الصيانة", "بانتظار قطع", "محالة للجودة", "جاهزة للتسليم" },
+                        values = new[] { 655, 22, 41, 9, 85 }
+                }, jsonOpts2))
+    </script>
+
+    <script id="d-car-operational" type="application/json">
+        @Html.Raw(JsonSerializer.Serialize(new
+                {
+                    labels = new[] { "ضباط", "أفراد", "أخرى" },
+                        values = new[] { 382, 72, 201 }
+                }, jsonOpts2))
+    </script>
+
+
+
+    <script id="d-maint-requests-priority" type="application/json">
+        @Html.Raw(JsonSerializer.Serialize(new
+                {
+                    labels = new[] { "طارئة", "عادية" },
+                        values = new[] { 38, 124 }
+                }, jsonOpts2))
+    </script>
+
+    <script id="d-maint-requests-types" type="application/json">
+        @Html.Raw(JsonSerializer.Serialize(new
+                {
+                    labels = new[] { "كهرباء", "سباكة", "نجارة", "تكييف", "أخرى" },
+                        values = new[] { 42, 31, 18, 27, 44 }
+                }, jsonOpts2))
+    </script>
+
     }
     @if (alloc != null)
     {
@@ -483,6 +822,8 @@
         <script id="d-maintenance" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { completed = maint.CompletedJobs, remaining = maint.PlannedJobs - maint.CompletedJobs, pct = mp }, jsonOpts2))</script>
         <script id="d-facility" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = maint.FacilityStatus.Select(f => f.Label).ToArray(), values = maint.FacilityStatus.Select(f => (double)f.Value).ToArray(), colors = maint.FacilityStatus.Select(f => f.Color ?? "#7c3aed").ToArray() }, jsonOpts2))</script>
     }
+
+
 
     <script src="~/lib/chartjs/chart.umd.js" asp-append-version="true"></script>
     <script src="~/lib/chartjs/chartjs-plugin-datalabels.min.js" asp-append-version="true"></script>
@@ -649,6 +990,65 @@
         /* ══ 1c — غرف ══ */
         var dR = get('d-rooms');
         if (dR) mk('c-rooms', hbar(dR.labels, dR.values, [COLORS.info, COLORS.primary, COLORS.warning, COLORS.purple, COLORS.danger, COLORS.cyan]));
+
+
+         /* ══ 1b — العربات ══ */
+                var dCarMain = get('d-car-status');
+        if (dCarMain) {
+            mk('c-car-status',
+                donut(
+                    dCarMain.labels,
+                    dCarMain.values,
+                    [COLORS.success, COLORS.warning, COLORS.danger, COLORS.purple, COLORS.cyan]
+                )
+            );
+        }
+
+        var dCars = get('d-cars');
+        if (dCars) {
+            mk('c-cars',
+                hbar(
+                    dCars.labels,
+                    dCars.values,
+                    [COLORS.primary, COLORS.info, COLORS.warning, COLORS.purple, COLORS.danger]
+                )
+            );
+        }
+
+        var dCarOp = get('d-car-operational');
+        if (dCarOp) {
+            mk('c-car-operational',
+                hbar(
+                    dCarOp.labels,
+                    dCarOp.values,
+                    [COLORS.success, COLORS.warning, COLORS.danger, COLORS.purple, COLORS.cyan]
+                )
+            );
+        }
+
+
+                /* ══ 7 — برنامج طلبات الصيانة ══ */
+        var dMrp = get('d-maint-requests-priority');
+        if (dMrp) {
+            mk('c-maint-requests-priority',
+                donut(
+                    dMrp.labels,
+                    dMrp.values,
+                    [COLORS.danger, COLORS.info]
+                )
+            );
+        }
+
+        var dMrt = get('d-maint-requests-types');
+        if (dMrt) {
+            mk('c-maint-requests-types',
+                hbar(
+                    dMrt.labels,
+                    dMrt.values,
+                    [COLORS.warning, COLORS.cyan, COLORS.accent, COLORS.purple, COLORS.gray]
+                )
+            );
+        }
 
         /* ══ 2 — فئات ══ */
         var d2 = get('d-categories');
