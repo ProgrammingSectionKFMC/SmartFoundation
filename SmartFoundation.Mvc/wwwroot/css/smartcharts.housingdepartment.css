@@ -440,7 +440,9 @@ body {
     }
 
     .kc strong {
-        display: block;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
         font-size: 1.05rem;
         font-weight: 700;
         color: var(--t1);
@@ -779,6 +781,30 @@ body {
     color: var(--t3);
     margin-top: 4px;
     font-weight: 500;
+}
+
+/* ═══════════════════════════════════════
+   SAUDI RIYAL ICON
+═══════════════════════════════════════ */
+.sar-icon {
+    display: inline-block;
+    width: 0.95em;
+    height: 0.95em;
+    vertical-align: -0.1em;
+    margin-right: 2px;
+    background-color: currentColor;
+    mask-image: url('/img/Saudi_Riyal_Symbol.svg');
+    mask-size: contain;
+    mask-repeat: no-repeat;
+    mask-position: center;
+}
+
+/* Fix icon size in top KPI cards */
+.kc strong .sar-icon {
+    width: 1.4em;
+    height: 1.4em;
+    vertical-align: middle;
+
 }
 
 /* ═══════════════════════════════════════
