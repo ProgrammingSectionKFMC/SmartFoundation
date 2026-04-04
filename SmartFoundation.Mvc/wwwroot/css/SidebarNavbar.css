@@ -866,6 +866,27 @@ body.sidebar-collapsed #pin-sidebar i {
         color: #e2e8f0;
     }
 
+/* زر الشاشة التفاعلية  */
+.sf-header-action-btn.sf-dashboard-btn {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: rgba(16, 185, 129, 0.4);
+    color: #ffffff;
+}
+
+    .sf-header-action-btn.sf-dashboard-btn:hover {
+        background: rgba(16, 185, 129, 0.25);
+        border-color: rgba(16, 185, 129, 0.6);
+        color: #ffffff;
+    }
+
+    .sf-header-action-btn.sf-dashboard-btn i {
+        color: #34d399;
+    }
+
+    .sf-header-action-btn.sf-dashboard-btn:hover i {
+        color: #6ee7b7;
+    }
+
 nav[aria-label="روابط سريعة"] a:hover {
     background: #0b6b52 !important;
     color: #fff !important;
