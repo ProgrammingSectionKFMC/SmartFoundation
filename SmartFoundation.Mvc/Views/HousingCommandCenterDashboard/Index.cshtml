@@ -3,7 +3,7 @@
 
 @{
     Layout = null;
-    ViewData["Title"] = Model.PageTitle ?? "لوحة الإسكان والمالي والطلبات";
+    ViewData["Title"] = Model.PageTitle ?? "لوحة قيادة الإدارات التشغيلية والصيانة";
 }
 <!doctype html>
 <html lang="ar" dir="rtl">
@@ -11,179 +11,76 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>@ViewData["Title"]</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='2' y='18' width='7' height='12' rx='3.5' fill='%230f766e'/><rect x='12' y='10' width='7' height='20' rx='3.5' fill='%232563eb'/><rect x='22' y='4' width='7' height='26' rx='3.5' fill='%23d97706'/></svg>" />
+
+    @* Favicon *@
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='2' y='18' width='7' height='12' rx='3.5' fill='%231a3a5c'/><rect x='12' y='10' width='7' height='20' rx='3.5' fill='%232d5282'/><rect x='22' y='4' width='7' height='26' rx='3.5' fill='%23c9a227'/></svg>" />
+
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/statistics.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/Fontawesome6-5-0.min.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/smartcharts.housingcommandcenter.css" asp-append-version="true" />
-
-    <style>
-            *,
-            *::before,
-            *::after {
-                box-sizing: border-box;
-                margin: 0;
-                padding: 0;
-            }
-
-            :root {
-                --hcc-page-bg: #f3f6f8;
-                --hcc-radius-xl: 16px;
-                --hcc-footer-height: 60px;
-                --hcc-footer-bg: #f0f4f7;
-                --hcc-footer-color: #64748b;
-                --hcc-footer-font: 11.5px;
-            }
-
-            html,
-            body {
-                width: 100%;
-                min-height: 100%;
-                overflow: auto;
-            }
-
-            /* ─── Page title bar ─── */
-            .hcc-title-bar {
-                flex: 0 0 auto;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 10px;
-                padding: 24px 20px 20px;
-                background: linear-gradient(135deg, #ffffff 0%, #eef7f2 100%);
-                border-bottom: 1px solid #dbe8e0;
-                position: relative;
-            }
-
-                .hcc-title-bar::after {
-                    content: "";
-                    position: absolute;
-                    inset: auto 0 0 0;
-                    height: 3px;
-                    background: linear-gradient(90deg, #0f766e 0%, #2563eb 50%, #d97706 100%);
-                }
-
-            .hcc-title-bar-icon {
-                flex-shrink: 0;
-            }
-
-            .hcc-title-bar-text {
-                font-size: 1.5rem;
-                font-weight: 500;
-                color: #0f2b22;
-                letter-spacing: -.2px;
-            }
-
-           
-
-            body {
-                display: flex;
-                flex-direction: column;
-                background: var(--hcc-page-bg);
-                color: #0f172a;
-                font-family: "Segoe UI", Tahoma, Arial, sans-serif;
-            }
-
-
-            /* ─── Main content area fills all remaining space ─── */
-            .hcc-content {
-                flex: 1 1 auto;
-                overflow: auto;
-                padding: 14px 14px 0;
-            }
-
-            /* ─── Charts container: no border, no shadow, no bg ─── */
-            .hcc-charts-wrap {
-                width: 100%;
-                height: 100%;
-            }
-
-                /* Override any inner gaps if needed */
-                .hcc-charts-wrap .sf-smartcharts,
-                .hcc-charts-wrap .sf-smartcharts-wrap,
-                .hcc-charts-wrap .sf-smartcharts-grid {
-                    gap: 12px !important;
-                }
-
-                .hcc-charts-wrap .sf-hcc {
-                    border-radius: var(--hcc-radius-xl) !important;
-                }
-
-            /* ─── Empty state ─── */
-            .hcc-empty {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                height: 100%;
-                gap: 8px;
-                color: #64748b;
-                font-size: 14px;
-                text-align: center;
-            }
-
-                .hcc-empty b {
-                    color: #334155;
-                }
-
-            /* ─── Slim footer ─── */
-            .hcc-footer {
-                flex: 0 0 var(--hcc-footer-height);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background: var(--hcc-footer-bg);
-                border-top: 1px solid rgba(148, 163, 184, .15);
-                color: var(--hcc-footer-color);
-                font-size: var(--hcc-footer-font);
-                letter-spacing: .01em;
-                padding: 10px 14px;
-                user-select: none;
-                margin-top: 20px;
-            }
-
-            /* ─── Responsive ─── */
-            @@media (max-width: 991.98px) {
-                .hcc-content {
-                    padding: 14px 14px 20px;
-                }
-            }
-
-            @@media (max-width: 575.98px) {
-                .hcc-content {
-                    padding: 8px 8px 0;
-                }
-
-                :root {
-                    --hcc-footer-height: 32px;
-                    --hcc-footer-font: 10.5px;
-                }
-            }
-    </style>
+    <link rel="stylesheet" href="~/css/hcc-page.css" asp-append-version="true" />
 </head>
 
 <body>
 
-    <!-- ═══════════════════════════════════════════
-         Main scrollable content — no wrapper shell
-    ════════════════════════════════════════════ -->
-    <div class="hcc-title-bar">
-        <svg class="hcc-title-bar-icon" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" width="24" height="24">
-            <rect x="1" y="16" width="7" height="11" rx="3.5" fill="#0f766e" opacity="0.9" />
-            <rect x="10" y="9" width="7" height="18" rx="3.5" fill="#2563eb" opacity="0.9" />
-            <rect x="19" y="3" width="7" height="24" rx="3.5" fill="#d97706" opacity="0.9" />
-        </svg>
-        <span class="hcc-title-bar-text">لوحة قيادة الإدارات التشغيلية والصيانة</span>
-    </div>
+    @* ════ HEADER ════ *@
+    <header class="hcc-header">
+        <div class="hcc-header-inner">
+
+            @* ── يمين: الشعار/الأيقونة ── *@
+            <div class="hcc-header-logo">
+                <svg class="hcc-chart-icon" viewBox="0 0 32 26" fill="none"
+                     xmlns="http://www.w3.org/2000/svg" width="34" height="28">
+                    <rect x="0" y="14" width="7" height="12" rx="2" fill="#60a5fa" />
+                    <rect x="9" y="8" width="7" height="18" rx="2" fill="#34d399" />
+                    <rect x="18" y="2" width="7" height="24" rx="2" fill="#fbbf24" />
+                    <rect x="27" y="10" width="5" height="16" rx="2" fill="#f87171" />
+                    <line x1="0" y1="25.5" x2="32" y2="25.5" stroke="rgba(255,255,255,.25)" stroke-width="1" />
+                </svg>
+            </div>
+
+            @* ── وسط: العنوان والشيبس ── *@
+            <div class="hcc-header-brand">
+                <div class="hcc-header-title">لوحة قيادة الإدارات التشغيلية والصيانة</div>
+                <div class="hcc-header-chips">
+                    <span class="hcc-chip">
+                        <span class="hcc-chip-dot is-live"></span>
+                        مباشر
+                    </span>
+                    <span class="hcc-chip">
+                        <i class="fa-solid fa-building" style="font-size:.62rem;color:#c9a227"></i>
+                        7 إدارات
+                    </span>
+                    <span class="hcc-chip">
+                        <i class="fa-solid fa-chart-bar" style="font-size:.62rem;color:#c9a227"></i>
+                        5 معايير
+                    </span>
+                    <span class="hcc-chip">
+                        <i class="fa-regular fa-clock" style="font-size:.62rem"></i>
+                        <span id="hcc-last-updated-text">آخر تحديث: الآن</span>
+                    </span>
+                </div>
+            </div>
+
+            @* ── يسار: التاريخ والساعة ── *@
+            <div class="hcc-header-meta">
+                <div class="hcc-datetime">
+                    <div class="hcc-time" id="hcc-live-time">--:--:--</div>
+                    <div class="hcc-date" id="hcc-live-date">......</div>
+                </div>
+            </div>
+
+        </div>
+    </header>
+
+    @* ════ Main Content ════ *@
     <main class="hcc-content">
         <div class="hcc-charts-wrap">
             @if (Model?.Charts is not null)
             {
-                @await Component.InvokeAsync(
-                    "SmartCharts",
-                    new { model = Model.Charts, embedded = true }
-                )
+                @await Component.InvokeAsync("SmartCharts", new { model = Model.Charts, embedded = true })
             }
             else
             {
@@ -195,27 +92,84 @@
         </div>
     </main>
 
-    <!-- ═══════════════════════════════════════════
-         Slim sticky footer
-    ════════════════════════════════════════════ -->
+    @* ════ Footer ════ *@
     <footer class="hcc-footer">
         إدارة مدينة الملك فيصل العسكرية للتشغيل والصيانة &mdash; قسم الحاسب الآلي &copy; 2026
     </footer>
 
-    <!-- ═══════════════════════════════════════════
-         Scripts
-    ════════════════════════════════════════════ -->
+    @* ════ Scripts ════ *@
     <script src="~/js/smartcharts.housingcommandcenter.js" asp-append-version="true"></script>
 
     <script>
             (function () {
+                'use strict';
+
+                /* ── Render SmartCharts ── */
                 document.querySelectorAll('.sf-hcc[id]').forEach(function (el) {
-                    var script = el.querySelector('script[type="application/json"]');
-                    if (!script) return;
-                    if (window.SmartCharts && window.SmartCharts.renderHousingCommandCenter) {
-                        window.SmartCharts.renderHousingCommandCenter(el.id, script.id);
-                    }
+                    var s = el.querySelector('script[type="application/json"]');
+                    if (!s) return;
+                    if (window.SmartCharts && window.SmartCharts.renderHousingCommandCenter)
+                        window.SmartCharts.renderHousingCommandCenter(el.id, s.id);
                 });
+
+                /* ── Live Clock ── */
+                var DAYS   = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+                var MONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو',
+                              'يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+                function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+                function tick() {
+                    var d  = new Date();
+                    var tEl = document.getElementById('hcc-live-time');
+                    var dEl = document.getElementById('hcc-live-date');
+                    if (tEl) tEl.textContent = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+                    if (dEl) dEl.textContent = DAYS[d.getDay()] + ' · ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+                }
+                tick();
+                setInterval(tick, 1000);
+
+                /* ── Last Updated ── */
+                var lastUpdate = new Date();
+                function updateStamp() {
+                    var sec = Math.floor((new Date() - lastUpdate) / 1000);
+                    var el  = document.getElementById('hcc-last-updated-text');
+                    if (!el) return;
+                    el.textContent = sec < 60   ? 'آخر تحديث: منذ ' + sec + ' ث'
+                                   : sec < 3600 ? 'آخر تحديث: منذ ' + Math.floor(sec/60) + ' د'
+                                   :              'آخر تحديث: منذ ' + Math.floor(sec/3600) + ' س';
+                }
+                setInterval(updateStamp, 10000);
+
+                /* ── Overall Performance ── */
+                function calcOverall() {
+                    var el = document.getElementById('hcc-overall-perf');
+                    if (!el) return;
+                    var cells = document.querySelectorAll('.sf-hccm-tcell-percent');
+                    if (!cells.length) return;
+                    var sum = 0, n = 0;
+                    cells.forEach(function(c) {
+                        var v = parseFloat(c.textContent);
+                        if (!isNaN(v)) { sum += v; n++; }
+                    });
+                    if (!n) return;
+                    var avg = (sum / n).toFixed(1);
+                    el.textContent = avg + '%';
+                    el.style.color = parseFloat(avg) >= 85 ? '#4ade80'
+                                   : parseFloat(avg) >= 70 ? '#fbbf24' : '#f87171';
+                }
+                setTimeout(calcOverall, 900);
+                setTimeout(calcOverall, 2400);
+
+                /* ── Refresh ── */
+                window.hccRefresh = function(btn) {
+                    btn.classList.add('is-spinning');
+                    lastUpdate = new Date();
+                    var el = document.getElementById('hcc-last-updated-text');
+                    if (el) el.textContent = 'آخر تحديث: الآن';
+                    setTimeout(function() { location.reload(); }, 550);
+                };
+
             })();
     </script>
 

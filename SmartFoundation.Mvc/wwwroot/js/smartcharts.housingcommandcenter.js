@@ -51,55 +51,59 @@
         return 'neutral';
     }
 
+    // ── Government Official Color Tones ──────────────────────
+    //    Deep Navy · Steel Blue · Official Gold · Forest Green
+    // ─────────────────────────────────────────────────────────
     const TONES = {
         info: {
-            bg: '#eff6ff',
-            soft: '#dbeafe',
-            border: '#bfdbfe',
-            text: '#1d4ed8',
-            accent: '#2563eb'
+            bg: '#ffffff',
+            soft: '#f0f4f8',
+            border: '#ccd4e0',
+            text: '#2d5282',
+            accent: '#2d5282'
         },
         success: {
-            bg: '#f0fdf4',
-            soft: '#dcfce7',
-            border: '#bbf7d0',
-            text: '#15803d',
-            accent: '#16a34a'
+            bg: '#ffffff',
+            soft: '#f0f5f2',
+            border: '#c8d8cc',
+            text: '#1a5c3a',
+            accent: '#1a5c3a'
         },
         warning: {
-            bg: '#fffbeb',
-            soft: '#fef3c7',
-            border: '#fde68a',
-            text: '#b45309',
-            accent: '#d97706'
+            bg: '#ffffff',
+            soft: '#f5f0e8',
+            border: '#d4c090',
+            text: '#7c5209',
+            accent: '#8b6914'
         },
         danger: {
-            bg: '#fef2f2',
-            soft: '#fee2e2',
-            border: '#fecaca',
-            text: '#b91c1c',
-            accent: '#dc2626'
+            bg: '#ffffff',
+            soft: '#f5eeee',
+            border: '#ccaaaa',
+            text: '#8b1a1a',
+            accent: '#8b1a1a'
         },
         neutral: {
-            bg: '#f8fafc',
-            soft: '#f1f5f9',
-            border: '#e2e8f0',
-            text: '#475569',
-            accent: '#64748b'
+            bg: '#ffffff',
+            soft: '#f0f3f7',
+            border: '#ccd4e0',
+            text: '#3d5166',
+            accent: '#3d5166'
         }
     };
 
+    // ── Government Official Data Palette ─────────────────────
     const PALETTE = [
-        '#0f766e',
-        '#2563eb',
-        '#d97706',
-        '#dc2626',
-        '#7c3aed',
-        '#0891b2',
-        '#16a34a',
-        '#db2777',
-        '#ea580c',
-        '#4f46e5'
+        '#1a3a5c',   // كحلي رسمي
+        '#2d5282',   // فولاذي أزرق
+        '#1a5c3a',   // أخضر غابي
+        '#8b6914',   // ذهبي رسمي
+        '#2e3f8f',   // نيلي رسمي
+        '#1a4f5c',   // تيل داكن
+        '#226b44',   // أخضر متوسط
+        '#3d5166',   // رمادي فولاذي
+        '#5c4a0a',   // زيتي ذهبي
+        '#8b1a1a'    // أحمر داكن
     ];
 
     function toneStyle(tone, color, idx) {
@@ -146,8 +150,8 @@
     }
 
     function calcDepartmentOverall(dep, metricMap, opts) {
-        if (dep?.overallCompletionPercent !== null && 
-            dep?.overallCompletionPercent !== undefined && 
+        if (dep?.overallCompletionPercent !== null &&
+            dep?.overallCompletionPercent !== undefined &&
             dep?.overallCompletionPercent !== '' &&
             num(dep.overallCompletionPercent) > 0) {
             return clamp(num(dep.overallCompletionPercent), 0, 100);
@@ -164,14 +168,14 @@
 
     function renderPercentRing(percent, accent) {
         const p = clamp(num(percent), 0, 100);
-        const r = 24;
+        const r = 21;
         const c = 2 * Math.PI * r;
         const dash = (p / 100) * c;
 
         return `
-<svg class="sf-hccm-ring-svg" viewBox="0 0 64 64" aria-hidden="true">
-    <circle cx="32" cy="32" r="${r}" class="sf-hccm-ring-track"></circle>
-    <circle cx="32" cy="32" r="${r}" class="sf-hccm-ring-fill" style="stroke:${accent};stroke-dasharray:${dash} ${c};"></circle>
+<svg class="sf-hccm-ring-svg" viewBox="0 0 52 52" aria-hidden="true">
+    <circle cx="26" cy="26" r="${r}" class="sf-hccm-ring-track"></circle>
+    <circle cx="26" cy="26" r="${r}" class="sf-hccm-ring-fill" style="stroke:${accent};stroke-dasharray:${dash} ${c};"></circle>
 </svg>`;
     }
 
@@ -292,19 +296,19 @@
         const remaining = Math.max(num(target) - num(actual), 0);
         const displayText = has(depMetric.displayText) ? depMetric.displayText : fmtPercent(percent, 1);
         const noteHtml = has(depMetric?.note)
-                        ? `<div class="sf-hccm-tcell-tooltip">
+            ? `<div class="sf-hccm-tcell-tooltip">
         <div class="sf-hccm-tooltip-title">${esc(metric?.shortTitle || metric?.title || '')}</div>
         <div class="sf-hccm-tooltip-body">
             ${depMetric.note.split('|').map(s => s.trim()).filter(s => s).map(s =>
-                            `<div class="sf-hccm-tooltip-row">
+                `<div class="sf-hccm-tooltip-row">
     <div class="sf-hccm-tooltip-dot"></div>
     <span>${esc(s)}</span>
  </div>`
-                        ).join('')}
+            ).join('')}
         </div>
        </div>`
-                        : '';
-                        
+            : '';
+
 
         const hrefOpen = has(depMetric?.href)
             ? `<a class="sf-hccm-tcell-link-cover" href="${esc(depMetric.href)}" aria-label="${esc(metric?.title || '')}"></a>`
@@ -367,7 +371,7 @@
 
         // الأعلى والأدنى من الـ metric
         const bestHtml = '';
-            const worstHtml = '';
+        const worstHtml = '';
 
         return `
 <td class="sf-hccm-matrix-td">
@@ -405,9 +409,9 @@
 </td>`;
     }
 
-   function buildGaugeSvg(percent, accent) {
+    function buildGaugeSvg(percent, accent) {
         const p = clamp(num(percent), 0, 100);
-        const trackColor = p >= 85 ? '#15803d' : p >= 70 ? '#d97706' : '#dc2626';
+        const trackColor = p >= 85 ? '#1a5c3a' : p >= 70 ? '#8b6914' : '#8b1a1a';
         const W = 120, H = 88;
         const cx = W / 2, cy = 62;
         const r = 46;
@@ -437,9 +441,9 @@
   <defs>
     <linearGradient id="${gid}" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%"   stop-color="#dc2626"/>
-      <stop offset="38%"  stop-color="#f59e0b"/>
-      <stop offset="68%"  stop-color="#84cc16"/>
-      <stop offset="100%" stop-color="#16a34a"/>
+        <stop offset="38%"  stop-color="#f59e0b"/>
+        <stop offset="68%"  stop-color="#84cc16"/>
+        <stop offset="100%" stop-color="#16a34a"/>
     </linearGradient>
   </defs>
 
@@ -504,33 +508,36 @@
     function buildMatrixDepartmentCell(dep, metricMap, opts, depIndex) {
         const depTone = toneStyle(dep?.tone, dep?.color, depIndex);
         const overall = calcDepartmentOverall(dep, metricMap, opts);
+        const perfCls = getPerfClass(overall);
 
-        const iconHtml = has(dep?.emoji)
-            ? `<span class="sf-hccm-dep-chip-emoji">${esc(dep.emoji)}</span>`
-            : has(dep?.icon)
-                ? `<i class="${esc(dep.icon)}"></i>`
-                : `<span class="sf-hccm-dep-chip-emoji">🏢</span>`;
+        const barColor = depTone.accent;
+
+        const chartIcon = `<svg viewBox="0 0 18 14" fill="none" xmlns="http://www.w3.org/2000/svg" width="16" height="12" style="flex-shrink:0">
+    <rect x="0" y="7" width="4" height="7" rx="1.5" fill="#1a56db"/>
+    <rect x="7" y="3" width="4" height="11" rx="1.5" fill="#057a55"/>
+    <rect x="14" y="0" width="4" height="14" rx="1.5" fill="#d97706"/>
+</svg>`;
+
+        const detailsBtn = has(dep?.href)
+            ? `<a class="sf-hccm-dep-card-btn" href="${esc(dep.href)}">${chartIcon}<span>التفاصيل</span></a>`
+            : `<span class="sf-hccm-dep-card-btn is-disabled">${chartIcon}<span>التفاصيل</span></span>`;
 
         return `
 <td class="sf-hccm-matrix-td is-sticky-col is-department-col">
-    <div class="sf-hccm-dep-cell"
-         style="--dc-bg:${depTone.bg};--dc-soft:${depTone.soft};--dc-border:${depTone.border};--dc-text:${depTone.text};--dc-accent:${depTone.accent}">
-        <div class="sf-hccm-dep-cell-top">
-            <div class="sf-hccm-dep-chip">${iconHtml}</div>
-            <div class="sf-hccm-dep-cell-copy">
-                <div class="sf-hccm-dep-cell-name">${esc(dep?.name || '')}</div>
-                ${has(dep?.hint) ? `<div class="sf-hccm-dep-cell-hint">${esc(dep.hint)}</div>` : ''}
+    <div class="sf-hccm-dep-card ${perfCls}" style="--dc-accent:${depTone.accent};--dc-bg:${depTone.bg};--dc-border:${depTone.border}">
+        <div class="sf-hccm-dep-card-stripe"></div>
+        <div class="sf-hccm-dep-card-inner">
+            <div class="sf-hccm-dep-card-top">
+                <div class="sf-hccm-dep-card-badge">${depIndex + 1}</div>
+                <div class="sf-hccm-dep-card-name">${esc(dep?.shortName || dep?.name || '')}</div>
             </div>
-        </div>
-
-        <div class="sf-hccm-dep-cell-foot">
-            <span class="sf-hccm-dep-cell-foot-label">الإجمالي: ${esc(fmtPercent(overall, 1))}</span>
-            ${has(dep?.href)
-                ? `<a class="sf-hccm-dep-details-btn" href="${esc(dep.href)}">
-                       <i class="fa-solid fa-chart-column"></i> التفاصيل
-                   </a>`
-                : `<span class="sf-hccm-dep-details-btn is-disabled">لا يوجد رابط</span>`
-            }
+            <div class="sf-hccm-dep-card-track">
+                <div class="sf-hccm-dep-card-fill" style="width:${overall.toFixed(1)}%;background:${barColor}"></div>
+            </div>
+            <div class="sf-hccm-dep-card-foot">
+                <div class="sf-hccm-dep-card-pct ${perfCls}">${esc(fmtPercent(overall, 1))}</div>
+                ${detailsBtn}
+            </div>
         </div>
     </div>
 </td>`;
@@ -588,19 +595,24 @@
         return `
 <tr>
     <th class="is-sticky-col is-department-col">
-        <div class="sf-hccm-th-main">الإدارة</div>
-        <div class="sf-hccm-th-sub">اسم الإدارة والإجمالي العام</div>
-    </th>
-    ${metrics.map(metric => `
+    <div class="sf-hccm-th-main"><i class="fa-solid fa-building-columns" style="margin-left:5px;font-size:.7rem"></i>الإدارة</div>
+    <div class="sf-hccm-th-sub">اسم الإدارة والإجمالي العام</div>
+</th>
+    ${metrics.map((metric, i) => {
+            const s = toneStyle(metric.tone, metric.color, i);
+        return `
         <th>
-            <div class="sf-hccm-th-main">${esc(metric.shortTitle || metric.title || '')}</div>
+            <div class="sf-hccm-th-main" style="color:${s.accent}">
+    <i class="${esc(metric.icon || 'fa-solid fa-chart-bar')}" style="margin-left:5px;font-size:.7rem"></i>
+    ${esc(metric.shortTitle || metric.title || '')}
+</div>
             <div class="sf-hccm-th-sub">${esc(metric.unit || metric.subtitle || '')}</div>
-        </th>
-    `).join('')}
+        </th>`;
+        }).join('')}
     <th class="is-summary-col">
-        <div class="sf-hccm-th-main">الإجمالي</div>
-        <div class="sf-hccm-th-sub">متوسط أداء الإدارة</div>
-    </th>
+    <div class="sf-hccm-th-main"><i class="fa-solid fa-chart-pie" style="margin-left:5px;font-size:.7rem"></i>الإجمالي</div>
+    <div class="sf-hccm-th-sub">متوسط أداء الإدارة</div>
+</th>
 </tr>`;
     }
 
@@ -662,27 +674,27 @@
             return;
         }
 
-                    // احسب الأعلى والأدنى لكل معيار
-                    metrics.forEach(metric => {
-                        const vals = departments
-                            .map(dep => {
-                                const dm = findDepartmentMetric(dep, metric.key);
-                                if (!dm) return null;
-                                return {
-                                    name: dep.shortName || dep.name || '',
-                                    percent: resolvePercent(dm, opts)
-                                };
-                            })
-                            .filter(x => x !== null);
+        // احسب الأعلى والأدنى لكل معيار
+        metrics.forEach(metric => {
+            const vals = departments
+                .map(dep => {
+                    const dm = findDepartmentMetric(dep, metric.key);
+                    if (!dm) return null;
+                    return {
+                        name: dep.shortName || dep.name || '',
+                        percent: resolvePercent(dm, opts)
+                    };
+                })
+                .filter(x => x !== null);
 
-                        if (vals.length) {
-                            vals.sort((a, b) => b.percent - a.percent);
-                            metric.__best = vals[0];
-                            metric.__worst = vals[vals.length - 1];
-                        }
-                    });
+            if (vals.length) {
+                vals.sort((a, b) => b.percent - a.percent);
+                metric.__best = vals[0];
+                metric.__worst = vals[vals.length - 1];
+            }
+        });
 
-                    metricsBox.innerHTML = metrics.map((metric, i) => buildMetricCard(metric, opts, i)).join('');
+        metricsBox.innerHTML = metrics.map((metric, i) => buildMetricCard(metric, opts, i)).join('');
         matrixHead.innerHTML = buildDynamicHead(metrics);
 
         if (!departments.length) {
@@ -710,7 +722,7 @@
     }
 
     // Tooltip follow mouse
-    document.addEventListener('mousemove', function(e) {
+    document.addEventListener('mousemove', function (e) {
         const tooltip = document.querySelector('.sf-hccm-tcell:hover .sf-hccm-tcell-tooltip');
         if (!tooltip) return;
 
@@ -719,7 +731,7 @@
         let left = e.clientX - tw - margin;
         let top = e.clientY - margin;
 
-        
+
         if (left < margin) left = e.clientX + margin;
 
         // لو خرج من الأسفل

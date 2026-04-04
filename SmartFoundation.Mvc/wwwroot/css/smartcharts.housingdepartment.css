@@ -49,6 +49,54 @@ html {
     --sh2: 0 4px 12px rgba(0,0,0,.1);
     --sh3: 0 8px 24px rgba(0,0,0,.12);
     --transition: all .15s ease;
+
+    /* Scrollbar colors */
+    --scroll-track: rgba(30, 58, 95, 0.06);
+}
+
+/* ══════════════════════════════════════════════════════
+   MODERN SCROLLBAR STYLES
+══════════════════════════════════════════════════════ */
+
+/* WebKit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--scroll-track);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #a8b8c8 0%, #8fa3b8 100%);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #3d5a80 0%, #2d4a6f 100%);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:active {
+    background: linear-gradient(180deg, #2d4a6f 0%, #1e3a5f 100%);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+    background: var(--scroll-track);
+}
+
+/* Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #a8b8c8 var(--scroll-track);
 }
 
 body {
