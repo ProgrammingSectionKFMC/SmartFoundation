@@ -9,6 +9,7 @@ using SmartFoundation.DataEngine.Core.Models;
 using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace SmartFoundation.Mvc.Services.AiAssistant;
 
@@ -321,7 +322,9 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
                 searchQuery = $"{msg} {GetEntityLabel(selectedEntityKey)}";
 
             //var citations = _kb.Search(searchQuery, topK);
-            var citations = _kb.Search(originalMsg + " لائحة نظام", topK);
+            var normalizedMsg = NormalizeArabic(originalMsg);
+            var citations = _kb.Search(normalizedMsg + " لائحه نظام", topK);
+            //var citations = _kb.Search(originalMsg + " لائحة نظام", topK);
 
             // ✅ مسار خاص للأنظمة واللوائح
             if (intent == "REGULATION")
@@ -940,14 +943,16 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
     //    return s.Trim();
     //}
 
+
     private static List<(string Key, string Label)> DetectEntities(string message)
     {
         message ??= "";
         var hits = new List<(string Key, string Label)>();
+        var normalizedMessage = NormalizeArabic(message);
 
         foreach (var e in Entities)
         {
-            if (e.Keywords.Any(k => message.Contains(k, StringComparison.OrdinalIgnoreCase)))
+            if (e.Keywords.Any(k => normalizedMessage.Contains(NormalizeArabic(k), StringComparison.Ordinal)))
                 hits.Add((e.Key, e.Label));
         }
 
@@ -956,6 +961,22 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
             .Select(g => g.First())
             .ToList();
     }
+    //private static List<(string Key, string Label)> DetectEntities(string message)
+    //{
+    //    message ??= "";
+    //    var hits = new List<(string Key, string Label)>();
+
+    //    foreach (var e in Entities)
+    //    {
+    //        if (e.Keywords.Any(k => message.Contains(k, StringComparison.OrdinalIgnoreCase)))
+    //            hits.Add((e.Key, e.Label));
+    //    }
+
+    //    return hits
+    //        .GroupBy(x => x.Key, StringComparer.OrdinalIgnoreCase)
+    //        .Select(g => g.First())
+    //        .ToList();
+    //}
 
     private static bool IsKnownEntity(string key)
         => Entities.Any(e => e.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
@@ -1089,49 +1110,95 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
     }
 
 
+
     private static string ResolveRegulationTopic(string query)
     {
         if (string.IsNullOrWhiteSpace(query)) return "";
 
-        query = query.Trim();
+        var normalizedQuery = NormalizeArabic(query);
 
         var knownTopics = new[]
-{
-    "العمر الافتراضي",
-    "المنشأة السكنية",
-    "المنشأة العسكرية",
-    "البند",
-    "الصنف",
-    "القوائم",
-    "المعاينة",
-    "اللائحة التنظيمية",
-    "الرسوم",
-    "الفترة الانتقالية",
-    "سكن العزاب",
-    "سكن العائلات",
-    "المعدات الثابتة",
-    "الغرامات",
-    "التلف الجزئي",
-    "التلف الكلي",
-    "الضياع",
-    "الصيانة",
-    "الإهمال",
-    "الإصلاح",
-    "الاستبدال",
-    "الإنهاء",
-    "الأحقية",
-    "التخصيص",
-    "الإخلاء"
-};
+        {
+        "العمر الافتراضي",
+        "المنشاه السكنيه",
+        "المنشاه العسكريه",
+        "البند",
+        "الصنف",
+        "القوائم",
+        "المعاينه",
+        "اللائحه التنظيميه",
+        "الرسوم",
+        "الفتره الانتقاليه",
+        "سكن العزاب",
+        "سكن العائلات",
+        "المعدات الثابته",
+        "الغرامات",
+        "التلف الجزئي",
+        "التلف الكلي",
+        "الضياع",
+        "الصيانه",
+        "الاهمال",
+        "الاصلاح",
+        "الاستبدال",
+        "الانهاء",
+        "الاحقيه",
+        "التخصيص",
+        "الاخلاء"
+    };
 
         foreach (var topic in knownTopics.OrderByDescending(x => x.Length))
         {
-            if (query.Contains(topic, StringComparison.OrdinalIgnoreCase))
+            if (normalizedQuery.Contains(topic, StringComparison.Ordinal))
                 return topic;
         }
 
         return "";
     }
+
+
+    //    private static string ResolveRegulationTopic(string query)
+    //    {
+    //        if (string.IsNullOrWhiteSpace(query)) return "";
+
+    //        query = query.Trim();
+
+    //        var knownTopics = new[]
+    //{
+    //    "العمر الافتراضي",
+    //    "المنشأة السكنية",
+    //    "المنشأة العسكرية",
+    //    "البند",
+    //    "الصنف",
+    //    "القوائم",
+    //    "المعاينة",
+    //    "اللائحة التنظيمية",
+    //    "الرسوم",
+    //    "الفترة الانتقالية",
+    //    "سكن العزاب",
+    //    "سكن العائلات",
+    //    "المعدات الثابتة",
+    //    "الغرامات",
+    //    "التلف الجزئي",
+    //    "التلف الكلي",
+    //    "الضياع",
+    //    "الصيانة",
+    //    "الإهمال",
+    //    "الإصلاح",
+    //    "الاستبدال",
+    //    "الإنهاء",
+    //    "الأحقية",
+    //    "التخصيص",
+    //    "الإخلاء"
+    //};
+
+    //        foreach (var topic in knownTopics.OrderByDescending(x => x.Length))
+    //        {
+    //            if (query.Contains(topic, StringComparison.OrdinalIgnoreCase))
+    //                return topic;
+    //        }
+
+    //        return "";
+    //    }
 
     private static string ExtractSection(string text, string header)
     {
@@ -1187,9 +1254,13 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
 
     private static string NormalizeIntent(string query)
     {
+        //if (string.IsNullOrWhiteSpace(query)) return "";
+        //query = query.Trim().ToLowerInvariant();
+        //query = query.Replace("؟", "").Replace("?", "").Trim();
+
         if (string.IsNullOrWhiteSpace(query)) return "";
-        query = query.Trim().ToLowerInvariant();
-        query = query.Replace("؟", "").Replace("?", "").Trim();
+
+        query = NormalizeArabic(query);
 
         if (ContainsAny(query, "تعديل", "عدّل", "عدل", "تحديث", "حدث", "تغيير", "غير", "صحح", "تصحيح"))
             return "UPDATE";
@@ -1275,13 +1346,18 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
 
     }
 
+
     private static bool ContainsAny(string s, params string[] parts)
     {
-        foreach (var p in parts)
-            if (s.Contains(p, StringComparison.OrdinalIgnoreCase))
-                return true;
-        return false;
+        return ArabicContainsAny(s, parts);
     }
+    //private static bool ContainsAny(string s, params string[] parts)
+    //{
+    //    foreach (var p in parts)
+    //        if (s.Contains(p, StringComparison.OrdinalIgnoreCase))
+    //            return true;
+    //    return false;
+    //}
 
     private static string RemoveKeywords(string text)
     {
@@ -1468,6 +1544,7 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
             text.Contains("تظهر رسالة حقول إلزامية", StringComparison.OrdinalIgnoreCase);
     }
 
+
     private static int ScoreParagraph(string paragraph, string query)
     {
         if (string.IsNullOrWhiteSpace(paragraph) || string.IsNullOrWhiteSpace(query))
@@ -1475,80 +1552,230 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
 
         int score = 0;
 
+        var normalizedParagraph = NormalizeArabic(paragraph);
+        var normalizedQuery = NormalizeArabic(query);
+
         var topics = new[]
         {
         "العمر الافتراضي",
-        "المنشأة السكنية",
-        "المنشأة العسكرية",
+        "المنشاه السكنيه",
+        "المنشاه العسكريه",
         "البند",
         "الصنف",
         "القوائم",
-        "المعاينة",
-        "اللائحة التنظيمية",
+        "المعاينه",
+        "اللائحه التنظيميه",
         "الرسوم",
-        "الفترة الانتقالية",
+        "الفتره الانتقاليه",
         "سكن العزاب",
         "سكن العائلات",
-        "المعدات الثابتة",
+        "المعدات الثابته",
         "الغرامات",
         "التلف الجزئي",
         "التلف الكلي",
         "الضياع",
-        "الصيانة",
-        "الإهمال",
-        "الإصلاح",
+        "الصيانه",
+        "الاهمال",
+        "الاصلاح",
         "الاستبدال",
-        "الإنهاء",
-        "الأحقية",
-        "أحقية السكن",
+        "الانهاء",
+        "الاحقيه",
+        "احقيه السكن",
         "التخصيص",
-        "الإخلاء",
-        "مسؤولية المستفيد",
-        "مسؤولية الإدارة",
+        "الاخلاء",
+        "مسؤوليه المستفيد",
+        "مسؤوليه الاداره",
         "المسؤوليات",
         "واجبات المستفيد"
     };
 
         foreach (var topic in topics)
         {
-            if (query.Contains(topic, StringComparison.OrdinalIgnoreCase) &&
-                paragraph.Contains(topic, StringComparison.OrdinalIgnoreCase))
-            {
+            if (normalizedQuery.Contains(topic) && normalizedParagraph.Contains(topic))
                 score += 10;
-            }
         }
 
-        var words = query.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var words = normalizedQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
         foreach (var word in words)
         {
             if (word.Length < 2) continue;
-
-            if (paragraph.Contains(word, StringComparison.OrdinalIgnoreCase))
+            if (normalizedParagraph.Contains(word))
                 score += 1;
         }
 
-        if (paragraph.StartsWith("##"))
+        if (normalizedParagraph.StartsWith("##"))
             score += 2;
 
-        if (paragraph.StartsWith("###"))
+        if (normalizedParagraph.StartsWith("###"))
             score += 1;
 
-        if ((query.Contains("ما هو", StringComparison.OrdinalIgnoreCase) ||
-             query.Contains("ما هي", StringComparison.OrdinalIgnoreCase) ||
-             query.Contains("وش", StringComparison.OrdinalIgnoreCase) ||
-             query.Contains("يعني", StringComparison.OrdinalIgnoreCase) ||
-             query.Contains("تعريف", StringComparison.OrdinalIgnoreCase) ||
-             query.Contains("عرف", StringComparison.OrdinalIgnoreCase))
-             &&
-             (paragraph.Contains("تعريف", StringComparison.OrdinalIgnoreCase) ||
-              paragraph.Contains("يقصد به", StringComparison.OrdinalIgnoreCase) ||
-              paragraph.Contains("هي", StringComparison.OrdinalIgnoreCase)))
+        if (ArabicContainsAny(normalizedQuery, "ما هو", "ما هي", "وش", "يعني", "تعريف", "عرف") &&
+            ArabicContainsAny(normalizedParagraph, "تعريف", "يقصد به", "هي"))
         {
             score += 3;
         }
 
         return score;
+    }
+
+    //private static int ScoreParagraph(string paragraph, string query)
+    //{
+    //    if (string.IsNullOrWhiteSpace(paragraph) || string.IsNullOrWhiteSpace(query))
+    //        return 0;
+
+    //    int score = 0;
+
+    //    var topics = new[]
+    //    {
+    //    "العمر الافتراضي",
+    //    "المنشأة السكنية",
+    //    "المنشأة العسكرية",
+    //    "البند",
+    //    "الصنف",
+    //    "القوائم",
+    //    "المعاينة",
+    //    "اللائحة التنظيمية",
+    //    "الرسوم",
+    //    "الفترة الانتقالية",
+    //    "سكن العزاب",
+    //    "سكن العائلات",
+    //    "المعدات الثابتة",
+    //    "الغرامات",
+    //    "التلف الجزئي",
+    //    "التلف الكلي",
+    //    "الضياع",
+    //    "الصيانة",
+    //    "الإهمال",
+    //    "الإصلاح",
+    //    "الاستبدال",
+    //    "الإنهاء",
+    //    "الأحقية",
+    //    "أحقية السكن",
+    //    "التخصيص",
+    //    "الإخلاء",
+    //    "مسؤولية المستفيد",
+    //    "مسؤولية الإدارة",
+    //    "المسؤوليات",
+    //    "واجبات المستفيد"
+    //};
+
+    //    foreach (var topic in topics)
+    //    {
+    //        if (query.Contains(topic, StringComparison.OrdinalIgnoreCase) &&
+    //            paragraph.Contains(topic, StringComparison.OrdinalIgnoreCase))
+    //        {
+    //            score += 10;
+    //        }
+    //    }
+
+    //    var words = query.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    //    foreach (var word in words)
+    //    {
+    //        if (word.Length < 2) continue;
+
+    //        if (paragraph.Contains(word, StringComparison.OrdinalIgnoreCase))
+    //            score += 1;
+    //    }
+
+    //    if (paragraph.StartsWith("##"))
+    //        score += 2;
+
+    //    if (paragraph.StartsWith("###"))
+    //        score += 1;
+
+    //    if ((query.Contains("ما هو", StringComparison.OrdinalIgnoreCase) ||
+    //         query.Contains("ما هي", StringComparison.OrdinalIgnoreCase) ||
+    //         query.Contains("وش", StringComparison.OrdinalIgnoreCase) ||
+    //         query.Contains("يعني", StringComparison.OrdinalIgnoreCase) ||
+    //         query.Contains("تعريف", StringComparison.OrdinalIgnoreCase) ||
+    //         query.Contains("عرف", StringComparison.OrdinalIgnoreCase))
+    //         &&
+    //         (paragraph.Contains("تعريف", StringComparison.OrdinalIgnoreCase) ||
+    //          paragraph.Contains("يقصد به", StringComparison.OrdinalIgnoreCase) ||
+    //          paragraph.Contains("هي", StringComparison.OrdinalIgnoreCase)))
+    //    {
+    //        score += 3;
+    //    }
+
+    //    return score;
+    //}
+
+
+    private static string NormalizeArabic(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return "";
+
+        text = text.Trim();
+
+        // إزالة التشكيل
+        text = Regex.Replace(text, "[\u064B-\u065F\u0670\u06D6-\u06ED]", "");
+
+        // توحيد الحروف
+        text = text
+            .Replace('أ', 'ا')
+            .Replace('إ', 'ا')
+            .Replace('آ', 'ا')
+            .Replace('ٱ', 'ا')
+            .Replace('ى', 'ي')
+            .Replace('ئ', 'ي')
+            .Replace('ؤ', 'و')
+            .Replace('ة', 'ه');
+
+        // إزالة التطويل
+        text = text.Replace("ـ", "");
+
+        // توحيد الأرقام العربية/الفارسية إلى إنجليزية
+        text = text
+            .Replace('٠', '0').Replace('١', '1').Replace('٢', '2').Replace('٣', '3').Replace('٤', '4')
+            .Replace('٥', '5').Replace('٦', '6').Replace('٧', '7').Replace('٨', '8').Replace('٩', '9')
+            .Replace('۰', '0').Replace('۱', '1').Replace('۲', '2').Replace('۳', '3').Replace('۴', '4')
+            .Replace('۵', '5').Replace('۶', '6').Replace('۷', '7').Replace('۸', '8').Replace('۹', '9');
+
+        // إزالة الرموز الشائعة
+        text = text.Replace("؟", " ")
+                   .Replace("?", " ")
+                   .Replace("،", " ")
+                   .Replace(",", " ")
+                   .Replace(".", " ")
+                   .Replace(";", " ")
+                   .Replace(":", " ")
+                   .Replace("/", " ")
+                   .Replace("\\", " ")
+                   .Replace("-", " ")
+                   .Replace("_", " ");
+
+        // توحيد المسافات
+        text = Regex.Replace(text, @"\s+", " ").Trim();
+
+        return text.ToLowerInvariant();
+    }
+
+    private static bool ArabicContains(string source, string target)
+    {
+        if (string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(target))
+            return false;
+
+        return NormalizeArabic(source).Contains(NormalizeArabic(target), StringComparison.Ordinal);
+    }
+
+    private static bool ArabicContainsAny(string source, params string[] values)
+    {
+        if (string.IsNullOrWhiteSpace(source) || values == null || values.Length == 0)
+            return false;
+
+        var normalizedSource = NormalizeArabic(source);
+
+        foreach (var value in values)
+        {
+            if (string.IsNullOrWhiteSpace(value)) continue;
+            if (normalizedSource.Contains(NormalizeArabic(value), StringComparison.Ordinal))
+                return true;
+        }
+
+        return false;
     }
 
 }
