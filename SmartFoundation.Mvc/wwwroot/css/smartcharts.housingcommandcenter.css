@@ -107,7 +107,7 @@
     padding: 14px 20px 16px;
     border: 1px solid #0e2035;
     border-radius: var(--hccm-r-xl);
-    background: linear-gradient(135deg, #1e3f62 0%, #122845 100%);
+    background: #3d5a80;
     box-shadow: 0 3px 14px rgba(14,32,53,.3), inset 0 1px 0 rgba(255,255,255,.06);
     position: relative;
     overflow: hidden;
@@ -118,7 +118,7 @@
         position: absolute;
         inset: auto 0 0 0;
         height: 3px;
-        /*background: linear-gradient(90deg, #7a5810 0%, #c9a227 35%, #e8c84a 50%, #c9a227 65%, #7a5810 100%);*/
+        
         display: none;
         opacity: .95;
     }
@@ -459,9 +459,9 @@
     justify-content: center;
     gap: 10px;
     padding: 11px 16px 13px;
-    border: 1px solid rgba(10,22,40,.5);
+    border: none;
     border-radius: var(--hccm-r-lg);
-    background: linear-gradient(135deg, #1e3a5f 0%, #2d4a6f 50%, #3d5a80 100%);
+    background: #3d5a80;
     box-shadow: 0 2px 8px rgba(14,30,53,.22), inset 0 1px 0 rgba(255,255,255,.05);
     position: relative;
     text-align: center;
@@ -572,15 +572,16 @@
         }
 
 .sf-hccm-th-main {
-    font-size: .72rem;
-    font-weight: 900;
+    font-size: .80rem;
+    font-weight: 500;
     color: var(--gov-navy);
     line-height: 1.5;
 }
 
 .sf-hccm-th-sub {
     margin-top: 2px;
-    font-size: .61rem;
+    /*font-size: .61rem;*/
+    font-weight: 500;
     color: var(--hccm-muted);
     line-height: 1.4;
 }
@@ -1163,7 +1164,6 @@
     line-height: 1.65;
     padding: 0;
     border-radius: 13px;
-    border: 1px solid #c4d0e0;
     box-shadow: 0 0 0 1px rgba(26,58,92,.06), 0 8px 22px rgba(14,28,50,.14);
     direction: rtl;
     text-align: right;
@@ -1178,8 +1178,7 @@
     font-weight: 900;
     color: #ffffff;
     text-align: center;
-    background: linear-gradient(135deg, #1a3a5c 0%, #112440 100%);
-    border-bottom: 2px solid rgba(201,162,39,.25);
+    background: #3d5a80;
 }
 
 .sf-hccm-tooltip-body {
@@ -1499,10 +1498,10 @@
     padding: 4px 11px;
     border-radius: 7px;
     background: rgba(255,255,255,.85);
-    color: var(--dc-accent, var(--gov-navy));
+    color: var(--gov-navy, #1e3a5f);
     font-size: .68rem;
     font-weight: 800;
-    border: 1px solid color-mix(in srgb, var(--dc-accent, var(--gov-navy)) 22%, transparent);
+    border: 1px solid rgba(30, 58, 95, 0.15);
     transition: background .14s, box-shadow .14s;
     cursor: pointer;
     text-decoration: none;
@@ -1514,6 +1513,7 @@
     .sf-hccm-dep-card-btn:hover {
         background: #ffffff;
         box-shadow: 0 2px 8px rgba(14,22,40,.1);
+        border-color: rgba(30, 58, 95, 0.25);
     }
 
     .sf-hccm-dep-card-btn.is-disabled {

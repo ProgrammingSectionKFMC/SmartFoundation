@@ -416,9 +416,7 @@
         const cx = W / 2, cy = 62;
         const r = 46;
         const totalLen = Math.PI * r;
-        const filled = (p / 100) * totalLen;
         const track = `M ${cx - r},${cy} a ${r},${r} 0 0,1 ${r * 2},0`;
-        const gid = `hg${Math.round(p * 10)}`;
 
         // زاوية العقرب: 0% = يسار (180°) ، 100% = يمين (0°)
         const angle = Math.PI - (p / 100) * Math.PI;
@@ -436,28 +434,29 @@
             return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#cbd5e1" stroke-width="1.2"/>`;
         }).join('');
 
+        
+        const segmentColors = ['#dc2626', '#f59e0b', '#84cc16', '#16a34a'];
+        const segmentLen = totalLen / 4;
+        const segments = segmentColors.map((color, i) => {
+            const dashOffset = i * segmentLen;
+            return `<path d="${track}"
+                fill="none" stroke="${color}" stroke-width="10"
+                stroke-linecap="butt"
+                stroke-dasharray="${segmentLen * 0.96} ${totalLen}"
+                stroke-dashoffset="-${dashOffset}"
+                pathLength="${totalLen.toFixed(2)}"/>`;
+        }).join('');
+
         return `
 <svg viewBox="0 0 ${W} ${H}" class="sf-hccm-gauge-svg" aria-hidden="true">
-  <defs>
-    <linearGradient id="${gid}" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%"   stop-color="#dc2626"/>
-        <stop offset="38%"  stop-color="#f59e0b"/>
-        <stop offset="68%"  stop-color="#84cc16"/>
-        <stop offset="100%" stop-color="#16a34a"/>
-    </linearGradient>
-  </defs>
 
   <!-- Track رمادي -->
   <path d="${track}"
     fill="none" stroke="#e8edf0" stroke-width="10"
     stroke-linecap="round"/>
 
-  <!-- Fill ملون بتدرج -->
-  <path d="${track}"
-    fill="none" stroke="url(#${gid})" stroke-width="10"
-    stroke-linecap="round"
-    stroke-dasharray="${filled.toFixed(2)} ${totalLen.toFixed(2)}"
-    pathLength="${totalLen.toFixed(2)}"/>
+  <!-- قطاعات ملونة -->
+  ${segments}
 
   <!-- علامات التدريج -->
   ${ticks}
@@ -591,28 +590,132 @@
 </tr>`;
     }
 
+    // ── SVG Icons for Column Headers ──
+    const COLUMN_SVG_ICONS = {
+        // أيقونة الإدارة - هيكل تنظيمي
+        department: `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px;margin-inline-start:6px;display:inline-block;vertical-align:middle">
+            <rect x="9" y="2" width="6" height="5" rx="1.5" fill="#c9a227"/>
+            <rect x="2" y="14" width="6" height="5" rx="1.5" fill="#2563eb"/>
+            <rect x="9" y="14" width="6" height="5" rx="1.5" fill="#0f766e"/>
+            <rect x="16" y="14" width="6" height="5" rx="1.5" fill="#7c3aed"/>
+            <line x1="12" y1="7" x2="12" y2="11" stroke="#64748b" stroke-width="1.5"/>
+            <line x1="5" y1="11" x2="19" y2="11" stroke="#64748b" stroke-width="1.5"/>
+            <line x1="5" y1="11" x2="5" y2="14" stroke="#64748b" stroke-width="1.5"/>
+            <line x1="12" y1="11" x2="12" y2="14" stroke="#64748b" stroke-width="1.5"/>
+            <line x1="19" y1="11" x2="19" y2="14" stroke="#64748b" stroke-width="1.5"/>
+        </svg>`,
+
+        // أيقونة جاهزية السكن والأصول - مباني
+        housing: `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px;margin-inline-start:6px;display:inline-block;vertical-align:middle">
+            <rect x="3" y="10" width="7" height="11" rx="1" fill="#2563eb"/>
+            <rect x="14" y="10" width="7" height="11" rx="1" fill="#0f766e"/>
+            <path d="M6.5 3L12 7L17.5 3" stroke="#c9a227" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <rect x="5" y="13" width="3" height="3" rx="0.5" fill="#93c5fd"/>
+            <rect x="16" y="13" width="3" height="3" rx="0.5" fill="#6ee7b7"/>
+            <line x1="6.5" y1="7" x2="6.5" y2="10" stroke="#64748b" stroke-width="1.5"/>
+            <line x1="17.5" y1="7" x2="17.5" y2="10" stroke="#64748b" stroke-width="1.5"/>
+        </svg>`,
+
+        // أيقونة الإشغال وقوائم الانتظار - أشخاص
+        occupancy: `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px;margin-inline-start:6px;display:inline-block;vertical-align:middle">
+            <circle cx="8" cy="6" r="3" fill="#2563eb"/>
+            <circle cx="16" cy="6" r="3" fill="#0f766e"/>
+            <circle cx="12" cy="14" r="3" fill="#c9a227"/>
+            <path d="M5 12C5 10.3 6.3 9 8 9" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M19 12C19 10.3 17.7 9 16 9" stroke="#0f766e" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M9 20C9 18.3 10.3 17 12 17C13.7 17 15 18.3 15 20" stroke="#c9a227" stroke-width="1.5" stroke-linecap="round"/>
+            <rect x="2" y="19" width="4" height="3" rx="1" fill="#93c5fd"/>
+            <rect x="18" y="19" width="4" height="3" rx="1" fill="#6ee7b7"/>
+        </svg>`,
+
+        // أيقونة الطلبات وSLA - مستند مع ساعة
+        requests: `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px;margin-inline-start:6px;display:inline-block;vertical-align:middle">
+            <rect x="4" y="3" width="16" height="18" rx="2" fill="#2563eb"/>
+            <rect x="6" y="6" width="8" height="2" rx="1" fill="#fff"/>
+            <rect x="6" y="10" width="12" height="1.5" rx="0.75" fill="#93c5fd"/>
+            <rect x="6" y="13" width="10" height="1.5" rx="0.75" fill="#93c5fd"/>
+            <circle cx="17" cy="17" r="5" fill="#c9a227"/>
+            <path d="M17 14V17.5L19 19" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>`,
+
+        // أيقونة الماليات والاستهلاك - محفظة
+        finance: `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px;margin-inline-start:6px;display:inline-block;vertical-align:middle">
+            <rect x="2" y="6" width="20" height="14" rx="2" fill="#0f766e"/>
+            <rect x="2" y="6" width="20" height="4" fill="#064e3b"/>
+            <circle cx="12" cy="15" r="3" fill="#c9a227"/>
+            <rect x="5" y="13" width="2" height="4" rx="0.5" fill="#6ee7b7"/>
+            <rect x="17" y="13" width="2" height="4" rx="0.5" fill="#6ee7b7"/>
+        </svg>`,
+
+        // أيقونة الصيانة والجودة - مفتاح ربط مع علامة صح
+        maintenance: `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px;margin-inline-start:6px;display:inline-block;vertical-align:middle">
+            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" fill="#dc2626" stroke="#991b1b" stroke-width="1"/>
+            <circle cx="17" cy="17" r="5" fill="#c9a227"/>
+            <path d="M15 17l1.5 1.5L19 15.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>`,
+
+        // أيقونة الإجمالي - دائرة مقسمة (الأصلية)
+        total: `<svg viewBox="0 0 16 16" width="14" height="14" style="margin-inline-start:6px;display:inline-block;vertical-align:middle">
+            <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0z" fill="#e5e7eb"/>
+            <path d="M8 0v8h8a8 8 0 0 0-8-8z" fill="#1a56db"/>
+            <path d="M8 8v8a8 8 0 0 0 8-8H8z" fill="#057a55"/>
+            <path d="M8 8H0a8 8 0 0 0 8 8V8z" fill="#d97706"/>
+        </svg>`,
+
+        // أيقونة افتراضية - رسم بياني
+        default: `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px;margin-inline-start:6px;display:inline-block;vertical-align:middle">
+            <rect x="3" y="14" width="4" height="7" rx="1" fill="#2563eb"/>
+            <rect x="10" y="10" width="4" height="11" rx="1" fill="#0f766e"/>
+            <rect x="17" y="6" width="4" height="15" rx="1" fill="#c9a227"/>
+        </svg>`
+    };
+
+    // دالة للحصول على أيقونة SVG بناءً على مفتاح المعيار
+    function getMetricSvgIcon(metricKey, metricIndex) {
+        const key = String(metricKey || '').toLowerCase();
+
+        // تطابق المفاتيح مع الأيقونات
+        if (key.includes('housing') || key.includes('asset') || key.includes('سكن') || key.includes('أصول') || metricIndex === 0) {
+            return COLUMN_SVG_ICONS.housing;
+        }
+        if (key.includes('occupancy') || key.includes('waiting') || key.includes('إشغال') || key.includes('انتظار') || metricIndex === 1) {
+            return COLUMN_SVG_ICONS.occupancy;
+        }
+        if (key.includes('request') || key.includes('sla') || key.includes('طلب') || metricIndex === 2) {
+            return COLUMN_SVG_ICONS.requests;
+        }
+        if (key.includes('finance') || key.includes('consumption') || key.includes('مالي') || key.includes('استهلاك') || metricIndex === 3) {
+            return COLUMN_SVG_ICONS.finance;
+        }
+        if (key.includes('maintenance') || key.includes('quality') || key.includes('صيانة') || key.includes('جودة') || metricIndex === 4) {
+            return COLUMN_SVG_ICONS.maintenance;
+        }
+
+        return COLUMN_SVG_ICONS.default;
+    }
+
     function buildDynamicHead(metrics) {
         return `
 <tr>
     <th class="is-sticky-col is-department-col">
-    <div class="sf-hccm-th-main"><i class="fa-solid fa-building-columns" style="margin-left:5px;font-size:.7rem"></i>الإدارة</div>
-    <div class="sf-hccm-th-sub">اسم الإدارة والإجمالي العام</div>
-</th>
+        <div class="sf-hccm-th-main">${COLUMN_SVG_ICONS.department} الإدارة</div>
+        <div class="sf-hccm-th-sub">اسم الإدارة والإجمالي العام</div>
+    </th>
     ${metrics.map((metric, i) => {
-            const s = toneStyle(metric.tone, metric.color, i);
+        const s = toneStyle(metric.tone, metric.color, i);
+        const svgIcon = getMetricSvgIcon(metric.key, i);
         return `
         <th>
             <div class="sf-hccm-th-main" style="color:${s.accent}">
-    <i class="${esc(metric.icon || 'fa-solid fa-chart-bar')}" style="margin-left:5px;font-size:.7rem"></i>
-    ${esc(metric.shortTitle || metric.title || '')}
-</div>
+                ${svgIcon} ${esc(metric.shortTitle || metric.title || '')}
+            </div>
             <div class="sf-hccm-th-sub">${esc(metric.unit || metric.subtitle || '')}</div>
         </th>`;
-        }).join('')}
+    }).join('')}
     <th class="is-summary-col">
-    <div class="sf-hccm-th-main"><i class="fa-solid fa-chart-pie" style="margin-left:5px;font-size:.7rem"></i>الإجمالي</div>
-    <div class="sf-hccm-th-sub">متوسط أداء الإدارة</div>
-</th>
+        <div class="sf-hccm-th-main">${COLUMN_SVG_ICONS.total} الإجمالي</div>
+        <div class="sf-hccm-th-sub">متوسط أداء الإدارة</div>
+    </th>
 </tr>`;
     }
 
@@ -722,26 +825,34 @@
     }
 
     // Tooltip follow mouse
-    document.addEventListener('mousemove', function (e) {
-        const tooltip = document.querySelector('.sf-hccm-tcell:hover .sf-hccm-tcell-tooltip');
-        if (!tooltip) return;
+document.addEventListener('mousemove', function (e) {
+    const tooltip = document.querySelector('.sf-hccm-tcell:hover .sf-hccm-tcell-tooltip');
+    if (!tooltip) return;
 
-        const tw = 360;
-        const margin = 12;
-        let left = e.clientX - tw - margin;
-        let top = e.clientY - margin;
+    const tw = 360;
+    const th = tooltip.offsetHeight || 180;
+    const margin = 14;
+    const offset = 24;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
 
+    let left = e.clientX - tw - offset;
+    if (left < margin) left = e.clientX + offset;
+    if (left + tw > vw - margin) left = vw - tw - margin;
 
-        if (left < margin) left = e.clientX + margin;
+    let top;
+    if (e.clientY > vh / 2) {
+        top = e.clientY - th - offset; 
+    } else {
+        top = e.clientY + offset; 
+    }
 
-        // لو خرج من الأسفل
-        if (top + tooltip.offsetHeight > window.innerHeight - margin) {
-            top = window.innerHeight - tooltip.offsetHeight - margin;
-        }
+    if (top < margin) top = margin;
+    if (top + th > vh - margin) top = vh - th - margin;
 
-        tooltip.style.left = left + 'px';
-        tooltip.style.top = top + 'px';
-    });
+    tooltip.style.left = left + 'px';
+    tooltip.style.top  = top  + 'px';
+});
 
     window.SmartCharts.renderHousingCommandCenter = renderHousingCommandCenter;
 

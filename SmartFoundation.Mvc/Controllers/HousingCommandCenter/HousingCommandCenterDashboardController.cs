@@ -8,30 +8,30 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
     public class HousingCommandCenterDashboardController : Controller
     {
         // ═══════════════════════════════════════════════════════
-        //  لوحة الألوان — زاهية · واضحة · غير متشابهة
+        //  لوحة الألوان
         // ═══════════════════════════════════════════════════════
         private static class Color
         {
-            // ── الخمسة الرئيسية للمعايير ── مختلفة تماماً
-            public const string RoyalBlue = "#1a56db";   // أزرق ملكي زاهي
-            public const string Teal = "#0694a2";   // تيل فيروزي
-            public const string Amber = "#d97706";   // برتقالي عسلي
-            public const string Emerald = "#057a55";   // أخضر زمردي
-            public const string Violet = "#6d28d9";   // بنفسجي ملكي
+            
+            public const string RoyalBlue = "#1a56db";   
+            public const string Teal = "#0694a2";   
+            public const string Amber = "#d97706";   
+            public const string Emerald = "#057a55";  
+            public const string Violet = "#6d28d9";   
 
-            // ── ألوان الإدارات السبع ── كل واحدة مختلفة
-            public const string Navy = "#1e3a8a";   // كحلي داكن
-            public const string SteelBlue = "#1d4ed8";   // أزرق فولاذي
-            public const string Green = "#065f46";   // أخضر داكن
-            public const string Cyan = "#155e75";   // سماوي داكن
-            public const string Purple = "#5b21b6";   // بنفسجي داكن
-            public const string Orange = "#92400e";   // بني برتقالي
-            public const string Slate = "#1e3a5f";   // رمادي أزرق
+            // ── ألوان الإدارات
+            public const string Navy = "#1e3a8a";   
+            public const string SteelBlue = "#1d4ed8";   
+            public const string Green = "#065f46";   
+            public const string Cyan = "#155e75";   
+            public const string Purple = "#5b21b6";   
+            public const string Orange = "#92400e";   
+            public const string Slate = "#1e3a5f";  
 
             // ── للبيانات والتفاصيل ──
-            public const string Red = "#991b1b";   // أحمر داكن
-            public const string Gold = "#b45309";   // ذهبي داكن
-            public const string Indigo = "#3730a3";   // نيلي
+            public const string Red = "#991b1b";   
+            public const string Gold = "#b45309";   
+            public const string Indigo = "#3730a3";
         }
 
         public IActionResult Index()
@@ -245,7 +245,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
             BuildDepartment("dep_04", 4,
                 "إدارة التشغيل والصيانة للمنشآت العسكرية بجازان",
                 "منشآت جازان",
-                "fa-solid fa-water", "🏙️", "warning", Color.Cyan,
+                "fa-solid fa-water", "🏙️", "info", Color.Cyan,
                 [
                     DM("m_housing_readiness",  100, 78, "جاهزية السكن والأصول",
                        "إجمالي الوحدات: 910 | مشغولة: 788 | شاغرة: 61 | تحت الصيانة: 36 | جاهزة للتسكين: 5"),
