@@ -245,7 +245,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
             BuildDepartment("dep_04", 4,
                 "إدارة التشغيل والصيانة للمنشآت العسكرية بجازان",
                 "منشآت جازان",
-                "fa-solid fa-water", "🏙️", "warning", Color.Cyan,
+                "fa-solid fa-water", "🏙️", "info", Color.Cyan,
                 [
                     DM("m_housing_readiness",  100, 78, "جاهزية السكن والأصول",
                        "إجمالي الوحدات: 910 | مشغولة: 788 | شاغرة: 61 | تحت الصيانة: 36 | جاهزة للتسكين: 5"),

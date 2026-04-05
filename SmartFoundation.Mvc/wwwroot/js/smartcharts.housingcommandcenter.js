@@ -416,9 +416,7 @@
         const cx = W / 2, cy = 62;
         const r = 46;
         const totalLen = Math.PI * r;
-        const filled = (p / 100) * totalLen;
         const track = `M ${cx - r},${cy} a ${r},${r} 0 0,1 ${r * 2},0`;
-        const gid = `hg${Math.round(p * 10)}`;
 
         // زاوية العقرب: 0% = يسار (180°) ، 100% = يمين (0°)
         const angle = Math.PI - (p / 100) * Math.PI;
@@ -436,28 +434,29 @@
             return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#cbd5e1" stroke-width="1.2"/>`;
         }).join('');
 
+        
+        const segmentColors = ['#dc2626', '#f59e0b', '#84cc16', '#16a34a'];
+        const segmentLen = totalLen / 4;
+        const segments = segmentColors.map((color, i) => {
+            const dashOffset = i * segmentLen;
+            return `<path d="${track}"
+                fill="none" stroke="${color}" stroke-width="10"
+                stroke-linecap="butt"
+                stroke-dasharray="${segmentLen * 0.96} ${totalLen}"
+                stroke-dashoffset="-${dashOffset}"
+                pathLength="${totalLen.toFixed(2)}"/>`;
+        }).join('');
+
         return `
 <svg viewBox="0 0 ${W} ${H}" class="sf-hccm-gauge-svg" aria-hidden="true">
-  <defs>
-    <linearGradient id="${gid}" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%"   stop-color="#dc2626"/>
-        <stop offset="38%"  stop-color="#f59e0b"/>
-        <stop offset="68%"  stop-color="#84cc16"/>
-        <stop offset="100%" stop-color="#16a34a"/>
-    </linearGradient>
-  </defs>
 
   <!-- Track رمادي -->
   <path d="${track}"
     fill="none" stroke="#e8edf0" stroke-width="10"
     stroke-linecap="round"/>
 
-  <!-- Fill ملون بتدرج -->
-  <path d="${track}"
-    fill="none" stroke="url(#${gid})" stroke-width="10"
-    stroke-linecap="round"
-    stroke-dasharray="${filled.toFixed(2)} ${totalLen.toFixed(2)}"
-    pathLength="${totalLen.toFixed(2)}"/>
+  <!-- قطاعات ملونة -->
+  ${segments}
 
   <!-- علامات التدريج -->
   ${ticks}
@@ -610,7 +609,7 @@
         </th>`;
         }).join('')}
     <th class="is-summary-col">
-    <div class="sf-hccm-th-main"><i class="fa-solid fa-chart-pie" style="margin-left:5px;font-size:.7rem"></i>الإجمالي</div>
+    <div class="sf-hccm-th-main"><svg viewBox="0 0 16 16" width="14" height="14" style="margin-left:5px;display:inline-block;vertical-align:middle"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0z" fill="#e5e7eb"/><path d="M8 0v8h8a8 8 0 0 0-8-8z" fill="#1a56db"/><path d="M8 8v8a8 8 0 0 0 8-8H8z" fill="#057a55"/><path d="M8 8H0a8 8 0 0 0 8 8V8z" fill="#d97706"/></svg>الإجمالي</div>
     <div class="sf-hccm-th-sub">متوسط أداء الإدارة</div>
 </th>
 </tr>`;
