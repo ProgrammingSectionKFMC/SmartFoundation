@@ -572,15 +572,16 @@
         }
 
 .sf-hccm-th-main {
-    font-size: .72rem;
-    font-weight: 900;
+    font-size: .80rem;
+    font-weight: 500;
     color: var(--gov-navy);
     line-height: 1.5;
 }
 
 .sf-hccm-th-sub {
     margin-top: 2px;
-    font-size: .61rem;
+    /*font-size: .61rem;*/
+    font-weight: 500;
     color: var(--hccm-muted);
     line-height: 1.4;
 }
@@ -1163,7 +1164,6 @@
     line-height: 1.65;
     padding: 0;
     border-radius: 13px;
-    border: 1px solid #c4d0e0;
     box-shadow: 0 0 0 1px rgba(26,58,92,.06), 0 8px 22px rgba(14,28,50,.14);
     direction: rtl;
     text-align: right;
@@ -1179,7 +1179,6 @@
     color: #ffffff;
     text-align: center;
     background: #3d5a80;
-    border-bottom: 2px solid rgba(201,162,39,.25);
 }
 
 .sf-hccm-tooltip-body {
@@ -1499,10 +1498,10 @@
     padding: 4px 11px;
     border-radius: 7px;
     background: rgba(255,255,255,.85);
-    color: var(--dc-accent, var(--gov-navy));
+    color: var(--gov-navy, #1e3a5f);
     font-size: .68rem;
     font-weight: 800;
-    border: 1px solid color-mix(in srgb, var(--dc-accent, var(--gov-navy)) 22%, transparent);
+    border: 1px solid rgba(30, 58, 95, 0.15);
     transition: background .14s, box-shadow .14s;
     cursor: pointer;
     text-decoration: none;
@@ -1514,6 +1513,7 @@
     .sf-hccm-dep-card-btn:hover {
         background: #ffffff;
         box-shadow: 0 2px 8px rgba(14,22,40,.1);
+        border-color: rgba(30, 58, 95, 0.25);
     }
 
     .sf-hccm-dep-card-btn.is-disabled {
