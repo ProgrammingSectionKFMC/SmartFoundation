@@ -102,13 +102,14 @@ html, body {
     overflow: auto;
 }
 
+
 body {
     display: flex;
     flex-direction: column;
     background: var(--page-bg);
     color: #0e1e30;
     font-family: "Segoe UI", Arial, Tahoma, sans-serif;
-    zoom: 1.1;
+    font-size: 110%;
 }
 
 /* ══════════════════════════════════════════════════════
@@ -119,22 +120,12 @@ body {
     top: 0;
     z-index: 1000;
     flex: 0 0 auto;
-    /*background: linear-gradient(135deg, var(--nav-from) 0%, var(--nav-mid) 50%, var(--nav-to) 100%);*/
     background: #2d4a6f;
     border-bottom: 1px solid rgba(10,22,40,.5);
-    /*box-shadow: 0 4px 20px rgba(10,22,40,.28);*/
-    overflow: hidden;
+    overflow: visible;
 }
 
-    /*.hcc-header::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: radial-gradient(ellipse at 90% 0%, rgba(255,255,255,.04) 0%, transparent 40%), radial-gradient(ellipse at 10% 100%, rgba(255,255,255,.02) 0%, transparent 40%);
-        pointer-events: none;
-    }*/
-
-/* ── الحاوية الرئيسية — position relative لتمكين absolute للعنوان ── */
+/* ── الحاوية الرئيسية  ── */
 .hcc-header-inner {
     position: relative;
     display: flex;
@@ -151,7 +142,7 @@ body {
     opacity: .88;
 }
 
-/* ── الشعار — أقصى اليمين ── */
+/* ── الشعار  ── */
 .hcc-header-logo {
     flex-shrink: 0;
     display: flex;
@@ -229,7 +220,7 @@ body {
     }
 }
 
-/* ── التاريخ والساعة — أقصى اليسار ── */
+/* ── التاريخ والساعة ── */
 .hcc-header-meta {
     display: flex;
     align-items: center;
@@ -266,13 +257,12 @@ body {
     line-height: 1.4;
 }
 
-/* ── Main Content ── */
+
 .hcc-content {
     flex: 1 1 auto;
-    overflow: auto;
+    overflow: visible;
     padding: 14px 14px 0;
 }
-
 .hcc-charts-wrap {
     width: 100%;
 }
