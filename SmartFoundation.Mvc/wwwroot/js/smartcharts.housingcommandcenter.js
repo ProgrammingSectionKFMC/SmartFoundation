@@ -824,35 +824,24 @@
         }
     }
 
-    // Tooltip follow mouse
-document.addEventListener('mousemove', function (e) {
-    const tooltip = document.querySelector('.sf-hccm-tcell:hover .sf-hccm-tcell-tooltip');
-    if (!tooltip) return;
+    document.addEventListener('mousemove', function(e) {
+        const tooltip = document.querySelector('.sf-hccm-tcell:hover .sf-hccm-tcell-tooltip');
+        if (!tooltip) return;
 
-    const tw = 360;
-    const th = tooltip.offsetHeight || 180;
-    const margin = 14;
-    const offset = 24;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
+        const tw = 360;
+        const margin = 12;
+        let left = e.clientX - tw - margin;
+        let top = e.clientY - margin;
 
-    let left = e.clientX - tw - offset;
-    if (left < margin) left = e.clientX + offset;
-    if (left + tw > vw - margin) left = vw - tw - margin;
+        if (left < margin) left = e.clientX + margin;
 
-    let top;
-    if (e.clientY > vh / 2) {
-        top = e.clientY - th - offset; 
-    } else {
-        top = e.clientY + offset; 
-    }
+        if (top + tooltip.offsetHeight > window.innerHeight - margin) {
+            top = window.innerHeight - tooltip.offsetHeight - margin;
+        }
 
-    if (top < margin) top = margin;
-    if (top + th > vh - margin) top = vh - th - margin;
-
-    tooltip.style.left = left + 'px';
-    tooltip.style.top  = top  + 'px';
-});
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = top + 'px';
+    });
 
     window.SmartCharts.renderHousingCommandCenter = renderHousingCommandCenter;
 
