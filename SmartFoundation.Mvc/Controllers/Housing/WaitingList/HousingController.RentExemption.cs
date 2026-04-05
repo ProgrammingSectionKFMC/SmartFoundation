@@ -430,7 +430,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
            
 
             // UPDATE fields
-                var updateFieldsWaitingList = new List<FieldConfig>
+                var AddFieldsWaitingList = new List<FieldConfig>
             {
                 new FieldConfig { Name = "redirectAction",      Type = "hidden", Value = PageName },
                 new FieldConfig { Name = "redirectController",  Type = "hidden", Value = ControllerName},
@@ -458,15 +458,46 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p05", Label = "رقم القرار", Type = "text", ColCss = "3", MaxLength = 50, TextMode = "number",Required=true},
                 new FieldConfig { Name = "p06", Label = "تاريخ القرار", Type = "date", ColCss = "3", MaxLength = 50, TextMode = "number",Required=true,Placeholder="YYYY-MM-DD"},
 
-                new FieldConfig { Name = "p07", Label = "فئة سجل الانتظار", Type = "hidden", ColCss = "3", Required = true, Options= waitingClassOptions },
-                new FieldConfig { Name = "p08", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Required = true, Options= waitingOrderTypeOptions,Select2=true },
+                new FieldConfig { Name = "p07", Label = "تاريخ بداية الاعفاء", Type = "date", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p08", Label = "تاريخ نهاية الاعفاء", Type = "hiddateden", ColCss = "3", Required = false},
                 new FieldConfig { Name = "p09", Label = "ملاحظات", Type = "textarea", ColCss = "3", Required = false },
             };
 
-              
 
 
-           
+            var updateFieldsWaitingList = new List<FieldConfig>
+            {
+                new FieldConfig { Name = "redirectAction",      Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectController",  Type = "hidden", Value = ControllerName},
+                new FieldConfig { Name = "redirectUrl",  Type = "hidden", Value = currentUrl},
+                new FieldConfig { Name = "pageName_",           Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "ActionType",          Type = "hidden", Value = "UPDATEWAITINGLIST" },
+                new FieldConfig { Name = "idaraID",             Type = "hidden", Value = IdaraId.ToString() },
+                new FieldConfig { Name = "entrydata",           Type = "hidden", Value = usersId.ToString() },
+                new FieldConfig { Name = "hostname",            Type = "hidden", Value = Request.Host.Value },
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
+                new FieldConfig { Name = rowIdField_dt2,            Type = "hidden" },
+
+
+
+
+                new FieldConfig { Name = "p01", Label = "الرقم المرجعي", Type = "hidden", ColCss = "6", Required = true,Value=residentInfoID_ },
+                new FieldConfig { Name = "p02", Label = "الرقم المرجعي", Type = "hidden", ColCss = "6", Required = true,Value=residentInfoID_ },
+                new FieldConfig { Name = "p03", Label = "رقم الهوية", Type = "hidden", ColCss = "6",Placeholder="1xxxxxxxxx",Value= NationalID_ },
+                new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "hidden", ColCss = "6", Required = true,Value=generalNo_FK_ },
+
+
+
+
+
+                new FieldConfig { Name = "p05", Label = "رقم القرار", Type = "text", ColCss = "3", MaxLength = 50, TextMode = "number",Required=true},
+                new FieldConfig { Name = "p06", Label = "تاريخ القرار", Type = "date", ColCss = "3", MaxLength = 50, TextMode = "number",Required=true,Placeholder="YYYY-MM-DD"},
+
+                new FieldConfig { Name = "p07", Label = "تاريخ بداية الاعفاء", Type = "date", ColCss = "3", Required = false },
+                new FieldConfig { Name = "p08", Label = "تاريخ نهاية الاعفاء", Type = "hiddateden", ColCss = "3", Required = false},
+                new FieldConfig { Name = "p09", Label = "ملاحظات", Type = "textarea", ColCss = "3", Required = false },
+            };
+
 
 
             // DELETE fields
@@ -602,59 +633,61 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowColumns = true,
                     ShowExportCsv = false,
                     ShowExportExcel = false,
-                    ShowAdd = canADDRENTEXEMPTION,
-                    ShowEdit = canEDITRENTEXEMPTION,
-                    ShowDelete = canDELETERENTEXEMPTION,
-                    
+                    ShowAdd = true,
+                    ShowEdit = true,
+                    ShowDelete = true,
+
+                    //ShowAdd = canADDRENTEXEMPTION,
+                    //ShowEdit = canEDITRENTEXEMPTION,
+                    //ShowDelete = canDELETERENTEXEMPTION,
+
                     ShowBulkDelete = false,
                     
 
        
                    
-                    Edit = new TableAction
+                    Add = new TableAction
                     {
-                        Label = "تعديل بيانات انتظار",
-                        Icon = "fa fa-pen-to-square",
-                        Color = "info",
+                        Label = "اضافة اعفاء جديد",
+                        Icon = "fa fa-plus",
+                        Color = "success",
                         //Placement = TableActionPlacement.ActionsMenu,
                         IsEdit = true,
                         OpenModal = true,
-                        ModalTitle = "تعديل بيانات انتظار",
+                        ModalTitle = "اضافة اعفاء جديد",
                         ModalMessage = "ملاحظة: جميع التعديلات مرصودة",
                         ModalMessageIcon = "fa-solid fa-circle-info",
                         ModalMessageClass = "bg-sky-100 text-sky-700",
                         OpenForm = new FormConfig
                         {
                             FormId = "BuildingTypeEditForm",
-                            Title = "تعديل بيانات انتظار",
+                            Title = "اضافة اعفاء جديد",
                             Method = "post",
                             ActionUrl = "/crud/update",
                             SubmitText = "حفظ التعديلات",
                             CancelText = "إلغاء",
-                            Fields = updateFieldsWaitingList
+                            Fields = AddFieldsWaitingList
                         },
-                        RequireSelection = true,
-                        MinSelection = 1,
-                        MaxSelection = 1
+                       
                     },
 
 
-                    Add = new TableAction
+                    Edit= new TableAction
                     {
-                        Label = "الغاء بيانات انتظار",
+                        Label = "تعديل سجل اعفاء",
                         Icon = "fa fa-trash",
-                        Color = "danger",
+                        Color = "warning",
                         //Placement = TableActionPlacement.ActionsMenu,
                         IsEdit = true,
                         OpenModal = true,
                         ModalTitle = "تحذير",
-                        ModalMessage = "هل أنت متأكد من الغاء بيانات الانتظار؟",
+                        ModalMessage = "هل أنت متأكد من تعديل سجل اعفاء؟",
                         ModalMessageIcon = "fa fa-exclamation-triangle text-red-600",
                         ModalMessageClass = "bg-red-50 text-red-700",
                         OpenForm = new FormConfig
                         {
                             FormId = "BuildingTypeDeleteForm",
-                            Title = "تأكيد الغاء بيانات الانتظار",
+                            Title = "تأكيد تعديل سجل اعفاء",
                             Method = "post",
                             ActionUrl = "/crud/delete",
                             Buttons = new List<FormButtonConfig>
@@ -662,7 +695,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 new FormButtonConfig { Text = "حذف", Type = "submit", Color = "danger", },
                                 new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
                             },
-                            Fields = deleteFieldsWaitingList
+                            Fields = updateFieldsWaitingList
                         },
                         RequireSelection = true,
                         MinSelection = 1,
@@ -671,20 +704,20 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                     Delete = new TableAction
                     {
-                        Label = "الغاء بيانات انتظار",
+                        Label = "الغاء سجل اعفاء",
                         Icon = "fa fa-trash",
                         Color = "danger",
                         //Placement = TableActionPlacement.ActionsMenu,
                         IsEdit = true,
                         OpenModal = true,
                         ModalTitle = "تحذير",
-                        ModalMessage = "هل أنت متأكد من الغاء بيانات الانتظار؟",
+                        ModalMessage = "هل أنت متأكد من الغاء سجل اعفاء؟",
                         ModalMessageIcon = "fa fa-exclamation-triangle text-red-600",
                         ModalMessageClass = "bg-red-50 text-red-700",
                         OpenForm = new FormConfig
                         {
                             FormId = "BuildingTypeDeleteForm",
-                            Title = "تأكيد الغاء بيانات الانتظار",
+                            Title = "تأكيد الغاء سجل اعفاء",
                             Method = "post",
                             ActionUrl = "/crud/delete",
                             Buttons = new List<FormButtonConfig>
