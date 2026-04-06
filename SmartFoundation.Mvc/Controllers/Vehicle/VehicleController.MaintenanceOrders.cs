@@ -79,11 +79,7 @@ namespace SmartFoundation.Mvc.Controllers.Vehicle
                     if (permissionName == "UPDATE") canUpdate = true;
                 }
 
-                if (!canAccess && !canSelect)
-                {
-                    TempData["Error"] = "تم رصد دخول غير مصرح به انت لاتملك صلاحية للوصول الى هذه الصفحة";
-                    return RedirectToAction("Index", "Home");
-                }
+                
 
                 var dataTable = dt2 ?? dt3 ?? dt1;
 
