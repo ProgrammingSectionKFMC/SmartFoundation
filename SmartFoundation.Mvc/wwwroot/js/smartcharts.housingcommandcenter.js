@@ -227,7 +227,7 @@
         </div>
     </div>
 
-    <div class="sf-hccm-metric-title">${esc(metric?.title || '')}</div>
+    <div class="sf-hccm-metric-title"><span class="sf-hccm-title-dot" style="background:${s.accent}"></span>${esc(metric?.title || '')}</div>
     ${has(metric?.subtitle) ? `<div class="sf-hccm-metric-subtitle">${esc(metric.subtitle)}</div>` : ''}
 
     ${metaHtml}
@@ -237,7 +237,17 @@
         <div class="sf-hccm-metric-progress-fill" style="width:${percent.toFixed(2)}%;background:${s.accent};"></div>
     </div>` : ''}
 
-    ${has(metric?.hint) ? `<div class="sf-hccm-metric-hint">${esc(metric.hint)}</div>` : ''}
+    ${has(metric?.hint) ? `<div class="sf-hccm-metric-hint">
+        <span class="sf-hccm-metric-hint-icon">
+            <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" width="18" height="18">
+                <path d="M10 2C6.68629 2 4 4.68629 4 8C4 10.2208 5.20659 12.1599 7 13.1973V15C7 15.5523 7.44772 16 8 16H12C12.5523 16 13 15.5523 13 15V13.1973C14.7934 12.1599 16 10.2208 16 8C16 4.68629 13.3137 2 10 2Z" fill="#c9a227"/>
+                <path d="M8 17H12V17.5C12 18.3284 11.3284 19 10.5 19H9.5C8.67157 19 8 18.3284 8 17.5V17Z" fill="#a88a1d"/>
+                <circle cx="10" cy="7" r="2" fill="#fef3c7"/>
+                <path d="M10 9V12" stroke="#fef3c7" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+        </span>
+        <span class="sf-hccm-metric-hint-text">${esc(metric.hint)}</span>
+    </div>` : ''}
 
     ${(metric?.__best || metric?.__worst) ? `
     <div class="sf-hccm-metric-ranking">
