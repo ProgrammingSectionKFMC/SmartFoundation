@@ -667,6 +667,15 @@
             <rect x="3" y="14" width="4" height="7" rx="1" fill="#2563eb"/>
             <rect x="10" y="10" width="4" height="11" rx="1" fill="#0f766e"/>
             <rect x="17" y="6" width="4" height="15" rx="1" fill="#c9a227"/>
+        </svg>`,
+
+        // أيقونة النسبة المئوية - دائرة تقدم مع علامة %
+        percent: `<svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:13px;height:13px;display:inline-block;vertical-align:middle">
+            <circle cx="10" cy="10" r="8" stroke="#cbd5e1" stroke-width="2" fill="none"/>
+            <path d="M10 2a8 8 0 0 1 6.93 12" stroke="#2563eb" stroke-width="2" stroke-linecap="round" fill="none"/>
+            <circle cx="6.5" cy="7" r="1.8" fill="#0f766e"/>
+            <circle cx="13.5" cy="13" r="1.8" fill="#c9a227"/>
+            <line x1="14" y1="6" x2="6" y2="14" stroke="#64748b" stroke-width="1.5" stroke-linecap="round"/>
         </svg>`
     };
 
@@ -694,6 +703,15 @@
         return COLUMN_SVG_ICONS.default;
     }
 
+    
+    function formatSubtitleWithIcon(text) {
+        const trimmed = String(text || '').trim();
+        if (trimmed === '%' || trimmed === '٪' || trimmed.toLowerCase() === 'percent' || trimmed === 'نسبة') {
+            return COLUMN_SVG_ICONS.percent;
+        }
+        return esc(trimmed);
+    }
+
     function buildDynamicHead(metrics) {
         return `
 <tr>
@@ -704,12 +722,13 @@
     ${metrics.map((metric, i) => {
         const s = toneStyle(metric.tone, metric.color, i);
         const svgIcon = getMetricSvgIcon(metric.key, i);
+        const subtitleContent = formatSubtitleWithIcon(metric.unit || metric.subtitle || '');
         return `
         <th>
             <div class="sf-hccm-th-main" style="color:${s.accent}">
                 ${svgIcon} ${esc(metric.shortTitle || metric.title || '')}
             </div>
-            <div class="sf-hccm-th-sub">${esc(metric.unit || metric.subtitle || '')}</div>
+            <div class="sf-hccm-th-sub">${subtitleContent}</div>
         </th>`;
     }).join('')}
     <th class="is-summary-col">
