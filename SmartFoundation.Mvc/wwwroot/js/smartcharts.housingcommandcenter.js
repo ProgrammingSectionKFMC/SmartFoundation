@@ -514,7 +514,7 @@
 </td>`;
     }
 
-    function buildMatrixDepartmentCell(dep, metricMap, opts, depIndex) {
+    function buildMatrixDepartmentCell(dep, metricMap, opts, depIndex, depRank) {
         const depTone = toneStyle(dep?.tone, dep?.color, depIndex);
         const overall = calcDepartmentOverall(dep, metricMap, opts);
         const perfCls = getPerfClass(overall);
@@ -531,20 +531,26 @@
             ? `<a class="sf-hccm-dep-card-btn" href="${esc(dep.href)}">${chartIcon}<span>التفاصيل</span></a>`
             : `<span class="sf-hccm-dep-card-btn is-disabled">${chartIcon}<span>التفاصيل</span></span>`;
 
+        // عرض الميدالية للمراكز الثلاثة الأولى 
+        const medalIcon = getMedalIcon(depRank);
+        const medalHtml = medalIcon 
+            ? `<div class="sf-hccm-dep-card-medal">${medalIcon}</div>`
+            : `<div class="sf-hccm-dep-card-medal-placeholder"></div>`;
+
         return `
 <td class="sf-hccm-matrix-td is-sticky-col is-department-col">
     <div class="sf-hccm-dep-card ${perfCls}" style="--dc-accent:${depTone.accent};--dc-bg:${depTone.bg};--dc-border:${depTone.border}">
         <div class="sf-hccm-dep-card-stripe"></div>
         <div class="sf-hccm-dep-card-inner">
             <div class="sf-hccm-dep-card-top">
-                <div class="sf-hccm-dep-card-badge">${depIndex + 1}</div>
+                <div class="sf-hccm-dep-card-badge">${depRank + 1}</div>
                 <div class="sf-hccm-dep-card-name">${esc(dep?.shortName || dep?.name || '')}</div>
             </div>
             <div class="sf-hccm-dep-card-track">
                 <div class="sf-hccm-dep-card-fill" style="width:${overall.toFixed(1)}%;background:${barColor}"></div>
             </div>
             <div class="sf-hccm-dep-card-foot">
-                <div class="sf-hccm-dep-card-pct ${perfCls}">${esc(fmtPercent(overall, 1))}</div>
+                ${medalHtml}
                 ${detailsBtn}
             </div>
         </div>
@@ -552,7 +558,7 @@
 </td>`;
     }
 
-    function buildMatrixRow(dep, metrics, metricMap, opts, depIndex) {
+    function buildMatrixRow(dep, metrics, metricMap, opts, depIndex, depRank) {
         const metricCells = metrics.map((metric, i) => {
             const depMetric = findDepartmentMetric(dep, metric.key);
             return buildMatrixMetricCell(depMetric, metric, opts, i);
@@ -560,7 +566,7 @@
 
         return `
 <tr class="sf-hccm-matrix-tr">
-    ${buildMatrixDepartmentCell(dep, metricMap, opts, depIndex)}
+    ${buildMatrixDepartmentCell(dep, metricMap, opts, depIndex, depRank)}
     ${metricCells}
     ${buildMatrixOverallCell(dep, metricMap, opts, depIndex)}
 </tr>`;
@@ -688,6 +694,50 @@
             <line x1="14" y1="6" x2="6" y2="14" stroke="#64748b" stroke-width="1.5" stroke-linecap="round"/>
         </svg>`
     };
+
+    // ── أيقونات الميداليات للمراكز الأولى ──
+    const MEDAL_ICONS = {
+        // ميدالية ذهبية - المركز الأول
+        gold: `<svg viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg" class="sf-hccm-medal-svg">
+            <path d="M10 0h12l2 8H8l2-8z" fill="#dc2626"/>
+            <path d="M12 0h8l1.5 8h-11L12 0z" fill="#ef4444"/>
+            <circle cx="16" cy="24" r="14" fill="#fbbf24"/>
+            <circle cx="16" cy="24" r="11" fill="#f59e0b"/>
+            <circle cx="16" cy="24" r="8" fill="#fbbf24"/>
+            <text x="16" y="28" text-anchor="middle" font-size="10" font-weight="900" fill="#92400e">1</text>
+            <ellipse cx="12" cy="18" rx="2" ry="1" fill="#fef3c7" opacity="0.6"/>
+        </svg>`,
+
+        // ميدالية فضية - المركز الثاني
+        silver: `<svg viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg" class="sf-hccm-medal-svg">
+            <path d="M10 0h12l2 8H8l2-8z" fill="#2563eb"/>
+            <path d="M12 0h8l1.5 8h-11L12 0z" fill="#3b82f6"/>
+            <circle cx="16" cy="24" r="14" fill="#d1d5db"/>
+            <circle cx="16" cy="24" r="11" fill="#9ca3af"/>
+            <circle cx="16" cy="24" r="8" fill="#d1d5db"/>
+            <text x="16" y="28" text-anchor="middle" font-size="10" font-weight="900" fill="#4b5563">2</text>
+            <ellipse cx="12" cy="18" rx="2" ry="1" fill="#fff" opacity="0.6"/>
+        </svg>`,
+
+        // ميدالية برونزية - المركز الثالث
+        bronze: `<svg viewBox="0 0 32 40" fill="none" xmlns="http://www.w3.org/2000/svg" class="sf-hccm-medal-svg">
+            <path d="M10 0h12l2 8H8l2-8z" fill="#0f766e"/>
+            <path d="M12 0h8l1.5 8h-11L12 0z" fill="#14b8a6"/>
+            <circle cx="16" cy="24" r="14" fill="#d97706"/>
+            <circle cx="16" cy="24" r="11" fill="#b45309"/>
+            <circle cx="16" cy="24" r="8" fill="#d97706"/>
+            <text x="16" y="28" text-anchor="middle" font-size="10" font-weight="900" fill="#78350f">3</text>
+            <ellipse cx="12" cy="18" rx="2" ry="1" fill="#fef3c7" opacity="0.5"/>
+        </svg>`
+    };
+
+    // دالة للحصول على ميدالية حسب الترتيب
+    function getMedalIcon(rank) {
+        if (rank === 0) return MEDAL_ICONS.gold;
+        if (rank === 1) return MEDAL_ICONS.silver;
+        if (rank === 2) return MEDAL_ICONS.bronze;
+        return null;
+    }
 
     // دالة للحصول على أيقونة SVG بناءً على مفتاح المعيار
     function getMetricSvgIcon(metricKey, metricIndex) {
@@ -837,8 +887,15 @@
     </td>
 </tr>`;
         } else {
-            matrixBody.innerHTML = departments
-                .map((dep, i) => buildMatrixRow(dep, metrics, metricMap, opts, i))
+            // ترتيب الإدارات من الأعلى نسبة للأقل
+            const sortedDepartments = [...departments].map((dep, originalIndex) => ({
+                dep,
+                originalIndex,
+                overall: calcDepartmentOverall(dep, metricMap, opts)
+            })).sort((a, b) => b.overall - a.overall);
+
+            matrixBody.innerHTML = sortedDepartments
+                .map((item, rank) => buildMatrixRow(item.dep, metrics, metricMap, opts, item.originalIndex, rank))
                 .join('');
         }
 

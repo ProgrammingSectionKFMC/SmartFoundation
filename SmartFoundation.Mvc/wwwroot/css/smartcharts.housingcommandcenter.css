@@ -1215,7 +1215,7 @@
     line-height: 1.65;
     padding: 0;
     border-radius: 13px;
-    border: 1px solid #c4d0e0;
+    /*border: 1px solid #c4d0e0;*/
     box-shadow: 0 0 0 1px rgba(26,58,92,.06), 0 8px 22px rgba(14,28,50,.14);
     direction: rtl;
     text-align: right;
@@ -1575,3 +1575,28 @@
         cursor: default;
         pointer-events: none;
     }
+
+/* ── ميدالية المراكز الأولى ── */
+.sf-hccm-dep-card-medal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.sf-hccm-dep-card-medal-placeholder {
+    width: 28px;
+    min-width: 28px;
+    flex-shrink: 0;
+}
+
+.sf-hccm-medal-svg {
+    width: 28px;
+    height: 35px;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,.15));
+    transition: transform .2s ease;
+}
+
+.sf-hccm-dep-card:hover .sf-hccm-medal-svg {
+    transform: scale(1.08);
+}
