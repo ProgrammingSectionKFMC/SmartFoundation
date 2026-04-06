@@ -117,7 +117,7 @@ body {
 .dep-hdr {
     position: relative;
     overflow: hidden;
-    background: linear-gradient(135deg, #1e3a5f 0%, #2d4a6f 50%, #3d5a80 100%);
+    background: #2d4a6f;
 }
 
 .dep-hdr-bg {
@@ -401,7 +401,8 @@ body {
     }
 
     .dep-tab.is-active {
-        background: linear-gradient(135deg, #1e3a5f 0%, #2d4a6f 50%, #3d5a80 100%);
+        /*background: linear-gradient(135deg, #1e3a5f 0%, #2d4a6f 50%, #3d5a80 100%);*/
+        background: #3d5a80;
         color: #fff;
         font-weight: 700;
         box-shadow: 0 4px 12px rgba(30,58,95,.3);
@@ -928,3 +929,45 @@ body {
     .ch220 { height: 200px; }
     .ch250 { height: 220px; }
 }
+
+/* ═══════════════════════════════════════
+   CHART.JS LEGEND — Interactive Styling
+   Makes legend items clearly clickable
+═══════════════════════════════════════ */
+
+/* Target Chart.js generated legend container */
+.ch-wrap + div,
+.ccard canvas + div {
+    margin-top: 8px;
+}
+
+/* Style all Chart.js legend items */
+.ch-wrap canvas,
+.ccard canvas {
+    cursor: default;
+}
+
+/* Make legend items interactive and obvious */
+:root {
+    --legend-hover-bg: rgba(30, 58, 95, 0.06);
+    --legend-hover-scale: 1.02;
+}
+
+/* Target Chart.js legend list items - they have specific structure */
+[class*="chartjs"] li,
+.chartjs-legend li,
+canvas + * li {
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    padding: 4px 8px !important;
+    border-radius: 6px !important;
+    position: relative !important;
+}
+
+[class*="chartjs"] li:hover,
+.chartjs-legend li:hover,
+canvas + * li:hover {
+    background: var(--legend-hover-bg) !important;
+    transform: scale(var(--legend-hover-scale)) !important;
+}
+
