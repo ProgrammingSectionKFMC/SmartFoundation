@@ -312,19 +312,6 @@
     display: inline-block;
 }
 
-    
-    .sf-hccm-metric-title::after {
-        content: "";
-        position: absolute;
-        bottom: -2px;
-        right: 4px;
-        width: calc(100% - 4px);
-        height: 2px;
-        background: linear-gradient(90deg, var(--mc-accent, var(--gov-navy)) 0%, transparent 100%);
-        border-radius: 2px;
-        opacity: 0.35;
-    }
-
 
 .sf-hccm-title-dot {
     display: inline-block;
