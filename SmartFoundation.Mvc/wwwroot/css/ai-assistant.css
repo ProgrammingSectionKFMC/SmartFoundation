@@ -249,6 +249,14 @@
     color: #14532d;
 }
 
+.sf-ai-avatar.user img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 50%;
+}
+
 .sf-ai-bubble {
     max-width: 85%;
     background: #fff;

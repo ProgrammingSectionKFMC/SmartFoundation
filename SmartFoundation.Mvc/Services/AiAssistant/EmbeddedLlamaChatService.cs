@@ -40,6 +40,105 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
         "housing-residents"
     };
 
+    private static readonly string[] ThanksExpressions =
+    {
+        "شكرا",
+        "شكراً",
+        "شكرًا",
+        "شكرا لك",
+        "شكراً لك",
+        "شكرًا لك",
+        "مشكور",
+        "مشكورين",
+        "الله يعطيك العافية",
+        "يعطيك العافيه",
+        "يعطيك العافية",
+        "يعطيكم العافية",
+        "يعطيكم العافيه",
+        "لاهنت",
+        "لا هنت",
+        "تسلم",
+        "تسلم يا غالي",
+        "يسلمو",
+        "ما قصرت",
+        "ماقصرت",
+        "ما قصرتوا",
+        "ماقصرتوا",
+        "كثر خيرك",
+        "كثير خيرك",
+        "كثر الله خيرك",
+        "جزاك الله خير",
+        "جزاك الله خيرًا",
+        "جزاكم الله خير",
+        "بيض الله وجهك",
+        "ونعم",
+        "أحسنت",
+        "ممتاز شكرا",
+        "شكرا جزيلا",
+        "شكرا جزيلاً",
+        "شكراً جزيلاً"
+    };
+
+    private static readonly string[] GreetingExpressions =
+    {
+        "سلام",
+        "السلام عليكم",
+        "وعليكم السلام",
+        "مرحبا",
+        "هلا",
+        "اهلا",
+        "أهلا",
+        "اهلين",
+        "أهلين",
+        "صباح الخير",
+        "مساء الخير",
+        "يا هلا",
+        "حياك الله",
+        "هلابك",
+        "هاي",
+        "hello",
+        "hi",
+        "كيفك",
+        "كيف حالك",
+        "شلونك",
+        "اخبارك",
+        "أخبارك",
+        "وش الأخبار",
+        "وش الاخبار",
+        "كيف الوضع"
+    };
+
+    private static readonly string[] ProcedureIntentHints =
+    {
+        "اضيف",
+        "أضيف",
+        "اعدل",
+        "أعدل",
+        "احذف",
+        "أحذف",
+        "ابحث",
+        "أبحث",
+        "اطبع",
+        "أطبع",
+        "افتح",
+        "أفتح",
+        "اغلق",
+        "إغلاق",
+        "اعتمد",
+        "اين",
+        "أين",
+        "وين",
+        "صفحة",
+        "تقرير",
+        "مستفيد",
+        "مبنى",
+        "عداد",
+        "سجل",
+        "فترة",
+        "لوائح",
+        "شروط"
+    };
+
     private sealed class PendingState
     {
         public string Intent { get; set; } = "";
@@ -107,16 +206,30 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
                     null);
             }
 
+            var firstName = ResolveFirstName(request.UserFullName);
+
             // ✅ التحية السريعة بدون أي معالجة ثقيلة
-            if (ArabicTextNormalizer.ContainsAny(originalMsg, "سلام", "السلام", "هلا", "مرحبا", "اهلا", "أهلا"))
+            if (IsGreetingLikeMessage(originalMsg))
             {
                 return await SaveAndReturn(
                     request,
                     startTime,
-                    "مرحبًا بكم.\n\nأنا فيصل، المساعد الذكي للنظام.\n\nيمكنكم الاستفسار عن إجراءات النظام، مثل:\n• كيف أضيف مستفيد؟\n• كيف أفتح فترة قراءة العدادات؟\n• كيف أطبع تقريرًا؟",
+                    BuildGreetingReplyMessage(firstName),
                     Array.Empty<KnowledgeChunk>(),
                     null,
                     "GREETING");
+            }
+
+            // ✅ إغلاق المحادثة/الشكر
+            if (IsClosingThanksMessage(originalMsg))
+            {
+                return await SaveAndReturn(
+                    request,
+                    startTime,
+                    BuildThanksReplyMessage(firstName),
+                    Array.Empty<KnowledgeChunk>(),
+                    null,
+                    "CLOSING");
             }
 
             var pageKey = ResolvePageKey(request);
@@ -209,7 +322,7 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
 
             // 2) محادثات عامة محلية (بدون إنترنت) بنبرة رسمية
             if (!interpretation.HasPage &&
-                TryBuildGeneralOfficialResponse(effectiveMsg, out var generalResponse, out var generalIntent))
+                TryBuildGeneralOfficialResponse(effectiveMsg, firstName, out var generalResponse, out var generalIntent))
             {
                 return await SaveAndReturn(
                     request,
@@ -1115,6 +1228,7 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
 
     private static bool TryBuildGeneralOfficialResponse(
         string userQuestion,
+        string firstName,
         out string response,
         out string intent)
     {
@@ -1158,17 +1272,17 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
             return true;
         }
 
-        if (ContainsAny(normalized, "شكرا", "شكرًا", "يعطيك العافيه", "يعطيك العافية"))
+        if (ContainsAny(normalized, ThanksExpressions))
         {
-            response = "شكرًا لكم. في خدمتكم.";
+            response = BuildThanksReplyMessage(firstName);
             intent = "GENERAL_THANKS";
             return true;
         }
 
-        if (ContainsAny(normalized, "كيف حالك", "اخبارك", "أخبارك"))
+        if (IsGreetingLikeMessage(normalized))
         {
-            response = "شكرًا لسؤالكم. أنا جاهز لخدمتكم في استفسارات النظام.";
-            intent = "GENERAL_SMALLTALK";
+            response = BuildGreetingReplyMessage(firstName);
+            intent = "GREETING";
             return true;
         }
 
@@ -2153,6 +2267,64 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
             return $"page:{pageUrl}";
 
         return "local-session";
+    }
+
+    private static string ResolveFirstName(string? fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName))
+            return "";
+
+        var parts = fullName
+            .Trim()
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        return parts.Length > 0 ? parts[0] : "";
+    }
+
+    private static string BuildGreetingReplyMessage(string firstName)
+    {
+        var greetLine = string.IsNullOrWhiteSpace(firstName)
+            ? "مرحبًا بك."
+            : $"مرحبًا بك {firstName}.";
+
+        return $"{greetLine}\n\nأنا فيصل، مساعدك الذكي للنظام.\n\nيمكنكم الاستفسار عن إجراءات النظام، مثل:\n\n• كيف أضيف مستفيد؟\n\n• كيف أفتح فترة قراءة العدادات؟\n\n• كيف أطبع تقريرًا؟";
+    }
+
+    private static bool IsClosingThanksMessage(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+            return false;
+
+        if (ContainsAny(message, "كيف", "أضيف", "اضيف", "أعدل", "اعدل", "أحذف", "احذف", "أبحث", "ابحث", "أطبع", "اطبع", "وين", "أين"))
+            return false;
+
+        return ContainsAny(message, ThanksExpressions);
+    }
+
+    private static bool IsGreetingLikeMessage(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+            return false;
+
+        var normalized = ArabicTextNormalizer.Normalize(message);
+        if (string.IsNullOrWhiteSpace(normalized))
+            return false;
+
+        var hasGreeting = ContainsAny(normalized, GreetingExpressions);
+        if (!hasGreeting)
+            return false;
+
+        // لا نحوّل السؤال إلى تحية إذا كان يحتوي طلب إجراء واضح.
+        if (ContainsAny(normalized, ProcedureIntentHints))
+            return false;
+
+        return true;
+    }
+
+    private static string BuildThanksReplyMessage(string firstName)
+    {
+        var namePart = string.IsNullOrWhiteSpace(firstName) ? "" : $" {firstName}";
+        return $"العفو{namePart}\nانا هنا دائما في خدمتك بأي وقت";
     }
 
     private static string? GetPropString(object obj, string propName)

@@ -27,6 +27,7 @@ public sealed record AiChatRequest
     public string? IpAddress { get; init; }
     public string? IdaraId { get; init; }
     public string? UserPermissionsJson { get; init; }
+    public string? UserFullName { get; init; }
 
 
 }

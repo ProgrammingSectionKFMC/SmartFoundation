@@ -34,11 +34,13 @@ namespace SmartFoundation.Mvc.Controllers.Api
 
             // ✅ استخراج IdaraId من Session
             var idaraIdStr = HttpContext.Session.GetString("IdaraId") ?? "1";
+            var sessionFullName = HttpContext.Session.GetString("fullName") ?? "";
 
             var requestWithIp = request with 
             { 
                 IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
-                IdaraId = idaraIdStr // ✅ إضافة
+                IdaraId = idaraIdStr, // ✅ إضافة
+                UserFullName = sessionFullName
             };
 
             var result = await _chat.ChatAsync(requestWithIp, ct);
