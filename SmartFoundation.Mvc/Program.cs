@@ -1,16 +1,17 @@
-﻿using SmartFoundation.Application.Extensions;
+﻿using Microsoft.Extensions.Options;
+using QuestPDF.Drawing;
+using QuestPDF.Infrastructure;
+using SmartFoundation.Application.Extensions;
 using SmartFoundation.Application.Services;
 using SmartFoundation.DataEngine.Core.Interfaces;
 using SmartFoundation.DataEngine.Core.Services;
 using SmartFoundation.DataEngine.Core.Utilities;
 using SmartFoundation.Mvc.Controllers;
-using System.Text.Json;
-using QuestPDF.Infrastructure;
-using QuestPDF.Drawing;
-using SmartFoundation.Mvc.Services.Exports.Pdf;
+using SmartFoundation.Mvc.Helpers;
 using SmartFoundation.Mvc.Services.AiAssistant;
-using Microsoft.Extensions.Options;
 using SmartFoundation.Mvc.Services.Chart;
+using SmartFoundation.Mvc.Services.Exports.Pdf;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 QuestPDF.Settings.License = LicenseType.Community;
@@ -61,14 +62,17 @@ builder.Services.AddSingleton<LLamaModelHolder>(sp =>
     
     return new LLamaModelHolder(opt, env, log);
 });
-
-// ✅ تغيير من Singleton إلى Scoped
-builder.Services.AddScoped<IAiChatService, EmbeddedLlamaChatService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<IAiChatService, EmbeddedLlamaChatService>();
 
 // Chart services
 builder.Services.AddScoped<Chart>();
 
 var app = builder.Build();
+
+UserPermissionSessionAccessor.Configure(
+    app.Services.GetRequiredService<IHttpContextAccessor>()
+);
 
 app.UseResponseCompression();
 app.UseHttpsRedirection();

@@ -433,6 +433,27 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                             bool isdeptID = c.ColumnName.Equals("deptID", StringComparison.OrdinalIgnoreCase);
                             bool issecID = c.ColumnName.Equals("secID", StringComparison.OrdinalIgnoreCase);
                             bool isdivID = c.ColumnName.Equals("divID", StringComparison.OrdinalIgnoreCase);
+                            bool isPermissionRoleID = c.ColumnName.Equals("PermissionRoleID", StringComparison.OrdinalIgnoreCase);
+                            bool ismenuName_A = c.ColumnName.Equals("menuName_A", StringComparison.OrdinalIgnoreCase);
+
+
+                            List<OptionItem> filterOpts = new();
+                            if (ismenuName_A)
+                            {
+                                var field = c.ColumnName;
+
+                                var distinctVals = dt1.AsEnumerable()
+                                    .Select(r => (r[field] == DBNull.Value ? "" : r[field]?.ToString())?.Trim())
+                                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                                    .Distinct()
+                                    .OrderBy(s => s)
+                                    .ToList();
+
+                                filterOpts = distinctVals
+                                    .Select(s => new OptionItem { Value = s!, Text = s! })
+                                    .ToList();
+                            }
+
 
                             dynamicColumns.Add(new TableColumn
                             {
@@ -443,6 +464,18 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isuserID  || isdistributorID_FK || isRoleID_FK || isIdaraID_FK || isDSDID_FK || isdeptID || issecID || isdivID) 
+                                ,
+                                Filter = (ismenuName_A)
+                                    ? new TableColumnFilter
+                                    {
+                                        Enabled = true,
+                                        Type = "select",
+                                        Options = filterOpts,
+                                    }
+                                    : new TableColumnFilter
+                                    {
+                                        Enabled = false
+                                    }
                             });
                         }
 
@@ -720,7 +753,10 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 AllowExport = true,
                 PageTitle = "إدارة الصلاحيات",
                 PanelTitle = "إدارة الصلاحيات ",
-                
+                ShowFilter = true,
+                FilterRow = true,
+                FilterDebounce = 250,
+
                 Toolbar = new TableToolbarConfig
                 {
                     ShowRefresh = false,

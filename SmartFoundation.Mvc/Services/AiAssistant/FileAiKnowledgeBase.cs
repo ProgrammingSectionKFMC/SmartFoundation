@@ -52,6 +52,14 @@ public sealed class FileAiKnowledgeBase : IAiKnowledgeBase
                 {
                     if (c.tf.TryGetValue(t, out var n)) s += n;
                 }
+
+                // Prefer curated docs under /Pages when scores are close.
+                if (c.source.Contains("pages/", StringComparison.OrdinalIgnoreCase) ||
+                    c.source.Contains("pages\\", StringComparison.OrdinalIgnoreCase))
+                {
+                    s += 0.75;
+                }
+
                 s = s / Math.Sqrt(20 + c.text.Length);
                 return (c.source, c.text, score: s);
             })
@@ -86,10 +94,34 @@ public sealed class FileAiKnowledgeBase : IAiKnowledgeBase
         var q = query.Trim();
 
         string[] headers;
-        if (ContainsAny(q, "اضف", "أضف", "إضافة", "اضافة", "أضيف", "اضيف"))
+        if (ContainsAny(q, "قراءة عداد", "قراءات العدادات", "قراءة الكهرباء", "قراءة الماء", "قراءة الغاز"))
+            headers = new[]
+            {
+                "## إضافة قراءة عداد",
+                "## تعديل قراءة عداد",
+                "## اعتماد قراءة عداد",
+                "## عرض جميع قراءات العدادات",
+                "## فتح فترة قراءة العدادات",
+                "## إغلاق فترة قراءة العدادات"
+            };
+        else if (ContainsAny(q, "نوع عداد", "أنواع العدادات", "انواع العدادات", "ربط عداد"))
+            headers = new[]
+            {
+                "## إضافة نوع عداد",
+                "## تعديل نوع عداد",
+                "## حذف نوع عداد",
+                "## ربط عداد بمبنى",
+                "## إضافة عداد",
+                "## تعديل عداد",
+                "## حذف عداد"
+            };
+        else if (ContainsAny(q, "اضف", "أضف", "إضافة", "اضافة", "أضيف", "اضيف"))
             headers = new[] { 
                 "### إضافة سجل انتظار جديد",  // ✅ WaitingListByResident
                 "### إضافة خطاب تسكين جديد",   // ✅ WaitingListByResident
+                "## إضافة قراءة عداد",
+                "## إضافة نوع عداد",
+                "## إضافة عداد",
                 "## إضافة مستفيد", 
                 "## إضافة مبنى", 
                 "## إضافة فئة جديدة",
@@ -100,6 +132,9 @@ public sealed class FileAiKnowledgeBase : IAiKnowledgeBase
             headers = new[] { 
                 "### تعديل سجل انتظار",         // ✅ WaitingListByResident
                 "### تعديل خطاب تسكين",          // ✅ WaitingListByResident
+                "## تعديل قراءة عداد",
+                "## تعديل نوع عداد",
+                "## تعديل عداد",
                 "## تعديل مستفيد", 
                 "## تعديل مبنى", 
                 "## تعديل فئة موجودة",
@@ -111,6 +146,8 @@ public sealed class FileAiKnowledgeBase : IAiKnowledgeBase
                 "### حذف سجل انتظار",            // ✅ WaitingListByResident
                 "### حذف خطاب تسكين",             // ✅ WaitingListByResident
                 "### إلغاء طلب نقل",              // ✅ WaitingListByResident
+                "## حذف نوع عداد",
+                "## حذف عداد",
                 "## حذف مستفيد", 
                 "## حذف مبنى", 
                 "## حذف فئة",
@@ -258,11 +295,13 @@ public sealed class FileAiKnowledgeBase : IAiKnowledgeBase
 
             foreach (var f in files)
             {
-                var fileName = Path.GetFileName(f);
                 var text = File.ReadAllText(f, Encoding.UTF8);
+                var sourceKey = Path.GetRelativePath(kbPath, f)
+                    .Replace('\\', '/')
+                    .Trim();
 
                 // ✅ خزّن النص الكامل للملف
-                _docs[fileName] = text;
+                _docs[sourceKey] = text;
 
                 foreach (var chunk in Chunk(text))
                 {
@@ -272,7 +311,7 @@ public sealed class FileAiKnowledgeBase : IAiKnowledgeBase
                         tf[tok] = tf.TryGetValue(tok, out var n) ? n + 1 : 1;
                     }
                     if (tf.Count == 0) continue;
-                    _chunks.Add((fileName, chunk, tf));
+                    _chunks.Add((sourceKey, chunk, tf));
                 }
             }
 
@@ -329,6 +368,26 @@ public sealed class FileAiKnowledgeBase : IAiKnowledgeBase
             return null;
 
         return _docs.TryGetValue(source, out var full) ? full : null;
+    }
+
+    public string? GetDocumentByPageInternalName(string internalPageName)
+    {
+        if (string.IsNullOrWhiteSpace(internalPageName))
+            return null;
+
+        var expected = $"{internalPageName}.md";
+
+        foreach (var kv in _docs)
+        {
+            var normalized = kv.Key.Replace('\\', '/').Trim();
+            if (normalized.EndsWith($"/{expected}", StringComparison.OrdinalIgnoreCase) ||
+                normalized.Equals(expected, StringComparison.OrdinalIgnoreCase))
+            {
+                return kv.Value;
+            }
+        }
+
+        return null;
     }
 
 

@@ -189,6 +189,23 @@
     const userIdEl = document.getElementById("sf-ai-userid");
     const userId = userIdEl ? (userIdEl.value || "").trim() : "";
 
+    const CONVERSATION_STORAGE_KEY = "sf_ai_conversation_id_v1";
+    function getOrCreateConversationId() {
+        try {
+            const existing = sessionStorage.getItem(CONVERSATION_STORAGE_KEY);
+            if (existing && existing.trim()) return existing.trim();
+        } catch { }
+
+        const randomPart = Math.random().toString(36).slice(2, 10);
+        const generated = `sfai-${Date.now().toString(36)}-${randomPart}`;
+
+        try { sessionStorage.setItem(CONVERSATION_STORAGE_KEY, generated); } catch { }
+        return generated;
+    }
+
+    const conversationId = getOrCreateConversationId();
+    const clientId = `${window.location.host}|${navigator.userAgent.slice(0, 60)}`;
+
     const form = sendBtn.closest("form") || input.closest("form");
     if (form) {
         form.addEventListener("submit", (e) => {
@@ -458,7 +475,9 @@ if (role === "user") {
                 pageUrl: window.location.pathname + window.location.search,
                 pageName: window.location.pathname.split("/").filter(Boolean).pop() || null,
                 culture: (document.documentElement.lang || "ar"),
-                userId: userId
+                userId: userId,
+                conversationId: conversationId,
+                clientId: clientId
             };
 
             const res = await fetch("/api/ai/chat", {

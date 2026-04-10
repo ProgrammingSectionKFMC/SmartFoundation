@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using SmartFoundation.Application.Services;
+using SmartFoundation.Mvc.Helpers;
 using SmartFoundation.Mvc.Models;
+using SmartFoundation.Mvc.Services.AiAssistant.Core;
 using SmartFoundation.Mvc.Services.Chart;
 using SmartFoundation.UI.ViewModels.SmartCharts;
 using SmartFoundation.UI.ViewModels.SmartPage;
@@ -31,8 +33,13 @@ namespace SmartFoundation.Mvc.Controllers.Home
             DataSet ds = await _mastersServies.GetDataLoadDataSetAsync(spParameters);
             SplitDataSet(ds);
 
+            UserPermissionSessionHelper.SaveFromDataTable(HttpContext, dt2);
+            // 🔥 اختبار المساعد الذكي
+            var permissionMap = UserPermissionSessionHelper.Get(HttpContext);
 
-
+            _logger.LogInformation("Has AllMeterRead page? {Value}", permissionMap?.HasAccess("AllMeterRead") == true);
+            _logger.LogInformation("Has OPENMETERREADPERIOD? {Value}", permissionMap?.HasPermission("AllMeterRead", "OPENMETERREADPERIOD") == true);
+            _logger.LogInformation("Has READELECTRICITYMETER? {Value}", permissionMap?.HasPermission("AllMeterRead", "READELECTRICITYMETER") == true);
 
             // ✅ قراءة أسماء الـ Charts من ChartTable
             var chartMethodNames = new List<string>();

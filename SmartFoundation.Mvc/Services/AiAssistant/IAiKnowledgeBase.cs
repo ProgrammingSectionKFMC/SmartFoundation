@@ -5,5 +5,7 @@
         IReadOnlyList<KnowledgeChunk> Search(string query, int topK);
 
         string? GetDocumentBySource(string source);
+
+        string? GetDocumentByPageInternalName(string internalPageName);
     }
 }

@@ -1,12 +1,15 @@
 ﻿using LLama;
-using LLama.Abstractions;
 using LLama.Common;
-using LLama.Native;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using SmartFoundation.Application.Mapping;
 using SmartFoundation.DataEngine.Core.Interfaces;
 using SmartFoundation.DataEngine.Core.Models;
+using SmartFoundation.Mvc.Helpers;
+using SmartFoundation.Mvc.Services.AiAssistant.Core;
+using SmartFoundation.Mvc.Services.AiAssistant.Security;
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -18,54 +21,24 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
     private readonly IAiKnowledgeBase _kb;
     private readonly AiAssistantOptions _opt;
     private readonly ILogger<EmbeddedLlamaChatService> _log;
-    private readonly ISmartComponentService? _dataEngine;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly LLamaModelHolder _modelHolder;
 
-    // ✅ General executor (أسرع من إنشاء جديد كل مرة)
-    private readonly StatelessExecutor _generalExecutor;
-    private readonly IContextParams _generalCtxParams;
-
-    // ✅ Context Pool (أهم تحسين)
     private readonly SemaphoreSlim _poolGate;
     private readonly ConcurrentQueue<LLamaContext> _ctxPool = new();
 
-    private const int GeneralMaxAnswerLen = 1500;
-
-    private static readonly (string Key, string Label, string[] Keywords)[] Entities =
- {
-    ("Residents", "مستفيد", new[] { "مستفيد", "المستفيد", "المستفيدين", "ساكن", "Residents" }),
-
-    ("BuildingDetails", "مبنى" , new[] { "مبنى", "المباني", "Building", "BuildingDetails" }),
-
-    ("BuildingClass", "فئة مبنى" , new[] {
-        "فئة مبنى", "فئات المباني", "تصنيف مبنى", "تصنيفات المباني",
-        "نوع مبنى", "أنواع المباني", "BuildingClass"
-    }),
-
-    ("ResidentClass", "فئة مستفيد" , new[] {
-        "فئة مستفيد", "فئات المستفيدين", "تصنيف مستفيد", "تصنيفات المستفيدين",
-        "نوع مستفيد", "أنواع المستفيدين", "ResidentClass"
-    }),
-
-    ("WaitingListByResident", "قوائم الانتظار" , new[] {
-        "قوائم الانتظار", "قائمة الانتظار", "قائمة انتظار", "قوائم انتظار",
-        "سجل انتظار", "سجلات الانتظار", "سجلات انتظار",
-        "خطاب تسكين", "خطابات التسكين", "خطابات تسكين",
-        "نقل سجل", "نقل سجلات", "طلب نقل", "طلبات النقل",
-        "WaitingListByResident", "WaitingList"
-    }),
-
-    // ✅ الجديد (أضفه هنا)
-    ("Regulations", "اللوائح والأنظمة", new[] {
-        "لائحة", "اللوائح",
-        "نظام", "الأنظمة",
-        "مادة", "المادة", "فقرة",
-        "تعميم", "تعليمات",
-        "ضوابط", "شروط", "استثناء", "استثناءات",
-        "آلية", "كيفية التطبيق",
-        "التأمين الاحترازي", "الإخلاء", "أحقية السكن"
-    }),
-};
+    private static readonly ConcurrentDictionary<string, PendingState> _pending = new();
+    private static readonly TimeSpan PendingTtl = TimeSpan.FromMinutes(2);
+    private static readonly HashSet<string> RegulationFileNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "housing_allocation",
+        "housing_definitions",
+        "housing_entitlement",
+        "housing_eviction",
+        "housing_maintenance",
+        "housing_rules_general",
+        "housing-residents"
+    };
 
     private sealed class PendingState
     {
@@ -74,977 +47,720 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
         public DateTimeOffset At { get; set; } = DateTimeOffset.UtcNow;
     }
 
-    private sealed class GeneralChatTurn
-    {
-        public string Role { get; set; } = ""; // "user" | "assistant"
-        public string Text { get; set; } = "";
-        public DateTimeOffset At { get; set; } = DateTimeOffset.UtcNow;
-    }
-
-    private sealed class GeneralChatState
-    {
-        public ConcurrentQueue<GeneralChatTurn> Turns { get; } = new();
-        public DateTimeOffset LastAccessUtc { get; set; } = DateTimeOffset.UtcNow;
-    }
-
-    private static readonly ConcurrentDictionary<string, GeneralChatState> _general = new();
-    private static readonly TimeSpan GeneralTtl = TimeSpan.FromMinutes(20);
-    private const int GeneralMaxTurns = 10;
-
-
-
-    private static void CleanupGeneral()
-    {
-        var now = DateTimeOffset.UtcNow;
-        foreach (var kv in _general)
-            if (now - kv.Value.LastAccessUtc > GeneralTtl)
-                _general.TryRemove(kv.Key, out _);
-    }
-
-    private static void AddGeneralTurn(string convoKey, string role, string text)
-    {
-        if (string.IsNullOrWhiteSpace(convoKey)) return;
-
-        var st = _general.GetOrAdd(convoKey, _ => new GeneralChatState());
-        st.LastAccessUtc = DateTimeOffset.UtcNow;
-
-        st.Turns.Enqueue(new GeneralChatTurn { Role = role, Text = text, At = DateTimeOffset.UtcNow });
-
-        while (st.Turns.Count > GeneralMaxTurns)
-            st.Turns.TryDequeue(out _);
-    }
-
-    private static List<GeneralChatTurn> GetGeneralTurns(string convoKey)
-    {
-        if (string.IsNullOrWhiteSpace(convoKey)) return new();
-        if (!_general.TryGetValue(convoKey, out var st)) return new();
-        st.LastAccessUtc = DateTimeOffset.UtcNow;
-        return st.Turns.ToList();
-    }
-
-    private static readonly ConcurrentDictionary<string, PendingState> _pending = new();
-    private static readonly TimeSpan PendingTtl = TimeSpan.FromMinutes(2);
-
     public EmbeddedLlamaChatService(
         IAiKnowledgeBase kb,
         IOptions<AiAssistantOptions> opt,
         LLamaModelHolder modelHolder,
         ILogger<EmbeddedLlamaChatService> log,
-        ISmartComponentService? dataEngine = null)
+        IServiceScopeFactory scopeFactory)
     {
         _kb = kb;
         _opt = opt.Value;
         _log = log;
-        _dataEngine = dataEngine;
+        _scopeFactory = scopeFactory;
         _modelHolder = modelHolder;
 
-        // ✅ عدد الـContexts (Pool size)
         var poolSize = Math.Max(1, _opt.MaxParallelRequests);
-
-        // ✅ Gate يعكس pool size
         _poolGate = new SemaphoreSlim(poolSize, poolSize);
 
-        // ✅ أنشئ contexts مرة واحدة فقط
-        // Qwen2.5-3B أفضل توازن: 1024~2048
-        var ctxSize = (uint)Math.Clamp(_opt.ContextSize, 512, 2048);
+        var ctxSize = (uint)Math.Clamp(_opt.ContextSize, 512, 4096);
         var threads = Math.Max(1, _opt.Threads);
 
         for (int i = 0; i < poolSize; i++)
         {
             var ctx = _modelHolder.Weights.CreateContext(new ModelParams(_modelHolder.ModelPath)
             {
-                ContextSize = 1024,
+                ContextSize = ctxSize,
                 Threads = threads
             });
+
             _ctxPool.Enqueue(ctx);
         }
-
-        _generalCtxParams = new ModelParams(_modelHolder.ModelPath)
-        {
-            ContextSize = ctxSize,     // نفس ctxSize اللي فوق
-            Threads = threads          // نفس threads اللي فوق
-        };
-
-        _generalExecutor = new StatelessExecutor(_modelHolder.Weights, _generalCtxParams, _log);
 
         _log.LogInformation(
             "EmbeddedLlamaChatService created using model: {Path} | pool={Pool} | ctx={Ctx} | threads={Threads}",
             _modelHolder.ModelPath, poolSize, ctxSize, threads);
     }
 
+
     public async Task<AiChatResult> ChatAsync(AiChatRequest request, CancellationToken ct)
     {
         var startTime = DateTimeOffset.UtcNow;
 
-        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(8));
         using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
         var combinedCt = linkedCts.Token;
 
         try
         {
-            CleanupGeneral();
             CleanupPending();
 
             var originalMsg = (request.Message ?? "").Trim();
             if (string.IsNullOrWhiteSpace(originalMsg))
-                return await SaveAndReturn(request, startTime, "🙂", Array.Empty<KnowledgeChunk>(), null, null);
+            {
+                return await SaveAndReturn(
+                    request,
+                    startTime,
+                    "🙂",
+                    Array.Empty<KnowledgeChunk>(),
+                    null,
+                    null);
+            }
 
-            var msg = originalMsg;
+            // ✅ التحية السريعة بدون أي معالجة ثقيلة
+            if (ArabicTextNormalizer.ContainsAny(originalMsg, "سلام", "السلام", "هلا", "مرحبا", "اهلا", "أهلا"))
+            {
+                return await SaveAndReturn(
+                    request,
+                    startTime,
+                    "مرحبًا بكم.\n\nأنا فيصل، المساعد الذكي للنظام.\n\nيمكنكم الاستفسار عن إجراءات النظام، مثل:\n• كيف أضيف مستفيد؟\n• كيف أفتح فترة قراءة العدادات؟\n• كيف أطبع تقريرًا؟",
+                    Array.Empty<KnowledgeChunk>(),
+                    null,
+                    "GREETING");
+            }
+
             var pageKey = ResolvePageKey(request);
             var convoKey = ResolveConversationKey(request);
+            var effectiveMsg = originalMsg;
+
+            var expandedFromPending = TryExpandPendingActionQuestion(convoKey, originalMsg, out var expandedQuestion);
+            if (expandedFromPending)
+            {
+                effectiveMsg = expandedQuestion;
+            }
+            else if (TryCanonicalizeDirectActionQuestion(originalMsg, out var canonicalDirectQuestion))
+            {
+                effectiveMsg = canonicalDirectQuestion;
+            }
+            else if (TryGetActivePendingIntent(convoKey, out var activePendingIntent) &&
+                     IsLikelyEntityReply(originalMsg))
+            {
+                return await SaveAndReturn(
+                    request,
+                    startTime,
+                    BuildGenericActionClarificationMessage(activePendingIntent),
+                    Array.Empty<KnowledgeChunk>(),
+                    null,
+                    "CLARIFY_PAGE");
+            }
 
             _log.LogInformation(
                 "AI_CHAT: convoKey='{ConvoKey}', pageKey='{PageKey}', msg='{Msg}'",
-                convoKey ?? "", pageKey ?? "", originalMsg.Replace("\n", " ").Trim()
-            );
+                convoKey ?? "", pageKey ?? "", effectiveMsg.Replace("\n", " ").Trim());
 
-            var intent = NormalizeIntent(originalMsg);
-            var entityHits = DetectEntities(originalMsg);
-            if (entityHits.Count == 0 &&
-                !string.IsNullOrWhiteSpace(pageKey) &&
-                IsKnownEntity(pageKey))
+            // ✅ تفسير السؤال + الصلاحيات
+            var interpretation = BuildInterpretationResult(request, effectiveMsg, pageKey);
+            var userFacingMessage = BuildUserFacingMessage(interpretation);
+
+            _log.LogInformation(
+                "AI_INTERPRET: page='{Page}', action='{Action}', regulation={Regulation}, detailed={Detailed}, generalOnly={GeneralOnly}",
+                interpretation.Page?.InternalPageName ?? "",
+                interpretation.Action?.ActionType.ToString() ?? "",
+                interpretation.IsRegulationLike,
+                interpretation.CanExplainDetailedPageFlow,
+                interpretation.CanExplainGeneralOnly);
+
+            // 0) سؤال عام جدًا بصيغة إجراء بدون تحديد صفحة (مثل: كيف أعدل)
+            if (IsGenericActionOnlyQuestion(effectiveMsg, interpretation))
             {
-                entityHits.Add((pageKey, GetEntityLabel(pageKey)));
-            }
-            string? selectedEntityKey = null;
-
-            // ---- Pending follow-up support (محسّن) ----
-            if (!string.IsNullOrWhiteSpace(convoKey) &&
-                _pending.TryGetValue(convoKey, out var pendingState) &&
-                DateTimeOffset.UtcNow - pendingState.At <= PendingTtl)
-            {
-                // لو المستخدم كتب فقط الكيان بعد سؤال توضيح
-                if (string.IsNullOrWhiteSpace(intent) &&
-                    entityHits.Count == 1)
-                {
-                    intent = pendingState.Intent;
-                    selectedEntityKey = entityHits[0].Key;
-                    msg = pendingState.OriginalMessage;
-                }
-            }
-
-            // ---- لو المستخدم كتب فقط اسم كيان ----
-            if (string.IsNullOrWhiteSpace(intent) &&
-                selectedEntityKey is null &&
-                entityHits.Count == 1 &&
-                IsShortEntityAnswer(originalMsg))
-            {
-                var label = entityHits[0].Label;
-                return await SaveAndReturn(
-                    request, startTime,
-                    $"ماذا تريد أن تعمل في {label}؟ إضافة؟ تعديل؟ حذف؟ بحث؟ طباعة؟",
-                    Array.Empty<KnowledgeChunk>(),
-                    entityHits[0].Key,
-                    null
-                );
-            }
-
-            // =========================
-            // ✅ تحديد عام vs نظام
-            // =========================
-            bool isSystem =
-                !string.IsNullOrWhiteSpace(intent) ||
-                entityHits.Count > 0 ||
-                (!string.IsNullOrWhiteSpace(pageKey) && IsKnownEntity(pageKey));
-
-            bool isGeneral = !isSystem;
-
-            // =========================
-            // ✅ مسار المحادثة العامة (بدون KB)
-            // =========================
-
-
-            if (isGeneral)
-            {
-                if (!string.IsNullOrWhiteSpace(convoKey))
-                    _pending.TryRemove(convoKey, out _);
-
-                var systemOnlyMessage =
-                    "أنا فيصل 👋\n" +
-                    "المساعد الذكي مصمم فقط للإجابة عن النظام الموحد.\n\n" +
-                    "اكتب سؤالك عن النظام بهذه الطريقة:\n" +
-                    "• كيف أضيف مستفيد؟\n" +
-                    "• كيف أضيف مبنى؟\n" +
-                    "• كيف أبحث في قوائم الانتظار؟\n" +
-                    "• كيف أطبع أو أصدّر؟";
+                var genericIntent = ResolveGenericActionIntent(interpretation, effectiveMsg);
+                RegisterPendingActionQuestion(convoKey, genericIntent, effectiveMsg);
 
                 return await SaveAndReturn(
                     request,
                     startTime,
-                    systemOnlyMessage,
+                    BuildGenericActionClarificationMessage(genericIntent),
                     Array.Empty<KnowledgeChunk>(),
                     null,
-                    null
-                );
+                    "CLARIFY_PAGE");
             }
 
-
-            //if (isGeneral)
-            //{
-            //    if (!string.IsNullOrWhiteSpace(convoKey))
-            //        _pending.TryRemove(convoKey, out _);
-
-            //    // ردود سريعة بدون LLM (اختياري لكنه يسرّع)
-            //    if (IsTrivialGreeting(originalMsg))
-            //    {
-            //        var quick = "هلا 👋 تفضل، وش تحب تسولف فيه؟";
-            //        return await SaveAndReturn(request, startTime, quick, Array.Empty<KnowledgeChunk>(), null, null);
-            //    }
-
-            //    var generalAnswer = await AskLlmGeneralAsync(convoKey, originalMsg, combinedCt);
-            //    generalAnswer = Clip(generalAnswer, GeneralMaxAnswerLen);
-
-            //    // خزّن turnين (user + assistant)
-            //    if (!string.IsNullOrWhiteSpace(convoKey))
-            //    {
-            //        AddGeneralTurn(convoKey, "user", originalMsg);
-            //        AddGeneralTurn(convoKey, "assistant", generalAnswer);
-            //    }
-
-            //    return await SaveAndReturn(
-            //        request,
-            //        startTime,
-            //        generalAnswer,
-            //        Array.Empty<KnowledgeChunk>(),
-            //        null,
-            //        null
-            //    );
-            //}
-
-            // =========================
-            // ✅ مسار النظام (RAG)
-            // =========================
-            var isProcedural = !string.IsNullOrWhiteSpace(intent);
-            var topK = Math.Max(8, _opt.RetrievalTopK);
-
-            var searchQuery = msg;
-            if (!string.IsNullOrWhiteSpace(selectedEntityKey))
-                searchQuery = $"{msg} {GetEntityLabel(selectedEntityKey)}";
-
-            //var citations = _kb.Search(searchQuery, topK);
-            var normalizedMsg = NormalizeArabic(originalMsg);
-            var citations = _kb.Search(normalizedMsg + " لائحه نظام", topK);
-            //var citations = _kb.Search(originalMsg + " لائحة نظام", topK);
-
-            // ✅ مسار خاص للأنظمة واللوائح
-            if (intent == "REGULATION")
+            // 1) سؤال لائحي: مسار مستقل (يسمح بالنصوص النظامية حتى بدون تحديد صفحة)
+            if (interpretation.IsRegulationLike)
             {
-                var detected = DetectEntities(originalMsg);
-                var entityKey = detected.FirstOrDefault().Key ?? "Regulations";
+                var regulationQueries = BuildRegulationSearchQueries(originalMsg, interpretation);
+                var regulationCitations = SearchRegulationKnowledgeBase(
+                    regulationQueries,
+                    interpretation,
+                    effectiveMsg,
+                    Math.Clamp(_opt.RetrievalTopK, 4, 6));
 
-                if (citations.Count == 0)
+                var regulationAnswer = TryAnswerRegulationDirectly(effectiveMsg, regulationCitations);
+
+                if (!string.IsNullOrWhiteSpace(regulationAnswer))
                 {
                     return await SaveAndReturn(
-                        request, startTime,
-                        "لم أجد نصًا نظاميًا مطابقًا لهذا السؤال.",
-                        citations, entityKey, intent
-                    );
-                }
-
-                var topic = ResolveRegulationTopic(originalMsg);
-
-                string result = "";
-                string sourceName = "مرجع غير معروف";
-
-                foreach (var citation in citations)
-                {
-                    var doc = _kb.GetDocumentBySource(citation.Source ?? "") ?? citation.Text ?? "";
-                    if (string.IsNullOrWhiteSpace(doc))
-                        continue;
-
-                    string extracted = "";
-
-                    // 1) نحاول استخراج قسم بعنوان واضح
-                    if (!string.IsNullOrWhiteSpace(topic))
-                    {
-                        extracted = ExtractSection(doc, $"## {topic}");
-                        extracted = TrimToSingleSection(RemoveKeywords(extracted)).Trim();
-                    }
-
-                    // 2) إذا فشل، نأخذ أفضل فقرة/مقطع من النص الكامل
-                    if (string.IsNullOrWhiteSpace(extracted))
-                    {
-                        var searchText = !string.IsNullOrWhiteSpace(topic) ? topic : originalMsg;
-                        extracted = ExtractBestRegulationPassage(doc, searchText); extracted = RemoveKeywords(extracted).Trim();
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(extracted))
-                    {
-                        // ❌ تجاهل نتائج النماذج أو الشاشات
-                        if (extracted.Contains("رقم الهوية") ||
-                            extracted.Contains("الرقم العام") ||
-                            extracted.Contains("اضغط زر"))
-                        {
-                            continue;
-                        }
-
-                        result = extracted;
-                        sourceName = citation.Source ?? "مرجع غير معروف";
-                        break;
-                    }
-                }
-
-                if (string.IsNullOrWhiteSpace(result))
-                    result = "لم يتم العثور على نص واضح لهذا الموضوع. تأكد من أن ملف الـ MD يحتوي النص الفعلي وليس العنوان أو الهيكل فقط.";
-
-                if (!string.IsNullOrWhiteSpace(topic))
-                {
-                    result =
-            $@"📘 الموضوع: {topic}
-
-📄 النص:
-{result}
-
-📚 المرجع:
-دليل اجراءات الاسكان والممتلكات";
-                }
-                else
-                {
-                    result =
-            $@"📄 النص:
-{result}
-
-📚 المرجع:
-دليل اجراءات الاسكان والممتلكات";
+                        request,
+                        startTime,
+                        regulationAnswer,
+                        regulationCitations,
+                        interpretation.Page?.InternalPageName,
+                        "REGULATION");
                 }
 
                 return await SaveAndReturn(
-                    request, startTime,
-                    result,
+                    request,
+                    startTime,
+                    BuildUnableToAnswerMessage(),
+                    regulationCitations,
+                    interpretation.Page?.InternalPageName,
+                    "REGULATION");
+            }
+
+            // 2) محادثات عامة محلية (بدون إنترنت) بنبرة رسمية
+            if (!interpretation.HasPage &&
+                TryBuildGeneralOfficialResponse(effectiveMsg, out var generalResponse, out var generalIntent))
+            {
+                return await SaveAndReturn(
+                    request,
+                    startTime,
+                    generalResponse,
+                    Array.Empty<KnowledgeChunk>(),
+                    null,
+                    generalIntent);
+            }
+
+            // 2) إذا الصفحة غير مفهومة
+            if (!interpretation.HasPage)
+            {
+                return await SaveAndReturn(
+                    request,
+                    startTime,
+                    BuildUnableToAnswerMessage(),
+                    Array.Empty<KnowledgeChunk>(),
+                    null,
+                    null);
+            }
+
+            // 3) إذا لا توجد صلاحية على الصفحة أو الإجراء: اعتذار صريح بدون شرح تفصيلي
+            if (!interpretation.CanExplainDetailedPageFlow)
+            {
+                var denyMessage = interpretation.Permission.DenyReasonArabic;
+                if (string.IsNullOrWhiteSpace(denyMessage))
+                {
+                    denyMessage = "أعتذر، لا أستطيع شرح هذه الصفحة أو هذا الإجراء لأن صلاحيتك الحالية لا تسمح بذلك.";
+                }
+
+                return await SaveAndReturn(
+                    request,
+                    startTime,
+                    denyMessage,
+                    Array.Empty<KnowledgeChunk>(),
+                    interpretation.Page?.InternalPageName,
+                    interpretation.Action?.ActionType.ToString());
+            }
+
+            // 4) تجهيز البحث الإجرائي
+            var searchQueries = BuildSearchQueries(effectiveMsg, interpretation);
+            var citations = SearchKnowledgeBase(searchQueries, interpretation, Math.Clamp(_opt.RetrievalTopK, 3, 5));
+
+            // 5) سؤال إجرائي + عنده صلاحية + عنده Action؟ جرّب استخراج مباشر أولًا
+            if (interpretation.CanExplainDetailedPageFlow &&
+                interpretation.Page is not null &&
+                interpretation.Action is not null)
+            {
+                var proceduralAnswer = TryAnswerProceduralDirectly(interpretation, effectiveMsg, citations);
+
+                if (!string.IsNullOrWhiteSpace(proceduralAnswer))
+                {
+                    return await SaveAndReturn(
+                        request,
+                        startTime,
+                        proceduralAnswer,
+                        citations,
+                        interpretation.Page.InternalPageName,
+                        interpretation.Action.ActionType.ToString());
+                }
+
+                var fallbackAnswer = BuildProceduralFallbackAnswer(interpretation);
+                if (!string.IsNullOrWhiteSpace(fallbackAnswer))
+                {
+                    return await SaveAndReturn(
+                        request,
+                        startTime,
+                        fallbackAnswer,
+                        citations,
+                        interpretation.Page.InternalPageName,
+                        interpretation.Action.ActionType.ToString());
+                }
+            }
+
+            // 6) إذا السؤال غير محدد كفاية ولم يحدد الإجراء
+            if (interpretation.HasPage && !interpretation.HasAction)
+            {
+                return await SaveAndReturn(
+                    request,
+                    startTime,
+                    BuildUnableToAnswerMessage(),
                     citations,
-                    entityKey,
-                    intent
-                );
+                    interpretation.Page?.InternalPageName,
+                    null);
             }
 
-            if (isProcedural)
-            {
-                var detected = DetectEntities(originalMsg);
-
-                if (!string.IsNullOrWhiteSpace(selectedEntityKey))
-                {
-                    detected = new List<(string Key, string Label)>
-                    {
-                        (selectedEntityKey, GetEntityLabel(selectedEntityKey))
-                    };
-                }
-
-                if (detected.Count == 0 && !string.IsNullOrWhiteSpace(pageKey) && IsKnownEntity(pageKey))
-                    detected.Add((pageKey, GetEntityLabel(pageKey)));
-
-                if (detected.Count == 0)
-                {
-                    if (!string.IsNullOrWhiteSpace(convoKey))
-                        _pending[convoKey] = new PendingState { Intent = intent, OriginalMessage = originalMsg, At = DateTimeOffset.UtcNow };
-
-                    return await SaveAndReturn(
-                        request, startTime,
-                        BuildDisambiguationQuestion(intent, Entities.Select(e => e.Label).ToArray()),
-                        citations, null, intent
-                    );
-                }
-
-                if (detected.Count > 1)
-                {
-                    if (!string.IsNullOrWhiteSpace(convoKey))
-                        _pending[convoKey] = new PendingState { Intent = intent, OriginalMessage = originalMsg, At = DateTimeOffset.UtcNow };
-
-                    var opts = detected.Select(x => x.Label).Distinct().ToArray();
-                    return await SaveAndReturn(
-                        request, startTime,
-                        BuildDisambiguationQuestion(intent, opts),
-                        citations, null, intent
-                    );
-                }
-
-                var entityKey = detected[0].Key;
-
-                if (citations.Count > 0)
-                {
-                    var filtered = citations
-                        .Where(c => !string.IsNullOrWhiteSpace(c.Source) &&
-                                    c.Source.Contains(entityKey, StringComparison.OrdinalIgnoreCase))
-                        .ToList();
-                    if (filtered.Count > 0) citations = filtered;
-                }
-
-                if (citations.Count == 0)
-                {
-                    var suggestions = GetSuggestions(entityKey);
-                    return await SaveAndReturn(
-                        request, startTime,
-                        $"لم أجد معلومات محددة لهذا السؤال.\n\n{suggestions}",
-                        citations, entityKey, intent
-                    );
-                }
-
-                var header = ResolveHeader(entityKey, intent, originalMsg);
-                if (string.IsNullOrWhiteSpace(header))
-                {
-                    var suggestions = GetSuggestions(entityKey);
-                    return await SaveAndReturn(
-                        request, startTime,
-                        $"لا يوجد شرح لهذه العملية في الدليل الحالي.\n\n{suggestions}",
-                        citations, entityKey, intent
-                    );
-                }
-
-                // (هنا أنت ما تستخدم LLM للـ procedural، فقط استخراج section)
-                string? best = null;
-                var tryCount = Math.Min(6, citations.Count);
-                var fullDocCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-                for (int i = 0; i < tryCount; i++)
-                {
-                    combinedCt.ThrowIfCancellationRequested();
-
-                    var c = citations[i];
-                    var text = c.Text ?? "";
-
-                    if (!ContainsAny(text, "## إضافة", "## تعديل", "## حذف", "## طباعة", "## تصدير", "## البحث"))
-                    {
-                        if (!string.IsNullOrWhiteSpace(c.Source))
-                        {
-                            if (!fullDocCache.TryGetValue(c.Source, out var cached))
-                            {
-                                cached = _kb.GetDocumentBySource(c.Source) ?? "";
-                                fullDocCache[c.Source] = cached;
-                            }
-                            if (!string.IsNullOrWhiteSpace(cached)) text = cached;
-                        }
-                    }
-
-                    var extracted = ExtractSection(text, header);
-                    if (!string.IsNullOrWhiteSpace(extracted) &&
-                        !extracted.Equals(header, StringComparison.OrdinalIgnoreCase))
-                    {
-                        best = extracted;
-                        break;
-                    }
-                }
-
-                var answerText = string.IsNullOrWhiteSpace(best) || best.Equals(header, StringComparison.OrdinalIgnoreCase)
-                    ? $"السؤال غير واضح، ممكن تحدد سؤالك؟\n\n{GetSuggestions(entityKey)}"
-                    : TrimToSingleSection(RemoveKeywords(best)).Trim();
-
-                if (string.IsNullOrWhiteSpace(answerText))
-                    answerText = "لا يوجد قسم مطابق لهذا السؤال في الدليل الحالي.";
-
-                if (!string.IsNullOrWhiteSpace(convoKey))
-                    _pending.TryRemove(convoKey, out _);
-
-                return await SaveAndReturn(request, startTime, answerText, citations, entityKey, intent);
-            }
-
-            // ---- غير إجرائي لكن داخل النظام: إذا لا توجد اقتباسات ----
-            if (citations.Count == 0)
-            {
-                return await SaveAndReturn(
-                    request, startTime,
-                    "لم أفهم بشكل كافي. جرّب: كيف أضيف؟ كيف أبحث؟ كيف أطبع؟ واذكر (مستفيد/مبنى/قوائم انتظار...).",
-                    citations, null, null
-                );
-            }
-
-            // ---- داخل النظام + citations: نخلي LLM يصيغ الإجابة ----
-            var systemPrompt = BuildSystemPrompt(request, citations);
-            var answerFromLlm = await AskLlmWithCitationsAsync(msg, systemPrompt, combinedCt);
-            if (string.IsNullOrWhiteSpace(answerFromLlm))
-                answerFromLlm = "وضح سؤالك أكثر.";
-
-            return await SaveAndReturn(request, startTime, answerFromLlm, citations, null, null);
+            return await SaveAndReturn(
+                request,
+                startTime,
+                userFacingMessage,
+                citations,
+                interpretation.Page?.InternalPageName,
+                interpretation.IsRegulationLike ? "REGULATION" : interpretation.Action?.ActionType.ToString());
         }
         catch (OperationCanceledException) when (timeoutCts.Token.IsCancellationRequested)
         {
-            _log.LogWarning("AI_TIMEOUT: Request took longer than 30 seconds");
+            _log.LogWarning("AI_TIMEOUT");
             return await SaveAndReturn(
-                request, startTime,
-                "معليش، أخذ وقت طويل. حاول تختصر السؤال أو تحدده.\nمثال: بدل (كيف أضيف؟) قل (كيف أضيف مستفيد؟).",
-                Array.Empty<KnowledgeChunk>(), null, null
-            );
+                request,
+                startTime,
+                "استغرق الطلب وقتًا أطول من المتوقع.\nحاول أن يكون سؤالك أقصر أو أوضح.",
+                Array.Empty<KnowledgeChunk>(),
+                null,
+                null);
         }
         catch (OperationCanceledException)
         {
             return await SaveAndReturn(
-                request, startTime,
+                request,
+                startTime,
                 "تم إيقاف العملية.",
-                Array.Empty<KnowledgeChunk>(), null, null
-            );
+                Array.Empty<KnowledgeChunk>(),
+                null,
+                null);
         }
         catch (Exception ex)
         {
             _log.LogError(ex, "AI_ERROR");
             return await SaveAndReturn(
-                request, startTime,
-                "صار خطأ غير متوقع في المساعد.",
-                Array.Empty<KnowledgeChunk>(), null, null
-            );
+                request,
+                startTime,
+                "حدث خطأ غير متوقع في المساعد.",
+                Array.Empty<KnowledgeChunk>(),
+                null,
+                null);
         }
     }
 
-    // =========================
-    // ✅ LLM Helpers (Pool-based)
-    // =========================
-    private async Task<LLamaContext> AcquireContextAsync(CancellationToken ct)
+    private string TryAnswerProceduralDirectly(
+    AssistantInterpretationResult interpretation,
+    string userQuestion,
+    IReadOnlyList<KnowledgeChunk> citations)
     {
-        await _poolGate.WaitAsync(ct);
-        if (_ctxPool.TryDequeue(out var ctx))
-            return ctx;
+        if (interpretation.Page is null || interpretation.Action is null || citations.Count == 0)
+            return "";
 
-        // احتياط (المفروض ما يصير)
-        _poolGate.Release();
-        throw new InvalidOperationException("Context pool empty unexpectedly.");
-    }
+        var entityKey = interpretation.Page.InternalPageName;
+        var intent = MapActionToLegacyIntent(interpretation, userQuestion);
 
-    private void ReleaseContext(LLamaContext ctx)
-    {
-        _ctxPool.Enqueue(ctx);
-        _poolGate.Release();
-    }
+        if (string.IsNullOrWhiteSpace(intent))
+            return "";
 
-    private LLamaContext CreateNewContext()
-    {
-        var ctxSize = (uint)Math.Clamp(_opt.ContextSize, 512, 2048);
-        var threads = Math.Max(1, _opt.Threads);
+        var headers = ResolveCandidateHeaders(entityKey, intent, userQuestion);
+        if (headers.Count == 0)
+            return "";
 
-        return _modelHolder.Weights.CreateContext(new ModelParams(_modelHolder.ModelPath)
+        // مسار مباشر: إذا عرفنا الصفحة، اسحب ملفها أولاً بدل الاعتماد الكامل على نتائج البحث.
+        var pageDoc = _kb.GetDocumentByPageInternalName(entityKey);
+        if (!string.IsNullOrWhiteSpace(pageDoc))
         {
-            ContextSize = ctxSize,
-            Threads = threads
-        });
-    }
-
-    private void ReleaseGeneralContext(LLamaContext ctx)
-    {
-        try { ctx.Dispose(); } catch { }
-
-        // استبدله بواحد جديد نظيف
-        var fresh = CreateNewContext();
-        _ctxPool.Enqueue(fresh);
-        _poolGate.Release();
-    }
-
-    private async Task<string> AskLlmGeneralAsync(string? convoKey, string userMsg, CancellationToken ct)
-    {
-        var ctx = await AcquireContextAsync(ct);
-
-        try
-        {
-            // ✅ خذ آخر كم turn فقط لتقليل التوكنز وتسريع
-            var history = (!string.IsNullOrWhiteSpace(convoKey))
-                ? GetGeneralTurns(convoKey!).TakeLast(6).ToList()
-                : new List<GeneralChatTurn>();
-
-            // ✅ ChatML لـ Qwen (مع تعليمات خفيفة وطبيعية)
-            var sbPrompt = new StringBuilder();
-            sbPrompt.AppendLine("<|system|>");
-            sbPrompt.AppendLine("أنت مساعد دردشة ودي وخفيف دم. أجب بالعربية وبشكل طبيعي وبشرح كافٍ.");
-            sbPrompt.AppendLine("أكمل إجابتك حتى تنتهي الفكرة. لا تنهِ الرد بكلمة ناقصة أو بنقاط.");
-            sbPrompt.AppendLine("إذا طلب المستخدم نكتة: اكتب النكتة كاملة (سؤال + جواب) بدون مقدمات طويلة.");
-            sbPrompt.AppendLine("إذا كان السؤال يحتاج تفاصيل، أعطِ تفاصيل.");
-            sbPrompt.AppendLine("إذا كانت إجابة قصيرة تكفي، اجعلها قصيرة."); sbPrompt.AppendLine("إذا كان السؤال عن نظام SmartFoundation اطلب اسم الشاشة/الصفحة.");
-            sbPrompt.AppendLine("ممنوع تكتب أي ترويسات مثل <|system|> أو <|user|> داخل الإجابة.");
-            sbPrompt.AppendLine("</s>");
-
-            // ✅ أضف history (قص كل رسالة لتقليل الحمل)
-            foreach (var t in history)
+            foreach (var header in headers)
             {
-                var txt = Clip(t.Text ?? "", 300);
+                var extractedFromPage = ExtractSection(pageDoc, header);
+                if (string.IsNullOrWhiteSpace(extractedFromPage))
+                    continue;
 
-                if (string.Equals(t.Role, "user", StringComparison.OrdinalIgnoreCase))
+                extractedFromPage = TrimToSingleSection(RemoveKeywords(extractedFromPage)).Trim();
+                if (!string.IsNullOrWhiteSpace(extractedFromPage) &&
+                    !extractedFromPage.Equals(header, StringComparison.OrdinalIgnoreCase))
                 {
-                    sbPrompt.AppendLine("<|user|>");
-                    sbPrompt.AppendLine(txt);
-                    sbPrompt.AppendLine("</s>");
+                    return extractedFromPage;
+                }
+            }
+        }
+
+        var fullDocCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var orderedCitations = citations
+            .OrderByDescending(c => SourceMatchesPage(c.Source, entityKey))
+            .ThenByDescending(c =>
+                (c.Source ?? "").Contains("pages/", StringComparison.OrdinalIgnoreCase) ||
+                (c.Source ?? "").Contains("pages\\", StringComparison.OrdinalIgnoreCase))
+            .ThenByDescending(c =>
+                interpretation.Action is not null &&
+                ArabicTextNormalizer.Contains(c.Text ?? "", interpretation.Action.ArabicLabel))
+            .Take(8)
+            .ToList();
+
+        foreach (var c in orderedCitations)
+        {
+            var text = c.Text ?? "";
+
+            if (!string.IsNullOrWhiteSpace(c.Source))
+            {
+                if (!fullDocCache.TryGetValue(c.Source, out var cached))
+                {
+                    cached = _kb.GetDocumentBySource(c.Source) ?? "";
+                    fullDocCache[c.Source] = cached;
+                }
+
+                if (!string.IsNullOrWhiteSpace(cached))
+                    text = cached;
+            }
+
+            foreach (var header in headers)
+            {
+                var extracted = ExtractSection(text, header);
+                if (string.IsNullOrWhiteSpace(extracted))
+                    continue;
+
+                extracted = TrimToSingleSection(RemoveKeywords(extracted)).Trim();
+                if (!string.IsNullOrWhiteSpace(extracted) &&
+                    !extracted.Equals(header, StringComparison.OrdinalIgnoreCase))
+                {
+                    return extracted;
+                }
+            }
+        }
+
+        return "";
+    }
+
+    private static IReadOnlyList<string> ResolveCandidateHeaders(string entityKey, string intent, string userQuestion)
+    {
+        var headers = new List<string>();
+        var primary = ResolveHeader(entityKey, intent, userQuestion);
+        if (!string.IsNullOrWhiteSpace(primary))
+            headers.Add(primary);
+
+        if (entityKey.Equals("WaitingListByResident", StringComparison.OrdinalIgnoreCase))
+        {
+            if (intent == "ADD")
+            {
+                if (ContainsAny(userQuestion, "خطاب تسكين", "خطاب", "خطابات"))
+                {
+                    headers.Add("## إضافة خطاب تسكين");
+                    headers.Add("### إضافة خطاب تسكين جديد");
                 }
                 else
                 {
-                    sbPrompt.AppendLine("<|assistant|>");
-                    sbPrompt.AppendLine(txt);
-                    sbPrompt.AppendLine("</s>");
+                    headers.Add("## إضافة سجل انتظار");
+                    headers.Add("### إضافة سجل انتظار جديد");
                 }
             }
 
-            sbPrompt.AppendLine("<|user|>");
-            sbPrompt.AppendLine(userMsg);
-            sbPrompt.AppendLine("</s>");
-            sbPrompt.AppendLine("<|assistant|>");
-
-            var prompt = sbPrompt.ToString();
-
-            // ✅ InteractiveExecutor أسرع عادةً مع Pool
-            var executor = new InteractiveExecutor(ctx);
-
-            var inferenceParams = new InferenceParams
+            if (intent == "UPDATE")
             {
-                MaxTokens = 350,
-                AntiPrompts = new List<string>
-    {
-        "<|system|>",
-        "<|user|>",
-        "<|assistant|>"
-    },
-                SamplingPipeline = new LLama.Sampling.DefaultSamplingPipeline
+                if (ContainsAny(userQuestion, "خطاب تسكين", "خطاب", "خطابات"))
                 {
-                    Temperature = 0.6f,
-                    Seed = 1337
+                    headers.Add("## تعديل خطاب تسكين");
+                    headers.Add("### تعديل خطاب تسكين");
                 }
-            };
-
-            var sb = new StringBuilder();
-            await foreach (var piece in executor.InferAsync(prompt, inferenceParams, ct))
-            {
-                sb.Append(piece);
-
-                if (sb.Length > 2000) break;
-            }
-
-            var answer = CleanLlmArtifacts(sb.ToString()).Trim();
-
-
-            // ✅ قص أي تسريب ChatML لو ظهر (احتياط)
-            var cut = answer.IndexOf("<|assistant|>", StringComparison.Ordinal);
-            if (cut >= 0) answer = answer[..cut];
-
-
-           
-
-            if (string.IsNullOrWhiteSpace(answer))
-                answer = "تمام 🙂 وش ودّك نتكلم عنه؟";
-
-            return answer;
-        }
-        finally
-        {
-            // ✅ أهم جزء: بما أننا ما نقدر نمسح KV cache في إصدارك
-            // نعمل Replace للـContext بعد كل General request حتى ما تتلوث الحالة وتسبب تكرار
-            try { ctx.Dispose(); } catch { }
-
-            try
-            {
-                // أنشئ Context جديد "نظيف" وأعده للـPool بدل القديم
-                var fresh = _modelHolder.Weights.CreateContext(new ModelParams(_modelHolder.ModelPath)
+                else
                 {
-                    // خلك على نفس ctx اللي عندك في الإعدادات (أنت الآن 2048)
-                    ContextSize = (uint)Math.Clamp(_opt.ContextSize, 512, 2048),
-                    Threads = Math.Max(1, _opt.Threads)
-                });
-
-                _ctxPool.Enqueue(fresh);
-            }
-            catch
-            {
-                // لو فشل الإنشاء لأي سبب، لا نخلي الـSemaphore معلّق
-                // (هنا ما نقدر نرجع ctx لأنه تم Dispose، لكن على الأقل نفك القفل)
-            }
-            finally
-            {
-                _poolGate.Release();
-            }
-        }
-    }
-
-    private async Task<string> AskLlmWithCitationsAsync(string userMsg, string systemPrompt, CancellationToken ct)
-    {
-        var ctx = await AcquireContextAsync(ct);
-        try
-        {
-            var executor = new InteractiveExecutor(ctx);
-
-            var prompt = $"""
-<|im_start|>system
-أنت مساعد ذكي داخل نظام SmartFoundation ومتخصص في أنظمة ولوائح الإسكان والممتلكات.
-
-تعليمات مهمة:
-- أجب بالعربية الفصحى المبسطة.
-- اعتمد فقط على مقاطع المساعدة المعطاة لك.
-- لا تخترع معلومات غير موجودة.
-- إذا لم تجد جوابًا واضحًا في النص، قل: لم يتم العثور على نص واضح لهذا الموضوع.
-- إذا كان السؤال عن تعريف، اذكر التعريف مباشرة.
-- إذا كان السؤال عن شروط، اذكر الشروط بنقاط.
-- إذا كان السؤال عن خطوات أو إجراء، اذكر الخطوات مرتبة.
-- إذا كان السؤال عن مقارنة، اذكر الطرفين بوضوح.
-- لا تكرر التعليمات.
-- لا تضف مقدمات طويلة.
-<|im_end|>
-<|im_start|>user
-مقاطع المساعدة:
-{systemPrompt}
-
-سؤال المستخدم:
-{userMsg}
-<|im_end|>
-<|im_start|>assistant
-""";
-
-            var inferenceParams = new InferenceParams
-            {
-                MaxTokens = Math.Min(_opt.MaxTokens, 320),
-                AntiPrompts = new List<string>
-            {
-                "<|im_start|>",
-                "<|im_end|>"
-            },
-                SamplingPipeline = new LLama.Sampling.DefaultSamplingPipeline
-                {
-                    Temperature = 0.25f,
-                    Seed = 1337
+                    headers.Add("## تعديل سجل انتظار");
+                    headers.Add("### تعديل سجل انتظار");
                 }
-            };
-
-            var sb = new StringBuilder();
-            await foreach (var piece in executor.InferAsync(prompt, inferenceParams, ct))
-            {
-                sb.Append(piece);
-                if (sb.Length > 2500) break;
             }
 
-            return CleanLlmArtifacts(sb.ToString());
-        }
-        finally
-        {
-            ReleaseContext(ctx);
-        }
-    }
-
-    //    private async Task<string> AskLlmWithCitationsAsync(string userMsg, string systemPrompt, CancellationToken ct)
-    //    {
-    //        var ctx = await AcquireContextAsync(ct);
-    //        try
-    //        {
-    //            var executor = new InteractiveExecutor(ctx);
-
-    //            // ✅ قالب “سؤال/إجابة” أفضل مع Qwen من [System]/[User]
-    //            var prompt = $"""
-    //أنت مساعد داخل نظام SmartFoundation.
-    //أجب بالعربية وباختصار ودقة.
-    //استخدم مقاطع المساعدة فقط إذا كانت مفيدة ولا تكرر تعليمات النظام.
-
-    //مقاطع المساعدة:
-    //{systemPrompt}
-
-    //سؤال المستخدم:
-    //{userMsg}
-
-    //إجابتك:
-    //""";
-
-    //            var inferenceParams = new InferenceParams
-    //            {
-    //                MaxTokens = Math.Min(_opt.MaxTokens, 320),
-    //                AntiPrompts = new List<string> { "سؤال المستخدم:", "مقاطع المساعدة:", "إجابتك:" },
-    //                SamplingPipeline = new LLama.Sampling.DefaultSamplingPipeline
-    //                {
-    //                    Temperature = 0.25f,
-    //                    Seed = 1337
-    //                }
-    //            };
-
-    //            var sb = new StringBuilder();
-    //            await foreach (var piece in executor.InferAsync(prompt, inferenceParams, ct))
-    //            {
-    //                sb.Append(piece);
-    //                if (sb.Length > 2500) break;
-    //            }
-
-    //            return CleanLlmArtifacts(sb.ToString());
-    //        }
-    //        finally
-    //        {
-    //            ReleaseContext(ctx);
-    //        }
-    //    }
-
-    private static bool IsTrivialGreeting(string msg)
-    {
-        msg = (msg ?? "").Trim().ToLowerInvariant();
-        msg = msg.Replace("؟", "").Replace("!", "").Replace(".", "").Trim();
-        return msg is "سلام" or "هلا" or "هلاا" or "هلا 👋" or "مرحبا" or "اهلا" or "hello" or "hi";
-    }
-
-    // =========================
-    // ✅ Save + Utilities (كما عندك)
-    // =========================
-    private async Task<AiChatResult> SaveAndReturn(
-      AiChatRequest request,
-      DateTimeOffset startTime,
-      string answer,
-      IReadOnlyList<KnowledgeChunk> citations,
-      string? entityKey,
-      string? intent)
-    {
-        var responseTime = (int)(DateTimeOffset.UtcNow - startTime).TotalMilliseconds;
-
-        var chatId = await SaveChatHistoryAsync(
-            request, answer, entityKey, intent, responseTime, citations?.Count ?? 0
-        );
-
-        return new AiChatResult(answer, citations)
-        {
-            ChatId = chatId,
-            EntityKey = entityKey,
-            Intent = intent
-        };
-    }
-
-    private static string BuildDisambiguationQuestion(string intent, string[] options)
-    {
-        var verb = intent switch
-        {
-            "ADD" => "تضيف",
-            "UPDATE" => "تعدل",
-            "DELETE" => "تحذف",
-            "PRINT" => "تطبع",
-            "EXPORT" => "تصدّر",
-            "SEARCH" => "تبحث",
-            _ => "تعمل"
-        };
-
-        var opts = string.Join(" ؟ ", options.Select(o => o.Trim()).Where(o => o.Length > 0));
-        return $"ماذا تريد أن {verb}؟ {opts}؟";
-    }
-
-    private static bool IsShortEntityAnswer(string msg)
-    {
-        msg = (msg ?? "").Trim().Replace("؟", "").Replace("?", "").Trim();
-        if (msg.Length == 0 || msg.Length > 20) return false;
-
-        var parts = msg.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return parts.Length <= 2;
-    }
-
-
-    private static string CleanLlmArtifacts(string s)
-    {
-        if (string.IsNullOrWhiteSpace(s)) return "";
-
-        s = s.Replace("[System]", "", StringComparison.OrdinalIgnoreCase)
-             .Replace("[User]", "", StringComparison.OrdinalIgnoreCase)
-             .Replace("[Assistant]", "", StringComparison.OrdinalIgnoreCase)
-             .Replace("<|im_start|>", "", StringComparison.OrdinalIgnoreCase)
-             .Replace("<|im_end|>", "", StringComparison.OrdinalIgnoreCase);
-
-        while (s.Contains("\n\n\n"))
-            s = s.Replace("\n\n\n", "\n\n");
-
-        return s.Trim();
-    }
-    //private static string CleanLlmArtifacts(string s)
-    //{
-    //    if (string.IsNullOrWhiteSpace(s)) return "";
-
-    //    s = s.Replace("[System]", "", StringComparison.OrdinalIgnoreCase)
-    //         .Replace("[User]", "", StringComparison.OrdinalIgnoreCase)
-    //         .Replace("[Assistant]", "", StringComparison.OrdinalIgnoreCase);
-
-    //    while (s.Contains("\n\n\n"))
-    //        s = s.Replace("\n\n\n", "\n\n");
-
-    //    return s.Trim();
-    //}
-
-
-    private static List<(string Key, string Label)> DetectEntities(string message)
-    {
-        message ??= "";
-        var hits = new List<(string Key, string Label)>();
-        var normalizedMessage = NormalizeArabic(message);
-
-        foreach (var e in Entities)
-        {
-            if (e.Keywords.Any(k => normalizedMessage.Contains(NormalizeArabic(k), StringComparison.Ordinal)))
-                hits.Add((e.Key, e.Label));
+            if (intent == "DELETE")
+            {
+                if (ContainsAny(userQuestion, "خطاب تسكين", "خطاب", "خطابات"))
+                {
+                    headers.Add("## حذف خطاب تسكين");
+                    headers.Add("### حذف خطاب تسكين");
+                }
+                else
+                {
+                    headers.Add("## حذف سجل انتظار");
+                    headers.Add("### حذف سجل انتظار");
+                }
+            }
         }
 
-        return hits
-            .GroupBy(x => x.Key, StringComparer.OrdinalIgnoreCase)
-            .Select(g => g.First())
+        if (entityKey.Equals("AllMeterRead", StringComparison.OrdinalIgnoreCase))
+        {
+            if (intent == "VIEW_ALL_READS")
+                headers.Add("## عرض جميع قراءات العدادات");
+            if (intent == "ADD_METER_READ")
+                headers.Add("## إضافة قراءة عداد");
+            if (intent == "APPROVE_METER")
+                headers.Add("## اعتماد قراءة عداد");
+            if (intent == "OPEN_PERIOD")
+                headers.Add("## فتح فترة قراءة العدادات");
+            if (intent == "CLOSE_PERIOD")
+                headers.Add("## إغلاق فترة قراءة العدادات");
+            if (intent == "READ_METER")
+            {
+                headers.Add("## إضافة قراءة عداد");
+                headers.Add("## تعديل قراءة عداد");
+            }
+        }
+
+        return headers
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static bool SourceMatchesPage(string? source, string pageInternalName)
+    {
+        if (string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(pageInternalName))
+            return false;
+
+        var normalized = source.Replace('\\', '/').Trim();
+        return normalized.EndsWith($"/{pageInternalName}.md", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Equals($"{pageInternalName}.md", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string TryAnswerRegulationDirectly(
+    string userQuestion,
+    IReadOnlyList<KnowledgeChunk> citations)
+    {
+        var topic = ResolveRegulationTopic(userQuestion);
+        var hasTopic = !string.IsNullOrWhiteSpace(topic);
+        var topicDisplay = FormatRegulationTopicForDisplay(topic);
+        var workingCitations = citations
+            .Where(x => IsRegulationSource(x.Source))
             .ToList();
-    }
-    //private static List<(string Key, string Label)> DetectEntities(string message)
-    //{
-    //    message ??= "";
-    //    var hits = new List<(string Key, string Label)>();
 
-    //    foreach (var e in Entities)
-    //    {
-    //        if (e.Keywords.Any(k => message.Contains(k, StringComparison.OrdinalIgnoreCase)))
-    //            hits.Add((e.Key, e.Label));
-    //    }
-
-    //    return hits
-    //        .GroupBy(x => x.Key, StringComparer.OrdinalIgnoreCase)
-    //        .Select(g => g.First())
-    //        .ToList();
-    //}
-
-    private static bool IsKnownEntity(string key)
-        => Entities.Any(e => e.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
-
-    private static string GetEntityLabel(string key)
-        => Entities.FirstOrDefault(e => e.Key.Equals(key, StringComparison.OrdinalIgnoreCase)).Label ?? key;
-
-    private static void CleanupPending()
-    {
-        var now = DateTimeOffset.UtcNow;
-        foreach (var kv in _pending)
+        if (workingCitations.Count == 0)
         {
-            if (now - kv.Value.At > PendingTtl)
-                _pending.TryRemove(kv.Key, out _);
+            workingCitations = BuildRegulationFallbackCitations(topic, userQuestion);
         }
-    }
 
-    private static string ResolvePageKey(AiChatRequest request)
-    {
-        var v =
-            (GetPropString(request, "PageName") ??
-             GetPropString(request, "Page") ??
-             GetPropString(request, "Route") ??
-             GetPropString(request, "Screen") ??
-             "").Trim();
+        if (workingCitations.Count == 0)
+            return "";
 
-        if (v.Contains("WaitingList", StringComparison.OrdinalIgnoreCase)) return "WaitingListByResident";
-        if (v.Contains("BuildingDetails", StringComparison.OrdinalIgnoreCase)) return "BuildingDetails";
-        if (v.Contains("Residents", StringComparison.OrdinalIgnoreCase)) return "Residents";
-        if (v.Contains("BuildingClass", StringComparison.OrdinalIgnoreCase)) return "BuildingClass";
-        if (v.Contains("ResidentClass", StringComparison.OrdinalIgnoreCase)) return "ResidentClass";
-
-        return v;
-    }
-
-    private static string ResolveConversationKey(AiChatRequest request)
-    {
-        var v =
-            (GetPropString(request, "ConversationId") ??
-             GetPropString(request, "ClientId") ??
-             GetPropString(request, "userId") ??
-             GetPropString(request, "UserId") ??
-             GetPropString(request, "usersId") ??
-             GetPropString(request, "UsersId") ??
-             "").Trim();
-
-        return v;
-    }
-
-    private static string? GetPropString(object obj, string propName)
-    {
-        var p = obj.GetType().GetProperty(propName);
-        if (p == null) return null;
-        var val = p.GetValue(obj);
-        return val?.ToString();
-    }
-
-    private static string GetSuggestions(string entityKey)
-    {
-        return entityKey switch
+        foreach (var citation in workingCitations.Take(6))
         {
-            "Residents" => "💡 جرب:\n• كيف أضيف مستفيد؟\n• كيف أعدل بيانات مستفيد؟\n• كيف أحذف مستفيد؟\n• كيف أبحث عن مستفيد؟",
-            "BuildingDetails" => "💡 جرب:\n• كيف أضيف مبنى؟\n• كيف أعدل بيانات مبنى؟\n• كيف أحذف مبنى؟\n• كيف أبحث عن مبنى؟",
-            "BuildingClass" => "💡 جرب:\n• كيف أضيف فئة مبنى؟\n• كيف أعدل فئة مبنى؟\n• كيف أحذف فئة مبنى؟\n• كيف أطبع قائمة فئات المباني؟",
-            "ResidentClass" => "💡 جرب:\n• كيف أضيف فئة مستفيد؟\n• كيف أعدل فئة مستفيد؟\n• كيف أحذف فئة مستفيد؟",
-            "WaitingListByResident" => "💡 جرب:\n• كيف أبحث عن مستفيد برقم الهوية؟\n• كيف أضيف سجل انتظار؟\n• كيف أنقل سجل انتظار لإدارة أخرى؟\n• كيف أضيف خطاب تسكين؟\n• كيف أحذف طلب نقل؟",
-            _ => "💡 جرب: كيف أضيف؟ كيف أعدل؟ كيف أحذف؟ كيف أبحث؟"
-        };
+            var doc = _kb.GetDocumentBySource(citation.Source ?? "") ?? citation.Text ?? "";
+            if (string.IsNullOrWhiteSpace(doc))
+                continue;
+
+            doc = RemoveRegulationMetadata(doc);
+            string extracted = "";
+
+            if (hasTopic)
+            {
+                extracted = ExtractSection(doc, $"## {topic}");
+                if (string.IsNullOrWhiteSpace(extracted))
+                    extracted = ExtractSectionByTopicHeader(doc, topic);
+
+                extracted = TrimToSingleSection(RemoveRegulationMetadata(RemoveKeywords(extracted))).Trim();
+            }
+
+            if (string.IsNullOrWhiteSpace(extracted))
+            {
+                extracted = ExtractBestRegulationPassage(doc, userQuestion);
+                extracted = RemoveRegulationMetadata(RemoveKeywords(extracted)).Trim();
+            }
+
+            if (!string.IsNullOrWhiteSpace(extracted))
+            {
+                if (IsOperationalProceduralText(extracted))
+                    continue;
+
+                if (hasTopic)
+                {
+                    var topicInText = ArabicTextNormalizer.Contains(extracted, topic);
+                    var topicInSource = ScoreRegulationSourceByTopic(citation.Source, topic) > 0;
+                    if (!topicInText && !topicInSource)
+                        continue;
+                }
+
+                return hasTopic
+                    ? $"📘 الموضوع: {topicDisplay}\n\n{extracted}"
+                    : extracted;
+            }
+        }
+
+        return "";
+    }
+
+    private static bool IsOperationalProceduralText(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return true;
+
+        return ContainsAny(
+            text,
+            "## تسجيل",
+            "## إضافة",
+            "## تعديل",
+            "## حذف",
+            "## اعتماد",
+            "## نقل",
+            "## رفع",
+            "## فتح",
+            "## إغلاق",
+            "1. الدخول إلى صفحة",
+            "2. الضغط على زر",
+            "3. إدخال",
+            "4. حفظ");
+    }
+
+
+    private static string MapActionToLegacyIntent(
+    AssistantInterpretationResult interpretation,
+    string userQuestion)
+    {
+        if (interpretation.Page is null || interpretation.Action is null)
+            return "";
+
+        var page = interpretation.Page.InternalPageName;
+        var action = interpretation.Action.ActionType;
+
+        if (page.Equals("Residents", StringComparison.OrdinalIgnoreCase))
+        {
+            return action switch
+            {
+                ActionType.Add => "ADD",
+                ActionType.Update => "UPDATE",
+                ActionType.Delete => "DELETE",
+                ActionType.Search => "SEARCH",
+                ActionType.Print => "PRINT",
+                _ => ""
+            };
+        }
+
+        if (page.Equals("BuildingDetails", StringComparison.OrdinalIgnoreCase))
+        {
+            return action switch
+            {
+                ActionType.Add => "ADD",
+                ActionType.Update => "UPDATE",
+                ActionType.Delete => "DELETE",
+                ActionType.Search => "SEARCH",
+                ActionType.Print => "PRINT",
+                _ => ""
+            };
+        }
+
+        if (page.Equals("BuildingClass", StringComparison.OrdinalIgnoreCase) ||
+            page.Equals("BuildingType", StringComparison.OrdinalIgnoreCase))
+        {
+            return action switch
+            {
+                ActionType.Add => "ADD",
+                ActionType.Update => "UPDATE",
+                ActionType.Delete => "DELETE",
+                ActionType.Search => "SEARCH",
+                ActionType.Print => "PRINT",
+                _ => ""
+            };
+        }
+
+        if (page.Equals("WaitingListByResident", StringComparison.OrdinalIgnoreCase))
+        {
+            return action switch
+            {
+                ActionType.Add => "ADD",
+                ActionType.Update => "UPDATE",
+                ActionType.Delete => "DELETE",
+                ActionType.Search => "SEARCH",
+                ActionType.Print => "PRINT",
+                ActionType.Export => "EXPORT",
+                _ => ""
+            };
+        }
+
+        if (page.Equals("Assign", StringComparison.OrdinalIgnoreCase))
+        {
+            return action switch
+            {
+                ActionType.OpenPeriod => "OPEN_ASSIGN",
+                ActionType.ClosePeriod => "CLOSE_ASSIGN",
+                ActionType.Assign => "ASSIGN_HOUSE",
+                ActionType.Update => "UPDATE_ASSIGN",
+                ActionType.Exclude => "EXCLUDE_ASSIGN",
+                ActionType.Search => "SEARCH",
+                ActionType.Print => "PRINT",
+                ActionType.Export => "EXPORT",
+                _ => ""
+            };
+        }
+
+        if (page.Equals("AllMeterRead", StringComparison.OrdinalIgnoreCase))
+        {
+            return action switch
+            {
+                ActionType.View => "VIEW_ALL_READS",
+                ActionType.OpenPeriod => "OPEN_PERIOD",
+                ActionType.ClosePeriod => "CLOSE_PERIOD",
+                ActionType.ReadMeter => ContainsAny(userQuestion, "إضافة قراءة عداد", "اضافة قراءة عداد", "أضيف قراءة عداد", "اضيف قراءة عداد", "قراءة عداد جديدة")
+                    ? "ADD_METER_READ"
+                    : "READ_METER",
+                ActionType.Approve => "APPROVE_METER",
+                _ => ""
+            };
+        }
+
+        if (page.Equals("Meters", StringComparison.OrdinalIgnoreCase))
+        {
+            return action switch
+            {
+                ActionType.Add => ContainsAny(userQuestion, "نوع عداد", "أنواع العدادات", "اضافة نوع عداد", "إضافة نوع عداد")
+                    ? "ADD_METER_TYPE"
+                    : "ADD_METER",
+                ActionType.Assign => "LINK_METER_BUILDING",
+                ActionType.Update => ContainsAny(userQuestion, "نوع عداد", "تعديل نوع عداد")
+                    ? "UPDATE_METER_TYPE"
+                    : "UPDATE_METER",
+                ActionType.Delete => ContainsAny(userQuestion, "نوع عداد", "حذف نوع عداد")
+                    ? "DELETE_METER_TYPE"
+                    : "DELETE_METER",
+                _ => ""
+            };
+        }
+
+        if (page.Equals("HousingExit", StringComparison.OrdinalIgnoreCase))
+        {
+            return action switch
+            {
+                ActionType.Add => "ADD",
+                ActionType.Update => "UPDATE",
+                ActionType.Delete => "DELETE",
+                ActionType.Approve => "APPROVE",
+                ActionType.Review => "SEND_FINANCE",
+                _ => ""
+            };
+        }
+
+        return "";
+    }
+
+
+    private static string BuildSystemPromptForLlm(
+    AssistantInterpretationResult interpretation,
+    IReadOnlyList<KnowledgeChunk> citations,
+    string userQuestion)
+    {
+        var sb = new StringBuilder();
+
+        sb.AppendLine("أنت مساعد ذكي داخل نظام SmartFoundation.");
+        sb.AppendLine("أجب بالعربية فقط.");
+        sb.AppendLine("اعتمد على المقاطع التالية فقط ولا تخترع معلومات.");
+        sb.AppendLine("إذا لم تجد جوابًا واضحًا، قل ذلك بوضوح.");
+        sb.AppendLine();
+
+        if (interpretation.Page is not null)
+            sb.AppendLine($"اسم الصفحة: {interpretation.Page.ArabicPageName}");
+
+        if (interpretation.Action is not null)
+            sb.AppendLine($"الإجراء: {interpretation.Action.ArabicLabel}");
+
+        sb.AppendLine($"نوع السؤال اللائحي: {(interpretation.IsRegulationLike ? "نعم" : "لا")}");
+        sb.AppendLine();
+
+        foreach (var c in citations.Take(4))
+        {
+            var txt = Clip(RemoveKeywords(c.Text ?? ""), 700);
+            if (!string.IsNullOrWhiteSpace(txt))
+            {
+                sb.AppendLine("مقطع:");
+                sb.AppendLine(txt);
+                sb.AppendLine();
+            }
+        }
+
+        return sb.ToString().Trim();
     }
 
     private static string ResolveHeader(string entityKey, string intent, string userQuery = "")
@@ -1070,7 +786,7 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
             ("Residents", "UPDATE") => "## تعديل مستفيد",
             ("Residents", "DELETE") => "## حذف مستفيد",
             ("Residents", "SEARCH") => "## البحث عن مستفيد",
-            ("Residents", "PRINT") => "## طباعة تقرير المستفيدين",
+            ("Residents", "PRINT") => "## طباعة بيانات مستفيد",
 
             ("BuildingDetails", "ADD") => "## إضافة مبنى",
             ("BuildingDetails", "UPDATE") => "## تعديل مبنى",
@@ -1084,16 +800,27 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
             ("BuildingClass", "SEARCH") => "## البحث عن فئة مبنى",
             ("BuildingClass", "PRINT") => "## طباعة تقرير فئات المباني",
 
+            ("BuildingType", "ADD") => "## إضافة نوع مبنى",
+            ("BuildingType", "UPDATE") => "## تعديل نوع مبنى",
+            ("BuildingType", "DELETE") => "## حذف نوع مبنى",
+            ("BuildingType", "SEARCH") => "## البحث عن نوع مبنى",
+
             ("ResidentClass", "ADD") => "## إضافة فئة مستفيد",
             ("ResidentClass", "UPDATE") => "## تعديل فئة مستفيد",
             ("ResidentClass", "DELETE") => "## حذف فئة مستفيد",
 
-            ("WaitingListByResident", "SEARCH") => "## البحث عن مستفيد",
-            ("WaitingListByResident", "ADD") => "### إضافة سجل انتظار جديد",
-            ("WaitingListByResident", "UPDATE") => "### تعديل سجل انتظار",
-            ("WaitingListByResident", "DELETE") => "### حذف سجل انتظار",
-            ("WaitingListByResident", "PRINT") => "## التصدير",
-            ("WaitingListByResident", "EXPORT") => "## التصدير",
+            ("WaitingListByResident", "SEARCH") => "## البحث في قائمة الانتظار حسب المستفيد",
+            ("WaitingListByResident", "ADD") => ContainsAny(userQuery, "خطاب تسكين", "خطاب", "خطابات")
+                ? "## إضافة خطاب تسكين"
+                : "## إضافة سجل انتظار",
+            ("WaitingListByResident", "UPDATE") => ContainsAny(userQuery, "خطاب تسكين", "خطاب", "خطابات")
+                ? "## تعديل خطاب تسكين"
+                : "## تعديل سجل انتظار",
+            ("WaitingListByResident", "DELETE") => ContainsAny(userQuery, "خطاب تسكين", "خطاب", "خطابات")
+                ? "## حذف خطاب تسكين"
+                : "## حذف سجل انتظار",
+            ("WaitingListByResident", "PRINT") => "## طباعة بيانات مستفيد",
+            ("WaitingListByResident", "EXPORT") => "## طباعة بيانات مستفيد",
 
             ("Assign", "OPEN_ASSIGN") => "## إنشاء محضر تخصيص جديد",
             ("Assign", "CLOSE_ASSIGN") => "## إغلاق محضر التخصيص",
@@ -1105,278 +832,1185 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
             ("Assign", "PRINT") => "## طباعة خطاب",
             ("Assign", "EXPORT") => "## تصدير البيانات",
 
+            ("AllMeterRead", "VIEW_ALL_READS") => "## عرض جميع قراءات العدادات",
+            ("AllMeterRead", "OPEN_PERIOD") => "## فتح فترة قراءة العدادات",
+            ("AllMeterRead", "CLOSE_PERIOD") => "## إغلاق فترة قراءة العدادات",
+            ("AllMeterRead", "ADD_METER_READ") => "## إضافة قراءة عداد",
+            ("AllMeterRead", "READ_METER") => "## تعديل قراءة عداد",
+            ("AllMeterRead", "APPROVE_METER") => "## اعتماد قراءة عداد",
+            ("Meters", "ADD_METER") => "## إضافة عداد",
+            ("Meters", "ADD_METER_TYPE") => "## إضافة نوع عداد",
+            ("Meters", "LINK_METER_BUILDING") => "## ربط عداد بمبنى",
+            ("Meters", "UPDATE_METER") => "## تعديل عداد",
+            ("Meters", "UPDATE_METER_TYPE") => "## تعديل نوع عداد",
+            ("Meters", "DELETE_METER") => "## حذف عداد",
+            ("Meters", "DELETE_METER_TYPE") => "## حذف نوع عداد",
+            ("HousingExit", "ADD") => "## تسجيل إخلاء",
+            ("HousingExit", "UPDATE") => "## تعديل إخلاء",
+            ("HousingExit", "APPROVE") => "## اعتماد الإخلاء",
+            ("HousingExit", "SEND_FINANCE") => "## إرسال الإخلاء للتدقيق المالي",
+
             _ => ""
         };
     }
 
 
+    // =========================================================
+    // Interpretation + Permissions
+    // =========================================================
 
-    private static string ResolveRegulationTopic(string query)
+    private AssistantInterpretationResult BuildInterpretationResult(
+        AiChatRequest request,
+        string userQuestion,
+        string? currentInternalPageName)
     {
-        if (string.IsNullOrWhiteSpace(query)) return "";
+        var match = SystemModuleMatcher.MatchQuestion(userQuestion, currentInternalPageName);
+        var permissionMap = UserPermissionSessionAccessor.GetCurrent()
+            ?? ResolvePermissionMapFromRequest(request);
+        var permission = ResolvePermission(permissionMap, match);
 
-        var normalizedQuery = NormalizeArabic(query);
+        var looksLikeRegulation = SystemModuleMatcher.LooksLikeRegulationQuestion(userQuestion);
+        var isRegulationLike =
+            looksLikeRegulation ||
+            (match.Page?.ModuleType == ModuleType.Regulation && match.Action is null);
 
-        var knownTopics = new[]
+        return new AssistantInterpretationResult
         {
-        "العمر الافتراضي",
-        "المنشاه السكنيه",
-        "المنشاه العسكريه",
-        "البند",
-        "الصنف",
-        "القوائم",
-        "المعاينه",
-        "اللائحه التنظيميه",
-        "الرسوم",
-        "الفتره الانتقاليه",
-        "سكن العزاب",
-        "سكن العائلات",
-        "المعدات الثابته",
-        "الغرامات",
-        "التلف الجزئي",
-        "التلف الكلي",
-        "الضياع",
-        "الصيانه",
-        "الاهمال",
-        "الاصلاح",
-        "الاستبدال",
-        "الانهاء",
-        "الاحقيه",
-        "التخصيص",
-        "الاخلاء"
-    };
+            OriginalQuestion = match.OriginalQuestion,
+            NormalizedQuestion = match.NormalizedQuestion,
+            Page = match.Page,
+            Action = match.Action,
+            PageScore = match.PageScore,
+            ActionScore = match.ActionScore,
+            MatchedPageKeywords = match.MatchedPageKeywords,
+            MatchedActionKeywords = match.MatchedActionKeywords,
+            Permission = permission,
+            IsRegulationLike = isRegulationLike
+        };
+    }
 
-        foreach (var topic in knownTopics.OrderByDescending(x => x.Length))
+    private static UserPermissionMap? ResolvePermissionMapFromRequest(AiChatRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.UserPermissionsJson))
+            return null;
+
+        try
         {
-            if (normalizedQuery.Contains(topic, StringComparison.Ordinal))
-                return topic;
+            var map = JsonSerializer.Deserialize<UserPermissionMap>(request.UserPermissionsJson);
+
+            return map;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("❌ Failed to parse permissions: " + ex.Message);
+            return null;
+        }
+    }
+
+    private static PermissionDecision ResolvePermission(
+        UserPermissionMap? permissionMap,
+        SystemQuestionMatchResult match)
+    {
+        if (match.Page is null)
+        {
+            return new PermissionDecision
+            {
+                HasAnyPageAccess = false,
+                HasRequestedActionPermission = false,
+                CanExplainDetailedPageFlow = false,
+                CanExplainGeneralOnly = false,
+                DenyReasonArabic = AssistantArabicPhrases.BuildPageNotFoundMessage(string.Empty)
+            };
         }
 
-        return "";
-    }
+        var page = match.Page;
 
-
-    //    private static string ResolveRegulationTopic(string query)
-    //    {
-    //        if (string.IsNullOrWhiteSpace(query)) return "";
-
-    //        query = query.Trim();
-
-    //        var knownTopics = new[]
-    //{
-    //    "العمر الافتراضي",
-    //    "المنشأة السكنية",
-    //    "المنشأة العسكرية",
-    //    "البند",
-    //    "الصنف",
-    //    "القوائم",
-    //    "المعاينة",
-    //    "اللائحة التنظيمية",
-    //    "الرسوم",
-    //    "الفترة الانتقالية",
-    //    "سكن العزاب",
-    //    "سكن العائلات",
-    //    "المعدات الثابتة",
-    //    "الغرامات",
-    //    "التلف الجزئي",
-    //    "التلف الكلي",
-    //    "الضياع",
-    //    "الصيانة",
-    //    "الإهمال",
-    //    "الإصلاح",
-    //    "الاستبدال",
-    //    "الإنهاء",
-    //    "الأحقية",
-    //    "التخصيص",
-    //    "الإخلاء"
-    //};
-
-    //        foreach (var topic in knownTopics.OrderByDescending(x => x.Length))
-    //        {
-    //            if (query.Contains(topic, StringComparison.OrdinalIgnoreCase))
-    //                return topic;
-    //        }
-
-    //        return "";
-    //    }
-
-    private static string ExtractSection(string text, string header)
-    {
-        if (string.IsNullOrWhiteSpace(text) || string.IsNullOrWhiteSpace(header)) return "";
-
-        var h = System.Text.RegularExpressions.Regex.Escape(header.Trim());
-        h = h.Replace("\\ ", "\\s+");
-
-        var pattern = $"{h}\\s*\\r?\\n(?<body>[\\s\\S]*?)(?=\\r?\\n###?\\s|\\z)";
-        var m = System.Text.RegularExpressions.Regex.Match(
-            text,
-            pattern,
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase
-        );
-
-        // ✅ لا ترجع العنوان فقط عند الفشل
-        if (!m.Success) return "";
-
-        return (header + "\n" + m.Groups["body"].Value).Trim();
-    }
-
-    private static string TrimToSingleSection(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text)) return "";
-
-        var sep = text.IndexOf("\n---", StringComparison.Ordinal);
-        if (sep > 0) text = text[..sep];
-
-        var first = text.IndexOf("\n## ", StringComparison.Ordinal);
-        if (first >= 0)
+        if (permissionMap is null)
         {
-            var second = text.IndexOf("\n## ", first + 4, StringComparison.Ordinal);
-            if (second > 0) text = text[..second];
+            return new PermissionDecision
+            {
+                InternalPageName = page.InternalPageName,
+                ArabicPageName = page.ArabicPageName,
+                HasAnyPageAccess = false,
+                HasRequestedActionPermission = false,
+                CanExplainDetailedPageFlow = false,
+                CanExplainGeneralOnly = false,
+                DenyReasonArabic = AssistantArabicPhrases.BuildPermissionDeniedForPage(page.ArabicPageName)
+            };
         }
 
-        return text.Trim();
-    }
+        var pagePermissionSet = permissionMap.FindPage(page.InternalPageName);
+        var hasAnyPageAccess = pagePermissionSet?.HasAccess() == true;
 
-    private static string BuildSystemPrompt(AiChatRequest r, IReadOnlyList<KnowledgeChunk> citations)
-    {
-        var kb = string.Join(
-            "\n\n---\n\n",
-            citations.Select((c, i) => $"[مقطع {i + 1}]\n{Clip(RemoveKeywords(c.Text ?? ""), 800)}")
-        );
-
-        return $"""
-سياق الصفحة:
-- {r.PageTitle} | {r.PageUrl}
-
-{kb}
-""";
-    }
-
-    private static string NormalizeIntent(string query)
-    {
-        //if (string.IsNullOrWhiteSpace(query)) return "";
-        //query = query.Trim().ToLowerInvariant();
-        //query = query.Replace("؟", "").Replace("?", "").Trim();
-
-        if (string.IsNullOrWhiteSpace(query)) return "";
-
-        query = NormalizeArabic(query);
-
-        if (ContainsAny(query, "تعديل", "عدّل", "عدل", "تحديث", "حدث", "تغيير", "غير", "صحح", "تصحيح"))
-            return "UPDATE";
-
-        if (ContainsAny(query, "حذف", "احذف", "مسح", "امسح", "ازالة", "إزالة", "الغاء", "إلغاء"))
-            return "DELETE";
-
-        if (ContainsAny(query, "طباعة", "اطبع", "تقرير", "pdf", "excel", "اكسل", "تصدير", "صدّر"))
-            return "PRINT";
-
-        if (ContainsAny(query, "بحث", "ابحث", "ادور", "وين", "فين"))
-            return "SEARCH";
-
-        if (ContainsAny(query, "اضافة", "إضافة", "اضف", "أضف", "اضيف", "أضيف", "تسجيل", "سجل", "انشاء", "إنشاء", "جديد"))
-            return "ADD";
-
-        if (ContainsAny(query,
-    "أضيف", "اضافة", "إنشاء",
-    "تعديل", "احذف", "حذف",
-    "بحث", "طباعة", "تصدير",
-    "مستفيد", "مبنى", "قائمة الانتظار"
-))
+        if (!hasAnyPageAccess)
         {
-            return "SYSTEM";
+            return new PermissionDecision
+            {
+                InternalPageName = page.InternalPageName,
+                ArabicPageName = page.ArabicPageName,
+                HasAnyPageAccess = false,
+                HasRequestedActionPermission = false,
+                CanExplainDetailedPageFlow = false,
+                CanExplainGeneralOnly = false,
+                PagePermissionSet = pagePermissionSet,
+                DenyReasonArabic = AssistantArabicPhrases.BuildPermissionDeniedForPage(page.ArabicPageName)
+            };
         }
 
-        if (ContainsAny(query,
-     "مادة", "نص المادة", "النص النظامي",
-     "لائحة", "اللوائح", "نظام", "الأنظمة", "تعليمات",
-     "شروط", "استثناء", "استثناءات", "ضوابط",
-     "آلية", "كيف يطبق", "كيفية التطبيق",
-     "التأمين الاحترازي", "الإخلاء", "أحقية السكن",
-     "الفترة الانتقالية", "الغرامات", "الصيانة", "الدفاع",
-     "التلف الجزئي", "التلف الكلي", "التخصيص", "إيجار السكن",
-     "سكن العزاب", "سكن العائلات", "الرسوم", "التجهيزات"))
-            return "REGULATION";
-
-        if (ContainsAny(query,
-   "ما هو", "ما هي", "وش", "عرف", "تعريف", "يعني", "المقصود"
-))
+        if (match.Action is null)
         {
-            return "REGULATION";
+            return new PermissionDecision
+            {
+                InternalPageName = page.InternalPageName,
+                ArabicPageName = page.ArabicPageName,
+                HasAnyPageAccess = true,
+                HasRequestedActionPermission = true,
+                CanExplainDetailedPageFlow = true,
+                CanExplainGeneralOnly = true,
+                PagePermissionSet = pagePermissionSet
+            };
         }
 
-        if (ContainsAny(query,
-    "الأحقية", "التخصيص", "الإخلاء",
-    "الصيانة", "التلف", "الضياع",
-    "الرسوم", "الغرامات",
-    "المنشأة", "العمر الافتراضي",
-    "الإهمال", "الإصلاح", "الاستبدال",
-    "الإنهاء", "القوائم", "المعاينة",
-    "اللائحة", "الفترة الانتقالية"
-))
+        var requiredPermissionNames = match.Action.PermissionNames?
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray() ?? Array.Empty<string>();
+
+        if (requiredPermissionNames.Length == 0)
         {
-            return "REGULATION";
+            return new PermissionDecision
+            {
+                InternalPageName = page.InternalPageName,
+                ArabicPageName = page.ArabicPageName,
+                HasAnyPageAccess = true,
+                HasRequestedActionPermission = true,
+                CanExplainDetailedPageFlow = true,
+                CanExplainGeneralOnly = true,
+                PagePermissionSet = pagePermissionSet
+            };
         }
 
-        if (
-    (query.StartsWith("كيف") || query.StartsWith("اذا") || query.StartsWith("وش"))
-    &&
-    ContainsAny(query,
-        "السكن",
-        "الأحقية",
-        "التخصيص",
-        "الإخلاء",
-        "الصيانة",
-        "التلف",
-        "الضياع",
-        "الغرامات",
-        "الرسوم",
-        "المستفيد",
-        "الوحدة",
-        "الفترة الانتقالية"
-    )
-)
+        var hasRequestedActionPermission = pagePermissionSet?.HasAnyPermission(requiredPermissionNames) == true;
+
+        if (!hasRequestedActionPermission)
         {
-            return "REGULATION";
+            return new PermissionDecision
+            {
+                InternalPageName = page.InternalPageName,
+                ArabicPageName = page.ArabicPageName,
+                RequestedPermissionName = string.Join(", ", requiredPermissionNames),
+                HasAnyPageAccess = true,
+                HasRequestedActionPermission = false,
+                CanExplainDetailedPageFlow = false,
+                CanExplainGeneralOnly = false,
+                PagePermissionSet = pagePermissionSet,
+                DenyReasonArabic = AssistantArabicPhrases.BuildPermissionDeniedForPage(page.ArabicPageName)
+            };
         }
 
-        return "";
-
-       
-
+        return new PermissionDecision
+        {
+            InternalPageName = page.InternalPageName,
+            ArabicPageName = page.ArabicPageName,
+            RequestedPermissionName = string.Join(", ", requiredPermissionNames),
+            HasAnyPageAccess = true,
+            HasRequestedActionPermission = true,
+            CanExplainDetailedPageFlow = true,
+            CanExplainGeneralOnly = true,
+            PagePermissionSet = pagePermissionSet
+        };
     }
 
-
-    private static bool ContainsAny(string s, params string[] parts)
+    private static string BuildUserFacingMessage(AssistantInterpretationResult result)
     {
-        return ArabicContainsAny(s, parts);
-    }
-    //private static bool ContainsAny(string s, params string[] parts)
-    //{
-    //    foreach (var p in parts)
-    //        if (s.Contains(p, StringComparison.OrdinalIgnoreCase))
-    //            return true;
-    //    return false;
-    //}
+        if (result is null)
+            return AssistantArabicPhrases.UnexpectedErrorMessage;
 
-    private static string RemoveKeywords(string text)
+        if (!result.HasPage)
+            return AssistantArabicPhrases.UnknownQuestionMessage;
+
+        if (!result.CanExplainDetailedPageFlow)
+        {
+            if (result.CanExplainGeneralOnly)
+            {
+                var intro = AssistantArabicPhrases.BuildPageIntroMessage(
+                    result.ArabicPageName ?? "",
+                    result.Page?.ArabicDescription ?? "");
+
+                var examples = AssistantArabicPhrases.BuildExamplesForPage(
+                    result.ArabicPageName ?? "",
+                    result.Page?.SuggestedQuestionsArabic ?? Array.Empty<string>());
+
+                return string.Join("\n\n",
+                    new[]
+                    {
+                        result.Permission.DenyReasonArabic,
+                        intro,
+                        examples
+                    }.Where(x => !string.IsNullOrWhiteSpace(x)));
+            }
+
+            return result.Permission.DenyReasonArabic
+                   ?? AssistantArabicPhrases.NoPermissionMessage;
+        }
+
+        if (result.HasPage && !result.HasAction)
+        {
+            var intro = AssistantArabicPhrases.BuildPageIntroMessage(
+                result.ArabicPageName ?? "",
+                result.Page?.ArabicDescription ?? "");
+
+            var examples = AssistantArabicPhrases.BuildExamplesForPage(
+                result.ArabicPageName ?? "",
+                result.Page?.SuggestedQuestionsArabic ?? Array.Empty<string>());
+
+            if (result.IsRegulationLike)
+            {
+                return string.Join("\n\n",
+                    new[]
+                    {
+                        intro,
+                        "فهمت أن سؤالك يتعلق باللوائح أو الشروط أو الجانب النظامي المرتبط بهذه الصفحة.",
+                        "سأعتمد على اللوائح والأنظمة والمعرفة المتاحة لإعطائك الإجابة المناسبة.",
+                        examples
+                    }.Where(x => !string.IsNullOrWhiteSpace(x)));
+            }
+
+            var availableActions = result.Page?.Actions?
+                .Select(x => x.ArabicLabel)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct()
+                .ToArray() ?? Array.Empty<string>();
+
+            var clarification = AssistantArabicPhrases.BuildActionClarificationMessage(
+                result.ArabicPageName ?? "",
+                availableActions);
+
+            return string.Join("\n\n",
+                new[]
+                {
+                    intro,
+                    clarification,
+                    examples
+                }.Where(x => !string.IsNullOrWhiteSpace(x)));
+        }
+
+        if (result.HasPage && result.HasAction)
+        {
+            var intro = AssistantArabicPhrases.BuildPageIntroMessage(
+                result.ArabicPageName ?? "",
+                result.Page?.ArabicDescription ?? "");
+
+            return string.Join("\n\n",
+                new[]
+                {
+                    intro,
+                    $"فهمت أنك تريد: {result.ArabicActionName} في صفحة {result.ArabicPageName}.",
+                    "سأعتمد الآن على شرح الصفحة والمعرفة المتاحة لإعطائك الإجابة المناسبة."
+                }.Where(x => !string.IsNullOrWhiteSpace(x)));
+        }
+
+        return AssistantArabicPhrases.UnknownQuestionMessage;
+    }
+
+    private static bool TryBuildGeneralOfficialResponse(
+        string userQuestion,
+        out string response,
+        out string intent)
     {
-        if (string.IsNullOrWhiteSpace(text)) return "";
+        response = "";
+        intent = "GENERAL";
 
-        var idx = text.IndexOf("## كلمات مفتاحية", StringComparison.OrdinalIgnoreCase);
-        if (idx >= 0) text = text.Substring(0, idx);
+        if (string.IsNullOrWhiteSpace(userQuestion))
+            return false;
 
-        text = text.Replace("Tags:", "", StringComparison.OrdinalIgnoreCase);
+        var normalized = ArabicTextNormalizer.Normalize(userQuestion);
+        var now = DateTimeOffset.Now;
 
-        text = text.Replace("[User]", "", StringComparison.OrdinalIgnoreCase)
-                   .Replace("[Assistant]", "", StringComparison.OrdinalIgnoreCase)
-                   .Replace("[System]", "", StringComparison.OrdinalIgnoreCase);
+        if (ContainsAny(normalized, "كم الساعه", "كم الساعة", "ما الوقت", "ماهو الوقت", "ما هو الوقت", "الوقت الان", "الوقت الآن", "الساعه الان", "الساعة الآن", "الوقت حاليا", "الوقت حالياً"))
+        {
+            var culture = new CultureInfo("ar-SA");
+            var dayName = culture.DateTimeFormat.GetDayName(now.DayOfWeek);
 
-        return text.Trim();
+            response =
+                $"الوقت الحالي هو {now:HH:mm}.\n" +
+                $"تاريخ اليوم: {dayName} {now:dd/MM/yyyy}.\n" +
+                "(وفق وقت الخادم المحلي).";
+            intent = "GENERAL_TIME";
+            return true;
+        }
+
+        if (ContainsAny(normalized, "تاريخ اليوم", "اليوم كم", "ما تاريخ اليوم", "كم التاريخ", "اي يوم", "أي يوم"))
+        {
+            var culture = new CultureInfo("ar-SA");
+            var dayName = culture.DateTimeFormat.GetDayName(now.DayOfWeek);
+            response = $"تاريخ اليوم هو {dayName} {now:dd/MM/yyyy} (وفق وقت الخادم المحلي).";
+            intent = "GENERAL_DATE";
+            return true;
+        }
+
+        if (ContainsAny(normalized, "من انت", "من أنت", "تعريفك", "وش دورك", "ما دورك", "ماذا تستطيع"))
+        {
+            response =
+                "أنا مساعد ذكي رسمي داخل النظام.\n" +
+                "أقدّم شرح الإجراءات واللوائح المعتمدة وفق الصلاحيات المتاحة للمستخدم.";
+            intent = "GENERAL_IDENTITY";
+            return true;
+        }
+
+        if (ContainsAny(normalized, "شكرا", "شكرًا", "يعطيك العافيه", "يعطيك العافية"))
+        {
+            response = "شكرًا لكم. في خدمتكم.";
+            intent = "GENERAL_THANKS";
+            return true;
+        }
+
+        if (ContainsAny(normalized, "كيف حالك", "اخبارك", "أخبارك"))
+        {
+            response = "شكرًا لسؤالكم. أنا جاهز لخدمتكم في استفسارات النظام.";
+            intent = "GENERAL_SMALLTALK";
+            return true;
+        }
+
+        if (ContainsAny(normalized, "طقس", "اخبار", "أخبار", "سعر الدولار", "سعر الذهب", "بيتكوين", "انترنت", "إنترنت"))
+        {
+            response =
+                "هذه الخدمة تعمل محليًا وبدون اتصال بالإنترنت.\n" +
+                "لذلك أجيب فقط عن إجراءات النظام واللوائح المعتمدة داخله.";
+            intent = "GENERAL_OFFLINE_SCOPE";
+            return true;
+        }
+
+        return false;
     }
 
-    private static string Clip(string s, int max)
-        => string.IsNullOrWhiteSpace(s) ? "" : (s.Length <= max ? s : s[..max] + " ...");
+    private static string BuildUnableToAnswerMessage()
+    {
+        return
+            "أعتذر منك، لم أتمكن من الإجابة بدقة 🙏\n" +
+            "سأحاول تطوير نفسي بشكل مستمر، حيث أنني لا زلت في مرحلة التدريب حاليًا.\n\n" +
+            "يمكنك مساعدتي بطرح سؤالك بشكل أوضح، مثل:\n\n" +
+            "* كيف أضيف عداد جديد؟\n" +
+            "* كيف أفتح فترة قراءة العدادات؟\n" +
+            "* كيف أبحث عن مستفيد؟\n" +
+            "* كيف أعدل بيانات الساكن؟\n" +
+            "* كيف أطبع التقرير؟\n" +
+            "* أين أجد صفحة التخصيص؟\n" +
+            "* كيف أسجل قراءة عداد؟\n\n" +
+            "كلما كان سؤالك محددًا أكثر، كانت إجابتي أدق 👍";
+    }
+
+    private static string ResolveGenericActionIntent(AssistantInterpretationResult interpretation, string userQuestion)
+    {
+        var actionType = interpretation.Action?.ActionType;
+
+        var resolved = actionType switch
+        {
+            ActionType.Add => "ADD",
+            ActionType.Update => "UPDATE",
+            ActionType.Delete => "DELETE",
+            ActionType.Search => "SEARCH",
+            ActionType.Print => "PRINT",
+            _ => string.Empty
+        };
+
+        if (!string.IsNullOrWhiteSpace(resolved))
+            return resolved;
+
+        return TryDetectGenericActionIntent(userQuestion, out var inferredIntent)
+            ? inferredIntent
+            : string.Empty;
+    }
+
+    private static void RegisterPendingActionQuestion(string convoKey, string intent, string originalMessage)
+    {
+        if (string.IsNullOrWhiteSpace(convoKey) || string.IsNullOrWhiteSpace(intent))
+            return;
+
+        _pending[convoKey] = new PendingState
+        {
+            Intent = intent,
+            OriginalMessage = originalMessage,
+            At = DateTimeOffset.UtcNow
+        };
+    }
+
+    private static bool TryExpandPendingActionQuestion(string convoKey, string currentMessage, out string expandedQuestion)
+    {
+        expandedQuestion = currentMessage;
+
+        if (string.IsNullOrWhiteSpace(convoKey) || string.IsNullOrWhiteSpace(currentMessage))
+            return false;
+
+        if (!_pending.TryGetValue(convoKey, out var pendingState))
+            return false;
+
+        if (DateTimeOffset.UtcNow - pendingState.At > PendingTtl)
+        {
+            _pending.TryRemove(convoKey, out _);
+            return false;
+        }
+
+        // إذا عاد المستخدم وسأل بصيغة كاملة جديدة، نلغي الحالة المؤقتة.
+        if (ContainsAny(currentMessage, "كيف", "أضيف", "اضيف", "أعدل", "اعدل", "أحذف", "احذف", "أبحث", "ابحث", "أطبع", "اطبع"))
+        {
+            _pending.TryRemove(convoKey, out _);
+            return false;
+        }
+
+        var directPage = ResolveDirectEntityReplyPage(currentMessage);
+        var matchedPage = directPage;
+
+        if (matchedPage is null)
+        {
+            var pageMatch = SystemModuleMatcher.MatchPage(currentMessage);
+            if (pageMatch.Page is null || pageMatch.Score < 3)
+                return false;
+
+            matchedPage = pageMatch.Page;
+        }
+
+        var canonical = BuildCanonicalActionQuestion(pendingState.Intent, matchedPage, currentMessage);
+        if (string.IsNullOrWhiteSpace(canonical))
+            return false;
+
+        expandedQuestion = canonical;
+        pendingState.At = DateTimeOffset.UtcNow;
+        _pending.TryRemove(convoKey, out _);
+        return true;
+    }
+
+    private static bool TryCanonicalizeDirectActionQuestion(string question, out string canonicalQuestion)
+    {
+        canonicalQuestion = question;
+
+        if (!TryDetectGenericActionIntent(question, out var intent))
+            return false;
+
+        var page = ResolveDirectEntityReplyPage(question);
+        if (page is null)
+            return false;
+
+        var canonical = BuildCanonicalActionQuestion(intent, page, question);
+        if (string.IsNullOrWhiteSpace(canonical))
+            return false;
+
+        canonicalQuestion = canonical;
+        return true;
+    }
+
+    private static string BuildCanonicalActionQuestion(string intent, SystemPageDefinition page, string? sourceText = null)
+    {
+        if (page is null || string.IsNullOrWhiteSpace(intent))
+            return string.Empty;
+
+        var src = sourceText ?? string.Empty;
+
+        string actionPhrase;
+
+        if (page.InternalPageName.Equals("Meters", StringComparison.OrdinalIgnoreCase))
+        {
+            var isType = ContainsAny(src, "نوع عداد", "أنواع العدادات", "انواع العدادات");
+            var isLink = ContainsAny(src, "ربط عداد", "ربط عداد بمبنى", "اربط عداد");
+
+            actionPhrase = intent switch
+            {
+                "ADD" => isType ? "إضافة نوع عداد" : (isLink ? "ربط عداد بمبنى" : "إضافة عداد"),
+                "UPDATE" => isType ? "تعديل نوع عداد" : "تعديل عداد",
+                "DELETE" => isType ? "حذف نوع عداد" : "حذف عداد",
+                "SEARCH" => "البحث عن عداد",
+                "PRINT" => "طباعة تقرير العدادات",
+                _ => string.Empty
+            };
+
+            return actionPhrase;
+        }
+
+        if (page.InternalPageName.Equals("AllMeterRead", StringComparison.OrdinalIgnoreCase))
+        {
+            actionPhrase = intent switch
+            {
+                "ADD" => "إضافة قراءة عداد",
+                "UPDATE" => "تعديل قراءة عداد",
+                "SEARCH" => "البحث في جميع قراءات العدادات",
+                _ => string.Empty
+            };
+
+            return actionPhrase;
+        }
+
+        if (page.InternalPageName.Equals("WaitingListByResident", StringComparison.OrdinalIgnoreCase))
+        {
+            actionPhrase = intent switch
+            {
+                "ADD" => "إضافة سجل انتظار",
+                "UPDATE" => "تعديل سجل انتظار",
+                "DELETE" => "حذف سجل انتظار",
+                "SEARCH" => "البحث عن سجل انتظار",
+                "PRINT" => "طباعة بيانات مستفيد",
+                _ => string.Empty
+            };
+
+            return actionPhrase;
+        }
+
+        if (page.InternalPageName.Equals("BuildingDetails", StringComparison.OrdinalIgnoreCase))
+        {
+            actionPhrase = intent switch
+            {
+                "ADD" => "إضافة مبنى",
+                "UPDATE" => "تعديل مبنى",
+                "DELETE" => "حذف مبنى",
+                "SEARCH" => "البحث عن مبنى",
+                "PRINT" => "طباعة تقرير المباني",
+                _ => string.Empty
+            };
+
+            return actionPhrase;
+        }
+
+        if (page.InternalPageName.Equals("Residents", StringComparison.OrdinalIgnoreCase))
+        {
+            actionPhrase = intent switch
+            {
+                "ADD" => "إضافة مستفيد",
+                "UPDATE" => "تعديل مستفيد",
+                "DELETE" => "حذف مستفيد",
+                "SEARCH" => "البحث عن مستفيد",
+                "PRINT" => "طباعة بيانات مستفيد",
+                _ => string.Empty
+            };
+
+            return actionPhrase;
+        }
+
+        var actionWord = intent switch
+        {
+            "ADD" => "إضافة",
+            "UPDATE" => "تعديل",
+            "DELETE" => "حذف",
+            "SEARCH" => "بحث",
+            "PRINT" => "طباعة",
+            _ => string.Empty
+        };
+
+        if (string.IsNullOrWhiteSpace(actionWord))
+            return string.Empty;
+
+        return $"{actionWord} {page.ArabicPageName}";
+    }
+
+    private static SystemPageDefinition? ResolveDirectEntityReplyPage(string entityReply)
+    {
+        if (string.IsNullOrWhiteSpace(entityReply))
+            return null;
+
+        if (ContainsAny(entityReply, "قراءة عداد", "قراءات العدادات", "جميع قراءات العدادات"))
+            return SystemModuleRegistry.FindPageByInternalName("AllMeterRead");
+
+        if (ContainsAny(entityReply, "نوع عداد", "أنواع العدادات", "انواع العدادات"))
+            return SystemModuleRegistry.FindPageByInternalName("Meters");
+
+        if (ContainsAny(entityReply, "مستفيد", "المستفيد", "المستفيدين"))
+            return SystemModuleRegistry.FindPageByInternalName("Residents");
+
+        if (ContainsAny(entityReply, "مبنى", "المبنى", "المباني"))
+            return SystemModuleRegistry.FindPageByInternalName("BuildingDetails");
+
+        if (ContainsAny(entityReply, "عداد", "العداد", "العدادات"))
+            return SystemModuleRegistry.FindPageByInternalName("Meters");
+
+        if (ContainsAny(entityReply, "سجل انتظار", "سجلات الانتظار", "قائمة انتظار", "قوائم الانتظار"))
+            return SystemModuleRegistry.FindPageByInternalName("WaitingListByResident");
+
+        if (ContainsAny(entityReply, "فئة مبنى", "فئات المباني"))
+            return SystemModuleRegistry.FindPageByInternalName("BuildingClass");
+
+        if (ContainsAny(entityReply, "نوع مبنى", "أنواع المباني", "انواع المباني"))
+            return SystemModuleRegistry.FindPageByInternalName("BuildingType");
+
+        return null;
+    }
+
+    private static bool TryGetActivePendingIntent(string convoKey, out string intent)
+    {
+        intent = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(convoKey))
+            return false;
+
+        if (!_pending.TryGetValue(convoKey, out var pendingState))
+            return false;
+
+        if (DateTimeOffset.UtcNow - pendingState.At > PendingTtl)
+        {
+            _pending.TryRemove(convoKey, out _);
+            return false;
+        }
+
+        intent = pendingState.Intent ?? string.Empty;
+        return !string.IsNullOrWhiteSpace(intent);
+    }
+
+    private static bool IsLikelyEntityReply(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+            return false;
+
+        if (ContainsAny(message, "كيف", "أضيف", "اضيف", "أعدل", "اعدل", "أحذف", "احذف", "أبحث", "ابحث", "أطبع", "اطبع"))
+            return false;
+
+        var tokens = ArabicTextNormalizer.Tokenize(message);
+        return tokens.Length is > 0 and <= 3;
+    }
+
+    private static bool TryDetectGenericActionIntent(string message, out string intent)
+    {
+        intent = string.Empty;
+        if (string.IsNullOrWhiteSpace(message))
+            return false;
+
+        var normalized = ArabicTextNormalizer.Normalize(message);
+
+        if (ContainsAny(normalized, "كيف اضيف", "كيف أضيف", "ابي اضيف", "أبي أضيف", "اضافه", "إضافة"))
+        {
+            intent = "ADD";
+            return true;
+        }
+
+        if (ContainsAny(normalized, "كيف اعدل", "كيف أعدل", "ابي اعدل", "أبي أعدل", "تعديل"))
+        {
+            intent = "UPDATE";
+            return true;
+        }
+
+        if (ContainsAny(normalized, "كيف احذف", "كيف أحذف", "ابي احذف", "أبي أحذف", "حذف"))
+        {
+            intent = "DELETE";
+            return true;
+        }
+
+        if (ContainsAny(normalized, "كيف ابحث", "كيف أبحث", "ابي ابحث", "أبي أبحث", "بحث"))
+        {
+            intent = "SEARCH";
+            return true;
+        }
+
+        if (ContainsAny(normalized, "كيف اطبع", "كيف أطبع", "ابي اطبع", "أبي أطبع", "طباعه", "طباعة"))
+        {
+            intent = "PRINT";
+            return true;
+        }
+
+        return false;
+    }
+
+    private static string BuildGenericActionClarificationMessage(string intent)
+    {
+        return intent switch
+        {
+            "ADD" =>
+                "ماذا تريد أن تضيف؟\n\n" +
+                "يمكنك التحديد مثل:\n" +
+                "• مبنى\n" +
+                "• مستفيد\n" +
+                "• سجل انتظار\n" +
+                "• عداد",
+
+            "UPDATE" =>
+                "ماذا تريد أن تعدل؟\n\n" +
+                "يمكنك التحديد مثل:\n" +
+                "• مبنى\n" +
+                "• مستفيد\n" +
+                "• فئة مبنى\n" +
+                "• نوع مبنى",
+
+            "DELETE" =>
+                "ماذا تريد أن تحذف؟\n\n" +
+                "يمكنك التحديد مثل:\n" +
+                "• مبنى\n" +
+                "• مستفيد\n" +
+                "• سجل انتظار\n" +
+                "• عداد",
+
+            "SEARCH" =>
+                "في أي صفحة تريد تنفيذ البحث؟\n\n" +
+                "مثال: مستفيد، مبنى، قائمة انتظار، قراءات العدادات.",
+
+            "PRINT" =>
+                "ما الذي تريد طباعته؟\n\n" +
+                "مثال: تقرير المستفيدين، تقرير المباني، تقرير القراءات.",
+
+            _ =>
+                "يرجى تحديد الصفحة المطلوبة أولًا حتى أقدم خطوات دقيقة.\n\n" +
+                "مثال: كيف أعدل مبنى؟ أو كيف أعدل فئة مبنى؟"
+        };
+    }
+
+    private static bool IsGenericActionOnlyQuestion(string userQuestion, AssistantInterpretationResult interpretation)
+    {
+        if (string.IsNullOrWhiteSpace(userQuestion))
+            return false;
+
+        if (interpretation.IsRegulationLike)
+            return false;
+
+        var tokens = ArabicTextNormalizer.Tokenize(userQuestion);
+        if (tokens.Length > 4)
+            return false;
+
+        if (!TryDetectGenericActionIntent(userQuestion, out _))
+            return false;
+
+        var hasPageSignal = interpretation.MatchedPageKeywords is { Count: > 0 };
+        if (hasPageSignal)
+            return false;
+
+        return true;
+    }
+
+    // =========================================================
+    // Search
+    // =========================================================
+
+    private IReadOnlyList<string> BuildSearchQueries(
+        string originalQuestion,
+        AssistantInterpretationResult interpretation)
+    {
+        var queries = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(originalQuestion))
+            queries.Add(originalQuestion);
+
+        var normalized = ArabicTextNormalizer.Normalize(originalQuestion);
+        if (!string.IsNullOrWhiteSpace(normalized))
+            queries.Add(normalized);
+
+        if (interpretation.Page is not null)
+        {
+            queries.Add(interpretation.Page.ArabicPageName);
+            queries.Add(interpretation.Page.InternalPageName);
+            queries.Add($"{originalQuestion} {interpretation.Page.ArabicPageName}");
+            queries.Add($"{normalized} {interpretation.Page.ArabicPageName}");
+            queries.Add($"{normalized} {interpretation.Page.InternalPageName}");
+        }
+
+        if (interpretation.Action is not null)
+        {
+            queries.Add($"{originalQuestion} {interpretation.Action.ArabicLabel}");
+            queries.Add($"{normalized} {interpretation.Action.ArabicLabel}");
+        }
+
+        if (interpretation.IsRegulationLike)
+        {
+            queries.Add($"{originalQuestion} لائحة نظام شروط ضوابط");
+            queries.Add($"{normalized} لائحة نظام شروط ضوابط");
+        }
+
+        return queries
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(5)
+            .ToArray();
+    }
+
+    private IReadOnlyList<string> BuildRegulationSearchQueries(
+        string originalQuestion,
+        AssistantInterpretationResult interpretation)
+    {
+        var queries = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(originalQuestion))
+            queries.Add(originalQuestion);
+
+        var normalized = ArabicTextNormalizer.Normalize(originalQuestion);
+        if (!string.IsNullOrWhiteSpace(normalized))
+            queries.Add(normalized);
+
+        var topic = ResolveRegulationTopic(originalQuestion);
+        if (!string.IsNullOrWhiteSpace(topic))
+        {
+            queries.Add(topic);
+            queries.Add($"{topic} تعريف شروط ضوابط");
+
+            if (ContainsAny(topic, "احقي", "أحقي", "استحقاق"))
+                queries.Add("أحقية السكن شروط الاستحقاق");
+
+            if (ContainsAny(topic, "اخلاء", "إخلاء"))
+                queries.Add("شروط الإخلاء الفترة الانتقالية");
+
+            if (ContainsAny(topic, "تلف", "جزئي", "كلي", "صيانة"))
+                queries.Add("التلف الجزئي التلف الكلي الصيانة المسؤولية");
+        }
+
+        queries.Add($"{originalQuestion} لائحة نظام شروط ضوابط تعريف");
+        queries.Add($"{normalized} لائحة نظام شروط ضوابط تعريف");
+        queries.Add("اللوائح والانظمة الاسكان");
+
+        if (interpretation.Page is not null)
+        {
+            queries.Add(interpretation.Page.ArabicPageName);
+            queries.Add($"{interpretation.Page.ArabicPageName} شروط");
+            queries.Add($"{interpretation.Page.ArabicPageName} تعريف");
+        }
+
+        return queries
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(6)
+            .ToArray();
+    }
+
+    private IReadOnlyList<KnowledgeChunk> SearchKnowledgeBase(
+        IReadOnlyList<string> queries,
+        AssistantInterpretationResult interpretation,
+        int topK)
+    {
+        var all = new List<KnowledgeChunk>();
+
+        foreach (var q in queries)
+        {
+            var hits = _kb.Search(q, topK);
+            if (hits is { Count: > 0 })
+                all.AddRange(hits);
+        }
+
+        var deduped = all
+            .Where(x => !string.IsNullOrWhiteSpace(x.Source) && !string.IsNullOrWhiteSpace(x.Text))
+            .GroupBy(x => $"{x.Source}::{x.Text}", StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
+            .ToList();
+
+        if (interpretation.Page is not null)
+        {
+            deduped = deduped
+                .OrderByDescending(x =>
+                {
+                    var score = 0;
+                    var src = (x.Source ?? "").Replace('\\', '/');
+
+                    if (ContainsAny(src, interpretation.Page.InternalPageName))
+                        score += 8;
+
+                    if (ContainsAny(x.Text ?? "", interpretation.Page.ArabicPageName))
+                        score += 5;
+
+                    if (src.EndsWith($"/{interpretation.Page.InternalPageName}.md", StringComparison.OrdinalIgnoreCase) ||
+                        src.Equals($"{interpretation.Page.InternalPageName}.md", StringComparison.OrdinalIgnoreCase))
+                    {
+                        score += 20;
+                    }
+
+                    if (src.Contains("pages/", StringComparison.OrdinalIgnoreCase))
+                        score += 6;
+
+                    if (interpretation.Action is not null &&
+                        ContainsAny(x.Text ?? "", interpretation.Action.ArabicLabel))
+                        score += 4;
+
+                    if (interpretation.IsRegulationLike &&
+                        ContainsAny(x.Text ?? "", "شروط", "ضوابط", "لائحة", "تعريف", "أحقية", "إخلاء"))
+                        score += 6;
+
+                    return score;
+                })
+                .Take(Math.Max(topK, 5))
+                .ToList();
+        }
+        else
+        {
+            deduped = deduped.Take(Math.Max(topK, 5)).ToList();
+        }
+
+        return deduped;
+    }
+
+    private IReadOnlyList<KnowledgeChunk> SearchRegulationKnowledgeBase(
+        IReadOnlyList<string> queries,
+        AssistantInterpretationResult interpretation,
+        string userQuestion,
+        int topK)
+    {
+        var all = new List<KnowledgeChunk>();
+
+        foreach (var q in queries)
+        {
+            var hits = _kb.Search(q, Math.Max(topK, 4));
+            if (hits is { Count: > 0 })
+                all.AddRange(hits);
+        }
+
+        var deduped = all
+            .Where(x => !string.IsNullOrWhiteSpace(x.Source) && !string.IsNullOrWhiteSpace(x.Text))
+            .GroupBy(x => $"{x.Source}::{x.Text}", StringComparer.OrdinalIgnoreCase)
+            .Select(g => g.First())
+            .ToList();
+
+        // ⛔ سؤال لائحي = نبحث فقط في ملفات اللوائح والأنظمة، ونستبعد ملفات صفحات الإجراءات.
+        var regulationOnly = deduped
+            .Where(x => IsRegulationSource(x.Source))
+            .ToList();
+
+        if (regulationOnly.Count == 0)
+            return Array.Empty<KnowledgeChunk>();
+
+        var topic = ResolveRegulationTopic(userQuestion);
+
+        var ranked = regulationOnly
+            .OrderByDescending(x =>
+            {
+                var score = 0;
+                var src = (x.Source ?? "").Replace('\\', '/').ToLowerInvariant();
+                var txt = x.Text ?? "";
+
+                if (!src.Contains("pages/", StringComparison.OrdinalIgnoreCase))
+                    score += 10;
+                else
+                    score -= 14;
+
+                if (src.Contains("rules") || src.Contains("regulation") || src.Contains("entitlement") ||
+                    src.Contains("eviction") || src.Contains("allocation") || src.Contains("maintenance"))
+                    score += 10;
+
+                if (ContainsAny(txt, "## شروط", "## تعريف", "ضوابط", "لائحة", "النظام", "أحقية", "استحقاق", "الإخلاء", "التخصيص"))
+                    score += 8;
+
+                if (!string.IsNullOrWhiteSpace(topic))
+                {
+                    var sourceTopicScore = ScoreRegulationSourceByTopic(src, topic);
+                    score += sourceTopicScore;
+
+                    if (ContainsAny(txt, topic))
+                        score += 10;
+
+                    if (sourceTopicScore == 0 && !ContainsAny(txt, topic))
+                        score -= 10;
+                }
+
+                if (interpretation.Page is not null && ContainsAny(txt, interpretation.Page.ArabicPageName))
+                    score += 3;
+
+                return score;
+            })
+            .Take(Math.Max(topK, 6))
+            .ToList();
+
+        return ranked;
+    }
+
+    private List<KnowledgeChunk> BuildRegulationFallbackCitations(string topic, string userQuestion)
+    {
+        var candidates = GetPreferredRegulationSources(topic)
+            .Concat(RegulationFileNames.Select(x => $"{x}.md"))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var list = new List<KnowledgeChunk>();
+
+        foreach (var source in candidates)
+        {
+            var doc = _kb.GetDocumentBySource(source);
+            if (string.IsNullOrWhiteSpace(doc))
+                continue;
+
+            var text = ExtractBestRegulationPassage(doc, userQuestion);
+            if (string.IsNullOrWhiteSpace(text))
+                text = doc;
+
+            text = RemoveRegulationMetadata(RemoveKeywords(text)).Trim();
+            if (string.IsNullOrWhiteSpace(text))
+                continue;
+
+            list.Add(new KnowledgeChunk(source, Clip(text, 900)));
+        }
+
+        return list;
+    }
+
+    private static IReadOnlyList<string> GetPreferredRegulationSources(string topic)
+    {
+        if (string.IsNullOrWhiteSpace(topic))
+            return new[] { "housing_rules_general.md", "housing_definitions.md" };
+
+        if (ContainsAny(topic, "اخلاء"))
+            return new[] { "housing_eviction.md", "housing_rules_general.md" };
+
+        if (ContainsAny(topic, "احقي", "استحقاق"))
+            return new[] { "housing_entitlement.md", "housing_definitions.md" };
+
+        if (ContainsAny(topic, "تلف", "جزئي", "كلي", "صيانه", "صيانة", "مسؤوليه", "مسؤولية"))
+            return new[] { "housing_maintenance.md", "housing_definitions.md", "housing_rules_general.md" };
+
+        if (ContainsAny(topic, "تخصيص"))
+            return new[] { "housing_allocation.md", "housing_entitlement.md" };
+
+        return new[] { "housing_rules_general.md", "housing_definitions.md" };
+    }
+
+    private static bool IsRegulationSource(string? source)
+    {
+        if (string.IsNullOrWhiteSpace(source))
+            return false;
+
+        var src = source.Replace('\\', '/').Trim().ToLowerInvariant();
+
+        if (src.Contains("pages/", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var file = src.Split('/').LastOrDefault() ?? src;
+        if (file.EndsWith(".md"))
+            file = file[..^3];
+
+        // يعتمد فقط على قائمة ملفات اللوائح/الأنظمة المحددة من الفريق.
+        return RegulationFileNames.Contains(file);
+    }
+
+    private static int ScoreRegulationSourceByTopic(string? source, string? topic)
+    {
+        if (string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(topic))
+            return 0;
+
+        var src = source.Replace('\\', '/').ToLowerInvariant();
+        var normalizedTopic = ArabicTextNormalizer.Normalize(topic);
+        var score = 0;
+
+        if (ContainsAny(normalizedTopic, "احقي", "استحقاق"))
+        {
+            if (src.Contains("housing_entitlement"))
+                score += 18;
+            if (src.Contains("housing_definitions"))
+                score += 6;
+        }
+
+        if (ContainsAny(normalizedTopic, "اخلاء"))
+        {
+            if (src.Contains("housing_eviction"))
+                score += 18;
+            if (src.Contains("housing_rules_general"))
+                score += 5;
+        }
+
+        if (ContainsAny(normalizedTopic, "تلف", "جزئي", "كلي", "صيانه", "صيانة", "مسؤوليه", "مسؤولية"))
+        {
+            if (src.Contains("housing_maintenance"))
+                score += 18;
+            if (src.Contains("housing_definitions"))
+                score += 8;
+            if (src.Contains("housing_rules_general"))
+                score += 6;
+        }
+
+        if (ContainsAny(normalizedTopic, "تخصيص"))
+        {
+            if (src.Contains("housing_allocation"))
+                score += 18;
+            if (src.Contains("housing_entitlement"))
+                score += 6;
+        }
+
+        return score;
+    }
+
+    // =========================================================
+    // LLM
+    // =========================================================
+
+    private async Task<LLamaContext> AcquireContextAsync(CancellationToken ct)
+    {
+        await _poolGate.WaitAsync(ct);
+        if (_ctxPool.TryDequeue(out var ctx))
+            return ctx;
+
+        _poolGate.Release();
+        throw new InvalidOperationException("Context pool empty unexpectedly.");
+    }
+
+    private void ReleaseContext(LLamaContext ctx)
+    {
+        _ctxPool.Enqueue(ctx);
+        _poolGate.Release();
+    }
+
+    private async Task<string> AskLlmWithPromptAsync(string fullPrompt, CancellationToken ct)
+    {
+        var ctx = await AcquireContextAsync(ct);
+
+        try
+        {
+            var executor = new InteractiveExecutor(ctx);
+
+            var inferenceParams = new InferenceParams
+            {
+                MaxTokens = 200,
+                AntiPrompts = new List<string>
+                {
+                    "[تعليمات النظام]",
+                    "[رسالة المستخدم]"
+                },
+                SamplingPipeline = new LLama.Sampling.DefaultSamplingPipeline
+                {
+                    Temperature = 0.2f,
+                    Seed = 1337
+                }
+            };
+
+            var sb = new StringBuilder();
+
+            await foreach (var piece in executor.InferAsync(fullPrompt, inferenceParams, ct))
+            {
+                sb.Append(piece);
+                if (sb.Length > 3500)
+                    break;
+            }
+
+            return CleanLlmArtifacts(sb.ToString());
+        }
+        finally
+        {
+            ReleaseContext(ctx);
+        }
+    }
+
+    // =========================================================
+    // Save + Utilities
+    // =========================================================
+
+    private async Task<AiChatResult> SaveAndReturn(
+        AiChatRequest request,
+        DateTimeOffset startTime,
+        string answer,
+        IReadOnlyList<KnowledgeChunk> citations,
+        string? entityKey,
+        string? intent)
+    {
+        var responseTime = (int)(DateTimeOffset.UtcNow - startTime).TotalMilliseconds;
+
+        var saveTask = SaveChatHistoryAsync(
+            request,
+            answer,
+            entityKey,
+            intent,
+            responseTime,
+            citations?.Count ?? 0);
+        var chatId = 0L;
+
+        var completed = await Task.WhenAny(saveTask, Task.Delay(TimeSpan.FromMilliseconds(350)));
+        if (completed == saveTask)
+        {
+            chatId = await saveTask;
+        }
+        else
+        {
+            _log.LogWarning("AI_SAVE_HISTORY_TIMEOUT");
+        }
+
+        return new AiChatResult(answer, citations)
+        {
+            ChatId = chatId,
+            EntityKey = entityKey,
+            Intent = intent
+        };
+    }
 
     private async Task<long> SaveChatHistoryAsync(
         AiChatRequest request,
@@ -1386,10 +2020,13 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
         int responseTimeMs,
         int citationsCount)
     {
-        if (_dataEngine is null) return 0;
-
         try
         {
+            using var scope = _scopeFactory.CreateScope();
+            var dataEngine = scope.ServiceProvider.GetService<ISmartComponentService>();
+            if (dataEngine is null)
+                return 0;
+
             var userId = GetPropString(request, "UserId");
             var idaraId = GetPropString(request, "IdaraId") ?? "1";
 
@@ -1438,7 +2075,7 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
                 Params = parameters
             };
 
-            var response = await _dataEngine.ExecuteAsync(spRequest);
+            var response = await dataEngine.ExecuteAsync(spRequest);
 
             if (response.Success && response.Data?.Count > 0)
             {
@@ -1457,39 +2094,330 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
         return 0;
     }
 
-    public void Dispose()
-    {
-        try
-        {
-            while (_ctxPool.TryDequeue(out var ctx))
-            {
-                try { ctx.Dispose(); } catch { }
-            }
-        }
-        catch { }
-
-        try { _poolGate?.Dispose(); } catch { }
-    }
-
     private static Dictionary<string, object?> CleanParams(Dictionary<string, object?> p)
     {
         var cleaned = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+
         foreach (var kv in p)
         {
             var v = kv.Value;
             if (v is DBNull) v = null;
             cleaned[kv.Key] = v;
         }
+
         return cleaned;
     }
 
+    private static string ResolvePageKey(AiChatRequest request)
+    {
+        var v =
+            (GetPropString(request, "PageName") ??
+             GetPropString(request, "Page") ??
+             GetPropString(request, "Route") ??
+             GetPropString(request, "Screen") ??
+             "").Trim();
+
+        return v;
+    }
+
+    private static string ResolveConversationKey(AiChatRequest request)
+    {
+        var conversationId = (request.ConversationId ?? GetPropString(request, "ConversationId") ?? "").Trim();
+        if (!string.IsNullOrWhiteSpace(conversationId))
+            return $"conv:{conversationId}";
+
+        var clientId = (request.ClientId ?? GetPropString(request, "ClientId") ?? "").Trim();
+        if (!string.IsNullOrWhiteSpace(clientId))
+            return $"client:{clientId}";
+
+        var userId = (request.UserId ??
+                      GetPropString(request, "userId") ??
+                      GetPropString(request, "UserId") ??
+                      GetPropString(request, "usersId") ??
+                      GetPropString(request, "UsersId") ??
+                      "").Trim();
+
+        var ip = (request.IpAddress ?? GetPropString(request, "IpAddress") ?? "").Trim();
+
+        if (!string.IsNullOrWhiteSpace(userId) && !string.IsNullOrWhiteSpace(ip))
+            return $"user:{userId}|ip:{ip}";
+
+        if (!string.IsNullOrWhiteSpace(userId))
+            return $"user:{userId}";
+
+        if (!string.IsNullOrWhiteSpace(ip))
+            return $"ip:{ip}";
+
+        var pageUrl = (request.PageUrl ?? "").Trim();
+        if (!string.IsNullOrWhiteSpace(pageUrl))
+            return $"page:{pageUrl}";
+
+        return "local-session";
+    }
+
+    private static string? GetPropString(object obj, string propName)
+    {
+        var p = obj.GetType().GetProperty(propName);
+        if (p == null) return null;
+
+        var val = p.GetValue(obj);
+        return val?.ToString();
+    }
+
+    private static string CleanLlmArtifacts(string s)
+    {
+        if (string.IsNullOrWhiteSpace(s))
+            return "";
+
+        s = s.Replace("[System]", "", StringComparison.OrdinalIgnoreCase)
+             .Replace("[User]", "", StringComparison.OrdinalIgnoreCase)
+             .Replace("[Assistant]", "", StringComparison.OrdinalIgnoreCase)
+             .Replace("<|im_start|>", "", StringComparison.OrdinalIgnoreCase)
+             .Replace("<|im_end|>", "", StringComparison.OrdinalIgnoreCase);
+
+        while (s.Contains("\n\n\n"))
+            s = s.Replace("\n\n\n", "\n\n");
+
+        return s.Trim();
+    }
+
+    private static string RemoveKeywords(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return "";
+
+        var idx = text.IndexOf("## كلمات مفتاحية", StringComparison.OrdinalIgnoreCase);
+        if (idx >= 0)
+            text = text[..idx];
+
+        text = text.Replace("Tags:", "", StringComparison.OrdinalIgnoreCase)
+                   .Replace("[User]", "", StringComparison.OrdinalIgnoreCase)
+                   .Replace("[Assistant]", "", StringComparison.OrdinalIgnoreCase)
+                   .Replace("[System]", "", StringComparison.OrdinalIgnoreCase);
+
+        return RemoveRegulationMetadata(text).Trim();
+    }
+
+    private static string RemoveRegulationMetadata(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return "";
+
+        var lines = text.Replace("\r\n", "\n")
+            .Split('\n', StringSplitOptions.None);
+
+        var cleaned = lines
+            .Where(line =>
+            {
+                var t = line.Trim();
+
+                if (t.StartsWith("- category:", StringComparison.OrdinalIgnoreCase))
+                    return false;
+
+                if (t.StartsWith("category:", StringComparison.OrdinalIgnoreCase))
+                    return false;
+
+                if (t.StartsWith("- search_tags:", StringComparison.OrdinalIgnoreCase))
+                    return false;
+
+                if (t.StartsWith("search_tags:", StringComparison.OrdinalIgnoreCase))
+                    return false;
+
+                return true;
+            });
+
+        var result = string.Join("\n", cleaned).Trim();
+
+        while (result.Contains("\n\n\n", StringComparison.Ordinal))
+            result = result.Replace("\n\n\n", "\n\n", StringComparison.Ordinal);
+
+        return result;
+    }
+
+    private static string Clip(string s, int max)
+        => string.IsNullOrWhiteSpace(s) ? "" : (s.Length <= max ? s : s[..max] + " ...");
+
+    private static bool ContainsAny(string s, params string[] parts)
+    {
+        if (string.IsNullOrWhiteSpace(s) || parts is null || parts.Length == 0)
+            return false;
+
+        foreach (var p in parts)
+        {
+            if (string.IsNullOrWhiteSpace(p))
+                continue;
+
+            if (ArabicTextNormalizer.Contains(s, p))
+                return true;
+        }
+
+        return false;
+    }
+
+    private static void CleanupPending()
+    {
+        var now = DateTimeOffset.UtcNow;
+
+        foreach (var kv in _pending)
+        {
+            if (now - kv.Value.At > PendingTtl)
+                _pending.TryRemove(kv.Key, out _);
+        }
+    }
+
+
+    private static string ResolveRegulationTopic(string query)
+    {
+        if (string.IsNullOrWhiteSpace(query)) return "";
+
+        var normalizedQuery = ArabicTextNormalizer.Normalize(query);
+
+        var knownTopics = new[]
+        {
+        "العمر الافتراضي",
+        "المنشاه السكنيه",
+        "المنشاه العسكريه",
+        "البند",
+        "الصنف",
+        "القوائم",
+        "المعاينه",
+        "اللائحه التنظيميه",
+        "الرسوم",
+        "الفتره الانتقاليه",
+        "سكن العزاب",
+        "سكن العائلات",
+        "المعدات الثابته",
+        "الغرامات",
+        "التلف الجزئي",
+        "التلف الكلي",
+        "الضياع",
+        "الصيانه",
+        "الاهمال",
+        "الاصلاح",
+        "الاستبدال",
+        "الانهاء",
+        "الاحقيه",
+        "احقيه السكن",
+        "التخصيص",
+        "الاخلاء",
+        "مسؤوليه المستفيد",
+        "مسؤوليه الاداره",
+        "المسؤوليات",
+        "واجبات المستفيد"
+    };
+
+        foreach (var topic in knownTopics.OrderByDescending(x => x.Length))
+        {
+            if (normalizedQuery.Contains(topic, StringComparison.Ordinal))
+                return topic;
+        }
+
+        return "";
+    }
+
+    private static string FormatRegulationTopicForDisplay(string topic)
+    {
+        var normalized = ArabicTextNormalizer.Normalize(topic);
+
+        return normalized switch
+        {
+            "الاحقيه" => "الأحقية",
+            "احقيه السكن" => "أحقية السكن",
+            "الاخلاء" => "الإخلاء",
+            "الصيانه" => "الصيانة",
+            "الاصلاح" => "الإصلاح",
+            "الانهاء" => "الإنهاء",
+            _ => string.IsNullOrWhiteSpace(topic) ? "" : topic
+        };
+    }
+
+    private static string ExtractSection(string text, string header)
+    {
+        if (string.IsNullOrWhiteSpace(text) || string.IsNullOrWhiteSpace(header))
+            return "";
+
+        var h = Regex.Escape(header.Trim());
+        h = h.Replace("\\ ", "\\s+");
+
+        var pattern = $"{h}\\s*\\r?\\n(?<body>[\\s\\S]*?)(?=\\r?\\n###?\\s|\\z)";
+        var m = Regex.Match(text, pattern, RegexOptions.IgnoreCase);
+
+        if (!m.Success)
+            return "";
+
+        return (header + "\n" + m.Groups["body"].Value).Trim();
+    }
+
+    private static string ExtractSectionByTopicHeader(string text, string topic)
+    {
+        if (string.IsNullOrWhiteSpace(text) || string.IsNullOrWhiteSpace(topic))
+            return "";
+
+        var lines = text.Replace("\r\n", "\n")
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+        var topicNormalized = ArabicTextNormalizer.Normalize(topic);
+
+        foreach (var line in lines)
+        {
+            var trimmed = line.Trim();
+            if (!trimmed.StartsWith("##", StringComparison.Ordinal))
+                continue;
+
+            if (!ArabicTextNormalizer.Contains(trimmed, topicNormalized))
+                continue;
+
+            var sec = ExtractSection(text, trimmed);
+            if (!string.IsNullOrWhiteSpace(sec))
+                return sec;
+        }
+
+        if (ContainsAny(topicNormalized, "اخلاء"))
+        {
+            foreach (var candidate in new[] { "## شروط الإخلاء", "## حالات الإخلاء", "## تعريف الإخلاء", "## إجراءات الإخلاء" })
+            {
+                var sec = ExtractSection(text, candidate);
+                if (!string.IsNullOrWhiteSpace(sec))
+                    return sec;
+            }
+        }
+
+        if (ContainsAny(topicNormalized, "احقي", "استحقاق"))
+        {
+            foreach (var candidate in new[] { "## تعريف الأحقية", "## شروط الأحقية", "## الفئات المستحقة" })
+            {
+                var sec = ExtractSection(text, candidate);
+                if (!string.IsNullOrWhiteSpace(sec))
+                    return sec;
+            }
+        }
+
+        return "";
+    }
+
+    private static string TrimToSingleSection(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return "";
+
+        var sep = text.IndexOf("\n---", StringComparison.Ordinal);
+        if (sep > 0)
+            text = text[..sep];
+
+        var first = text.IndexOf("\n## ", StringComparison.Ordinal);
+        if (first >= 0)
+        {
+            var second = text.IndexOf("\n## ", first + 4, StringComparison.Ordinal);
+            if (second > 0)
+                text = text[..second];
+        }
+
+        return text.Trim();
+    }
 
     private static string ExtractBestRegulationPassage(string text, string query, int maxLength = 1200)
     {
         if (string.IsNullOrWhiteSpace(text) || string.IsNullOrWhiteSpace(query))
             return "";
-
-        var normalizedQuery = query.Trim();
 
         var paragraphs = text.Replace("\r\n", "\n")
             .Split("\n\n", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -1501,11 +2429,9 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
             .Select(p => new
             {
                 Text = p.Trim(),
-                Score = ScoreParagraph(p, normalizedQuery)
+                Score = ScoreParagraph(p, query)
             })
-            .Where(x =>
-                x.Score > 0 &&
-                !IsUiOrFormNoise(x.Text))
+            .Where(x => x.Score > 0 && !IsUiOrFormNoise(x.Text))
             .OrderByDescending(x => x.Score)
             .ToList();
 
@@ -1528,23 +2454,6 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
         return sb.ToString().Trim();
     }
 
-    private static bool IsUiOrFormNoise(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return true;
-
-        return
-            text.Contains("رقم الهوية", StringComparison.OrdinalIgnoreCase) ||
-            text.Contains("الرقم العام", StringComparison.OrdinalIgnoreCase) ||
-            text.Contains("اضغط زر", StringComparison.OrdinalIgnoreCase) ||
-            text.Contains("إضافة مستفيد", StringComparison.OrdinalIgnoreCase) ||
-            text.Contains("إدخال بيانات", StringComparison.OrdinalIgnoreCase) ||
-            text.Contains("حفظ", StringComparison.OrdinalIgnoreCase) && text.Contains("نافذة", StringComparison.OrdinalIgnoreCase) ||
-            text.Contains("لا يعمل زر تعديل", StringComparison.OrdinalIgnoreCase) ||
-            text.Contains("تظهر رسالة حقول إلزامية", StringComparison.OrdinalIgnoreCase);
-    }
-
-
     private static int ScoreParagraph(string paragraph, string query)
     {
         if (string.IsNullOrWhiteSpace(paragraph) || string.IsNullOrWhiteSpace(query))
@@ -1552,8 +2461,8 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
 
         int score = 0;
 
-        var normalizedParagraph = NormalizeArabic(paragraph);
-        var normalizedQuery = NormalizeArabic(query);
+        var normalizedParagraph = ArabicTextNormalizer.Normalize(paragraph);
+        var normalizedQuery = ArabicTextNormalizer.Normalize(query);
 
         var topics = new[]
         {
@@ -1610,172 +2519,106 @@ internal sealed class EmbeddedLlamaChatService : IAiChatService, IDisposable
         if (normalizedParagraph.StartsWith("###"))
             score += 1;
 
-        if (ArabicContainsAny(normalizedQuery, "ما هو", "ما هي", "وش", "يعني", "تعريف", "عرف") &&
-            ArabicContainsAny(normalizedParagraph, "تعريف", "يقصد به", "هي"))
+        if (ContainsAny(normalizedQuery, "ما هو", "ما هي", "وش", "يعني", "تعريف", "عرف") &&
+            ContainsAny(normalizedParagraph, "تعريف", "يقصد به", "هي"))
         {
             score += 3;
         }
 
         return score;
     }
-
-    //private static int ScoreParagraph(string paragraph, string query)
-    //{
-    //    if (string.IsNullOrWhiteSpace(paragraph) || string.IsNullOrWhiteSpace(query))
-    //        return 0;
-
-    //    int score = 0;
-
-    //    var topics = new[]
-    //    {
-    //    "العمر الافتراضي",
-    //    "المنشأة السكنية",
-    //    "المنشأة العسكرية",
-    //    "البند",
-    //    "الصنف",
-    //    "القوائم",
-    //    "المعاينة",
-    //    "اللائحة التنظيمية",
-    //    "الرسوم",
-    //    "الفترة الانتقالية",
-    //    "سكن العزاب",
-    //    "سكن العائلات",
-    //    "المعدات الثابتة",
-    //    "الغرامات",
-    //    "التلف الجزئي",
-    //    "التلف الكلي",
-    //    "الضياع",
-    //    "الصيانة",
-    //    "الإهمال",
-    //    "الإصلاح",
-    //    "الاستبدال",
-    //    "الإنهاء",
-    //    "الأحقية",
-    //    "أحقية السكن",
-    //    "التخصيص",
-    //    "الإخلاء",
-    //    "مسؤولية المستفيد",
-    //    "مسؤولية الإدارة",
-    //    "المسؤوليات",
-    //    "واجبات المستفيد"
-    //};
-
-    //    foreach (var topic in topics)
-    //    {
-    //        if (query.Contains(topic, StringComparison.OrdinalIgnoreCase) &&
-    //            paragraph.Contains(topic, StringComparison.OrdinalIgnoreCase))
-    //        {
-    //            score += 10;
-    //        }
-    //    }
-
-    //    var words = query.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-    //    foreach (var word in words)
-    //    {
-    //        if (word.Length < 2) continue;
-
-    //        if (paragraph.Contains(word, StringComparison.OrdinalIgnoreCase))
-    //            score += 1;
-    //    }
-
-    //    if (paragraph.StartsWith("##"))
-    //        score += 2;
-
-    //    if (paragraph.StartsWith("###"))
-    //        score += 1;
-
-    //    if ((query.Contains("ما هو", StringComparison.OrdinalIgnoreCase) ||
-    //         query.Contains("ما هي", StringComparison.OrdinalIgnoreCase) ||
-    //         query.Contains("وش", StringComparison.OrdinalIgnoreCase) ||
-    //         query.Contains("يعني", StringComparison.OrdinalIgnoreCase) ||
-    //         query.Contains("تعريف", StringComparison.OrdinalIgnoreCase) ||
-    //         query.Contains("عرف", StringComparison.OrdinalIgnoreCase))
-    //         &&
-    //         (paragraph.Contains("تعريف", StringComparison.OrdinalIgnoreCase) ||
-    //          paragraph.Contains("يقصد به", StringComparison.OrdinalIgnoreCase) ||
-    //          paragraph.Contains("هي", StringComparison.OrdinalIgnoreCase)))
-    //    {
-    //        score += 3;
-    //    }
-
-    //    return score;
-    //}
-
-
-    private static string NormalizeArabic(string text)
+    private static bool IsUiOrFormNoise(string text)
     {
         if (string.IsNullOrWhiteSpace(text))
-            return "";
+            return true;
 
-        text = text.Trim();
-
-        // إزالة التشكيل
-        text = Regex.Replace(text, "[\u064B-\u065F\u0670\u06D6-\u06ED]", "");
-
-        // توحيد الحروف
-        text = text
-            .Replace('أ', 'ا')
-            .Replace('إ', 'ا')
-            .Replace('آ', 'ا')
-            .Replace('ٱ', 'ا')
-            .Replace('ى', 'ي')
-            .Replace('ئ', 'ي')
-            .Replace('ؤ', 'و')
-            .Replace('ة', 'ه');
-
-        // إزالة التطويل
-        text = text.Replace("ـ", "");
-
-        // توحيد الأرقام العربية/الفارسية إلى إنجليزية
-        text = text
-            .Replace('٠', '0').Replace('١', '1').Replace('٢', '2').Replace('٣', '3').Replace('٤', '4')
-            .Replace('٥', '5').Replace('٦', '6').Replace('٧', '7').Replace('٨', '8').Replace('٩', '9')
-            .Replace('۰', '0').Replace('۱', '1').Replace('۲', '2').Replace('۳', '3').Replace('۴', '4')
-            .Replace('۵', '5').Replace('۶', '6').Replace('۷', '7').Replace('۸', '8').Replace('۹', '9');
-
-        // إزالة الرموز الشائعة
-        text = text.Replace("؟", " ")
-                   .Replace("?", " ")
-                   .Replace("،", " ")
-                   .Replace(",", " ")
-                   .Replace(".", " ")
-                   .Replace(";", " ")
-                   .Replace(":", " ")
-                   .Replace("/", " ")
-                   .Replace("\\", " ")
-                   .Replace("-", " ")
-                   .Replace("_", " ");
-
-        // توحيد المسافات
-        text = Regex.Replace(text, @"\s+", " ").Trim();
-
-        return text.ToLowerInvariant();
+        return
+            text.Contains("رقم الهوية", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("الرقم العام", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("اضغط زر", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("إضافة مستفيد", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("إدخال بيانات", StringComparison.OrdinalIgnoreCase) ||
+            (text.Contains("حفظ", StringComparison.OrdinalIgnoreCase) && text.Contains("نافذة", StringComparison.OrdinalIgnoreCase)) ||
+            text.Contains("لا يعمل زر تعديل", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("تظهر رسالة حقول إلزامية", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool ArabicContains(string source, string target)
-    {
-        if (string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(target))
-            return false;
+    private static string BuildProceduralFallbackAnswer(AssistantInterpretationResult interpretation)
+{
+    if (interpretation.Page is null)
+        return "";
 
-        return NormalizeArabic(source).Contains(NormalizeArabic(target), StringComparison.Ordinal);
+    var pageName = interpretation.Page.ArabicPageName;
+    var pageDescription = interpretation.Page.ArabicDescription;
+    var actionName = interpretation.Action?.ArabicLabel ?? "";
+
+    if (string.IsNullOrWhiteSpace(actionName))
+    {
+        return $"صفحة {pageName}: {pageDescription}";
     }
 
-    private static bool ArabicContainsAny(string source, params string[] values)
+    return interpretation.Page.InternalPageName switch
     {
-        if (string.IsNullOrWhiteSpace(source) || values == null || values.Length == 0)
-            return false;
+        "AllMeterRead" when interpretation.Action?.ActionType == ActionType.View
+            => "لعرض جميع قراءات العدادات:\n1) ادخل إلى صفحة جميع قراءات العدادات.\n2) حدّد الفترة أو معايير البحث.\n3) نفّذ البحث.\n4) راجع النتائج الظاهرة في الجدول.",
 
-        var normalizedSource = NormalizeArabic(source);
+        "AllMeterRead" when interpretation.Action?.ActionType == ActionType.OpenPeriod
+            => "لفتح فترة قراءة عدادات:\n1) ادخل إلى صفحة جميع قراءات العدادات.\n2) اختر فتح فترة.\n3) أدخل بيانات الفترة المطلوبة.\n4) احفظ العملية ثم أكمل إدخال القراءات داخل الفترة.",
 
-        foreach (var value in values)
+        "AllMeterRead" when interpretation.Action?.ActionType == ActionType.ClosePeriod
+            => "لإغلاق فترة قراءة عدادات:\n1) ادخل إلى صفحة جميع قراءات العدادات.\n2) اختر الفترة المفتوحة.\n3) نفّذ أمر إغلاق الفترة بعد التأكد من اكتمال القراءات.",
+
+        "AllMeterRead" when interpretation.Action?.ActionType == ActionType.Approve
+            => "لاعتماد قراءة عداد:\n1) افتح صفحة جميع قراءات العدادات.\n2) ابحث عن سجل القراءة المطلوب.\n3) حدّد السجل.\n4) نفّذ اعتماد قراءة العداد.",
+
+        "Meters" when interpretation.Action?.ActionType == ActionType.Add
+            => "لإضافة عداد جديد:\n1) افتح صفحة العدادات.\n2) اختر إضافة عداد.\n3) أدخل بيانات العداد المطلوبة.\n4) احفظ البيانات.\n5) عند الحاجة اربط العداد بالمبنى المناسب.",
+
+        "Meters" when interpretation.Action?.ActionType == ActionType.Update
+            => "لتعديل بيانات عداد أو نوع عداد:\n1) افتح صفحة العدادات.\n2) ابحث عن السجل المطلوب.\n3) اختر التعديل.\n4) حدّث البيانات المطلوبة ثم احفظ.",
+
+        "Residents" when interpretation.Action?.ActionType == ActionType.Add
+            => "لإضافة مستفيد:\n1) افتح صفحة المستفيدين.\n2) اختر إضافة مستفيد.\n3) أدخل البيانات الأساسية المطلوبة.\n4) راجع الحقول الإلزامية.\n5) احفظ السجل.",
+
+        "Residents" when interpretation.Action?.ActionType == ActionType.Update
+            => "لتعديل بيانات مستفيد:\n1) افتح صفحة المستفيدين.\n2) ابحث عن المستفيد المطلوب.\n3) افتح سجل المستفيد.\n4) عدّل البيانات اللازمة.\n5) احفظ التعديلات.",
+
+        "BuildingDetails" when interpretation.Action?.ActionType == ActionType.Add
+            => "لإضافة مبنى:\n1) افتح صفحة المباني.\n2) اختر إضافة مبنى.\n3) أدخل بيانات المبنى والوحدة حسب الحقول المطلوبة.\n4) احفظ السجل.",
+
+        "BuildingDetails" when interpretation.Action?.ActionType == ActionType.Update
+            => "لتعديل بيانات مبنى:\n1) افتح صفحة المباني.\n2) ابحث عن المبنى المطلوب.\n3) اختر التعديل.\n4) حدّث البيانات ثم احفظ.",
+
+        "BuildingClass" when interpretation.Action?.ActionType == ActionType.Add
+            => "لإضافة فئة مبنى:\n1) افتح صفحة فئات المباني.\n2) اختر إضافة فئة مبنى.\n3) أدخل البيانات المطلوبة.\n4) احفظ السجل.",
+
+        "BuildingClass" when interpretation.Action?.ActionType == ActionType.Update
+            => "لتعديل فئة مبنى:\n1) افتح صفحة فئات المباني.\n2) ابحث عن الفئة المطلوبة.\n3) حدّد السجل.\n4) عدّل البيانات ثم احفظ.",
+
+        "BuildingType" when interpretation.Action?.ActionType == ActionType.Add
+            => "لإضافة نوع مبنى:\n1) افتح صفحة أنواع المباني.\n2) اختر إضافة نوع مبنى.\n3) أدخل البيانات المطلوبة.\n4) احفظ السجل.",
+
+        "BuildingType" when interpretation.Action?.ActionType == ActionType.Update
+            => "لتعديل نوع مبنى:\n1) افتح صفحة أنواع المباني.\n2) ابحث عن النوع المطلوب.\n3) حدّد السجل.\n4) عدّل البيانات ثم احفظ.",
+
+        "HousingExit" when interpretation.Action?.ActionType == ActionType.Add
+            => "لتسجيل إخلاء:\n1) افتح صفحة الإخلاء.\n2) اختر تسجيل إخلاء جديد.\n3) أدخل بيانات المستفيد والوحدة وتفاصيل الإخلاء.\n4) احفظ الطلب.\n5) أكمل الاعتماد أو الإرسال للمالية حسب الصلاحية.",
+
+        _ => $"لفهم إجراء {actionName} في صفحة {pageName}:\n1) افتح الصفحة المطلوبة.\n2) اختر الإجراء المناسب من الخيارات المتاحة.\n3) أدخل البيانات المطلوبة.\n4) راجع الحقول الإلزامية.\n5) احفظ أو اعتمد حسب نوع العملية."
+    };
+}
+  
+    public void Dispose()
+    {
+        try
         {
-            if (string.IsNullOrWhiteSpace(value)) continue;
-            if (normalizedSource.Contains(NormalizeArabic(value), StringComparison.Ordinal))
-                return true;
+            while (_ctxPool.TryDequeue(out var ctx))
+            {
+                try { ctx.Dispose(); } catch { }
+            }
         }
+        catch { }
 
-        return false;
+        try { _poolGate?.Dispose(); } catch { }
     }
-
 }

@@ -25,7 +25,10 @@ public sealed record AiChatRequest
     public string? ConversationId { get; init; }
     public string? ClientId { get; init; }
     public string? IpAddress { get; init; }
-    public string? IdaraId { get; init; } // ✅ إضافة
+    public string? IdaraId { get; init; }
+    public string? UserPermissionsJson { get; init; }
+
+
 }
 
 /// <summary>
