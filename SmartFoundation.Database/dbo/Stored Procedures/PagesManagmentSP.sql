@@ -132,7 +132,8 @@ SET @dateOfBirth_DT         = TRY_CONVERT(date, @dateOfBirth, 23);
                     ;THROW 50001, N'الاسم الإنجليزي مستخدم مسبقاً', 1;
                  END
             
-
+            Declare @ProgOrder int
+            set @ProgOrder = (select Top(1) programSerial + 1 from dbo.Program p order by p.programSerial desc )
 
 
             INSERT INTO  dbo.Program
@@ -156,7 +157,7 @@ SET @dateOfBirth_DT         = TRY_CONVERT(date, @dateOfBirth, 23);
               ,@programActive      
               ,@programLink        
               ,@programIcon        
-              ,@programSerial      
+              ,@ProgOrder      
               , GETDATE()
               ,@entryData
               ,@hostName

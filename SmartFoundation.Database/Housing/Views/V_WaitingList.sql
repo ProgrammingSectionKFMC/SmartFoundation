@@ -4,6 +4,7 @@
 
 
 
+
 CREATE VIEW [Housing].[V_WaitingList]
 AS
 WITH d AS
@@ -107,6 +108,7 @@ SELECT
 
     
     la.AssignPeriodID_FK as AssignPeriodID,
+    la.InAssignPeriod as InAssignPeriod,
     la.buildingActionParentID as LastActionbuildingActionParentID,
 
     la.buildingActionNote AS LastActionNote,

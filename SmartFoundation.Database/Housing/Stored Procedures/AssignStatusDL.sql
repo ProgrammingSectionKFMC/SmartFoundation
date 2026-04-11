@@ -3,7 +3,7 @@
 -- Create date: <Create Date,,>
 -- Description:	<Description,,>
 -- =============================================
-Create PROCEDURE [Housing].[AssignStatusDL] 
+CREATE PROCEDURE [Housing].[AssignStatusDL] 
 	-- Add the parameters for the stored procedure here
 	    @pageName_      NVARCHAR(400)
     , @idaraID        INT
@@ -29,6 +29,7 @@ BEGIN
             rd.FullName_A as FullName_A,
             w.NationalID,
             w.GeneralNo,
+            rd.rankNameA,
             w.ActionDecisionNo,
             convert(nvarchar(10),w.[ActionDecisionDate],23) ActionDecisionDate,
             w.WaitingClassID,
@@ -42,19 +43,26 @@ BEGIN
             ba.buildingActionTypeResidentAlias,
             w.buildingDetailsID,
             w.buildingDetailsNo,
+            b.militaryLocationName_A,
             isnull(w.LastActionNote,w.ActionNote) ActionNote,
             w.IdaraId,
             w.AssignPeriodID,
-            isnull((select count(*) FROM Housing.V_WaitingList w  WHERE w.AssignPeriodID = @AssignPeriodID and w.LastActionTypeID in (38,40) ),0) Count_
+            isnull((select count(*) FROM Housing.V_WaitingList w  WHERE w.AssignPeriodID = 20 and w.LastActionTypeID in (38,40) ),0) Count_,
+            
+            rd.militaryUnitName_A
+            
+            
             
             
     FROM Housing.V_WaitingList w 
     INNER JOIN Housing.V_GetFullResidentDetails rd 
         ON w.residentInfoID = rd.residentInfoID
         Inner Join Housing.BuildingActionType ba on w.LastActionTypeID = ba.buildingActionTypeID
+        left join Housing.V_GetGeneralListForBuilding b on w.buildingDetailsID = b.buildingDetailsID
     WHERE w.AssignPeriodID = @AssignPeriodID
       AND w.IdaraId = @idaraID
       AND  w.LastActionTypeID in (38,39,40,41,42,45)
+      AND (w.InAssignPeriod = 1 or w.InAssignPeriod is null)
       order by   w.waitingClassSequence asc
       --or w.LastActionTypeID in (2,3,18,19,20,21,22,23,24,26,27,28,33,34,35)
 
@@ -62,9 +70,10 @@ BEGIN
 
 
      -- AssignPeriod DDL
-            SELECT c.AssignPeriodID,c.AssignPeriodDescrption
+            SELECT c.AssignPeriodID,N'محضر تخصيص '+wc.waitingClassName_A+N' برقم '+CONVERT(nvarchar(100),c.AssignPeriodID) as AssignPeriodDescrptionText
             FROM [DATACORE].[Housing].[AssignPeriod] c
-            where  c.IdaraId_FK = @idaraID and c.AssignPeriodActive = 1 and c.AssignPeriodClose = 0 and c.AssignPeriodEnddate is not null
+            inner join Housing.WaitingClass wc on c.WaitingClassID_FK = wc.WaitingClassID
+            where  c.IdaraId_FK = 1 and c.AssignPeriodActive = 1 and c.AssignPeriodClose = 0 and c.AssignPeriodEnddate is not null
             and c.AssignPeriodFinalEND = 1 and c.AssignPeriodFinalEnddate is null
             order by c.AssignPeriodID asc
 

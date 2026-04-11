@@ -25,7 +25,7 @@ BEGIN
                 ,bd.buildingDetailsNo
                 ,bd.buildingDetailsRooms
                 ,bd.buildingLevelsCount
-                ,bd.buildingDetailsArea
+                ,cast(bd.buildingDetailsArea as decimal(18,2)) as buildingDetailsArea
                 ,bd.buildingDetailsCoordinates
                 ,bd.buildingTypeID_FK
                 ,bt.buildingTypeName_A
@@ -47,6 +47,38 @@ BEGIN
                 ,br.buildingRentStartDate
                 ,br.buildingRentEndDate
                 ,bd.IdaraId_FK
+                ,(select Top(1) count(*) 
+                from Housing.BuildingDetailsMeterServices m 
+                where m.BuildingDetailsID_FK = bd.buildingDetailsID 
+                and m.BuildingDetailsMeterServicesActive = 1 
+                and m.MeterServicesTypeID_FK = 1) ElectrcityServices
+                ,(select Top(1) count(*) 
+                from Housing.BuildingDetailsMeterServices m 
+                where m.BuildingDetailsID_FK = bd.buildingDetailsID 
+                and m.BuildingDetailsMeterServicesActive = 1 
+                and m.MeterServicesTypeID_FK = 2) WaterServices
+                ,(select Top(1) count(*) 
+                from Housing.BuildingDetailsMeterServices m 
+                where m.BuildingDetailsID_FK = bd.buildingDetailsID 
+                and m.BuildingDetailsMeterServicesActive = 1 
+                and m.MeterServicesTypeID_FK = 3) GasServices
+                ,(select Top(1) count(*) 
+                from Housing.BuildingDetailsMeterServices m 
+                where m.BuildingDetailsID_FK = bd.buildingDetailsID 
+                and m.BuildingDetailsMeterServicesActive = 1 
+                and m.MeterServicesTypeID_FK = 1) ElectrcityServicesView
+                ,(select Top(1) count(*) 
+                from Housing.BuildingDetailsMeterServices m 
+                where m.BuildingDetailsID_FK = bd.buildingDetailsID 
+                and m.BuildingDetailsMeterServicesActive = 1 
+                and m.MeterServicesTypeID_FK = 2) WaterServicesView
+                ,(select Top(1) count(*) 
+                from Housing.BuildingDetailsMeterServices m 
+                where m.BuildingDetailsID_FK = bd.buildingDetailsID 
+                and m.BuildingDetailsMeterServicesActive = 1 
+                and m.MeterServicesTypeID_FK = 3) GasServicesView
+               
+
 
            FROM [DATACORE].[Housing].[BuildingDetails] bd
             inner join [DATACORE].[Housing].[BuildingType] bt on bd.buildingTypeID_FK = bt.buildingTypeID
@@ -98,6 +130,19 @@ BEGIN
             WHERE r.buildingClassActive = 1 and (r.IdaraId_FK = @idaraID or r.IdaraId_FK is null);
 
 
+            -- services
+
+            select 
+             (select count(*) from Housing.MeterServiceTypeLinkedWithIdara m 
+                inner join Housing.MeterServiceTypeFixedAmount f on m.MeterServiceTypeID_FK = f.MeterServiceTypeID_FK
+                where m.MeterServiceTypeLinkedWithIdaraActive = 1 and m.Idara_FK = @idaraID and m.MeterServiceTypeID_FK = 1) ElectrictyService
+                ,(select count(*) from Housing.MeterServiceTypeLinkedWithIdara m 
+                  inner join Housing.MeterServiceTypeFixedAmount f on m.MeterServiceTypeID_FK = f.MeterServiceTypeID_FK
+                where m.MeterServiceTypeLinkedWithIdaraActive = 1 and m.Idara_FK = 1 and m.MeterServiceTypeID_FK = 2) WaterService
+                ,(select count(*) from Housing.MeterServiceTypeLinkedWithIdara m
+                  inner join Housing.MeterServiceTypeFixedAmount f on m.MeterServiceTypeID_FK = f.MeterServiceTypeID_FK
+                  where m.MeterServiceTypeLinkedWithIdaraActive = 1 and m.Idara_FK = @idaraID and m.MeterServiceTypeID_FK = 3) GasService
+                  
 
            
 END

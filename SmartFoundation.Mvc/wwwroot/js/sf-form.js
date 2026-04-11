@@ -333,6 +333,270 @@ window.sfToggle = function (el, forcedValue) {
     });
 };
 
+// SupportMyTickets:
+// - Fill p06 (page URL) when p05 (page name) changes
+// - Load and filter p07 (actions) by selected page + user permissions
+window.sfSupportPageChanged = async function (el) {
+    const form = el?.closest("form") || document;
+    const selectedPage = (el?.value || "").trim();
+    const pageUrlInput = form.querySelector('input[name="p06"]');
+    const actionSelect = form.querySelector('select[name="p07"]');
+
+    const refreshSelect2 = (selectEl) => {
+        if (!selectEl || !window.jQuery || !jQuery.fn || !jQuery.fn.select2) return;
+        const $s = jQuery(selectEl);
+        if ($s.data("select2")) {
+            $s.trigger("change.select2");
+        }
+    };
+
+    const resetActions = () => {
+        if (!actionSelect) return;
+
+        actionSelect.innerHTML = "";
+        actionSelect.selectedIndex = -1;
+        actionSelect.disabled = true;
+        refreshSelect2(actionSelect);
+    };
+
+    if (pageUrlInput) {
+        pageUrlInput.value = "";
+        pageUrlInput.dispatchEvent(new Event("input", { bubbles: true }));
+        pageUrlInput.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    resetActions();
+
+    if (!selectedPage) return;
+
+    try {
+        const url = `/Support/SupportMyTicketsPageMeta?pageName=${encodeURIComponent(selectedPage)}`;
+        const response = await fetch(url, {
+            method: "GET",
+            headers: {
+                "Accept": "application/json",
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        const pageUrl = (data?.pageUrl || "").toString().trim();
+        const actions = Array.isArray(data?.actions) ? data.actions : [];
+
+        if (pageUrlInput) {
+            pageUrlInput.value = pageUrl;
+            pageUrlInput.dispatchEvent(new Event("input", { bubbles: true }));
+            pageUrlInput.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+
+        if (!actionSelect) return;
+
+        actionSelect.innerHTML = "";
+
+        for (const action of actions) {
+            const value = (action?.value ?? action?.Value ?? "").toString().trim();
+            const text = (action?.text ?? action?.Text ?? value).toString().trim();
+            if (!value) continue;
+
+            const opt = document.createElement("option");
+            opt.value = value;
+            opt.textContent = text;
+            actionSelect.appendChild(opt);
+        }
+
+        actionSelect.value = "";
+        actionSelect.selectedIndex = -1;
+        actionSelect.disabled = actions.length === 0;
+        refreshSelect2(actionSelect);
+    } catch (err) {
+        console.error("sfSupportPageChanged error:", err);
+        resetActions();
+        if (window.toastr?.error) {
+            window.toastr.error("تعذر تحميل إجراءات الصفحة المختارة");
+        }
+    }
+};
+
+// SupportPhoneTickets:
+// - p09 (caller) controls p05 (page list) based on selected caller permissions
+// - p05 controls p06 (URL) + p07 (actions) for selected caller/page
+window.sfSupportPhoneCallerChanged = async function (el) {
+    const form = el?.closest("form") || document;
+    const callerUserId = (el?.value || "").trim();
+    const pageSelect = form.querySelector('select[name="p05"]');
+    const pageUrlInput = form.querySelector('input[name="p06"]');
+    const actionSelect = form.querySelector('select[name="p07"]');
+
+    const refreshSelect2 = (selectEl) => {
+        if (!selectEl || !window.jQuery || !jQuery.fn || !jQuery.fn.select2) return;
+        const $s = jQuery(selectEl);
+        if ($s.data("select2")) {
+            $s.trigger("change.select2");
+        }
+    };
+
+    const resetActions = () => {
+        if (!actionSelect) return;
+        actionSelect.innerHTML = "";
+        actionSelect.value = "";
+        actionSelect.selectedIndex = -1;
+        actionSelect.disabled = true;
+        refreshSelect2(actionSelect);
+    };
+
+    const resetPages = () => {
+        if (!pageSelect) return;
+        pageSelect.innerHTML = "";
+        pageSelect.value = "";
+        pageSelect.selectedIndex = -1;
+        pageSelect.disabled = true;
+        refreshSelect2(pageSelect);
+    };
+
+    if (pageUrlInput) {
+        pageUrlInput.value = "";
+        pageUrlInput.dispatchEvent(new Event("input", { bubbles: true }));
+        pageUrlInput.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    resetPages();
+    resetActions();
+
+    if (!callerUserId) return;
+
+    try {
+        const url = `/Support/SupportPhoneTicketsPageMeta?callerUserId=${encodeURIComponent(callerUserId)}`;
+        const response = await fetch(url, {
+            method: "GET",
+            headers: {
+                "Accept": "application/json",
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        const pages = Array.isArray(data?.pages) ? data.pages : [];
+
+        if (!pageSelect) return;
+
+        pageSelect.innerHTML = "";
+        for (const page of pages) {
+            const value = (page?.value ?? page?.Value ?? "").toString().trim();
+            const text = (page?.text ?? page?.Text ?? value).toString().trim();
+            if (!value) continue;
+
+            const opt = document.createElement("option");
+            opt.value = value;
+            opt.textContent = text;
+            pageSelect.appendChild(opt);
+        }
+
+        pageSelect.value = "";
+        pageSelect.selectedIndex = -1;
+        pageSelect.disabled = pages.length === 0;
+        refreshSelect2(pageSelect);
+    } catch (err) {
+        console.error("sfSupportPhoneCallerChanged error:", err);
+        if (window.toastr?.error) {
+            window.toastr.error("تعذر تحميل صفحات المستخدم المختار");
+        }
+    }
+};
+
+window.sfSupportPhonePageChanged = async function (el) {
+    const form = el?.closest("form") || document;
+    const selectedPage = (el?.value || "").trim();
+    const callerSelect = form.querySelector('select[name="p09"]');
+    const callerUserId = (callerSelect?.value || "").trim();
+    const pageUrlInput = form.querySelector('input[name="p06"]');
+    const actionSelect = form.querySelector('select[name="p07"]');
+
+    const refreshSelect2 = (selectEl) => {
+        if (!selectEl || !window.jQuery || !jQuery.fn || !jQuery.fn.select2) return;
+        const $s = jQuery(selectEl);
+        if ($s.data("select2")) {
+            $s.trigger("change.select2");
+        }
+    };
+
+    const resetActions = () => {
+        if (!actionSelect) return;
+        actionSelect.innerHTML = "";
+        actionSelect.value = "";
+        actionSelect.selectedIndex = -1;
+        actionSelect.disabled = true;
+        refreshSelect2(actionSelect);
+    };
+
+    if (pageUrlInput) {
+        pageUrlInput.value = "";
+        pageUrlInput.dispatchEvent(new Event("input", { bubbles: true }));
+        pageUrlInput.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    resetActions();
+
+    if (!selectedPage || !callerUserId) return;
+
+    try {
+        const url = `/Support/SupportPhoneTicketsPageMeta?callerUserId=${encodeURIComponent(callerUserId)}&pageName=${encodeURIComponent(selectedPage)}`;
+        const response = await fetch(url, {
+            method: "GET",
+            headers: {
+                "Accept": "application/json",
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        const pageUrl = (data?.pageUrl || "").toString().trim();
+        const actions = Array.isArray(data?.actions) ? data.actions : [];
+
+        if (pageUrlInput) {
+            pageUrlInput.value = pageUrl;
+            pageUrlInput.dispatchEvent(new Event("input", { bubbles: true }));
+            pageUrlInput.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+
+        if (!actionSelect) return;
+
+        actionSelect.innerHTML = "";
+        for (const action of actions) {
+            const value = (action?.value ?? action?.Value ?? "").toString().trim();
+            const text = (action?.text ?? action?.Text ?? value).toString().trim();
+            if (!value) continue;
+
+            const opt = document.createElement("option");
+            opt.value = value;
+            opt.textContent = text;
+            actionSelect.appendChild(opt);
+        }
+
+        actionSelect.value = "";
+        actionSelect.selectedIndex = -1;
+        actionSelect.disabled = actions.length === 0;
+        refreshSelect2(actionSelect);
+    } catch (err) {
+        console.error("sfSupportPhonePageChanged error:", err);
+        resetActions();
+        if (window.toastr?.error) {
+            window.toastr.error("تعذر تحميل إجراءات الصفحة المختارة");
+        }
+    }
+};
+
 
 // تفعيل الانتر على نفس الحقل + منع التكرار
 window.sfEnter = (function () {

@@ -1,6 +1,9 @@
 ﻿CREATE TABLE [Housing].[ExtendInsurance] (
     [ExtendInsuranceID]            BIGINT          IDENTITY (1, 1) NOT NULL,
     [buildingActionID_FK]          BIGINT          NULL,
+    [residentInfoID_FK]            BIGINT          NULL,
+    [buildingDetailsID_FK]         BIGINT          NULL,
+    [buildingDetailsNo]            NVARCHAR (2000) NULL,
     [InsuranceAmount]              DECIMAL (18, 2) NULL,
     [Remaining]                    DECIMAL (18, 2) NULL,
     [InsuranceAmountWithRemaining] DECIMAL (18, 2) NULL,

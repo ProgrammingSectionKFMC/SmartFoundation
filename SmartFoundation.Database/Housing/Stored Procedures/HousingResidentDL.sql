@@ -3,7 +3,7 @@
 -- Create date: <Create Date,,>
 -- Description:	<Description,,>
 -- =============================================
-Create PROCEDURE [Housing].[HousingResidentDL] 
+CREATE PROCEDURE [Housing].[HousingResidentDL] 
 	-- Add the parameters for the stored procedure here
 	    @pageName_      NVARCHAR(400)
     , @idaraID        INT
@@ -38,7 +38,11 @@ BEGIN
             w.buildingDetailsNo,
             isnull(w.LastActionNote,w.ActionNote) ActionNote,
             w.IdaraId,
-            w.AssignPeriodID
+            w.AssignPeriodID,
+            (select count(*) from Housing.MeterForBuilding m 
+            where m.buildingDetailsID_FK = w.buildingDetailsID 
+            and m.IdaraID_FK = w.IdaraId 
+            and m.meterForBuildingActive = 1) meterscount
            
             
             

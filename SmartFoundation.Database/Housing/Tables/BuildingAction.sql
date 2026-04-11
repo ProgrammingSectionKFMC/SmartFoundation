@@ -39,6 +39,7 @@
     [buildingActionParentID]        BIGINT           NULL,
     [CustdyRecord]                  NVARCHAR (4000)  NULL,
     [AssignPeriodID_FK]             BIGINT           NULL,
+    [InAssignPeriod]                INT              NULL,
     [ExtendReasonTypeID_FK]         INT              NULL,
     [IdaraId_FK]                    BIGINT           NULL,
     [entryDate]                     DATETIME         CONSTRAINT [DF_BuildingAction_entryDate] DEFAULT (getdate()) NULL,
@@ -53,6 +54,8 @@
     CONSTRAINT [FK_BuildingAction_BuildingStatus] FOREIGN KEY ([buildingStatusID_FK]) REFERENCES [Housing].[BuildingStatus] ([buildingStatusID]),
     CONSTRAINT [FK_BuildingAction_ResidentInfo] FOREIGN KEY ([residentInfoID_FK]) REFERENCES [Housing].[ResidentInfo] ([residentInfoID])
 );
+
+
 
 
 GO

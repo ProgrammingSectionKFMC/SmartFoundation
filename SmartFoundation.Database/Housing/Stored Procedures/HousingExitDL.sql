@@ -85,7 +85,11 @@ BEGIN
             b.PenaltyReason,
             
 
-            w.IdaraId
+            w.IdaraId,
+            (select count(*) from Housing.MeterForBuilding m 
+            where m.buildingDetailsID_FK = w.buildingDetailsID 
+            and m.IdaraID_FK = w.IdaraId 
+            and m.meterForBuildingActive = 1) meterscount
            
             
             
@@ -95,7 +99,10 @@ BEGIN
         left Join Housing.BuildingActionType ba on w.LastActionTypeID = ba.buildingActionTypeID
         left join Housing.Bills b on w.residentInfoID = b.residentInfoID_FK and w.buildingDetailsID = b.buildingDetailsID and b.BillChargeTypeID_FK = 5 and b.BillActive = 1
     WHERE w.IdaraId = @idaraID
-      AND  (w.LastActionTypeID in (2,48,49,50,51,52,24,54,55,56,57,58,59,60,3) or w.LastActionTypeID is null)
+      --AND  (w.LastActionTypeID in (2,24))
+           AND  (w.LastActionTypeID in (2,48,49,50,51,52,24,54,55,56,57,58,59,60) or w.LastActionTypeID is null)
+
+     --AND  (w.LastActionTypeID in (2,48,49,50,51,52,24,54,55,56,57,58,59,60,3) or w.LastActionTypeID is null)
       AND w.residentInfoID = @residentInfoID
       order by w.LastActionEntryDate desc
 

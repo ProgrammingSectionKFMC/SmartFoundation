@@ -196,7 +196,7 @@ END
         t.billPaymentTypeID,
         t.billPaymentTypeName_A
         from Housing.billPaymentType t 
-        where t.billPaymentTypeID in(1,2,5)
+        where t.billPaymentTypeID in(1,2)
 
         ---------------------------------8-------------------------------------------------------------------------------------------------------------------
     Select e.BillChargeTypeID,e.BillChargeTypeName_A 
@@ -219,13 +219,21 @@ END
 
 
         ----------------------------------9------------------------------------------------------------------------------------------------------------------
-      Select e.ExtendReasonTypeID,e.ExtendReasonTypeName_A 
-      from Housing.ExtendReasonType e
-      where e.Active = 1
+      --Select e.ExtendReasonTypeID,e.ExtendReasonTypeName_A 
+      --from Housing.ExtendReasonType e
+      --where e.Active = 1
+
+      Select e.BillChargeTypeID,e.BillChargeTypeName_A 
+      from Housing.BillChargeType e
+      where e.BillChargeTypeActive  = 1 and e.BillChargeTypeID <> 6
 
        
         ----------------------------------10------------------------------------------------------------------------------------------------------------------
-      SELECT 
+     
+     if(@residentInfoID is null)
+     begin
+     
+     SELECT 
     e.residentInfoID,
     SUM(e.SumBillsTotalPrice) AS SumBillsTotalPrice,
     SUM(e.SumTotalPaidBills) AS SumTotalPaidBills,
@@ -235,8 +243,8 @@ END
     end as Remaining,
     --SUM(e.Remaining) AS Remaining,
     CASE 
-        WHEN SUM(e.Remaining) > 0 THEN N'مطالب بمبالغ للادارة'
-        WHEN SUM(e.Remaining) < 0 THEN N'يوجد مبالغ زائدة للمستفيد'
+        WHEN SUM(e.Remaining) > 0 THEN N'المستفيد مطالب بمبالغ مستحقة للادارة'
+        WHEN SUM(e.Remaining) < 0 THEN N'يوجد مبالغ فائضة للمستفيد'
         ELSE N'لايوجد مطالبات'
     END AS BillsStatus,
     CASE 
@@ -249,10 +257,42 @@ WHERE e.residentInfoID = @residentInfoID
 AND (e.buildingDetailsID = @buildingDetailsID OR e.buildingDetailsID IS NULL)
 GROUP BY e.residentInfoID;
      
+     end
 
+     else
+     begin
 
-     
+     SELECT 
+    @residentInfoID AS residentInfoID,
 
+    COALESCE(SUM(e.SumBillsTotalPrice), 0) AS SumBillsTotalPrice,
+    COALESCE(SUM(e.SumTotalPaidBills), 0) AS SumTotalPaidBills,
 
+    CASE
+        WHEN COALESCE(SUM(e.Remaining), 0) < 0 
+            THEN COALESCE(SUM(e.Remaining), 0) * -1
+        ELSE COALESCE(SUM(e.Remaining), 0)
+    END AS Remaining,
 
+    CASE 
+        WHEN COALESCE(SUM(e.Remaining), 0) > 0 THEN N'مطالب بمبالغ للادارة'
+        WHEN COALESCE(SUM(e.Remaining), 0) < 0 THEN N'يوجد مبالغ زائدة للمستفيد'
+        ELSE N'لايوجد مطالبات'
+    END AS BillsStatus,
+
+    CASE 
+        WHEN COALESCE(SUM(e.Remaining), 0) > 0 THEN 0
+        WHEN COALESCE(SUM(e.Remaining), 0) < 0 THEN 1
+        ELSE 2
+    END AS BillsStatusID
+
+FROM Housing.V_SumBillsTotalPriceAndTotalPaidForResident e
+WHERE e.residentInfoID = @residentInfoID
+AND (e.buildingDetailsID = @buildingDetailsID OR e.buildingDetailsID IS NULL)
+
+     end
+
+       ------------------------------------11----------------------------------------------------------------------------------------------------------------
+      
+       
 END

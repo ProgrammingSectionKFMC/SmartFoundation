@@ -89,7 +89,8 @@ BEGIN
             w.ActionNote,
             rd.FullName_A FullName_A,
             isnull(w.LastActionTypeID,0) LastActionTypeID,
-            isnull(w.LastActionTypeName,N'لايوجد اجراء') LastActionTypeName
+            isnull(w.LastActionTypeName,N'لايوجد اجراء') LastActionTypeName,
+            isnull(w.LastActionID,0) LastActionID
             FROM Housing.V_WaitingList w 
             inner join Housing.V_GetFullResidentDetails rd on w.residentInfoID = rd.residentInfoID 
             where w.NationalID = @NationalID
@@ -116,7 +117,8 @@ BEGIN
             w.ActionNote,
             rd.FullName_A FullName_A,
             isnull(w.LastActionTypeID,0) LastActionTypeID,
-            isnull(w.LastActionTypeName,N'لايوجد اجراء') LastActionTypeName
+            isnull(w.LastActionTypeName,N'لايوجد اجراء') LastActionTypeName,
+            isnull(w.LastActionID,0) LastActionID
             FROM Housing.V_WaitingList w 
             inner join Housing.V_GetFullResidentDetails rd on w.residentInfoID = rd.residentInfoID 
             where w.NationalID = @NationalID

@@ -707,10 +707,10 @@ DECLARE @PenaltyPriceDecimal DECIMAL(18,2) =
 
 
         
+         ----------------------------------------------------------------
+        -- HOUSINGEXIT
         ----------------------------------------------------------------
-        -- ApproveExtend
-        ----------------------------------------------------------------
-        ELSE IF @Action = N'ApproveExtend'
+        IF @Action = N'APPROVEHOUSINGEXIT'
         BEGIN
        
 
@@ -731,19 +731,19 @@ DECLARE @PenaltyPriceDecimal DECIMAL(18,2) =
                 ;THROW 50001, N'السجل غير موجود', 1;
             END
 
-
+            
               IF 
             (
                select w.LastActionTypeID from Housing.V_WaitingList w where w.ActionID = @ActionID 
-            ) Not in (52)
+            ) Not in (58)
             BEGIN
-                ;THROW 50001, N'لايمكن اعتماد الطلب', 1;
+                ;THROW 50001, N'المستفيد غير مؤهل للاخلاء لعدم انتهاء التدقيق المالي', 1;
             END
 
 
 
-
             
+          
 
 
               INSERT INTO  Housing.BuildingAction
@@ -764,7 +764,7 @@ DECLARE @PenaltyPriceDecimal DECIMAL(18,2) =
             
              VALUES
             (
-                  24
+                  3
                 , @residentInfoID
                 , @GeneralNo
                 , @buildingDetailsID
@@ -779,20 +779,15 @@ DECLARE @PenaltyPriceDecimal DECIMAL(18,2) =
             );
 
 
+            
             IF @@ROWCOUNT = 0
             BEGIN
-                ;THROW 50002, N'حصل خطأ في اعتماد الامهال', 1; -- برمجي
+                ;THROW 50002, N'حصل خطأ في اعتماد طلب الاخلاء', 1; -- برمجي
             END
-
-
-
-             SET @NewID = SCOPE_IDENTITY();
-
-
             SET @NewID = SCOPE_IDENTITY();
             IF @NewID IS NULL OR @NewID <= 0
             BEGIN
-                ;THROW 50002, N'حصل خطأ في اعتماد الامهال - Identity', 1; -- برمجي
+                ;THROW 50002, N'حصل خطأ في اعتماد طلب الاخلاء - Identity', 1; -- برمجي
             END
             SET @Note = N'{'
                 + N'"buildingActionID": "' + ISNULL(CONVERT(NVARCHAR(MAX), @NewID), '') + N'"'
@@ -804,7 +799,7 @@ DECLARE @PenaltyPriceDecimal DECIMAL(18,2) =
                 + N',"buildingActionActive": "'      + ISNULL(CONVERT(NVARCHAR(MAX), '1'), '') + N'"'
                 + N',"buildingActionNote": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @Notes), '') + N'"'
                 + N',"buildingActionParentID": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @LastActionID), '') + N'"'
-                + N',"buildingActionToDate": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @ExitDate), '') + N'"'
+                + N',"buildingActionDate": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @ExitDate), '') + N'"'
                 + N',"entryData": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @entryData), '') + N'"'
                 + N',"hostName": "'       + ISNULL(CONVERT(NVARCHAR(MAX), @hostName), '') + N'"'
                 + N'}';
@@ -820,16 +815,17 @@ DECLARE @PenaltyPriceDecimal DECIMAL(18,2) =
             VALUES
             (
                   N'[Housing].[BuildingAction]'
-                , N'ASSIGNHOUSE'
+                , N'HOUSINGEXIT'
                 , @ActionID
                 , @entryData
                 , @Note
             );
             
 
-            SELECT 1 AS IsSuccessful, N'تم اعتماد طلب الامهال بنجاح' AS Message_;
+            SELECT 1 AS IsSuccessful, N'تم اعتماد طلب الاخلاء بنجاح' AS Message_;
             RETURN;
         END
+
 
 
 
@@ -869,8 +865,30 @@ DECLARE @PenaltyPriceDecimal DECIMAL(18,2) =
 
 
 
+            Declare @buildingActionTypeID_FKForMeterRead int
+
+            IF exists (select 1 
+            from Housing.MeterForBuilding m 
+            where m.buildingDetailsID_FK = @buildingDetailsID 
+            and m.IdaraID_FK = @idaraID_FK 
+            and m.meterForBuildingActive = 1)
+            begin
+
+            set @buildingActionTypeID_FKForMeterRead = 59
+
+            end
+            else
+            begin
+
+            set @buildingActionTypeID_FKForMeterRead = 60
+
+            end
+
+
+
+
             if(@BillsID is null)
-            Begin
+            BEGIN
 
 
               INSERT INTO  Housing.BuildingAction
@@ -891,7 +909,7 @@ DECLARE @PenaltyPriceDecimal DECIMAL(18,2) =
             
              VALUES
             (
-                  59
+                  @buildingActionTypeID_FKForMeterRead
                 , @residentInfoID
                 , @GeneralNo
                 , @buildingDetailsID

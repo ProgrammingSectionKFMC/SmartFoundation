@@ -33,6 +33,6 @@ BEGIN
                   END AS buildingUtilityIsRent
             FROM  Housing.buildingUtilityType t
             WHERE t.buildingUtilityTypeActive = 1 and (t.IdaraId_FK is null or t.IdaraId_FK = @idaraID)
-            ORDER BY t.buildingUtilityTypeID DESC;
+            ORDER BY t.buildingUtilityTypeID asc;
     -- Insert statements for procedure here
 END

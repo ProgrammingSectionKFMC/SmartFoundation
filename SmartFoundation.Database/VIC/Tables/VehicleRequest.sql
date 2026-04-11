@@ -1,0 +1,27 @@
+﻿CREATE TABLE [VIC].[VehicleRequest] (
+    [RequestID]             BIGINT          IDENTITY (1, 1) NOT NULL,
+    [EmployeeUserID_FK]     BIGINT          NOT NULL,
+    [DeptID_FK]             INT             NOT NULL,
+    [RequestTypeID_FK]      INT             NULL,
+    [NeedFromDate]          DATETIME        NULL,
+    [NeedToDate]            DATETIME        NULL,
+    [Purpose]               NVARCHAR (600)  NULL,
+    [Notes]                 NVARCHAR (2000) NULL,
+    [Status]                NVARCHAR (40)   NOT NULL,
+    [Active]                BIT             CONSTRAINT [DF_VehicleRequest_Active] DEFAULT ((1)) NOT NULL,
+    [DeptDecisionBy]        BIGINT          NULL,
+    [DeptDecisionDate]      DATETIME        NULL,
+    [DeptDecisionNote]      NVARCHAR (1000) NULL,
+    [FleetDecisionBy]       BIGINT          NULL,
+    [FleetDecisionDate]     DATETIME        NULL,
+    [FleetDecisionNote]     NVARCHAR (1000) NULL,
+    [AssignedChassisNumber] NVARCHAR (100)  NULL,
+    [AssignedCustodyID]     BIGINT          NULL,
+    [AssignedDate]          DATETIME        NULL,
+    [IdaraID_FK]            BIGINT          NULL,
+    [entryDate]             DATETIME        CONSTRAINT [DF_VehicleRequest_entryDate] DEFAULT (getdate()) NOT NULL,
+    [entryData]             NVARCHAR (100)  NULL,
+    [hostName]              NVARCHAR (400)  NULL,
+    CONSTRAINT [PK_VehicleRequest] PRIMARY KEY CLUSTERED ([RequestID] ASC)
+);
+

@@ -446,7 +446,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 new FieldConfig {Name = "p28", Label = "الدرجة العلمية", Type = "select", Required = true, ColCss = "3", Options = EducationOptions, Select2 = true},
 
 
-                 new FieldConfig { Name = "p35", Label = "ملاحظات",Type = "textarea",   Required = true, ColCss = "3" },
+                 new FieldConfig { Name = "p35", Label = "سبب التحديث",Type = "textarea",   Required = true, ColCss = "3" },
 
             };
 
@@ -501,7 +501,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 new FieldConfig {Name = "p28", Label = "الدرجة العلمية", Type = "hidden", Required = true, ColCss = "3", Options = EducationOptions, Select2 = true},
 
 
-                 new FieldConfig { Name = "p35", Label = "ملاحظات",Type = "textarea",   Required = true, ColCss = "6" },
+                 new FieldConfig { Name = "p35", Label = "سبب التعطيل",Type = "textarea",   Required = true, ColCss = "6" },
 
             };
 
@@ -557,7 +557,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 new FieldConfig {Name = "p28", Label = "الدرجة العلمية", Type = "hidden", Required = true, ColCss = "3", Options = EducationOptions, Select2 = true},
 
 
-                 new FieldConfig { Name = "p35", Label = "ملاحظات",Type = "hidden",   Required = true, ColCss = "6" },
+                 new FieldConfig { Name = "p35", Label = "سبب التحديث",Type = "hidden",   Required = true, ColCss = "6" },
 
             };
 

@@ -46,11 +46,33 @@ BEGIN
            
             mbb.meterID,
             mst.meterServiceTypeName_A,
+            mst.meterServiceTypeID,
             mty.meterTypeName_A,
-            m.meterReadValue,
             mty.meterMaxRead,
+              case 
+             when m.BuildingActionID_FK is not null then  convert(nvarchar,mw.BeforeLastReadValue)
+             when m.BuildingActionID_FK is null then N''
+             END BeforeLastReadValue,
+           
+            m.meterReadValue,
+             case 
+             when m.BuildingActionID_FK is not null then  convert(nvarchar,mw.ReadDiff)
+             when m.BuildingActionID_FK is null then N''
+             END ReadDiff,
+            
+            case when m.BuildingActionID_FK is not null and mw.BeforeLastReadValue > m.meterReadValue then N'1'
+            else
+            N'0'
+            END ReadSizeStatus,
+            case when m.BuildingActionID_FK is not null and mw.BeforeLastReadValue > m.meterReadValue then N'تحقق من القراءة'
+            else
+            N'لايوجد ملاحظة'
+            END ReadSizeStatusText,
+
+            
             mr.meterReadID,
             w.LastActionDate,
+            w.buildingActionRoot,
 
               case 
              when m.BuildingActionID_FK is not null then N'تم تسجيل قراءة العداد'
@@ -64,7 +86,11 @@ BEGIN
              when m.BuildingActionID_FK is not null then N'1'
              when m.BuildingActionID_FK is null then N'0'
              END ReadStatusInt,
-             isnull(w.LastActionNote,w.ActionNote) ActionNote
+             isnull(w.LastActionNote,w.ActionNote) ActionNote,
+             b.BillsID,
+             w.LastActionDecisionDate,
+             w.LastActionDecisionNo
+             
              
            
             
@@ -74,11 +100,12 @@ BEGIN
     Inner Join Housing.BuildingActionType ba on w.LastActionTypeID = ba.buildingActionTypeID
     left Join Housing.V_GetListMetersLinkedWithBuildings mbb on w.buildingDetailsID = mbb.buildingDetailsID_FK
     left join Housing.V_GetListAllMetersLastRead mr on mbb.meterID = mr.meterID_FK
+    left join [Housing].[V_GetListAllMetersLastAndBeforeLastRead_WithWrap] mw on mbb.meterID = mw.meterID_FK
     left join Housing.MeterRead m on mr.meterReadID = m.meterReadID
     left join Housing.MeterReadType mrt on m.meterReadTypeID_FK = mrt.meterReadTypeID
     left join Housing.MeterServiceType mst on mbb.meterServiceTypeID_FK = mst.meterServiceTypeID
     left join Housing.MeterType mty on mbb.meterTypeID_FK = mty.meterTypeID
-    
+    left join Housing.Bills b on m.meterReadID = b.meterReadID
     WHERE w.IdaraId = @idaraID
       AND  w.LastActionTypeID in (46,59)
       AND w.residentInfoID = @residentInfoID

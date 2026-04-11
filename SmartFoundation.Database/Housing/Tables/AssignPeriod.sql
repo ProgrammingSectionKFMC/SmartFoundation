@@ -1,5 +1,6 @@
 ﻿CREATE TABLE [Housing].[AssignPeriod] (
     [AssignPeriodID]           BIGINT          IDENTITY (1, 1) NOT NULL,
+    [WaitingClassID_FK]        INT             NULL,
     [AssignPeriodDescrption]   NVARCHAR (4000) NULL,
     [AssignPeriodStartdate]    DATETIME        NULL,
     [AssignPeriodEnddate]      DATETIME        NULL,

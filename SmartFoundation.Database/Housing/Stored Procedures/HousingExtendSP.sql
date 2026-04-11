@@ -14,6 +14,7 @@ CREATE PROCEDURE [Housing].[HousingExtendSP]
     , @WaitingListOrder                     NVARCHAR(1000)  = NULL
     , @FullName_A                           NVARCHAR(1000)  = NULL
     , @buildingDetailsID                    NVARCHAR(1000)  = NULL
+    , @buildingDetailsNo                    NVARCHAR(1000)  = NULL
     , @AssignPeriodID                       NVARCHAR(1000)  = NULL
     , @LastActionID                         NVARCHAR(1000)  = NULL
     , @LastActionTypeID                     NVARCHAR(1000)  = NULL
@@ -24,6 +25,14 @@ CREATE PROCEDURE [Housing].[HousingExtendSP]
     , @ExtendStartDate                      NVARCHAR(1000)  = NULL
     , @ExtendEndDate                        NVARCHAR(1000)  = NULL
     , @ExtendTypeID                         NVARCHAR(1000)  = NULL
+    , @InsuranceAmount                      NVARCHAR(1000)  = NULL
+    , @Remaining                            NVARCHAR(1000)  = NULL
+    , @InsuranceAmountWithRemaining         NVARCHAR(1000)  = NULL
+    , @ExtendInsuranceNo                    NVARCHAR(1000)  = NULL
+    , @ExtendInsuranceDate                  NVARCHAR(1000)  = NULL
+    , @ExtendInsuranceType                  NVARCHAR(1000)  = NULL
+    , @ExtendInsuranceNote                  NVARCHAR(1000)  = NULL
+    , @ExtendInsuranceTypeID                NVARCHAR(1000)  = NULL
     , @idaraID_FK                           NVARCHAR(10)    = NULL
     , @entryData                            NVARCHAR(20)    = NULL
     , @hostName                             NVARCHAR(200)   = NULL
@@ -38,13 +47,15 @@ BEGIN
 
     DECLARE 
           @NewID BIGINT = NULL
-        , @Note  NVARCHAR(MAX) = NULL;
+        , @Note  NVARCHAR(MAX) = NULL
+        , @NewID1 BIGINT = NULL
+        , @Note1  NVARCHAR(MAX) = NULL;
 
     -- تحويلات رقمية آمنة
     DECLARE @IdaraID_INT INT = TRY_CONVERT(INT, NULLIF(@idaraID_FK, ''));
 
-    DECLARE @buildingDetailsNo nvarchar(200) 
-    set @buildingDetailsNo = (select b.buildingDetailsNo from Housing.V_GetGeneralListForBuilding b where b.buildingDetailsID = @buildingDetailsID);
+    --DECLARE @buildingDetailsNo nvarchar(200) 
+    --set @buildingDetailsNo = (select b.buildingDetailsNo from Housing.V_GetGeneralListForBuilding b where b.buildingDetailsID = @buildingDetailsID);
 
    
     BEGIN TRY
@@ -766,13 +777,22 @@ BEGIN
               IF 
             (
                select w.LastActionTypeID from Housing.V_WaitingList w where w.ActionID = @ActionID 
-            ) Not in (52)
+            ) Not in (52,61)
             BEGIN
                 ;THROW 50001, N'لايمكن اعتماد الطلب', 1;
             END
 
 
-
+            if exists 
+            (select 1 
+            from Housing.V_WaitingList w
+            inner join Housing.ExtendReasonType r on w.LastActionExtendReasonTypeID = r.ExtendReasonTypeID
+            where w.ActionID = @ActionID 
+            and r.InsuranceRequired = 1 and w.LastActionTypeID <> 61
+            )
+            BEGIN
+                ;THROW 50001, N'تنفيذ التأمين الاحترازي مطلوب', 1;
+            END
 
             
 
@@ -867,6 +887,256 @@ BEGIN
                 , @entryData
                 , @Note
             );
+            
+
+            SELECT 1 AS IsSuccessful, N'تم اعتماد طلب الامهال بنجاح' AS Message_;
+            RETURN;
+        END
+
+
+         ----------------------------------------------------------------
+        -- EXTENDINSURANCE
+        ----------------------------------------------------------------
+        ELSE IF @Action = N'EXTENDINSURANCE'
+        BEGIN
+       
+
+
+            IF @ActionID IS NULL
+            BEGIN
+                ;THROW 50001, N'رقم السجل مطلوب للتحديث', 1;
+            END
+
+
+            IF NOT EXISTS
+            (
+                 SELECT 1
+                FROM  Housing.V_WaitingList w
+                WHERE w.ActionID = @ActionID
+            )
+            BEGIN
+                ;THROW 50001, N'السجل غير موجود', 1;
+            END
+
+
+              IF 
+            (
+               select w.LastActionTypeID from Housing.V_WaitingList w where w.ActionID = @ActionID 
+            ) Not in (52)
+            BEGIN
+                ;THROW 50001, N'لايمكن اعتماد الطلب لعدم انتهاء مرحلة التدقيق المالي', 1;
+            END
+
+
+            if exists 
+            (select 1 
+            from Housing.V_WaitingList w
+            inner join Housing.ExtendReasonType r on w.LastActionExtendReasonTypeID = r.ExtendReasonTypeID
+            where w.ActionID = @ActionID 
+            and r.InsuranceRequired = 1 and w.LastActionTypeID = 61
+            )
+            BEGIN
+                ;THROW 50001, N'تم تنفيذ التأمين الاحترازي مسبقا', 1;
+            END
+
+            if exists 
+            (select 1 
+            from Housing.V_WaitingList w
+            inner join Housing.ExtendReasonType r on w.LastActionExtendReasonTypeID = r.ExtendReasonTypeID
+            where w.ActionID = @ActionID 
+            and r.InsuranceRequired = 0
+            )
+            BEGIN
+                ;THROW 50001, N'تنفيذ التأمين الاحترازي غير مطلوب', 1;
+            END
+
+
+
+              INSERT INTO  Housing.BuildingAction
+            (
+                  buildingActionTypeID_FK
+                , residentInfoID_FK
+                , generalNo_FK
+                , buildingActionDecisionNo
+                , buildingActionDecisionDate
+                , buildingDetailsID_FK
+                , buildingDetailsNo
+                , buildingActionActive
+                , buildingActionNote
+                , buildingActionParentID
+                , buildingActionFromDate
+                , buildingActionToDate
+                , ExtendReasonTypeID_FK
+                , IdaraId_FK
+                , entryData
+                , hostName
+            )
+            
+             VALUES
+            (
+                  61
+                , @residentInfoID
+                , @GeneralNo
+                , @ExtendLetterNo
+                , @ExtendLetterDate
+                , @buildingDetailsID
+                , @buildingDetailsNo
+                , 1
+                , @Notes
+                , @LastActionID
+                , @ExtendStartDate
+                , @ExtendEndDate
+                , @ExtendTypeID
+                , @IdaraID_INT
+                , @entryData
+                , @hostName
+            );
+
+
+            IF @@ROWCOUNT = 0
+            BEGIN
+                ;THROW 50002, N'حصل خطأ في تنفيذ التامين الاحترازي', 1; -- برمجي
+            END
+
+
+
+             SET @NewID = SCOPE_IDENTITY();
+
+
+            SET @NewID = SCOPE_IDENTITY();
+            IF @NewID IS NULL OR @NewID <= 0
+            BEGIN
+                ;THROW 50002, N'حصل خطأ في تنفيذ التامين الاحترازي - Identity', 1; -- برمجي
+            END
+            SET @Note = N'{'
+                + N'"buildingActionID": "' + ISNULL(CONVERT(NVARCHAR(MAX), @NewID), '') + N'"'
+                + N',"buildingActionTypeID_FK": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @buildingActionTypeID_FK), '') + N'"'
+                + N',"residentInfoID_FK": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @residentInfoID), '') + N'"'
+                + N',"generalNo_FK": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @GeneralNo), '') + N'"'
+                + N',"buildingActionDecisionNo": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @ExtendLetterNo), '') + N'"'
+                + N',"buildingActionDecisionDate": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @ExtendLetterDate), '') + N'"'
+                + N',"buildingDetailsID_FK": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @buildingDetailsID), '') + N'"'
+                + N',"buildingDetailsNo": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @buildingDetailsNo), '') + N'"'
+                + N',"buildingActionActive": "'      + ISNULL(CONVERT(NVARCHAR(MAX), '1'), '') + N'"'
+                + N',"buildingActionNote": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @Notes), '') + N'"'
+                + N',"buildingActionParentID": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @LastActionID), '') + N'"'
+                + N',"buildingActionFromDate": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @ExtendStartDate), '') + N'"'
+                + N',"buildingActionToDate": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @ExtendEndDate), '') + N'"'
+                + N',"entryData": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @entryData), '') + N'"'
+                + N',"hostName": "'       + ISNULL(CONVERT(NVARCHAR(MAX), @hostName), '') + N'"'
+                + N'}';
+
+            INSERT INTO  dbo.AuditLog
+            (
+                  TableName
+                , ActionType
+                , RecordID
+                , PerformedBy
+                , Notes
+            )
+            VALUES
+            (
+                  N'[Housing].[BuildingAction]'
+                , N'ApproveExtend'
+                , @NewID
+                , @entryData
+                , @Note
+            );
+
+
+               INSERT INTO  Housing.ExtendInsurance
+            (
+                  [buildingActionID_FK]
+                 ,[residentInfoID_FK]
+                 ,[buildingDetailsID_FK]
+                 ,[buildingDetailsNo]
+                 ,[InsuranceAmount]
+                 ,[Remaining]
+                 ,[InsuranceAmountWithRemaining]
+                 ,[ExtendInsuranceNo]
+                 ,[ExtendInsuranceDate]
+                 ,[ExtendInsuranceType]
+                 ,[ExtendInsuranceNote]
+                 ,[ExtendInsuranceActive]
+                 ,[IdaraId_FK]
+                 ,[entryDate]
+                 ,[entryData]
+                 ,[hostName]
+            )
+            
+             VALUES
+            (
+                  @NewID
+                , @residentInfoID
+                , @buildingDetailsID
+                , @buildingDetailsNo
+                , @InsuranceAmount
+                , @Remaining
+                , @InsuranceAmountWithRemaining
+                , @ExtendInsuranceNo
+                , @ExtendInsuranceDate
+                , @ExtendInsuranceType
+                , @ExtendInsuranceNote
+                , 1
+                , @IdaraID_INT
+                , GETDATE()
+                , @entryData
+                , @hostName
+            );
+
+
+            IF @@ROWCOUNT = 0
+            BEGIN
+                ;THROW 50002, N'حصل خطأ في تنفيذ التامين الاحترازي', 1; -- برمجي
+            END
+
+
+
+             SET @NewID1 = SCOPE_IDENTITY();
+
+
+            SET @NewID1 = SCOPE_IDENTITY();
+            IF @NewID1 IS NULL OR @NewID1 <= 0
+            BEGIN
+                ;THROW 50002, N'حصل خطأ في تنفيذ التامين الاحترازي - Identity', 1; -- برمجي
+            END
+
+     
+            SET @Note1 = N'{'
+                + N'"ExtendInsuranceID": "' + ISNULL(CONVERT(NVARCHAR(MAX), @NewID1), '') + N'"'
+                + N',"buildingActionID_FK": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @NewID), '') + N'"'
+                + N',"InsuranceAmount": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @InsuranceAmount), '') + N'"'
+                + N',"Remaining": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @Remaining), '') + N'"'
+                + N',"InsuranceAmountWithRemaining": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @InsuranceAmountWithRemaining), '') + N'"'
+                + N',"ExtendInsuranceNo": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @ExtendInsuranceNo), '') + N'"'
+                + N',"ExtendInsuranceDate": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @ExtendInsuranceDate), '') + N'"'
+                + N',"ExtendInsuranceType": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @ExtendInsuranceType), '') + N'"'
+                + N',"ExtendInsuranceActive": "'      + ISNULL(CONVERT(NVARCHAR(MAX), '1'), '') + N'"'
+                + N',"ExtendInsuranceNote": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @ExtendInsuranceNote), '') + N'"'
+                + N',"IdaraId_FK": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @IdaraID_INT), '') + N'"'
+                + N',"entryDate": "'      + ISNULL(CONVERT(NVARCHAR(MAX), GETDATE()), '') + N'"'
+                + N',"entryData": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @entryData), '') + N'"'
+                + N',"hostName": "'       + ISNULL(CONVERT(NVARCHAR(MAX), @hostName), '') + N'"'
+                + N'}';
+
+            INSERT INTO  dbo.AuditLog
+            (
+                  TableName
+                , ActionType
+                , RecordID
+                , PerformedBy
+                , Notes
+            )
+            VALUES
+            (
+                  N'[Housing].[ExtendInsurance]'
+                , N'EXTENDINSURANCE'
+                , @NewID1
+                , @entryData
+                , @Note1
+            );
+
+
             
 
             SELECT 1 AS IsSuccessful, N'تم اعتماد طلب الامهال بنجاح' AS Message_;

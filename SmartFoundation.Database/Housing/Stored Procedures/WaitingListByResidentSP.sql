@@ -178,28 +178,24 @@ BEGIN
         IF @Action = N'INSERTWAITINGLIST'
         BEGIN
 
-
-          IF
-              (
-            (
-                SELECT top(1) W.LastActionTypeID
+         if exists(SELECT 1
                 FROM  Housing.V_MoveWaitingList w
                 WHERE w.residentInfoID = @residentInfoID_FK
                   and w.IdaraId = @idaraID_FK
-                  order by w.ActionID desc
-            ) is null
-            or
-            (
+                  )
+                  begin
+                  
+            if (
                 SELECT top(1) W.LastActionTypeID
                 FROM  Housing.V_MoveWaitingList w
                 WHERE w.residentInfoID = @residentInfoID_FK
-                  and w.IdaraId = @idaraID_FK
+                  and w.IdaraId = @idaraID_FK 
                   order by w.ActionID desc
             ) = 33
-            )
             BEGIN
-                ;THROW 50001, N'لايمكن ادراج سجل انتظار جديد للمستفيد لوجود طلب نقل له الى ادارة اخرى', 1;
+                ;THROW 50001, N'لايمكن تعديل سجل انتظار جديد للمستفيد لوجود طلب نقل له الى ادارة اخرى', 1;
             END
+            end
 
         
 
@@ -353,28 +349,24 @@ BEGIN
                 ;THROW 50001, N'السجل غير موجود', 1;
             END
 
-             IF
-              (
-            (
-                SELECT top(1) W.LastActionTypeID
+            if exists(SELECT 1
                 FROM  Housing.V_MoveWaitingList w
                 WHERE w.residentInfoID = @residentInfoID_FK
                   and w.IdaraId = @idaraID_FK
-                  order by w.ActionID desc
-            ) is null
-            or
-            (
+                  )
+                  begin
+                  
+            if (
                 SELECT top(1) W.LastActionTypeID
                 FROM  Housing.V_MoveWaitingList w
                 WHERE w.residentInfoID = @residentInfoID_FK
-                  and w.IdaraId = @idaraID_FK
+                  and w.IdaraId = @idaraID_FK 
                   order by w.ActionID desc
             ) = 33
-            )
             BEGIN
                 ;THROW 50001, N'لايمكن تعديل سجل انتظار جديد للمستفيد لوجود طلب نقل له الى ادارة اخرى', 1;
             END
-
+            end
             
             IF EXISTS
             (
@@ -413,6 +405,31 @@ BEGIN
             BEGIN
                 ;THROW 50001, N'ملف المستفيد ليس في ادارتك حاليا', 1;
             END
+
+
+            --if exists (SELECT 1
+            --    FROM  Housing.V_WaitingList w
+            --    WHERE w.residentInfoID = @residentInfoID_FK
+            --      AND w.buildingActionRoot in (2,3)
+            --      AND w.ActionID = @ActionID
+            --      AND w.IdaraId = @idaraID_FK)
+
+            --      BEGIN
+            --    ;THROW 50001, N'لايمكن التعديل على سجل الانتظار لوجود اجراءات تسكين او اخلاء تمت على هذا السجل', 1;
+            --      END
+
+             if exists (SELECT 1
+                FROM  Housing.V_WaitingList w
+                WHERE w.residentInfoID = @residentInfoID_FK
+                  AND w.LastActionTypeID is not null and w.LastActionTypeID not in (34,35)
+                  AND w.ActionID = @ActionID
+                  AND w.IdaraId = @idaraID_FK)
+
+                  BEGIN
+                ;THROW 50001, N'لايمكن التعديل على سجل الانتظار لوجود اجراءات تمت على هذا السجل', 1;
+                  END
+
+
 
 
             UPDATE  Housing.BuildingAction
@@ -495,30 +512,7 @@ BEGIN
             END
 
 
-            IF
-              (
-            (
-                SELECT top(1) W.LastActionTypeID
-                FROM  Housing.V_MoveWaitingList w
-                WHERE w.residentInfoID = @residentInfoID_FK
-                  and w.IdaraId = @idaraID_FK
-                  order by w.ActionID desc
-            ) is null
-            or
-            (
-                SELECT top(1) W.LastActionTypeID
-                FROM  Housing.V_MoveWaitingList w
-                WHERE w.residentInfoID = @residentInfoID_FK
-                  and w.IdaraId = @idaraID_FK
-                  order by w.ActionID desc
-            ) = 33
-            )
-            BEGIN
-                ;THROW 50001, N'لايمكن الغاء سجل انتظار جديد للمستفيد لوجود طلب نقل له الى ادارة اخرى', 1;
-            END
 
-
-            
             IF EXISTS
             (
                 SELECT 1
@@ -557,6 +551,36 @@ BEGIN
                 ;THROW 50001, N'ملف المستفيد ليس في ادارتك حاليا', 1;
             END
 
+
+             if exists(SELECT 1
+                FROM  Housing.V_MoveWaitingList w
+                WHERE w.residentInfoID = @residentInfoID_FK
+                  and w.IdaraId = @idaraID_FK
+                  )
+                  begin
+                  
+            if (
+                SELECT top(1) W.LastActionTypeID
+                FROM  Housing.V_MoveWaitingList w
+                WHERE w.residentInfoID = @residentInfoID_FK
+                  and w.IdaraId = @idaraID_FK 
+                  order by w.ActionID desc
+            ) = 33
+            BEGIN
+                ;THROW 50001, N'لايمكن حذف سجل انتظار جديد للمستفيد لوجود طلب نقل له الى ادارة اخرى', 1;
+            END
+            end
+
+              if exists (SELECT 1
+                FROM  Housing.V_WaitingList w
+                WHERE w.residentInfoID = @residentInfoID_FK
+                  AND w.LastActionTypeID is not null and w.LastActionTypeID not in (34,35)
+                  AND w.ActionID = @ActionID
+                  AND w.IdaraId = @idaraID_FK)
+
+                  BEGIN
+                ;THROW 50001, N'لايمكن حذف سجل الانتظار لوجود اجراءات  تمت على هذا السجل', 1;
+                  END
 
 
             UPDATE  Housing.BuildingAction
@@ -617,27 +641,30 @@ BEGIN
             END
 
 
-              IF
-              (
-            (
-                SELECT top(1) W.LastActionTypeID
+             
+             if exists(SELECT 1
                 FROM  Housing.V_MoveWaitingList w
                 WHERE w.residentInfoID = @residentInfoID_FK
                   and w.IdaraId = @idaraID_FK
-                  order by w.ActionID desc
-            ) is null
-            or
-            (
+                  )
+                  begin
+                  
+            if (
                 SELECT top(1) W.LastActionTypeID
                 FROM  Housing.V_MoveWaitingList w
                 WHERE w.residentInfoID = @residentInfoID_FK
-                  and w.IdaraId = @idaraID_FK
+                  and w.IdaraId = @idaraID_FK 
                   order by w.ActionID desc
             ) = 33
-            )
+
             BEGIN
                 ;THROW 50001, N'لايمكن ادراج خطاب تسكين جديد للمستفيد لوجود طلب نقل له الى ادارة اخرى', 1;
             END
+
+            end
+
+            
+
 
         
             IF EXISTS
@@ -777,27 +804,45 @@ BEGIN
                 ;THROW 50001, N'السجل غير موجود', 1;
             END
 
-              IF
-              (
-            (
-                SELECT top(1) W.LastActionTypeID
+
+
+       
+
+
+              if exists(SELECT 1
                 FROM  Housing.V_MoveWaitingList w
                 WHERE w.residentInfoID = @residentInfoID_FK
                   and w.IdaraId = @idaraID_FK
-                  order by w.ActionID desc
-            ) is null
-            or
-            (
+                  )
+                  begin
+                  
+            if (
                 SELECT top(1) W.LastActionTypeID
                 FROM  Housing.V_MoveWaitingList w
                 WHERE w.residentInfoID = @residentInfoID_FK
-                  and w.IdaraId = @idaraID_FK
+                  and w.IdaraId = @idaraID_FK 
                   order by w.ActionID desc
             ) = 33
-            )
+            
+
             BEGIN
-                ;THROW 50001, N'لايمكن ادراج خطاب تسكين جديد للمستفيد لوجود طلب نقل له الى ادارة اخرى', 1;
+                ;THROW 50001, N'لايمكن تعديل خطاب تسكين للمستفيد لوجود طلب نقل له الى ادارة اخرى', 1;
             END
+
+            end
+
+              if exists (SELECT 1
+                FROM  Housing.V_WaitingList w
+                WHERE w.residentInfoID = @residentInfoID_FK
+                  AND w.buildingActionRoot in (2,3)
+                  AND w.ActionID = @ActionID
+                  AND w.IdaraId = @idaraID_FK)
+
+                  BEGIN
+                ;THROW 50001, N'لايمكن تعديل خطاب التسكين لوجود اجراءات تسكين او اخلاء تمت على هذا السجل', 1;
+                  END
+
+             
 
 
             
@@ -923,28 +968,41 @@ BEGIN
                 ;THROW 50001, N'السجل غير موجود', 1;
             END
 
-              IF
-  (
-(
-    SELECT top(1) W.LastActionTypeID
-    FROM  Housing.V_MoveWaitingList w
-    WHERE w.residentInfoID = @residentInfoID_FK
-      and w.IdaraId = @idaraID_FK
-      order by w.ActionID desc
-) is null
-or
-(
-    SELECT top(1) W.LastActionTypeID
-    FROM  Housing.V_MoveWaitingList w
-    WHERE w.residentInfoID = @residentInfoID_FK
-      and w.IdaraId = @idaraID_FK
-      order by w.ActionID desc
-) = 33
-)
-BEGIN
-    ;THROW 50001, N'لايمكن ادراج خطاب تسكين جديد للمستفيد لوجود طلب نقل له الى ادارة اخرى', 1;
-END
+              
+              if exists(SELECT 1
+                FROM  Housing.V_MoveWaitingList w
+                WHERE w.residentInfoID = @residentInfoID_FK
+                  and w.IdaraId = @idaraID_FK
+                  )
+                  begin
+                  
+            if (
+                SELECT top(1) W.LastActionTypeID
+                FROM  Housing.V_MoveWaitingList w
+                WHERE w.residentInfoID = @residentInfoID_FK
+                  and w.IdaraId = @idaraID_FK 
+                  order by w.ActionID desc
+            ) = 33
+            
 
+            BEGIN
+                ;THROW 50001, N'لايمكن حذف خطاب تسكين للمستفيد لوجود طلب نقل له الى ادارة اخرى', 1;
+            END
+
+            end
+
+              if exists (SELECT 1
+                FROM  Housing.V_WaitingList w
+                WHERE w.residentInfoID = @residentInfoID_FK
+                  AND w.buildingActionRoot in (2,3)
+                  AND w.ActionID = @ActionID
+                  AND w.IdaraId = @idaraID_FK)
+
+                  BEGIN
+                ;THROW 50001, N'لايمكن حذف خطاب التسكين لوجود اجراءات تسكين او اخلاء تمت على هذا السجل', 1;
+                  END
+
+             
 
 
             
@@ -1031,16 +1089,52 @@ END
         ELSE IF @Action = N'MOVEWAITINGLIST'
         BEGIN
 
-            IF EXISTS
-            (
-                SELECT 1
-                FROM  Housing.V_MoveWaitingList w
-                WHERE w.residentInfoID = @residentInfoID_FK and w.LastActionID is null
+            --IF EXISTS
+            --(
+            --    SELECT 1
+            --    FROM  Housing.V_MoveWaitingList w
+            --    WHERE w.residentInfoID = @residentInfoID_FK and w.LastActionID is null
                   
-            )
-            BEGIN
+            --)
+            --BEGIN
+            --    ;THROW 50001, N'يوجد طلبات نقل سجلات انتظار تحت الاجراء بالنظام للمستفيد', 1;
+            --END
+
+
+            
+              if exists(SELECT 1
+                FROM  Housing.V_MoveWaitingList w
+                WHERE w.residentInfoID = @residentInfoID_FK
+                  and w.IdaraId = @idaraID_FK
+                  )
+                  begin
+                  
+            if (
+                SELECT top(1) W.LastActionTypeID
+                FROM  Housing.V_MoveWaitingList w
+                WHERE w.residentInfoID = @residentInfoID_FK
+                  and w.IdaraId = @idaraID_FK 
+                  order by w.ActionID desc
+            ) = 32
+            
+
+             BEGIN
                 ;THROW 50001, N'يوجد طلبات نقل سجلات انتظار تحت الاجراء بالنظام للمستفيد', 1;
-            END
+              END
+
+            end
+
+              if exists (SELECT 1
+                FROM  Housing.V_WaitingList w
+                WHERE w.residentInfoID = @residentInfoID_FK
+                  AND w.buildingActionRoot in (2)
+                  AND w.IdaraId = @idaraID_FK)
+
+                  BEGIN
+                ;THROW 50001, N'لايمكن نقل سجلات انتظار المستفيد لوجود سجلات تدل على انه ساكن او تحت اجراءات التسكين', 1;
+                  END
+
+             
 
              IF NOT EXISTS
             (

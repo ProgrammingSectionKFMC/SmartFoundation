@@ -78,6 +78,8 @@ BEGIN
     DECLARE @NotifDsdID         BIGINT = NULL;
     DECLARE @NotifIdaraID       BIGINT = NULL;
     DECLARE @NotifMenuID        BIGINT = NULL;
+    DECLARE @NotifPermissionTypeID BIGINT = NULL;
+    DECLARE @NotifPermissionTypeIDs NVARCHAR(500) = NULL;
 
     DECLARE @NotifStartDate NVARCHAR(500) = NULL;
     DECLARE @NotifEndDate   NVARCHAR(500) = NULL;
@@ -89,6 +91,16 @@ BEGIN
         IF @tc = 0
             BEGIN TRAN;
 
+        -- دعم فصل صلاحيات صفحة مهامي:
+        -- نسمح للواجهة بإرسال page/action خاصين بالموظف
+        -- ثم نعيد التوجيه داخليًا إلى مسار تنفيذ المهام الحالي.
+        IF @pageName_ = N'SupportMyTasks'
+           AND UPPER(ISNULL(@ActionType, N'')) = N'SMY_UPDATE_TASK_STATUS'
+        BEGIN
+            SET @pageName_ = N'SupportTicketDetails';
+            SET @ActionType = N'STD_UPDATE_TASK_STATUS';
+        END
+
         -- reset outbox
         SET @SendNotif = 0;
         SET @NotifTitle = NULL;
@@ -98,6 +110,8 @@ BEGIN
         SET @NotifDistributorID = NULL;
         SET @NotifRoleID  = NULL;
         SET @NotifDsdID = NULL;
+        SET @NotifPermissionTypeID = NULL;
+        SET @NotifPermissionTypeIDs = NULL;
         SET @NotifStartDate = NULL;
         SET @NotifEndDate = NULL;
         ----------------------------------------------------------------
@@ -826,6 +840,9 @@ BEGIN
                   , @buildingDetailsEndDate         = @parameter_18
                   , @buildingRentTypeID_FK          = @parameter_11
                   , @buildingRentAmount             = @parameter_12
+                  , @ElectrictyService              = @parameter_19
+                  , @WaterService                   = @parameter_20      
+                  , @GasService                     = @parameter_21        
                   , @idaraID_FK                     = @idaraID
                   , @entryData                      = @entrydata
                   , @hostName                       = @hostName;
@@ -855,6 +872,9 @@ BEGIN
                   , @buildingDetailsEndDate         = @parameter_18
                   , @buildingRentTypeID_FK          = @parameter_13
                   , @buildingRentAmount             = @parameter_14
+                  , @ElectrictyService              = @parameter_19
+                  , @WaterService                   = @parameter_20      
+                  , @GasService                     = @parameter_21  
                   , @idaraID_FK                     = @idaraID
                   , @entryData                      = @entrydata
                   , @hostName                       = @hostName;
@@ -883,6 +903,9 @@ BEGIN
                   , @buildingDetailsActive          = @parameter_16
                   , @buildingRentTypeID_FK          = @parameter_13
                   , @buildingRentAmount             = @parameter_14
+                  , @ElectrictyService              = @parameter_19
+                  , @WaterService                   = @parameter_20      
+                  , @GasService                     = @parameter_21  
                   , @idaraID_FK                     = @idaraID
                   , @entryData                      = @entrydata
                   , @hostName                       = @hostName;
@@ -1259,14 +1282,16 @@ BEGIN
                     SET @NotifBody  = N'يوجد نقل سجلات انتظار جديد وارد للادارة اضغط هنا للاطلاع عليه';
                     SET @NotifUrl   = N'/Housing/WaitingListMoveList';
 
-                    SET @NotifUserID        = NULL;
-                    SET @NotifDistributorID = NULL;
-                    SET @NotifRoleID        = NULL;
-                    SET @NotifDsdID         = NULL;
-                    SET @NotifIdaraID       = @parameter_12;
-                    SET @NotifMenuID        = 275;
-                    SET @NotifStartDate     = NULL;
-                    SET @NotifEndDate       = NULL;
+                    SET @NotifUserID                 = NULL;
+                    SET @NotifDistributorID          = NULL;
+                    SET @NotifRoleID                 = NULL;
+                    SET @NotifDsdID                  = NULL;
+                    SET @NotifPermissionTypeID       = NULL;
+                    SET @NotifPermissionTypeIDs      = NULL;
+                    SET @NotifIdaraID                = @parameter_12;
+                    SET @NotifMenuID                 = 275;
+                    SET @NotifStartDate              = NULL;
+                    SET @NotifEndDate                = NULL;
                            
             END 
 
@@ -1295,14 +1320,18 @@ BEGIN
                     SET @NotifBody  = N'تم الغاء نقل سجلات الانتظارالوارد لديكم من قبل الادارة المرسلة اضغط هنا للاطلاع عليه';
                     SET @NotifUrl   = N'/Housing/WaitingListMoveList';
 
-                    SET @NotifUserID        = NULL;
-                    SET @NotifDistributorID = NULL;
-                    SET @NotifRoleID        = NULL;
-                    SET @NotifDsdID         = NULL;
-                    SET @NotifIdaraID       = @parameter_10;
-                    SET @NotifMenuID        = 275;
-                    SET @NotifStartDate     = NULL;
-                    SET @NotifEndDate       = NULL;
+
+                    SET @NotifUserID                 = NULL;
+                    SET @NotifDistributorID          = NULL;
+                    SET @NotifRoleID                 = NULL;
+                    SET @NotifDsdID                  = NULL;
+                    SET @NotifPermissionTypeID       = NULL;
+                    SET @NotifPermissionTypeIDs      = NULL;
+                    SET @NotifIdaraID                = @parameter_10;
+                    SET @NotifMenuID                 = 275;
+                    SET @NotifStartDate              = NULL;
+                    SET @NotifEndDate                = NULL;
+
                            
 
             END
@@ -1405,14 +1434,16 @@ BEGIN
                     SET @NotifBody  = N'تم رفض نقل سجلات انتظار لمستفيد من قبل الادارة المرسل اليها اضغط هنا للاطلاع عليه';
                     SET @NotifUrl   = N'/Housing/WaitingListMoveList';
 
-                    SET @NotifUserID        = NULL;
-                    SET @NotifDistributorID = NULL;
-                    SET @NotifRoleID        = NULL;
-                    SET @NotifDsdID         = NULL;
-                    SET @NotifIdaraID       = @parameter_09;
-                    SET @NotifMenuID        = 275;
-                    SET @NotifStartDate     = NULL;
-                    SET @NotifEndDate       = NULL;
+                    SET @NotifUserID                 = NULL;
+                    SET @NotifDistributorID          = NULL;
+                    SET @NotifRoleID                 = NULL;
+                    SET @NotifDsdID                  = NULL;
+                    SET @NotifIdaraID                = @parameter_09;
+                    SET @NotifMenuID                 = 275;
+                    SET @NotifPermissionTypeID       = NULL;
+                    SET @NotifPermissionTypeIDs      = NULL;
+                    SET @NotifStartDate              = NULL;
+                    SET @NotifEndDate                = NULL;
                
             END
 
@@ -1437,14 +1468,16 @@ BEGIN
                     SET @NotifBody  = N'تم قبول نقل سجلات انتظار للمستفيد صاحب الهوية رقم :'+@parameter_03 +N'من قبل الادارة المرسل اليها';
                     SET @NotifUrl   = N'/Housing/WaitingListByResident?NID='+@parameter_03;
 
-                    SET @NotifUserID        = NULL;
-                    SET @NotifDistributorID = NULL;
-                    SET @NotifRoleID        = NULL;
-                    SET @NotifDsdID         = NULL;
-                    SET @NotifIdaraID       = @parameter_09;
-                    SET @NotifMenuID        = 273;
-                    SET @NotifStartDate     = NULL;
-                    SET @NotifEndDate       = NULL;
+                    SET @NotifUserID                 = NULL;
+                    SET @NotifDistributorID          = NULL;
+                    SET @NotifRoleID                 = NULL;
+                    SET @NotifDsdID                  = NULL;
+                    SET @NotifIdaraID                = @parameter_09;
+                    SET @NotifMenuID                 = 273;
+                    SET @NotifPermissionTypeID       = NULL;
+                    SET @NotifPermissionTypeIDs      = NULL;
+                    SET @NotifStartDate              = NULL;
+                    SET @NotifEndDate                = NULL;
                            
                
             END
@@ -1613,6 +1646,7 @@ BEGIN
                        @Action              = @ActionType
                      , @Notes               = @parameter_01
                      , @AssignPeriodID      = @parameter_20
+                     , @WaitingClassID      = @parameter_21
                      , @idaraID_FK          = @idaraID
                      , @entryData           = @entrydata
                      , @hostName            = @hostName;
@@ -1626,6 +1660,7 @@ BEGIN
                        @Action              = @ActionType
                      , @Notes               = @parameter_01
                      , @AssignPeriodID      = @parameter_20
+                     , @WaitingClassID      = @parameter_21
                      , @idaraID_FK          = @idaraID
                      , @entryData           = @entrydata
                      , @hostName            = @hostName;
@@ -1858,6 +1893,30 @@ BEGIN
                   , @entryData                    = @entrydata
                   , @hostName                     = @hostName;
 
+
+                  if(cast(@parameter_22 as int) > 0)
+
+                  begin
+                  SET @SendNotif  = 1;
+                  SET @NotifTitle = N'طلب قراءة عدادات جديد بإنتظار الانهاء ⚡';
+                  SET @NotifBody  = N'طلب قراءة عدادات جديد للمستفيد '+@parameter_15+N' وارد بانتظار الانهاء اضغط هنا للاطلاع عليه ';
+                  SET @NotifUrl   = N'/ElectronicBillSystem/MeterReadForOccubentAndExit';
+                  
+                  
+                  SET @NotifUserID                 = NULL;
+                  SET @NotifDistributorID          = NULL;
+                  SET @NotifRoleID                 = NULL;
+                  SET @NotifDsdID                  = NULL;
+                  SET @NotifPermissionTypeID       = NULL;
+                  SET @NotifPermissionTypeIDs      = NULL;
+                  SET @NotifIdaraID                = @idaraID;
+                  SET @NotifMenuID                 = 281;
+                  SET @NotifStartDate              = NULL;
+                  SET @NotifEndDate                = NULL;
+
+
+                  END
+
             END
 
 
@@ -1949,8 +2008,11 @@ BEGIN
                   , @AssignPeriodID               = @parameter_20
                   , @LastActionID                 = @parameter_21
                   , @meterID                      = @parameter_23
+                  , @MeterServiceTypeID           = @parameter_30
+                  , @buildingActionRoot           = @parameter_31
                   , @NewMeterReadValue            = @parameter_27  
-                  , @ExitDate                     = @parameter_29 
+                  , @ExitDate                     = @parameter_29
+                  , @BillsID                      = @parameter_32
                   , @idaraID_FK                   = @idaraID
                   , @entryData                    = @entrydata
                   , @hostName                     = @hostName;
@@ -1983,6 +2045,9 @@ BEGIN
                   , @NewMeterReadValue            = @parameter_27  
                   , @meterReadID                  = @parameter_28  
                   , @ExitDate                     = @parameter_29
+                  , @BillsID                      = @parameter_32
+                  , @buildingActionRoot           = @parameter_31
+                  , @MeterServiceTypeID           = @parameter_30
                   , @idaraID_FK                   = @idaraID
                   , @entryData                    = @entrydata
                   , @hostName                     = @hostName;
@@ -1990,7 +2055,83 @@ BEGIN
                
             END
 
-            
+             ELSE IF @ActionType = 'APPROVEMETERREADFOROCCUBENTANDEXIT'
+            BEGIN
+                      INSERT INTO @Result(IsSuccessful, Message_)
+                EXEC [Housing].[MeterReadForOccubentAndExitSP]
+                    @Action                       = @ActionType
+                  , @ActionID                     = @parameter_01
+                  , @residentInfoID               = @parameter_02
+                  , @NationalID                   = @parameter_03
+                  , @GeneralNo                    = @parameter_04
+                  , @buildingActionDecisionNo     = @parameter_05
+                  , @buildingActionDecisionDate   = @parameter_46
+                  , @WaitingClassID               = @parameter_07
+                  , @WaitingClassName             = @parameter_08
+                  , @WaitingOrderTypeID           = @parameter_09
+                  , @WaitingOrderTypeName         = @parameter_10
+                  , @Notes                        = @parameter_12
+                  , @FullName_A                   = @parameter_15
+                  , @buildingDetailsID            = @parameter_18
+                  , @buildingDetailsNo            = @parameter_19
+                  , @AssignPeriodID               = @parameter_20
+                  , @LastActionID                 = @parameter_21
+                  , @meterID                      = @parameter_23
+                  , @NewMeterReadValue            = @parameter_27  
+                  , @meterReadID                  = @parameter_28  
+                  , @ExitDate                     = @parameter_29
+                  , @BillsID                      = @parameter_32
+                  , @buildingActionRoot           = @parameter_31
+                  , @MeterServiceTypeID           = @parameter_30
+                  , @idaraID_FK                   = @idaraID
+                  , @entryData                    = @entrydata
+                  , @hostName                     = @hostName;
+                  
+
+                  if(@parameter_31 = 1)
+                  begin
+                   SET @SendNotif  = 1;
+                   SET @NotifTitle = N'تم قراءة العدادات ⚡';
+                   SET @NotifBody  = N' تم قراءة العدادات للمستفيد '+@parameter_15+N' اضغط هنا للاطلاع عليه ';
+                   SET @NotifUrl   = N'/Housing/HousingResident';
+                   
+                   
+                   SET @NotifUserID                 = NULL;
+                   SET @NotifDistributorID          = NULL;
+                   SET @NotifRoleID                 = NULL;
+                   SET @NotifDsdID                  = NULL;
+                   SET @NotifPermissionTypeID       = NULL;
+                   SET @NotifPermissionTypeIDs      = NULL;
+                   SET @NotifIdaraID                = @idaraID;
+                   SET @NotifMenuID                 = 279;
+                   SET @NotifStartDate              = NULL;
+                   SET @NotifEndDate                = NULL;
+                   END
+
+
+                   
+                  if(@parameter_31 = 2)
+                  begin
+                   SET @SendNotif  = 1;
+                   SET @NotifTitle = N'تم قراءة العدادات ⚡';
+                   SET @NotifBody  = N' تم قراءة العدادات للمستفيد '+@parameter_15+N' اضغط هنا للاطلاع عليه ';
+                   SET @NotifUrl   = N'/Housing/HousingExit?NID='+@parameter_03;
+                   
+                   
+                   SET @NotifUserID                 = NULL;
+                   SET @NotifDistributorID          = NULL;
+                   SET @NotifRoleID                 = NULL;
+                   SET @NotifDsdID                  = NULL;
+                   SET @NotifPermissionTypeID       = NULL;
+                   SET @NotifPermissionTypeIDs      = NULL;
+                   SET @NotifIdaraID                = @idaraID;
+                   SET @NotifMenuID                 = 285;
+                   SET @NotifStartDate              = NULL;
+                   SET @NotifEndDate                = NULL;
+                   END
+               
+            END
+
 
             ELSE
             BEGIN
@@ -2046,6 +2187,7 @@ BEGIN
                   , @Notes                        = @parameter_26
                   , @FullName_A                   = @parameter_15
                   , @buildingDetailsID            = @parameter_18
+                  , @buildingDetailsNo            = @parameter_19
                   , @AssignPeriodID               = @parameter_20
                   , @LastActionID                 = @parameter_21
                   , @ExtendLetterDate             = @parameter_22
@@ -2077,6 +2219,7 @@ BEGIN
                   , @Notes                        = @parameter_26
                   , @FullName_A                   = @parameter_15
                   , @buildingDetailsID            = @parameter_18
+                  , @buildingDetailsNo            = @parameter_19
                   , @AssignPeriodID               = @parameter_20
                   , @LastActionID                 = @parameter_21
                   , @ExtendLetterDate             = @parameter_22
@@ -2108,6 +2251,7 @@ BEGIN
                   , @Notes                        = @parameter_26
                   , @FullName_A                   = @parameter_15
                   , @buildingDetailsID            = @parameter_18
+                  , @buildingDetailsNo            = @parameter_19
                   , @AssignPeriodID               = @parameter_20
                   , @LastActionID                 = @parameter_21
                   , @ExtendLetterDate             = @parameter_22
@@ -2138,6 +2282,7 @@ BEGIN
                   , @Notes                        = @parameter_26
                   , @FullName_A                   = @parameter_15
                   , @buildingDetailsID            = @parameter_18
+                  , @buildingDetailsNo            = @parameter_19
                   , @AssignPeriodID               = @parameter_20
                   , @LastActionID                 = @parameter_21
                   , @ExtendLetterDate             = @parameter_22
@@ -2148,6 +2293,29 @@ BEGIN
                   , @idaraID_FK                   = @idaraID
                   , @entryData                    = @entrydata
                   , @hostName                     = @hostName;
+
+
+
+
+                   SET @SendNotif  = 1;
+                   SET @NotifTitle = N'طلب تدقيق مالي جديد بإنتظار الانهاء  💵';
+                   SET @NotifBody  = N'طلب تدقيق مالي جديد للمستفيد '+@parameter_15+N' وارد بانتظار الانهاء اضغط هنا للاطلاع عليه ';
+                   SET @NotifUrl   = N'/IncomeSystem/FinancialAuditForExtendAndEvictions';
+
+
+                   SET @NotifUserID                 = NULL;
+                   SET @NotifDistributorID          = NULL;
+                   SET @NotifRoleID                 = NULL;
+                   SET @NotifDsdID                  = NULL;
+                   SET @NotifPermissionTypeID       = NULL;
+                   SET @NotifPermissionTypeIDs      = NULL;
+                   SET @NotifIdaraID                = @idaraID;
+                   SET @NotifMenuID                 = 284;
+                   SET @NotifStartDate              = NULL;
+                   SET @NotifEndDate                = NULL;
+
+        
+
 
             END
 
@@ -2167,6 +2335,7 @@ BEGIN
                   , @Notes                        = @parameter_26
                   , @FullName_A                   = @parameter_15
                   , @buildingDetailsID            = @parameter_18
+                  , @buildingDetailsNo            = @parameter_19
                   , @AssignPeriodID               = @parameter_20
                   , @LastActionID                 = @parameter_21
                   , @ExtendLetterDate             = @parameter_22
@@ -2174,6 +2343,46 @@ BEGIN
                   , @ExtendStartDate              = @parameter_24
                   , @ExtendEndDate                = @parameter_25
                   , @ExtendTypeID                 = @parameter_27
+                  , @idaraID_FK                   = @idaraID
+                  , @entryData                    = @entrydata
+                  , @hostName                     = @hostName;
+
+            END
+            
+
+            
+             ELSE IF @ActionType = 'EXTENDINSURANCE'
+            BEGIN
+                      INSERT INTO @Result(IsSuccessful, Message_)
+                EXEC [Housing].[HousingExtendSP]
+                    @Action                       = @ActionType
+                  , @ActionID                     = @parameter_01
+                  , @residentInfoID               = @parameter_02
+                  , @NationalID                   = @parameter_03
+                  , @GeneralNo                    = @parameter_04
+                  , @WaitingClassID               = @parameter_07
+                  , @WaitingClassName             = @parameter_08
+                  , @WaitingOrderTypeID           = @parameter_09
+                  , @WaitingOrderTypeName         = @parameter_10
+                  , @Notes                        = @parameter_26
+                  , @FullName_A                   = @parameter_15
+                  , @buildingDetailsID            = @parameter_18
+                  , @buildingDetailsNo            = @parameter_19
+                  , @AssignPeriodID               = @parameter_20
+                  , @LastActionID                 = @parameter_21
+                  , @ExtendLetterDate             = @parameter_22
+                  , @ExtendLetterNo               = @parameter_23
+                  , @ExtendStartDate              = @parameter_24
+                  , @ExtendEndDate                = @parameter_25
+                  , @ExtendTypeID                 = @parameter_27
+                  , @InsuranceAmount              = @parameter_30 
+                  , @Remaining                    = @parameter_28 
+                  , @InsuranceAmountWithRemaining = @parameter_31 
+                  , @ExtendInsuranceNo            = @parameter_33 
+                  , @ExtendInsuranceDate          = @parameter_35
+                  , @ExtendInsuranceType          = @parameter_27
+                  , @ExtendInsuranceNote          = @parameter_26
+                  , @ExtendInsuranceTypeID        = @parameter_34
                   , @idaraID_FK                   = @idaraID
                   , @entryData                    = @entrydata
                   , @hostName                     = @hostName;
@@ -2319,30 +2528,24 @@ BEGIN
                   , @entryData                    = @entrydata
                   , @hostName                     = @hostName;
 
-            END
 
-             ELSE IF @ActionType = 'ApproveExtend'
-            BEGIN
-                      INSERT INTO @Result(IsSuccessful, Message_)
-                EXEC [Housing].[HousingExitSP]
-                    @Action                       = @ActionType
-                  , @ActionID                     = @parameter_01
-                  , @residentInfoID               = @parameter_02
-                  , @NationalID                   = @parameter_03
-                  , @GeneralNo                    = @parameter_04
-                  , @WaitingClassID               = @parameter_07
-                  , @WaitingClassName             = @parameter_08
-                  , @WaitingOrderTypeID           = @parameter_09
-                  , @WaitingOrderTypeName         = @parameter_10
-                  , @Notes                        = @parameter_12
-                  , @FullName_A                   = @parameter_15
-                  , @buildingDetailsID            = @parameter_18
-                  , @AssignPeriodID               = @parameter_20
-                  , @LastActionID                 = @parameter_21
-                  , @ExitDate                     = @parameter_22
-                  , @idaraID_FK                   = @idaraID
-                  , @entryData                    = @entrydata
-                  , @hostName                     = @hostName;
+
+                   SET @SendNotif  = 1;
+                   SET @NotifTitle = N'طلب تدقيق مالي جديد بإنتظار الانهاء  💵';
+                   SET @NotifBody  = N'طلب تدقيق مالي جديد للمستفيد '+@parameter_15+N' وارد بانتظار الانهاء اضغط هنا للاطلاع عليه ';
+                   SET @NotifUrl   = N'/IncomeSystem/FinancialAuditForExtendAndEvictions';
+
+
+                   SET @NotifUserID                 = NULL;
+                   SET @NotifDistributorID          = NULL;
+                   SET @NotifRoleID                 = NULL;
+                   SET @NotifDsdID                  = NULL;
+                   SET @NotifPermissionTypeID       = NULL;
+                   SET @NotifPermissionTypeIDs      = NULL;
+                   SET @NotifIdaraID                = @idaraID;
+                   SET @NotifMenuID                 = 284;
+                   SET @NotifStartDate              = NULL;
+                   SET @NotifEndDate                = NULL;
 
             END
 
@@ -2373,8 +2576,55 @@ BEGIN
                   , @entryData                    = @entrydata
                   , @hostName                     = @hostName;
 
+                  if(cast(@parameter_42 as int) > 0)
+
+                  begin
+                   SET @SendNotif  = 1;
+                   SET @NotifTitle = N'طلب قراءة عدادات جديد بإنتظار الانهاء ⚡';
+                   SET @NotifBody  = N'طلب قراءة عدادات جديد للمستفيد '+@parameter_15+N' وارد بانتظار الانهاء اضغط هنا للاطلاع عليه ';
+                   SET @NotifUrl   = N'/ElectronicBillSystem/MeterReadForOccubentAndExit?U='+@parameter_02;
+
+
+                   SET @NotifUserID                 = NULL;
+                   SET @NotifDistributorID          = NULL;
+                   SET @NotifRoleID                 = NULL;
+                   SET @NotifDsdID                  = NULL;
+                   SET @NotifPermissionTypeID       = NULL;
+                   SET @NotifPermissionTypeIDs      = NULL;
+                   SET @NotifIdaraID                = @idaraID;
+                   SET @NotifMenuID                 = 281;
+                   SET @NotifStartDate              = NULL;
+                   SET @NotifEndDate                = NULL;
+
+                END
+
             END
 
+            ELSE IF @ActionType = 'APPROVEHOUSINGEXIT'
+            BEGIN
+                      INSERT INTO @Result(IsSuccessful, Message_)
+                EXEC [Housing].[HousingExitSP]
+                    @Action                       = @ActionType
+                  , @ActionID                     = @parameter_01
+                  , @residentInfoID               = @parameter_02
+                  , @NationalID                   = @parameter_03
+                  , @GeneralNo                    = @parameter_04
+                  , @WaitingClassID               = @parameter_07
+                  , @WaitingClassName             = @parameter_08
+                  , @WaitingOrderTypeID           = @parameter_09
+                  , @WaitingOrderTypeName         = @parameter_10
+                  , @Notes                        = @parameter_12
+                  , @FullName_A                   = @parameter_15
+                  , @buildingDetailsID            = @parameter_18
+                  , @AssignPeriodID               = @parameter_20
+                  , @LastActionID                 = @parameter_21
+                  , @ExitDate                     = @parameter_22
+                  , @LastActionTypeID             = @parameter_16
+                  , @idaraID_FK                   = @idaraID
+                  , @entryData                    = @entrydata
+                  , @hostName                     = @hostName;
+
+            END
             
 
             ELSE
@@ -2427,6 +2677,74 @@ BEGIN
                   , @idaraID_FK                         = @idaraID
                   , @entryData                          = @entrydata
                   , @hostName                           = @hostName;
+
+
+                  Declare @residentFullNameForFINANCIALAUDITFOREXTENDANDEVICTIONS nvarchar(2000),@residentNIDForFINANCIALAUDITFOREXTENDANDEVICTIONS nvarchar(2000)
+                  set @residentFullNameForFINANCIALAUDITFOREXTENDANDEVICTIONS =
+                  (
+                  select r.FullName_A from Housing.V_GetFullResidentDetails r where r.residentInfoID = @parameter_02
+                  )
+
+                  set @residentNIDForFINANCIALAUDITFOREXTENDANDEVICTIONS =
+                  (
+                  select r.NationalID from Housing.V_GetFullResidentDetails r where r.residentInfoID = @parameter_02
+                  )
+
+                  if(@parameter_16 = 57)
+                  BEGIN
+
+                   
+
+                SET @SendNotif  = 1;
+                SET @NotifTitle = N'انتهاء التدقيق المالي 🎉';
+                SET @NotifBody  = N'انتهى التدقيق المالي للمستفيد '+@residentFullNameForFINANCIALAUDITFOREXTENDANDEVICTIONS+N' اضغط هنا لانهاء اجراءات الاخلاء الان ';
+                SET @NotifUrl   = N'/Housing/HousingExit?NID='+@residentNIDForFINANCIALAUDITFOREXTENDANDEVICTIONS;
+
+
+                SET @NotifUserID                 = NULL;
+                SET @NotifDistributorID          = NULL;
+                SET @NotifRoleID                 = NULL;
+                SET @NotifDsdID                  = NULL;
+                SET @NotifPermissionTypeID       = NULL;
+                SET @NotifPermissionTypeIDs      = NULL;
+                SET @NotifIdaraID                = @idaraID;
+                SET @NotifMenuID                 = 285;
+                SET @NotifStartDate              = NULL;
+                SET @NotifEndDate                = NULL;
+
+
+
+
+                  END
+
+
+
+                   if(@parameter_16 = 51)
+                  BEGIN
+
+                   
+
+                SET @SendNotif  = 1;
+                SET @NotifTitle = N'انتهاء التدقيق المالي 🎉';
+                SET @NotifBody  = N'انتهى التدقيق المالي للمستفيد '+@residentFullNameForFINANCIALAUDITFOREXTENDANDEVICTIONS+N' اضغط هنا لانهاء اجراءات الامهال الان ';
+                SET @NotifUrl   = N'/Housing/HousingExtend';
+
+
+                SET @NotifUserID                 = NULL;
+                SET @NotifDistributorID          = NULL;
+                SET @NotifRoleID                 = NULL;
+                SET @NotifDsdID                  = NULL;
+                SET @NotifPermissionTypeID       = NULL;
+                SET @NotifPermissionTypeIDs      = NULL;
+                SET @NotifIdaraID                = @idaraID;
+                SET @NotifMenuID                 = 285;
+                SET @NotifStartDate              = NULL;
+                SET @NotifEndDate                = NULL;
+
+
+
+
+               END
 
             END
 
@@ -2975,7 +3293,7 @@ BEGIN
 
 
         ----------------------------------------------------------------
-        -- MeterReadForOccubentAndExit
+        -- HousingHandover
         ----------------------------------------------------------------
         ELSE IF @pageName_ = 'HousingHandover'
         BEGIN
@@ -3026,6 +3344,1645 @@ BEGIN
 
 
 
+
+
+
+
+
+
+----------------------------------------------------------------
+          --العربات 
+----------------------------------------------------------------
+        ----------------------------------------------------------------
+-- Custody_Close
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'Custody_Close'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACOREV.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    IF @ActionType = 'UPDATE'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[Custody_Close_SP]
+              @vehicleWithUsersID = @parameter_01
+            , @endDate            = @parameter_02
+            , @note               = @parameter_03
+            , @entryData          = @entrydata
+            , @hostName           = @hostName
+            , @idaraID_FK         = @idaraID;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+    GOTO Finish;
+END
+
+----------------------------------------------------------------
+-- Custody_Create
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'Custody_Create'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACOREV.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    DECLARE @Result_CustodyCreate TABLE
+    (
+          IsSuccessful       INT
+        , Message_           NVARCHAR(4000)
+        , vehicleWithUsersID INT
+    );
+
+    IF @ActionType = 'INSERT'
+    BEGIN
+        INSERT INTO @Result_CustodyCreate(IsSuccessful, Message_, vehicleWithUsersID)
+        EXEC [VIC].[Custody_Create_SP]
+              @chassisNumber = @parameter_01
+            , @userID_FK      = @parameter_02
+            , @startDate      = @parameter_03
+            , @note           = @parameter_04
+            , @entryData      = @entrydata
+            , @hostName       = @hostName
+            , @idaraID_FK     = @idaraID;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result_CustodyCreate;
+    GOTO Finish;
+END
+
+----------------------------------------------------------------
+-- Custody_Transfer
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'Custody_Transfer'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACOREV.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    DECLARE @Result_CustodyTransfer TABLE
+    (
+          IsSuccessful             INT
+        , Message_                 NVARCHAR(4000)
+        , ClosedVehicleWithUsersID INT
+        , NewVehicleWithUsersID    INT
+    );
+
+    IF @ActionType = 'INSERT'
+    BEGIN
+        INSERT INTO @Result_CustodyTransfer(IsSuccessful, Message_, ClosedVehicleWithUsersID, NewVehicleWithUsersID)
+        EXEC [VIC].[Custody_Transfer_SP]
+              @chassisNumber = @parameter_01
+            , @toUserID_FK    = @parameter_02
+            , @transferDate   = @parameter_03
+            , @note           = @parameter_04
+            , @entryData      = @entrydata
+            , @hostName       = @hostName
+            , @idaraID_FK     = @idaraID;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result_CustodyTransfer;
+    GOTO Finish;
+END
+
+----------------------------------------------------------------
+-- Handover_Create
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'Handover_Create'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACOREV.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    IF @ActionType = 'INSERT'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[Handover_Create_SP]
+              @requestID      = @parameter_01
+            , @handoverTypeID = @parameter_02
+            , @handoverDate   = @parameter_03
+            , @note           = @parameter_04
+            , @idaraID_FK     = @idaraID
+            , @entryData      = @entrydata
+            , @hostName       = @hostName;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+    GOTO Finish;
+END
+
+----------------------------------------------------------------
+-- HandoverType
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'HandoverType'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACORE.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    IF @ActionType = 'INSERT'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[HandoverType_Upsert_SP]
+              @handoverTypeID     = NULL
+            , @handoverTypeName_A = @parameter_01
+            , @handoverTypeName_E = @parameter_02
+            , @active             = @parameter_03
+            , @entryData          = @entrydata
+            , @hostName           = @hostName;
+    END
+    ELSE IF @ActionType = 'UPDATE'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[HandoverType_Upsert_SP]
+              @handoverTypeID     = @parameter_01
+            , @handoverTypeName_A = @parameter_02
+            , @handoverTypeName_E = @parameter_03
+            , @active             = @parameter_04
+            , @entryData          = @entrydata
+            , @hostName           = @hostName;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+    GOTO Finish;
+END
+
+----------------------------------------------------------------
+-- MaintenanceDetails_Delete
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'MaintenanceDetails_Delete'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACOREV.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    IF @ActionType = 'DELETE'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[MaintenanceDetails_Delete_SP]
+              @maintDetailesID = @parameter_01
+            , @idaraID_FK      = @idaraID
+            , @entryData       = @entrydata
+            , @hostName        = @hostName;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+    GOTO Finish;
+END
+
+----------------------------------------------------------------
+-- MaintenanceTemplate_Delete
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'MaintenanceTemplate_Delete'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACOREV.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    IF @ActionType = 'DELETE'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[MaintenanceTemplate_Delete_SP]
+              @TemplateID = @parameter_01
+            , @entryData  = @entrydata
+            , @hostName   = @hostName;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+    GOTO Finish;
+END
+----------------------------------------------------------------
+-- MaintenanceTemplate_Upsert
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'MaintenanceTemplate_Upsert'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACOREV.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    IF @ActionType = 'INSERT'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[MaintenanceTemplate_Upsert_SP]
+              @TemplateID        = NULL
+            , @MaintOrdTypeID_FK = @parameter_01
+            , @typesID_FK        = @parameter_02
+            , @TemplateOrder     = @parameter_03
+            , @active            = @parameter_04
+            , @entryData         = @entrydata
+            , @hostName          = @hostName;
+    END
+    ELSE IF @ActionType = 'UPDATE'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[MaintenanceTemplate_Upsert_SP]
+              @TemplateID        = @parameter_01
+            , @MaintOrdTypeID_FK = @parameter_02
+            , @typesID_FK        = @parameter_03
+            , @TemplateOrder     = @parameter_04
+            , @active            = @parameter_05
+            , @entryData         = @entrydata
+            , @hostName          = @hostName;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+    GOTO Finish;
+END
+
+----------------------------------------------------------------
+-- MaintenanceDetails_Upsert
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'MaintenanceDetails_Upsert'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACOREV.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    IF @ActionType = 'INSERT'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[MaintenanceDetails_Upsert_SP]
+              @maintDetailesID  = NULL
+            , @maintOrdID       = @parameter_01
+            , @typesID          = @parameter_02
+            , @supportID        = @parameter_03
+            , @checkStatus      = @parameter_04
+            , @actionState      = @parameter_05
+            , @correctiveAction = @parameter_06
+            , @fsn              = @parameter_07
+            , @maintLevel       = @parameter_08
+            , @currentDate      = @parameter_09
+            , @notes            = @parameter_10
+            , @idaraID_FK       = @idaraID
+            , @entryData        = @entrydata
+            , @hostName         = @hostName;
+    END
+    ELSE IF @ActionType = 'UPDATE'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[MaintenanceDetails_Upsert_SP]
+              @maintDetailesID  = @parameter_01
+            , @maintOrdID       = @parameter_02
+            , @typesID          = @parameter_03
+            , @supportID        = @parameter_04
+            , @checkStatus      = @parameter_05
+            , @actionState      = @parameter_06
+            , @correctiveAction = @parameter_07
+            , @fsn              = @parameter_08
+            , @maintLevel       = @parameter_09
+            , @currentDate      = @parameter_10
+            , @notes            = @parameter_11
+            , @idaraID_FK       = @idaraID
+            , @entryData        = @entrydata
+            , @hostName         = @hostName;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+    GOTO Finish;
+END
+
+----------------------------------------------------------------
+-- MaintenanceOrder_Close
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'MaintenanceOrder_Close'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACOREV.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    IF @ActionType = 'UPDATE'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[MaintenanceOrder_Close_SP]
+              @maintOrdID = @parameter_01
+            , @endDate    = @parameter_02
+            , @idaraID_FK = @idaraID
+            , @entryData  = @entrydata
+            , @hostName   = @hostName;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+    GOTO Finish;
+END
+
+----------------------------------------------------------------
+-- MaintenanceOrder_Upsert
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'MaintenanceOrder_Upsert'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACOREV.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    IF @ActionType = 'INSERT'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[MaintenanceOrder_Upsert_SP]
+              @maintOrdID     = NULL
+            , @maintOrdTypeID = @parameter_01
+            , @chassisNumber  = @parameter_02
+            , @startDate      = @parameter_03
+            , @endDate        = @parameter_04
+            , @desc           = @parameter_05
+            , @active         = @parameter_06
+            , @idaraID_FK     = @idaraID
+            , @entryData      = @entrydata
+            , @hostName       = @hostName;
+    END
+    ELSE IF @ActionType = 'UPDATE'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[MaintenanceOrder_Upsert_SP]
+              @maintOrdID     = @parameter_01
+            , @maintOrdTypeID = @parameter_02
+            , @chassisNumber  = @parameter_03
+            , @startDate      = @parameter_04
+            , @endDate        = @parameter_05
+            , @desc           = @parameter_06
+            , @active         = @parameter_07
+            , @idaraID_FK     = @idaraID
+            , @entryData      = @entrydata
+            , @hostName       = @hostName;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+    GOTO Finish;
+END
+----------------------------------------------------------------
+-- MaintenancePlan_AutoGenerate
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'MaintenancePlan_AutoGenerate'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACORE.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    IF @ActionType = 'INSERT'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[MaintenancePlan_AutoGenerate_SP]
+              @idaraID_FK = @idaraID
+            , @entryData  = @entrydata
+            , @hostName   = @hostName;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+    GOTO Finish;
+END
+----------------------------------------------------------------
+-- MaintenancePlan_SetActive
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'MaintenancePlan_SetActive'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACORE.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    IF @ActionType = 'UPDATE'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[MaintenancePlan_SetActive_SP]
+              @planID      = @parameter_01
+            , @active      = @parameter_02
+            , @idaraID_FK  = @idaraID
+            , @entryData   = @entrydata
+            , @hostName    = @hostName;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+    GOTO Finish;
+END
+----------------------------------------------------------------
+-- MaintenancePlan_Upsert
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'MaintenancePlan_Upsert'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACORE.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    IF @ActionType = 'INSERT'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[MaintenancePlan_Upsert_SP]
+              @planID        = NULL
+            , @chassisNumber = @parameter_01
+            , @periodMonths  = @parameter_02
+            , @nextDueDate   = @parameter_03
+            , @active        = @parameter_04
+            , @idaraID_FK    = @idaraID
+            , @entryData     = @entrydata
+            , @hostName      = @hostName;
+    END
+    ELSE IF @ActionType = 'UPDATE'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[MaintenancePlan_Upsert_SP]
+              @planID        = @parameter_01
+            , @chassisNumber = @parameter_02
+            , @periodMonths  = @parameter_03
+            , @nextDueDate   = @parameter_04
+            , @active        = @parameter_05
+            , @idaraID_FK    = @idaraID
+            , @entryData     = @entrydata
+            , @hostName      = @hostName;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+    GOTO Finish;
+END
+
+----------------------------------------------------------------
+-- Scrap_Action
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'Scrap_Action'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACOREV.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    IF @ActionType IN ('APPROVE', 'CANCEL')
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[Scrap_Action_SP]
+              @Action         = @ActionType
+            , @ScrapID        = @parameter_01
+            , @idaraID_FK     = @idaraID
+            , @actionByUserID = @parameter_02
+            , @actionNote     = @parameter_03
+            , @entryData      = @entrydata
+            , @hostName       = @hostName;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+    GOTO Finish;
+END
+
+----------------------------------------------------------------
+-- Scrap_Upsert
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'Scrap_Upsert'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACOREV.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DECLARE @Result_ScrapUpsert TABLE
+    (
+          IsSuccessful INT
+        , Message_     NVARCHAR(4000)
+        , ScrapID      BIGINT
+    );
+
+    IF @ActionType = 'INSERT'
+    BEGIN
+        INSERT INTO @Result_ScrapUpsert(IsSuccessful, Message_, ScrapID)
+        EXEC [VIC].[Scrap_Upsert_SP]
+              @ScrapID        = NULL
+            , @chassisNumber  = @parameter_01
+            , @idaraID_FK     = @idaraID
+            , @ScrapDate      = @parameter_02
+            , @ScrapTypeID_FK = @parameter_03
+            , @RefNo          = @parameter_04
+            , @Reason         = @parameter_05
+            , @Note           = @parameter_06
+            , @Notes          = @parameter_07
+            , @entryData      = @entrydata
+            , @hostName       = @hostName;
+    END
+    ELSE IF @ActionType = 'UPDATE'
+    BEGIN
+        INSERT INTO @Result_ScrapUpsert(IsSuccessful, Message_, ScrapID)
+        EXEC [VIC].[Scrap_Upsert_SP]
+              @ScrapID        = @parameter_01
+            , @chassisNumber  = @parameter_02
+            , @idaraID_FK     = @idaraID
+            , @ScrapDate      = @parameter_03
+            , @ScrapTypeID_FK = @parameter_04
+            , @RefNo          = @parameter_05
+            , @Reason         = @parameter_06
+            , @Note           = @parameter_07
+            , @Notes          = @parameter_08
+            , @entryData      = @entrydata
+            , @hostName       = @hostName;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_
+    FROM @Result_ScrapUpsert;
+
+    GOTO Finish;
+END
+
+
+----------------------------------------------------------------
+-- TransferRequest_Approve
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'TransferRequest_Approve'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACORE.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    IF @ActionType = 'UPDATE'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[TransferRequest_Approve_SP]
+              @requestID  = @parameter_01
+            , @actionBy   = @parameter_02
+            , @note       = @parameter_03
+            , @hostName   = @hostName
+            , @idaraID_FK = @idaraID;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+    GOTO Finish;
+END
+
+----------------------------------------------------------------
+-- TransferRequest_Cancel
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'TransferRequest_Cancel'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACORE.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    IF @ActionType = 'DELETE'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[TransferRequest_Cancel_SP]
+              @requestID  = @parameter_01
+            , @actionBy   = @parameter_02
+            , @note       = @parameter_03
+            , @hostName   = @hostName
+            , @idaraID_FK = @idaraID;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+    GOTO Finish;
+END
+
+----------------------------------------------------------------
+-- TransferRequest_Close
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'TransferRequest_Close'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACORE.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    IF @ActionType = 'CLOSE'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[TransferRequest_Close_SP]
+              @requestID  = @parameter_01
+            , @actionBy   = @parameter_02
+            , @note       = @parameter_03
+            , @hostName   = @hostName
+            , @idaraID_FK = @idaraID;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+    GOTO Finish;
+END
+
+----------------------------------------------------------------
+-- TransferRequest_Create
+----------------------------------------------------------------
+----------------------------------------------------------------
+-- TransferRequest_Create
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'TransferRequest_Create'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACORE.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    DECLARE @Result_TransferRequest_Create TABLE
+    (
+          IsSuccessful INT
+        , Message_     NVARCHAR(4000)
+        , RequestID    INT
+    );
+
+    IF @ActionType = 'INSERT'
+    BEGIN
+        INSERT INTO @Result_TransferRequest_Create(IsSuccessful, Message_, RequestID)
+        EXEC [VIC].[TransferRequest_Create_SP]
+              @requestTypeID = @parameter_01
+            , @chassisNumber = @parameter_02
+            , @fromUserID    = @parameter_03
+            , @toUserID      = @parameter_04
+            , @deptID        = @parameter_05
+            , @createByUser  = @parameter_06
+            , @note          = @parameter_07
+            , @idaraID_FK    = @idaraID
+            , @entryData     = @entrydata
+            , @hostName      = @hostName;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result_TransferRequest_Create;
+    GOTO Finish;
+END
+
+----------------------------------------------------------------
+-- TransferRequest_Execute
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'TransferRequest_Execute'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACORE.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    DECLARE @Result_TransferRequest_Execute TABLE
+    (
+          IsSuccessful       INT
+        , Message_           NVARCHAR(4000)
+        , vehicleWithUsersID INT
+    );
+
+    IF @ActionType = 'UPDATE'
+    BEGIN
+        INSERT INTO @Result_TransferRequest_Execute(IsSuccessful, Message_, vehicleWithUsersID)
+        EXEC [VIC].[TransferRequest_Execute_SP]
+              @requestID  = @parameter_01
+            , @entryData  = @entrydata
+            , @hostName   = @hostName
+            , @idaraID_FK = @idaraID
+            , @note       = @parameter_02;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result_TransferRequest_Execute;
+    GOTO Finish;
+END
+
+----------------------------------------------------------------
+-- TransferRequest_Reject
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'TransferRequest_Reject'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACORE.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    IF @ActionType = 'UPDATE'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[TransferRequest_Reject_SP]
+              @requestID  = @parameter_01
+            , @actionBy   = @parameter_02
+            , @note       = @parameter_03
+            , @hostName   = @hostName
+            , @idaraID_FK = @idaraID;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+    GOTO Finish;
+END
+
+----------------------------------------------------------------
+-- TransferRequestType
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'TransferRequestType'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACORE.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    IF @ActionType = 'INSERT'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[TransferRequestType_Upsert_SP]
+              @vehicleTransferRequestTypeID = NULL
+            , @nameA                        = @parameter_01
+            , @nameE                        = @parameter_02
+            , @active                       = @parameter_03;
+    END
+    ELSE IF @ActionType = 'UPDATE'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[TransferRequestType_Upsert_SP]
+              @vehicleTransferRequestTypeID = @parameter_01
+            , @nameA                        = @parameter_02
+            , @nameE                        = @parameter_03
+            , @active                       = @parameter_04;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+    GOTO Finish;
+END
+
+----------------------------------------------------------------
+-- TypesRoot_Upsert
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'TypesRoot_Upsert'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACORE.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    IF @ActionType = 'INSERT'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[TypesRoot_Upsert_SP]
+              @typesID            = NULL
+            , @typesName_A        = @parameter_01
+            , @typesName_E        = @parameter_02
+            , @typesDesc          = @parameter_03
+            , @typesActive        = @parameter_04
+            , @typesStartDate     = @parameter_05
+            , @typesEndDate       = @parameter_06
+            , @typesRoot_ParentID = @parameter_07
+            , @entryData          = @entrydata
+            , @hostName           = @hostName;
+    END
+    ELSE IF @ActionType = 'UPDATE'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[TypesRoot_Upsert_SP]
+              @typesID            = @parameter_01
+            , @typesName_A        = @parameter_02
+            , @typesName_E        = @parameter_03
+            , @typesDesc          = @parameter_04
+            , @typesActive        = @parameter_05
+            , @typesStartDate     = @parameter_06
+            , @typesEndDate       = @parameter_07
+            , @typesRoot_ParentID = @parameter_08
+            , @entryData          = @entrydata
+            , @hostName           = @hostName;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+    GOTO Finish;
+END
+
+----------------------------------------------------------------
+-- Vehicle_Upsert
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'Vehicle_Upsert'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACOREV.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    -- ملاحظة: VIC.Vehicle_Upsert_SP يرجّع 3 أعمدة (IsSuccessful, Message_, chassisNumber)
+    DECLARE @Result_VehicleUpsert TABLE
+    (
+          IsSuccessful  INT
+        , Message_      NVARCHAR(4000)
+        , chassisNumber NVARCHAR(100)
+    );
+
+    IF @ActionType = 'INSERT'
+    BEGIN
+        INSERT INTO @Result_VehicleUpsert(IsSuccessful, Message_, chassisNumber)
+        EXEC [VIC].[Vehicle_Upsert_SP]
+              @UsersID               = @entrydata
+            , @MenuLink              = NULL
+            , @SkipPermission        = 1
+            , @chassisNumber         = @parameter_01
+            , @ownerID_FK            = @parameter_02
+            , @ManufacturerNameID_FK = @parameter_03
+            , @vehicleModelID_FK     = @parameter_04
+            , @vehicleClassID_FK     = @parameter_05
+            , @TypeOfUseID_FK        = @parameter_06
+            , @vehicleColorID_FK     = @parameter_07
+            , @countryMadeID_FK      = @parameter_08
+            , @regstritionTypeID_FK  = @parameter_09
+            , @regionID_FK           = @parameter_10
+            , @fuelTypeID_FK         = @parameter_11
+            , @vehicleTypeID_FK      = @parameter_12
+            , @yearModel             = @parameter_13
+            , @capacity              = @parameter_14
+            , @serialNumber          = @parameter_15
+            , @plateLetters          = @parameter_16
+            , @plateNumbers          = @parameter_17
+            , @armyNumber            = @parameter_18
+            , @vehicleNote           = @parameter_19
+            , @idaraID_FK            = @idaraID
+            , @entryData             = @entrydata
+            , @hostName              = @hostName;
+    END
+    ELSE IF @ActionType = 'UPDATE'
+    BEGIN
+        INSERT INTO @Result_VehicleUpsert(IsSuccessful, Message_, chassisNumber)
+        EXEC [VIC].[Vehicle_Upsert_SP]
+              @UsersID               = @entrydata
+            , @MenuLink              = NULL
+            , @SkipPermission        = 1
+            , @chassisNumber         = @parameter_01
+            , @ownerID_FK            = @parameter_02
+            , @ManufacturerNameID_FK = @parameter_03
+            , @vehicleModelID_FK     = @parameter_04
+            , @vehicleClassID_FK     = @parameter_05
+            , @TypeOfUseID_FK        = @parameter_06
+            , @vehicleColorID_FK     = @parameter_07
+            , @countryMadeID_FK      = @parameter_08
+            , @regstritionTypeID_FK  = @parameter_09
+            , @regionID_FK           = @parameter_10
+            , @fuelTypeID_FK         = @parameter_11
+            , @vehicleTypeID_FK      = @parameter_12
+            , @yearModel             = @parameter_13
+            , @capacity              = @parameter_14
+            , @serialNumber          = @parameter_15
+            , @plateLetters          = @parameter_16
+            , @plateNumbers          = @parameter_17
+            , @armyNumber            = @parameter_18
+            , @vehicleNote           = @parameter_19
+            , @idaraID_FK            = @idaraID
+            , @entryData             = @entrydata
+            , @hostName              = @hostName;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result_VehicleUpsert;
+    GOTO Finish;
+END
+
+----------------------------------------------------------------
+-- VehicleDocument_Upsert
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'VehicleDocument_Upsert'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACORE.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    -- ملاحظة: VIC.VehicleDocument_Upsert_SP يرجّع 3 أعمدة (IsSuccessful, Message_, vehicleDocumentID)
+    DECLARE @Result_VehicleDocument TABLE
+    (
+          IsSuccessful      INT
+        , Message_          NVARCHAR(4000)
+        , vehicleDocumentID INT
+    );
+
+    IF @ActionType = 'INSERT'
+    BEGIN
+        INSERT INTO @Result_VehicleDocument(IsSuccessful, Message_, vehicleDocumentID)
+        EXEC [VIC].[VehicleDocument_Upsert_SP]
+              @vehicleDocumentID     = NULL
+            , @chassisNumber         = @parameter_01
+            , @vehicleDocumentTypeID = @parameter_02
+            , @vehicleDocumentNo     = @parameter_03
+            , @StartDate             = @parameter_04
+            , @EndDate               = @parameter_05
+            , @idaraID_FK            = @idaraID
+            , @entryData             = @entrydata
+            , @hostName              = @hostName;
+    END
+    ELSE IF @ActionType = 'UPDATE'
+    BEGIN
+        INSERT INTO @Result_VehicleDocument(IsSuccessful, Message_, vehicleDocumentID)
+        EXEC [VIC].[VehicleDocument_Upsert_SP]
+              @vehicleDocumentID     = @parameter_01
+            , @chassisNumber         = @parameter_02
+            , @vehicleDocumentTypeID = @parameter_03
+            , @vehicleDocumentNo     = @parameter_04
+            , @StartDate             = @parameter_05
+            , @EndDate               = @parameter_06
+            , @idaraID_FK            = @idaraID
+            , @entryData             = @entrydata
+            , @hostName              = @hostName;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result_VehicleDocument;
+    GOTO Finish;
+END
+
+----------------------------------------------------------------
+-- VehicleDocumentType_Upsert
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'VehicleDocumentType_Upsert'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACORE.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    -- ملاحظة: VIC.VehicleDocumentType_Upsert_SP يرجّع 3 أعمدة (IsSuccessful, Message_, vehicleDocumentTypeID)
+    DECLARE @Result_VehicleDocumentType TABLE
+    (
+          IsSuccessful           INT
+        , Message_               NVARCHAR(4000)
+        , vehicleDocumentTypeID  INT
+    );
+
+    IF @ActionType = 'INSERT'
+    BEGIN
+        INSERT INTO @Result_VehicleDocumentType(IsSuccessful, Message_, vehicleDocumentTypeID)
+        EXEC [VIC].[VehicleDocumentType_Upsert_SP]
+              @vehicleDocumentTypeID = NULL
+            , @NameA                 = @parameter_01
+            , @NameE                 = @parameter_02
+            , @Active                = @parameter_03
+            , @entryData             = @entrydata
+            , @hostName              = @hostName;
+    END
+    ELSE IF @ActionType = 'UPDATE'
+    BEGIN
+        INSERT INTO @Result_VehicleDocumentType(IsSuccessful, Message_, vehicleDocumentTypeID)
+        EXEC [VIC].[VehicleDocumentType_Upsert_SP]
+              @vehicleDocumentTypeID = @parameter_01
+            , @NameA                 = @parameter_02
+            , @NameE                 = @parameter_03
+            , @Active                = @parameter_04
+            , @entryData             = @entrydata
+            , @hostName              = @hostName;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result_VehicleDocumentType;
+    GOTO Finish;
+END
+
+----------------------------------------------------------------
+-- VehicleInsurance_SetActive
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'VehicleInsurance_SetActive'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACORE.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    IF @ActionType = 'SETACTIVE'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[VehicleInsurance_SetActive_SP]
+              @VehicleInsuranceID = @parameter_01
+            , @active             = @parameter_02
+            , @idaraID_FK          = @idaraID
+            , @entryData           = @entrydata
+            , @hostName            = @hostName;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+    GOTO Finish;
+END
+
+----------------------------------------------------------------
+-- VehicleInsurance_Upsert
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'VehicleInsurance_Upsert'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACORE.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    IF @ActionType = 'UPSERT'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[VehicleInsurance_Upsert_SP]
+              @VehicleInsuranceID = @parameter_01
+            , @chassisNumber      = @parameter_02
+            , @OperationTypeID    = @parameter_03
+            , @InsuranceTypeID    = @parameter_04
+            , @Source             = @parameter_05
+            , @StartInsurance     = @parameter_06
+            , @EndInsurance       = @parameter_07
+            , @Amount             = @parameter_08
+            , @Note               = @parameter_09
+            , @active             = @parameter_10
+            , @idaraID_FK          = @idaraID
+            , @entryData           = @entrydata
+            , @hostName            = @hostName;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+    GOTO Finish;
+END
+
+----------------------------------------------------------------
+-- VehicleScrap_Approve
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'VehicleScrap_Approve'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACORE.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    IF @ActionType = 'APPROVE'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[VehicleScrap_Approve_SP]
+              @ScrapID          = @parameter_01
+            , @ApprovedByUserID = @parameter_02
+            , @ApprovedDate     = @parameter_03
+            , @entryData        = @entrydata
+            , @hostName         = @hostName
+            , @idaraID_FK        = @idaraID;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+    GOTO Finish;
+END
+
+----------------------------------------------------------------
+-- Violation_SetPayment
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'Violation_SetPayment'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACORE.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    IF @ActionType = 'PAYMENT'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[Violation_SetPayment_SP]
+              @violationID  = @parameter_01
+            , @PaymentDate  = @parameter_02
+            , @entryPayment = @entrydata
+            , @hostName     = @hostName
+            , @idaraID_FK   = @idaraID;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1
+          @ok  = IsSuccessful
+        , @msg = Message_
+    FROM @Result;
+
+    GOTO Finish;
+END
+----------------------------------------------------------------
+-- Violation_Upsert
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'Violation_Upsert'
+BEGIN
+    IF (
+        SELECT COUNT(*)
+        FROM DATACORE.dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    IF @ActionType = 'INSERT'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[Violation_Upsert_SP]
+              @violationID       = NULL
+            , @violationTypeID   = @parameter_01
+            , @chassisNumber     = @parameter_02
+            , @violationDate     = @parameter_03
+            , @violationPrice    = @parameter_04
+            , @violationLocation = @parameter_05
+            , @idaraID_FK        = @idaraID
+            , @entryData         = @entrydata
+            , @hostName          = @hostName;
+    END
+    ELSE IF @ActionType = 'UPDATE'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [VIC].[Violation_Upsert_SP]
+              @violationID       = @parameter_01
+            , @violationTypeID   = @parameter_02
+            , @chassisNumber     = @parameter_03
+            , @violationDate     = @parameter_04
+            , @violationPrice    = @parameter_05
+            , @violationLocation = @parameter_06
+            , @idaraID_FK        = @idaraID
+            , @entryData         = @entrydata
+            , @hostName          = @hostName;
+    END
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+    GOTO Finish;
+END
 
 
 
@@ -3144,23 +5101,25 @@ Finish:
         BEGIN
             BEGIN TRY
                 EXEC dbo.Notifications_Create
-                      @Title         = @NotifTitle
-                    , @Body          = @NotifBody
-                    , @Url           = @NotifUrl
-                    , @StartDate     = @NotifStartDate
-                    , @EndDate       = @NotifEndDate
-                    , @UserID        = @NotifUserID
-                    , @DistributorID = @NotifDistributorID
-                    , @RoleID        = @NotifRoleID
-                    , @DsdID         = @NotifDsdID
-                    , @IdaraID       = @NotifIdaraID
-                    , @MenuID        = @NotifMenuID
-                    , @entryData     = @entrydata
-                    , @hostName      = @hostName;
+                      @Title             = @NotifTitle
+                    , @Body              = @NotifBody
+                    , @Url               = @NotifUrl
+                    , @StartDate         = @NotifStartDate
+                    , @EndDate           = @NotifEndDate
+                    , @UserID            = @NotifUserID
+                    , @DistributorID     = @NotifDistributorID
+                    , @RoleID            = @NotifRoleID
+                    , @DsdID             = @NotifDsdID
+                    , @PermissionTypeID  = @NotifPermissionTypeID
+                    , @PermissionTypeIDs = @NotifPermissionTypeIDs
+                    , @IdaraID           = @NotifIdaraID
+                    , @MenuID            = @NotifMenuID
+                    , @entryData         = @entrydata
+                    , @hostName          = @hostName;
             END TRY
             BEGIN CATCH
-                SELECT 0 AS IsSuccessful, ISNULL(@msg, N'فشل تنفيذ الاشعار') AS Message_;
-            RETURN;
+            --    SELECT 0 AS IsSuccessful, ISNULL(@msg, N'فشل تنفيذ الاشعار') AS Message_;
+            --RETURN;
                 -- تجاهل فشل الإشعار
             END CATCH
         END
@@ -3186,6 +5145,18 @@ Finish:
         IF @ErrNumber BETWEEN 50001 AND 50999
         BEGIN
             SELECT 0 AS IsSuccessful, @ErrMsg AS Message_;
+            RETURN;
+        END
+
+        ----------------------------------------------------------------
+        -- ✅ تعارضات أعمال متوقعة في نظام الدعم
+        -- (تكرار مهمة نشطة لنفس التذكرة ونفس الموظف)
+        ----------------------------------------------------------------
+        IF @ErrNumber IN (2601, 2627)
+           AND @ErrMsg LIKE N'%UX_support_TicketTask_Ticket_Assignee_Active%'
+        BEGIN
+            SELECT 0 AS IsSuccessful,
+                   N'تم إسناد مهمة نشطة لهذا الموظف على نفس التذكرة مسبقاً' AS Message_;
             RETURN;
         END
 

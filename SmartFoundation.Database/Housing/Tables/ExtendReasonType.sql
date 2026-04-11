@@ -3,7 +3,6 @@
     [ExtendReasonTypeName_A] NVARCHAR (500) NULL,
     [ExtendReasonTypeName_E] NVARCHAR (500) NULL,
     [InsuranceRequired]      BIT            NOT NULL,
-    [Active]                 BIT            NOT NULL,
-    CONSTRAINT [PK_ExtendReasonType] PRIMARY KEY CLUSTERED ([ExtendReasonTypeID] ASC)
+    [Active]                 BIT            NOT NULL
 );
 

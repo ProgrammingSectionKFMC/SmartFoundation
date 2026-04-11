@@ -104,7 +104,7 @@ BEGIN
 
             SET @NewID = (SELECT TOP(1) a.AssignPeriodID 
             FROM Housing.AssignPeriod a 
-            where a.IdaraId_FK = @idaraID_FK and a.AssignPeriodActive = 1 and a.AssignPeriodClose = 1 and a.AssignPeriodEnddate is null
+            where a.IdaraId_FK = @idaraID_FK and a.AssignPeriodActive = 1 and a.AssignPeriodClose = 0 
             order by a.AssignPeriodID desc);
 
             UPDATE Housing.AssignPeriod 
@@ -230,6 +230,7 @@ BEGIN
                 , buildingActionNote
                 , buildingActionParentID
                 , AssignPeriodID_FK
+                , InAssignPeriod
                 , IdaraId_FK
                 , entryData
                 , hostName
@@ -248,6 +249,7 @@ BEGIN
                 , @Notes
                 , @LastActionID
                 , @AssignPeriodID
+                , NULL
                 , @IdaraID_INT
                 , @entryData
                 , @hostName

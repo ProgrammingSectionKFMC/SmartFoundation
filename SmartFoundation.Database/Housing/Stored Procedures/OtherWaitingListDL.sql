@@ -29,6 +29,7 @@ BEGIN
             rd.FullName_A as FullName_A,
             w.NationalID,
             w.GeneralNo,
+            rd.rankNameA,
             w.ActionDecisionNo,
             convert(nvarchar(10),w.[ActionDecisionDate],23) ActionDecisionDate,
             w.WaitingClassID,

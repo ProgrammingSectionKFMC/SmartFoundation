@@ -79,7 +79,7 @@ BEGIN
             (
                 SELECT 1
                 FROM  Housing.AssignPeriod a
-                WHERE a.AssignPeriodActive = 1 and a.AssignPeriodClose = 1
+                WHERE a.AssignPeriodActive = 1 and a.AssignPeriodClose = 1 and a.WaitingClassID_FK = @WaitingClassID
                   AND a.IdaraId_FK = @IdaraID_INT
             )
             BEGIN
@@ -94,6 +94,7 @@ BEGIN
                 ,[AssignPeriodActive]
                 ,[AssignPeriodClose]
                 ,[AssignPeriodFinalEND]
+                ,[WaitingClassID_FK]
                 ,[IdaraId_FK]
                 ,[entryData]
                 ,[hostName]
@@ -105,6 +106,7 @@ BEGIN
                 , 1
                 , 1
                 , 1
+                , @WaitingClassID
                 , @IdaraID_INT
                 , @entryData
                 , @hostName
@@ -124,6 +126,7 @@ BEGIN
                 + N',"AssignPeriodDescrption": "'           + ISNULL(CONVERT(NVARCHAR(MAX), @Notes), '') + N'"'
                 + N',"AssignPeriodStartdate": "'           + ISNULL(CONVERT(NVARCHAR(MAX), GETDATE()), '') + N'"'
                 + N',"AssignPeriodActive": "1"'
+                + N',"WaitingClassID_FK": "'           + ISNULL(CONVERT(NVARCHAR(MAX), @WaitingClassID), '') + N'"'
                 + N',"IdaraId_FK": "'               + ISNULL(CONVERT(NVARCHAR(MAX), @idaraID_FK), '') + N'"'
                 + N',"entryData": "'                + ISNULL(CONVERT(NVARCHAR(MAX), @entryData), '') + N'"'
                 + N',"hostName": "'                 + ISNULL(CONVERT(NVARCHAR(MAX), @hostName), '') + N'"'
@@ -189,6 +192,7 @@ BEGIN
             UPDATE Housing.AssignPeriod 
             set AssignPeriodEnddate = GETDATE(), AssignPeriodCloseNote = @Notes, AssignPeriodCloseBy =@entryData,AssignPeriodClose = 0
             where IdaraId_FK = @idaraID_FK and AssignPeriodActive = 1 and AssignPeriodClose = 1 and AssignPeriodEnddate is null 
+            and WaitingClassID_FK = @WaitingClassID
             
           
 
@@ -212,13 +216,14 @@ BEGIN
                 , buildingActionNote
                 , buildingActionParentID
                 , AssignPeriodID_FK
+                , InAssignPeriod
                 , IdaraId_FK
                 , entryData
                 , hostName
             )
             
             Select 
-            w.LastActionTypeID
+             w.LastActionTypeID
             ,w.residentInfoID
             ,w.GeneralNo
             ,w.ActionDecisionNo
@@ -229,20 +234,21 @@ BEGIN
             ,w.LastActionNote
             ,w.LastActionbuildingActionParentID
             ,@AssignPeriodID
+            , 0
             ,@idaraID_FK
             ,@entryData
             ,@hostName
 
             From Housing.V_WaitingList w
             where 
-                 w.IdaraId = 1
+                 w.IdaraId = @idaraID_FK
                  AND  w.LastActionTypeID in (27,39,41)
 
 
             
             IF @@ROWCOUNT = 0
             BEGIN
-                ;THROW 50002, N'حصل خطأ في تخصيص المنزل للمستفيد', 1; -- برمجي
+                ;THROW 50002, N'حصل خطأ في اغلاق محضر التخصيص', 1; -- برمجي
             END
 
 
@@ -391,6 +397,7 @@ BEGIN
                 , buildingActionNote
                 , buildingActionParentID
                 , AssignPeriodID_FK
+                , InAssignPeriod
                 , IdaraId_FK
                 , entryData
                 , hostName
@@ -409,6 +416,7 @@ BEGIN
                 , @Notes
                 , @LastActionID
                 , @AssignPeriodID
+                , 1
                 , @IdaraID_INT
                 , @entryData
                 , @hostName
@@ -586,6 +594,7 @@ BEGIN
                 , buildingActionNote
                 , buildingActionParentID
                 , AssignPeriodID_FK
+                , InAssignPeriod
                 , IdaraId_FK
                 , entryData
                 , hostName
@@ -604,6 +613,7 @@ BEGIN
                 , 1
                 , NULL
                 , @TakeOffResidentFromAssignPeriodIdentity
+                , NULL
                 , NULL
                 , @IdaraID_INT
                 , @entryData
@@ -800,6 +810,7 @@ BEGIN
                 , buildingActionNote
                 , buildingActionParentID
                 , AssignPeriodID_FK
+                , InAssignPeriod
                 , IdaraId_FK
                 , entryData
                 , hostName
@@ -819,6 +830,7 @@ BEGIN
                 , @Notes
                 , @changeHouseIdentity
                 , @AssignPeriodID
+                , 1
                 , @IdaraID_INT
                 , @entryData
                 , @hostName
@@ -889,7 +901,118 @@ BEGIN
         END
 
             
-        
+         ----------------------------------------------------------------
+        -- AssignNote
+        ----------------------------------------------------------------
+        IF @Action = N'AssignNote'
+        BEGIN
+
+
+             IF 
+            (
+               select w.LastActionTypeID from Housing.V_WaitingList w where w.ActionID = @ActionID 
+            ) in (38,40)
+            BEGIN
+                ;THROW 50001, N'تم التخصيص لهذا المستفيد مسبقا', 1;
+            END
+
+
+             IF 
+            (
+               select w.LastActionTypeID from Housing.V_WaitingList w where w.ActionID = @ActionID 
+            ) in (42)
+            BEGIN
+                ;THROW 50001, N'تم الغاء احقية السكن لهذا المستفيد لتجاوزه الحد الاعلي من فرص التخصيص', 1;
+            END
+
+            if exists (select 1
+            from Housing.AssignNote n
+            where n.residentInfoID_FK = @residentInfoID 
+            and n.buildingActionID_FK = @LastActionID 
+            and n.AssignPeriodID_FK = @AssignPeriodID 
+            and n.AssignNoteActive = 1
+            )
+            Begin
+
+            update Housing.AssignNote set AssignNoteActive = 0
+            where residentInfoID_FK = @residentInfoID 
+            and buildingActionID_FK = @LastActionID 
+            and AssignPeriodID_FK = @AssignPeriodID 
+            and AssignNoteActive = 1
+
+
+            BEGIN
+                ;THROW 50002, N'حصل خطأ في اضافة سبب عدم التخصيص', 1;
+            END
+             
+            END
+
+
+
+
+            INSERT INTO  Housing.AssignNote
+            (
+                  [AssignPeriodID_FK]
+                 ,[residentInfoID_FK]
+                 ,[buildingActionID_FK]
+                 ,[AssignNote]
+                 ,[AssignNoteActive]
+                 ,[IdaraID_FK]
+                 ,[entryData]
+                 ,[hostName]
+            )
+            VALUES
+            (
+                  @AssignPeriodID
+                , @residentInfoID
+                , @LastActionID
+                , @Notes
+                , 1
+                , @IdaraID_INT
+                , @entryData
+                , @hostName
+            );
+
+            SET @NewID = SCOPE_IDENTITY();
+            IF @NewID IS NULL OR @NewID <= 0
+            BEGIN
+                ;THROW 50002, N'حصل خطأ في اضافة سبب عدم التخصيص - Identity', 1; -- برمجي
+            END
+            SET @Note = N'{'
+                + N'"AssignNoteID": "'           + ISNULL(CONVERT(NVARCHAR(MAX), @NewID), '') + N'"'
+                + N',"AssignPeriodID_FK": "'           + ISNULL(CONVERT(NVARCHAR(MAX), @Notes), '') + N'"'
+                + N',"residentInfoID_FK": "'           + ISNULL(CONVERT(NVARCHAR(MAX), GETDATE()), '') + N'"'
+                + N',"buildingActionID_FK": "'           + ISNULL(CONVERT(NVARCHAR(MAX), GETDATE()), '') + N'"'
+                + N',"AssignNote": "'           + ISNULL(CONVERT(NVARCHAR(MAX), GETDATE()), '') + N'"'
+                + N',"AssignNoteActive": "1"'
+                + N',"IdaraId_FK": "'               + ISNULL(CONVERT(NVARCHAR(MAX), @idaraID_FK), '') + N'"'
+                + N',"entryData": "'                + ISNULL(CONVERT(NVARCHAR(MAX), @entryData), '') + N'"'
+                + N',"hostName": "'                 + ISNULL(CONVERT(NVARCHAR(MAX), @hostName), '') + N'"'
+                + N'}';
+
+            INSERT INTO  dbo.AuditLog
+            (
+                  TableName
+                , ActionType
+                , RecordID
+                , PerformedBy
+                , Notes
+            )
+            VALUES
+            (
+                  N'[Housing].[AssignNote]'
+                , N'AssignNote'
+                , ISNULL(@NewID, 0)
+                , @entryData
+                , @Note
+            );
+
+            SELECT 1 AS IsSuccessful, N'تم اضافة سبب عدم التخصيص بنجاح' AS Message_;
+            RETURN;
+
+        END
+
+
        
 
         ----------------------------------------------------------------

@@ -97,76 +97,174 @@ BEGIN
 
 
 
-         -------------------------------------------------------------------
+    -------------------------------------------------------------------
     --                   AllMeterRead
     -------------------------------------------------------------------
 
          ELSE IF @pageName_ = 'AllMeterRead'
         BEGIN
          IF @ActionType = 'MeterLastBill'
+BEGIN
+
+    IF EXISTS
+    (
+        SELECT 1
+        FROM Housing.MeterRead mr
+        WHERE mr.meterID_FK = @parameter_02
+          AND mr.meterReadActive = 1
+    )
+    BEGIN
+        SELECT TOP (1)
+               mr.meterID_FK AS meterID,
+               m.meterNo,
+               mr.meterReadValue AS CurrentRead,
+               ISNULL(bp.billPeriodName_A + N' - ' + CAST(DATEPART(YEAR, bp.billPeriodStartDate) AS NVARCHAR), N' - ') AS periods_,
+               ISNULL(b.TotalPrice, 0) AS TotalPrice
+        FROM Housing.MeterRead mr
+        LEFT JOIN Housing.Meter m
+            ON m.meterID = mr.meterID_FK
+        LEFT JOIN Housing.Bills b
+            ON b.meterReadID = mr.meterReadID
+           AND b.BillActive = 1
+           AND b.meterServiceTypeID = @parameter_01
+           AND b.CurrentPeriodID <> @parameter_03
+        LEFT JOIN Housing.BillPeriod bp
+            ON bp.BillPeriodID = b.CurrentPeriodID
+        WHERE mr.meterID_FK = @parameter_02
+          AND mr.meterReadActive = 1
+        ORDER BY
+            ISNULL(mr.dateOfRead, mr.entryDate) DESC,
+            mr.meterReadID DESC;
+    END
+    ELSE
+    BEGIN
+        SELECT TOP (1)
+               md.meterID,
+               md.meterNo,
+               CAST(N'لا يوجد قراءة سابقة' AS NVARCHAR(200)) AS CurrentRead,
+               N' - ' AS periods_,
+               CAST(N'لا يوجد فاتورة سابقة' AS NVARCHAR(200)) AS TotalPrice
+        FROM Housing.V_MetersDetails md
+        WHERE md.meterID = @parameter_02
+          AND md.meterServiceTypeID_FK = @parameter_01;
+    END
+
+END
+ELSE IF @ActionType = 'MeterNewBill'
+BEGIN
+
+    SELECT 
+        CASE 
+            WHEN s.LastRead > s.CurrentRead THEN 0
+            WHEN s.LastRead = s.CurrentRead THEN 0
+            ELSE 1
+        END AS checks,
+        s.CurrentRead,
+        s.LastRead,
+        s.ReadDiff,
+        s.PRICE,
+        s.PRICETAX,
+        s.meterServicePrice,
+        s.meterServicePriceTAX,
+        (s.meterServicePrice + s.meterServicePriceTAX) AS ServicePriceWithTAX,
+        s.TotalPrice,
+        s.meterID,
+        s.meterNo,
+        s.CurrentPeriodID
+    FROM Housing.CalculteElectrictyBills_ByNewReadValue(@parameter_02, @parameter_04) s;
+
+END
+
+
+            ELSE  IF @ActionType = 'EDITBILL'
             BEGIN
 
-                    IF EXISTS (
-                            SELECT 1
-                            FROM Housing.Bills b
-                            inner join housing.BillPeriod bp on bp.BillPeriodID = b.CurrentPeriodID
-                            WHERE b.BillActive = 1
-                              AND b.meterServiceTypeID = @parameter_01
-                              AND b.meterID = @parameter_02
-                              AND b.CurrentPeriodID <> @parameter_03
-                        )
-                        BEGIN
-                            -- ✅ يوجد فاتورة سابقة (غير الفترة الحالية)
-                            SELECT TOP (1)
-                                   b.meterID,
-                                   b.meterNo,
-                                   --b.LastRead,
-                                   b.CurrentRead,
-                                   bp.billPeriodName_A+ N' - '+cast(DATEPART(YEAR,bp.billPeriodStartDate) as nvarchar) periods_,
-                                   b.TotalPrice
-                            FROM Housing.Bills b
-                            inner join housing.BillPeriod bp on bp.BillPeriodID = b.CurrentPeriodID
-                            WHERE b.BillActive = 1
-                              AND b.meterServiceTypeID = @parameter_01
-                              AND b.meterID = @parameter_02
-                              --AND b.CurrentPeriodID <> @parameter_03
-                            ORDER BY
-                                ISNULL(b.PeriodYear, 0) DESC,
-                                ISNULL(b.PeriodMonth, 0) DESC,
-                                ISNULL(b.CurrentPeriodID, 0) DESC,
-                                b.BillsID DESC;
-                        END
-                        ELSE
-                        BEGIN
-                            -- ❌ لا يوجد فاتورة سابقة
-                            SELECT TOP (1)
-                                   md.meterID,
-                                   md.meterNo,
-                                   --CAST(N'لا يوجد قراءة سابقة' AS NVARCHAR(200)) AS LastRead,
-                                   CAST(N'لا يوجد قراءة سابقة' AS NVARCHAR(200)) AS CurrentRead,
-                                   N' - ' as periods_,
-                                   CAST(N'لا يوجد فاتورة سابقة' AS NVARCHAR(200)) AS TotalPrice
-                            FROM Housing.V_MetersDetails md
-                            WHERE md.meterID = @parameter_02
-                              AND md.meterServiceTypeID_FK = @parameter_01;
-                        END
-                
-                END
-                ELSE  IF @ActionType = 'MeterNewBill'
-            BEGIN
 
-
-            SELECT 
-            case 
-            when s.LastRead > s.CurrentRead then 0
-            when s.LastRead = s.CurrentRead then 0
-            else
-            1 END as checks,
-            s.CurrentRead,s.LastRead,s.ReadDiff,s.PRICE,s.PRICETAX,s.meterServicePrice,s.meterServicePriceTAX,(s.meterServicePrice+s.meterServicePriceTAX) ServicePriceWithTAX,s.TotalPrice,s.meterID,s.meterNo,s.CurrentPeriodID
-            FROM Housing.CalculteElectrictyBills_ByNewReadValue(@parameter_02, @parameter_04) s;
-
+            select b.BillsID,b.meterNo,b.CurrentRead,b.LastRead,b.CurrentPeriodID,b.ReadDiff, b.TotalPrice,mst.meterServiceTypeName_A
+            FROM Housing.Bills b
+            inner join Housing.MeterServiceType mst on b.meterServiceTypeID = mst.meterServiceTypeID
+            where b.BillsID = @parameter_01
             END
 
+
+        END
+
+        -------------------------------------------------------------------
+    --                   AllMeterRead
+    -------------------------------------------------------------------
+
+         ELSE IF @pageName_ = 'MeterReadForOccubentAndExit'
+        BEGIN
+        IF @ActionType = 'MeterLastBill'
+BEGIN
+
+    IF EXISTS
+    (
+        SELECT 1
+        FROM Housing.MeterRead mr
+        WHERE mr.meterID_FK = @parameter_02
+          AND mr.meterReadActive = 1
+    )
+    BEGIN
+        SELECT TOP (1)
+               mr.meterID_FK AS meterID,
+               m.meterNo,
+               mr.meterReadValue AS CurrentRead,
+               ISNULL(bp.billPeriodName_A + N' - ' + CAST(DATEPART(YEAR, bp.billPeriodStartDate) AS NVARCHAR), N' - ') AS periods_,
+               ISNULL(b.TotalPrice, 0) AS TotalPrice
+        FROM Housing.MeterRead mr
+        LEFT JOIN Housing.Meter m
+            ON m.meterID = mr.meterID_FK
+        LEFT JOIN Housing.Bills b
+            ON b.meterReadID = mr.meterReadID
+           AND b.BillActive = 1
+           AND b.meterServiceTypeID = @parameter_01
+        LEFT JOIN Housing.BillPeriod bp
+            ON bp.BillPeriodID = b.CurrentPeriodID
+        WHERE mr.meterID_FK = @parameter_02
+          AND mr.meterReadActive = 1
+        ORDER BY
+            ISNULL(mr.dateOfRead, mr.entryDate) DESC,
+            mr.meterReadID DESC;
+    END
+    ELSE
+    BEGIN
+        SELECT TOP (1)
+               md.meterID,
+               md.meterNo,
+               CAST(N'لا يوجد قراءة سابقة' AS NVARCHAR(200)) AS CurrentRead,
+               N' - ' AS periods_,
+               CAST(N'لا يوجد فاتورة سابقة' AS NVARCHAR(200)) AS TotalPrice
+        FROM Housing.V_MetersDetails md
+        WHERE md.meterID = @parameter_02
+          AND md.meterServiceTypeID_FK = @parameter_01;
+    END
+
+END
+ELSE IF @ActionType = 'MeterNewBill'
+BEGIN
+
+    SELECT 
+        CASE 
+            WHEN s.LastRead > s.CurrentRead THEN 0
+            WHEN s.LastRead = s.CurrentRead THEN 0
+            ELSE 1
+        END AS checks,
+        s.CurrentRead,
+        s.LastRead,
+        s.ReadDiff,
+        s.PRICE,
+        s.PRICETAX,
+        s.meterServicePrice,
+        s.meterServicePriceTAX,
+        (s.meterServicePrice + s.meterServicePriceTAX) AS ServicePriceWithTAX,
+        s.TotalPrice,
+        s.meterID,
+        s.meterNo,
+        s.CurrentPeriodID
+    FROM Housing.CalculteElectrictyBills_ByNewReadValue(@parameter_02, @parameter_04) s;
+
+END
 
             ELSE  IF @ActionType = 'EDITBILL'
             BEGIN
@@ -288,12 +386,14 @@ BEGIN
             t.BillChargeTypeName_A,
             bp.buildingDetailsID_FK AS buildingDetailsID,
             bd.buildingDetailsNo,
-            vgrd.FullName_A
+            vgrd.FullName_A,
+            d.deductName
             FROM   Housing.BuildingPayment AS bp INNER JOIN
                          Housing.DeductList AS d ON bp.deductListID_FK = d.deductListID INNER JOIN
                          Housing.BillChargeType AS t ON bp.BillChargeTypeID_FK = t.BillChargeTypeID INNER JOIN
                          Housing.BuildingDetails AS bd ON bp.buildingDetailsID_FK = bd.buildingDetailsID LEFT JOIN
                          Housing.V_GetFullResidentDetails AS vgrd ON bp.residentInfoID_FK = vgrd.residentInfoID
+                        
             WHERE 
             (d.deductActive = 1) 
             AND (bp.buildingPayementActive = 1) 
@@ -391,6 +491,32 @@ BEGIN
             FROM Housing.Bills b
             where b.BillsID = @parameter_01
             END
+
+
+        END
+
+
+          -------------------------------------------------------------------
+    --                  FinancialAuditForExtendAndEvictions
+    -------------------------------------------------------------------
+
+
+         ELSE IF @pageName_ = 'WaitingListByResident'
+        BEGIN
+         IF @ActionType = 'GetWaitingListActions'
+            BEGIN
+
+               select b.buildingActionTypeResidentAlias
+              ,convert(nvarchar(10),c.entryDate,23)+' '+convert(nvarchar(10),c.entryDate,8) as entryDate
+              ,u.FullName
+              from [Housing].[fn_BuildingAction_ChainToRoot](@parameter_01) c
+              inner join Housing.BuildingActionType b on c.buildingActionTypeID_FK = b.buildingActionTypeID
+              inner join dbo.V_GetFullSystemUsersDetails u on c.entryData = u.usersID    
+       
+            END
+
+
+            
 
 
         END

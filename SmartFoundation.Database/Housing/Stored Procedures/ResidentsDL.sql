@@ -18,7 +18,7 @@ BEGIN
 	   
 
           -- Residents Data
-            SELECT 
+            SELECT Top(1000)
                  fr.residentInfoID [residentInfoID]
                 ,fr.NationalID [NationalID]
                 ,fr.generalNo_FK [generalNo_FK]

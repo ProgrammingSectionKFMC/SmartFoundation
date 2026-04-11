@@ -13,6 +13,17 @@
     , @parameter_08   NVARCHAR(4000) = NULL
     , @parameter_09   NVARCHAR(4000) = NULL
     , @parameter_10   NVARCHAR(4000) = NULL
+    , @parameter_11   NVARCHAR(4000) = NULL
+    , @parameter_12   NVARCHAR(4000) = NULL
+    , @parameter_13   NVARCHAR(4000) = NULL
+    , @parameter_14   NVARCHAR(4000) = NULL
+    , @parameter_15   NVARCHAR(4000) = NULL
+    , @parameter_16   NVARCHAR(4000) = NULL
+    , @parameter_17   NVARCHAR(4000) = NULL
+    , @parameter_18   NVARCHAR(4000) = NULL
+    , @parameter_19   NVARCHAR(4000) = NULL
+    , @parameter_20   NVARCHAR(4000) = NULL
+
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -713,14 +724,20 @@ BEGIN
         ELSE IF @pageName_ = 'Home'
         BEGIN
             -- User Permission
-           select c.ChartListName_E from dbo.ChartList c
-           inner join dbo.ChartListUsers cl on c.ChartListID = cl.ChartListID_FK
+           EXEC [dbo].[ChartsDL] 
+                      @pageName_                      = @pageName_
+                    , @idaraID                        = @idaraID
+                    , @entryData                      = @entrydata
+                    , @hostName                       = @hostName
+                    , @UsersID                        = @parameter_01
 
-           where c.ChartListActive = 1 and c.ChartListStartDate is not null and (c.ChartListEndDate is null or cast(c.ChartListEndDate as date) < cast(GETDATE() as date))
-           AND
-           cl.ChartListUsersActive = 1 and cl.ChartListUsersStartDate is not null and (cl.ChartListUsersEndDate is null or cast(cl.ChartListUsersEndDate as date) < cast(GETDATE() as date))
-           AND
-           cl.UsersID_FK = @parameter_01
+
+          SELECT    v.userID,
+                    v.menuName_E,
+                    v.menuName_A,
+                    v.permissionTypeName_E,
+                    v.permissionTypeName_A 
+          FROM [dbo].[ft_UserAllPermissionsForAi](@entrydata) v
            
         END
 
@@ -830,6 +847,37 @@ BEGIN
 
             ORDER BY P.programID DESC
             --where programActive = 1
+
+
+
+            --SubPrograms
+            
+              
+            select 
+          
+            m.[menuID]
+           ,p.programID
+           ,p.programName_A
+           ,m.[menuName_A]
+           ,m.[menuName_E]
+           ,m.[menuDescription]
+           ,m.[parentMenuID_FK]
+           ,m.[menuLink]
+           ,m.[programID_FK]
+           ,m.[menuSerial]
+           ,m.[menuActive]
+           ,m.[isDashboard]
+           ,m.[PageLvl]
+
+            from dbo.Menu m
+            inner join dbo.Program p on m.programID_FK = p. programID
+            where m.menuLink is null and m.menuID not in 
+            (select md.menuID_FK from dbo.MenuDistributor md
+            inner join dbo.Distributor d on md.distributorID_FK = d.distributorID and d.distributorType_FK = 4
+            where d.distributorType_FK = 4 and d.distributorActive = 1)
+            order by m.menuID desc
+
+
 
 
          --Menus
@@ -1162,6 +1210,7 @@ END
                     , @entryData                      = @entrydata
                     , @hostName                       = @hostName
                     , @WaitingClassID                 = @parameter_01
+                    , @AssignPeriodID                 = @parameter_01
 
 
           
@@ -1402,8 +1451,774 @@ END
 
 
 
+        
+    -------------------------------------------------------------------
+    --                     PAGE: RentExemption
+    -------------------------------------------------------------------
+        ELSE IF @pageName_ = 'RentExemption'
+        BEGIN
 
 
+            -- One Resident Data
+
+          EXEC [Housing].[RentExemptionDL]
+                      @pageName_                      = @pageName_
+                    , @idaraID                        = @idaraID
+                    , @entryData                      = @entrydata
+                    , @hostName                       = @hostName
+                    , @NationalID                      =@parameter_01
+
+
+           
+
+
+        END
+
+
+
+
+
+
+
+
+
+
+
+        ------------------------------------------------------------------
+--                     PAGE: VehicleS
+-------------------------------------------------------------------
+
+
+
+
+        -------------------------------------------------------------------
+--                     PAGE: Admin_VehicleDocumentType
+--DECLARE @ActiveOnly BIT;
+
+--SET @ActiveOnly =
+--    CASE
+--        WHEN @parameter_01 IN ('1','0') THEN CAST(@parameter_01 AS BIT)
+--        ELSE NULL
+--    END;
+
+--EXEC [VIC].[Admin_VehicleDocumentType_List_DL]
+--     @ActiveOnly = @ActiveOnly;
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'Admin_VehicleDocumentType'
+    BEGIN
+        
+
+        EXEC [VIC].[Admin_VehicleDocumentType_List_DL]
+    @ActiveOnly = @parameter_01;
+
+    END
+    -------------------------------------------------------------------
+--                     PAGE: Custody_Current_ByUser
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'Custody_Current_ByUser'
+    BEGIN
+        
+
+        -- Current Custody By User Data
+       EXEC [VIC].[Custody_Current_ByUser_DL]
+      @userID     = @parameter_01
+    , @idaraID_FK = @parameter_02;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: Custody
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'Custody'
+    BEGIN
+        
+
+        -- Current Custody List Data
+       EXEC [VIC].[CustodyCurrentListDL]
+      @userID        = @parameter_01
+    , @generalNo     = @parameter_02
+    , @chassisNumber = @parameter_03
+    , @pageNumber    = @parameter_04
+    , @pageSize      = @parameter_05
+    , @idaraID_FK    = @parameter_06;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: Custody_History_ByUser
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'Custody_History_ByUser'
+    BEGIN
+        
+        -- Custody History By User Data
+        EXEC [VIC].[Custody_History_ByUser_DL]
+      @userID     = @parameter_01
+    , @fromDate   = @parameter_02
+    , @toDate     = @parameter_03
+    , @pageNumber = @parameter_04
+    , @pageSize   = @parameter_05
+    , @idaraID_FK = @parameter_06;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: Custody_History_ByVehicle
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'Custody_History_ByVehicle'
+    BEGIN
+        
+
+        -- Custody History By Vehicle Data
+        EXEC [VIC].[Custody_History_ByVehicle_DL]
+      @chassisNumber = @parameter_01
+    , @fromDate      = @parameter_02
+    , @toDate        = @parameter_03
+    , @pageNumber    = @parameter_04
+    , @pageSize      = @parameter_05;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: Dashboard
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'Dashboard'
+    BEGIN
+        
+
+        -- Dashboard Data
+        EXEC [VIC].[Dashboard_Get_DL]
+      @onlyHasCustody         = @parameter_01
+    , @onlyHasActiveInsurance = @parameter_02
+    , @onlyHasDocExpiry       = @parameter_03
+    , @onlyHasInsExpiry       = @parameter_04
+    , @idaraID_FK             = @parameter_05;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: Handover_Get
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'Handover_Get'
+    BEGIN
+        
+
+        -- Handover Get Data
+       EXEC [VIC].[Handover_Get_DL]
+      @vehicleHandoverID = @parameter_01
+    , @idaraID_FK        = @parameter_02;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: Handover_List
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'Handover_List'
+    BEGIN
+        
+
+        -- Handover List Data
+        EXEC [VIC].[Handover_List_DL]
+      @requestID      = @parameter_01
+    , @handoverTypeID = @parameter_02
+    , @fromDate       = @parameter_03
+    , @toDate         = @parameter_04
+    , @pageNumber     = @parameter_05
+    , @pageSize       = @parameter_06
+    , @idaraID_FK      = @parameter_07;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: Handover_Print_Get
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'Handover_Print_Get'
+    BEGIN
+        
+        -- Handover Print Get Data
+        EXEC [VIC].[Handover_Print_Get_DL]
+      @vehicleHandoverID = @parameter_01
+    , @idaraID_FK        = @parameter_02;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: HandoverType
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'HandoverType'
+    BEGIN
+        
+
+        -- Handover Type Data
+        EXEC [VIC].[HandoverType_List_DL]
+              @activeOnly =  @parameter_01;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: MaintenanceDetails_List
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'MaintenanceDetails_List'
+    BEGIN
+        
+
+        -- Maintenance Details List Data
+        EXEC [VIC].[MaintenanceDetails_List_DL]
+      @maintOrdID = @parameter_01
+    , @idaraID_FK = @parameter_02;
+    END
+
+    -------------------------------------------------------------------
+--                     MaintenanceTemplate_List
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'MaintenanceTemplate_List'
+BEGIN
+    
+
+    EXEC [VIC].[MaintenanceTemplate_List_DL]
+          @MaintOrdTypeID_FK = @parameter_01
+        , @active            = @parameter_02;
+END
+    -------------------------------------------------------------------
+--                     PAGE: MaintenanceOrder_Get
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'MaintenanceOrder_Get'
+    BEGIN
+        
+
+        -- Maintenance Order Get Data
+        EXEC [VIC].[MaintenanceOrder_Get_DL]
+      @maintOrdID = @parameter_01
+    , @idaraID_FK = @parameter_02;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: MaintenanceOrder_List
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'MaintenanceOrder_List'
+    BEGIN
+        
+
+        -- Maintenance Order List Data
+        EXEC [VIC].[MaintenanceOrder_List_DL]
+      @chassisNumber  = @parameter_01
+    , @maintOrdTypeID = @parameter_02
+    , @active         = @parameter_03
+    , @fromDate       = @parameter_04
+    , @toDate         = @parameter_05
+    , @pageNumber     = @parameter_06
+    , @pageSize       = @parameter_07
+    , @idaraID_FK      = @parameter_08;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: Report_DocumentsExpiring
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'Report_DocumentsExpiring'
+    BEGIN
+       
+
+        -- Documents Expiring Report
+        EXEC [VIC].[Report_DocumentsExpiring_DL]
+      @days           = @parameter_01
+    , @includeExpired = @parameter_02
+    , @idaraID_FK     = @parameter_03;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: Report_InsuranceExpiring
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'Report_InsuranceExpiring'
+    BEGIN
+       
+
+        -- Insurance Expiring Report
+        EXEC [VIC].[Report_InsuranceExpiring_DL]
+      @days           = @parameter_01
+    , @includeExpired = @parameter_02
+    , @activeOnly     = @parameter_03
+    , @idaraID_FK      = @parameter_04;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: Report_MaintenanceCostByVehicle
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'Report_MaintenanceCostByVehicle'
+    BEGIN
+        
+
+        -- Maintenance Cost By Vehicle Report
+        EXEC [VIC].[Report_MaintenanceCostByVehicle_DL]
+      @fromDate   = @parameter_01
+    , @toDate     = @parameter_02
+    , @idaraID_FK = @parameter_03;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: Report_UnpaidViolations
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'Report_UnpaidViolations'
+    BEGIN
+        
+
+        -- Unpaid Violations Report
+        EXEC [VIC].[Report_UnpaidViolations_DL]
+      @chassisNumber = @parameter_01
+    , @fromDate      = @parameter_02
+    , @toDate        = @parameter_03
+    , @idaraID_FK     = @parameter_04;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: Report_VehiclesWithoutCustody
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'Report_VehiclesWithoutCustody'
+    BEGIN
+        
+
+        -- Vehicles Without Custody Report
+        EXEC [VIC].[Report_VehiclesWithoutCustody_DL]
+      @onlyActiveVehicles = @parameter_01
+    , @idaraID_FK         = @parameter_02;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: Report_VehicleTimeline
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'Report_VehicleTimeline'
+    BEGIN
+        
+
+        -- Vehicle Timeline Report
+        EXEC [VIC].[Report_VehicleTimeline_DL]
+      @chassisNumber = @parameter_01
+    , @fromDate      = @parameter_02
+    , @toDate        = @parameter_03
+    , @idaraID_FK     = @parameter_04;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: TransferRequest_Get
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'TransferRequest_Get'
+    BEGIN
+        
+
+        -- Transfer Request Get Data
+        EXEC [VIC].[TransferRequest_Get_DL]
+      @requestID  = @parameter_01
+    , @idaraID_FK = @parameter_02;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: TransferRequestHistory_List
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'TransferRequestHistory_List'
+    BEGIN
+        
+
+        -- Transfer Request History List Data
+        EXEC [VIC].[TransferRequestHistory_List_DL]
+      @requestID  = @parameter_01
+    , @idaraID_FK = @parameter_02;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: TransferRequest_Vehicles_ByUserDept
+-------------------------------------------------------------------
+ELSE IF @pageName_ = 'TransferRequest_Vehicles_ByUserDept'
+BEGIN
+    
+
+    EXEC [VIC].[TransferRequest_Vehicles_ByUserDept_DL]
+          @userID        = @parameter_01
+        , @idaraID_FK    = @parameter_02
+        , @pageNumber    = @parameter_03
+        , @pageSize      = @parameter_04
+        , @chassisNumber = @parameter_05;
+END
+
+-------------------------------------------------------------------
+--                     PAGE: TransferRequest_EligibleUsers
+-------------------------------------------------------------------
+ELSE IF @pageName_ = 'TransferRequest_EligibleUsers'
+BEGIN
+    
+
+    EXEC [VIC].[TransferRequest_EligibleUsers_DL]
+          @chassisNumber = @parameter_01
+        , @userID        = @parameter_02
+        , @idaraID_FK    = @parameter_03;
+END
+
+-------------------------------------------------------------------
+--                     PAGE: TransferRequest_Pending_ByDept
+-------------------------------------------------------------------
+ELSE IF @pageName_ = 'TransferRequest_Pending_ByDept'
+BEGIN
+    
+
+    EXEC [VIC].[TransferRequest_Pending_ByDept_DL]
+          @userID        = @parameter_01
+        , @idaraID_FK    = @parameter_02
+        , @pageNumber    = @parameter_03
+        , @pageSize      = @parameter_04;
+END
+
+-------------------------------------------------------------------
+--                     PAGE: TransferRequest_Approved_List
+-------------------------------------------------------------------
+ELSE IF @pageName_ = 'TransferRequest_Approved_List'
+BEGIN
+    
+
+    EXEC [VIC].[TransferRequest_Approved_List_DL]
+          @requestID      = @parameter_01
+        , @chassisNumber  = @parameter_02
+        , @fromUserID     = @parameter_03
+        , @toUserID       = @parameter_04
+        , @pageNumber     = @parameter_05
+        , @pageSize       = @parameter_06
+        , @idaraID_FK     = @parameter_07;
+END
+---------------------------------------------------------------------
+--وش يسوي؟
+
+--يرجع:
+--?? خطة وحدة فقط
+
+--تستخدمه في:
+--شاشة التعديل
+--لما تضغط “Edit”
+-------------------------------------------------------------------
+
+ELSE IF @pageName_ = 'MaintenancePlan_Get'
+BEGIN
+    
+
+    EXEC [VIC].[MaintenancePlan_Get_DL]
+          @planID      = @parameter_01
+        , @idaraID_FK  = @idaraID;
+END
+
+----------------------------------------------------------------
+-- MaintenanceDetails_Get
+----------------------------------------------------------------
+-- Description:
+-- جلب بند صيانة واحد من جدول VIC.MaintenanceDetails حسب MaintDetailesID
+-- مع التحقق من وجود السجل ومطابقة الإدارة عبر أمر الصيانة المرتبط (VehicleMaintenance).
+--
+-- Parameters:
+-- @parameter_01 = MaintDetailesID
+--
+-- Notes:
+-- - يستخدم في شاشة التعديل أو عرض تفاصيل بند صيانة واحد.
+-- - يعتمد على idaraID لضمان أن البيانات ضمن نفس الإدارة.
+----------------------------------------------------------------
+
+ELSE IF @pageName_ = 'MaintenanceDetails_Get'
+BEGIN
+    
+
+    EXEC [VIC].[MaintenanceDetails_Get_DL]
+          @maintDetailesID = @parameter_01
+        , @idaraID_FK      = @idaraID;
+END
+-------------------------------------------------------------------
+--                  يرجع لك:
+--?? كل خطط الصيانة الدورية
+
+--مع معلومات إضافية:
+
+--رقم اللوحة
+--كل كم شهر
+--متى الموعد القادم
+--هل الخطة مفعلة أو لا
+--تستخدمه في:
+--صفحة عرض الخطط (Grid)
+--الفلترة (حسب مركبة / مفعلة)
+-------------------------------------------------------------------
+ELSE IF @pageName_ = 'MaintenancePlan_List'
+BEGIN
+    
+
+    EXEC [VIC].[MaintenancePlan_List_DL]
+          @chassisNumber = @parameter_01
+        , @active        = @parameter_02
+        , @pageNumber    = @parameter_03
+        , @pageSize      = @parameter_04
+        , @idaraID_FK    = @idaraID;
+END
+
+-------------------------------------------------------------------
+ELSE IF @pageName_ = 'MaintenancePlan_Get'
+BEGIN
+
+    EXEC [VIC].[MaintenancePlan_Get_DL]
+          @planID     = @parameter_01
+        , @idaraID_FK = @idaraID;
+END
+-------------------------------------------------------------------
+--                    داش بورد الصيانه الدوريه
+-------------------------------------------------------------------
+
+ELSE IF @pageName_ = 'Dashboard_MaintenanceDue'
+BEGIN
+    
+
+    EXEC [VIC].[Dashboard_MaintenanceDue_DL]
+          @daysAhead  = @parameter_01
+        , @idaraID_FK = @idaraID;
+END
+    -------------------------------------------------------------------
+--                     PAGE: TransferRequestType_List
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'TransferRequestType_List'
+    BEGIN
+        
+
+        -- Transfer Request Type Lookup
+        EXEC [VIC].[TransferRequestType_List_DL]
+    @activeOnly = @parameter_01;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: TypesRoot_List
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'TypesRoot_List'
+    BEGIN
+        
+
+        -- Types Root Lookup / List
+        EXEC [VIC].[TypesRoot_List_DL]
+      @parentID   = @parameter_01
+    , @activeOnly = @parameter_02
+    , @search     = @parameter_03;
+    END
+    -------------------------------------------------------------------
+--                     PAGE: Scrap
+-------------------------------------------------------------------
+ELSE IF @pageName_ = 'Scrap'
+BEGIN
+
+    -- Scrap List / Get / Print
+    EXEC [VIC].[ScrapDL]
+          @scrapID       = @parameter_01
+        , @chassisNumber = @parameter_02
+        , @Status        = @parameter_03
+        , @DateFrom      = @parameter_04
+        , @DateTo        = @parameter_05
+        , @pageNumber    = @parameter_06
+        , @pageSize      = @parameter_07
+        , @idaraID_FK    = @idaraID;
+END
+    -------------------------------------------------------------------
+--                     PAGE: Vehicle_Get
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'Vehicle_Get'
+    BEGIN
+        
+
+        -- Vehicle Get Data
+        EXEC [VIC].[Vehicle_Get_DL]
+      @UsersID        = @parameter_01
+    , @MenuLink       = @parameter_02
+    , @SkipPermission = @parameter_03
+    , @chassisNumber  = @parameter_04
+    , @idaraID_FK      = @parameter_05;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: Vehicle_GetLookups
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'Vehicle_GetLookups'
+    BEGIN
+        
+
+        -- Vehicle Lookups Data
+        EXEC [VIC].[Vehicle_GetLookups_DL]
+      @UsersID            = @parameter_01
+    , @MenuLink           = @parameter_02
+    , @SkipPermission     = @parameter_03
+    , @TypesRoot_ParentID = @parameter_04;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: Vehicle_List
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'Vehiclelist'
+    BEGIN
+        
+
+        -- Vehicle List Data
+        EXEC [VIC].[Vehicle_List_DL]
+      @ownerID_FK   = @parameter_01
+    , @plateLetters = @parameter_02
+    , @plateNumbers = @parameter_03
+    , @hasCustody   = @parameter_04
+    , @pageNumber   = @parameter_05
+    , @pageSize     = @parameter_06
+    , @idaraID_FK     = @parameter_07;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: Vehicle_List_EXT
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'Vehicle_List_EXT'
+    BEGIN
+       
+
+        -- Vehicle List EXT Data
+        EXEC [VIC].[Vehicle_List_EXT_DL]
+      @UsersID          = @parameter_01
+    , @MenuLink         = @parameter_02
+    , @SkipPermission   = @parameter_03
+    , @q                = @parameter_04
+    , @ownerID_FK       = @parameter_05
+    , @plateLetters     = @parameter_06
+    , @plateNumbers     = @parameter_07
+    , @HasCustody       = @parameter_08
+    , @HasActiveRequest = @parameter_09
+    , @PageNumber       = @parameter_10
+    , @PageSize         = @parameter_11
+    , @idaraID_FK        = @parameter_12;
+    END
+
+
+    -------------------------------------------------------------------
+--                     PAGE: Vehicle_Profile_Get
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'Vehicle_Profile_Get'
+    BEGIN
+        
+
+        -- Vehicle Profile (multiple result-sets)
+        EXEC [VIC].[Vehicle_Profile_Get_DL]
+      @UsersID        = @parameter_01
+    , @MenuLink       = @parameter_02
+    , @SkipPermission = @parameter_03
+    , @chassisNumber  = @parameter_04
+    , @TopDocuments   = @parameter_05
+    , @TopInsurance   = @parameter_06
+    , @TopMaintenance = @parameter_07
+    , @TopViolations  = @parameter_08
+    , @idaraID_FK      = @parameter_09;
+    END
+-------------------------------------------------------------------
+--                     PAGE: Vehicles
+-------------------------------------------------------------------
+ELSE IF @pageName_ = 'Vehicles'
+BEGIN
+
+    -- Vehicle List Data
+    EXEC [VIC].[Vehicle_List_DL]
+          @ownerID_FK   = @parameter_01
+        , @plateLetters = @parameter_02
+        , @plateNumbers = @parameter_03
+        , @hasCustody   = @parameter_04
+        , @pageNumber   = @parameter_05
+        , @pageSize     = @parameter_06
+        , @idaraID_FK   = @parameter_07;
+END
+    -------------------------------------------------------------------
+--                     PAGE: Vehicle_Search
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'Vehicle_Search'
+    BEGIN
+       
+
+        -- Vehicle Search (fast by plate OR general q)
+        EXEC [VIC].[Vehicle_Search_DL]
+      @q            = @parameter_01
+    , @plateLetters = @parameter_02
+    , @plateNumbers = @parameter_03
+    , @Top          = @parameter_04
+    , @idaraID_FK     = @parameter_05;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: VehicleDocument_List
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'VehicleDocument_List'
+    BEGIN
+        
+
+        -- Vehicle Documents List (normal list OR expiring mode)
+        EXEC [VIC].[VehicleDocument_List_DL]
+      @chassisNumber         = @parameter_01
+    , @vehicleDocumentTypeID = @parameter_02
+    , @DocumentNo            = @parameter_03
+    , @OnlyActiveNow         = @parameter_04
+    , @Page                  = @parameter_05
+    , @PageSize              = @parameter_06
+    , @ExpireDays            = @parameter_07
+    , @IncludeExpired        = @parameter_08
+    , @idaraID_FK            = @parameter_09;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: VehicleDocumentType_List
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'VehicleDocumentType_List'
+    BEGIN
+        
+
+        -- Vehicle Document Types (Lookup/Dropdown)
+        EXEC [VIC].[VehicleDocumentType_List_DL]
+    @ActiveOnly = @parameter_01;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: VehicleInsurance_List
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'VehicleInsurance_List'
+    BEGIN
+        
+
+        -- Vehicle Insurance List (filters + optional expiring)
+       EXEC [VIC].[VehicleInsurance_List_DL]
+      @chassisNumber   = @parameter_01
+    , @InsuranceTypeID = @parameter_02
+    , @OperationTypeID = @parameter_03
+    , @Active          = @parameter_04
+    , @FromDate        = @parameter_05
+    , @ToDate          = @parameter_06
+    , @Page            = @parameter_07
+    , @PageSize        = @parameter_08
+    , @Days            = @parameter_09
+    , @IncludeExpired  = @parameter_10;
+    END
+
+    -------------------------------------------------------------------
+--                     PAGE: Violation_GetLookups
+-------------------------------------------------------------------
+   ----------------------------------------------------------------
+-- Violation_GetLookups
+----------------------------------------------------------------
+ELSE IF @pageName_ = 'Violation_GetLookups'
+BEGIN
+    EXEC [VIC].[Violation_GetLookups_DL]
+          @ActiveOnly = @parameter_01;
+END
+
+    -------------------------------------------------------------------
+--                     PAGE: Violation_List
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'Violation_List'
+    BEGIN
+        
+
+        -- Violations List (filters + paging)
+        EXEC [VIC].[Violation_List_DL]
+      @chassisNumber   = @parameter_01
+    , @violationTypeID = @parameter_02
+    , @Paid            = @parameter_03
+    , @FromDate        = @parameter_04
+    , @ToDate          = @parameter_05
+    , @Page            = @parameter_06
+    , @PageSize        = @parameter_07
+    , @idaraID_FK       = @parameter_08;
+    END
+     -------------------------------------------------------------------
+--                    Violation_Get
+-------------------------------------------------------------------
+
+    ELSE IF @pageName_ = 'Violation_Get'
+BEGIN
+    EXEC [VIC].[Violation_Get_DL]
+          @violationID = @parameter_01
+        , @idaraID_FK  = @parameter_02;
+END
 
 
 
@@ -1428,12 +2243,22 @@ END
         IF @@TRANCOUNT > 0
             ROLLBACK TRANSACTION;
 
-        DECLARE @ErrMsg NVARCHAR(4000), @ErrSeverity INT, @ErrState INT, @IdentityCatchError INT;
+        DECLARE @ErrMsg NVARCHAR(4000), @ErrSeverity INT, @ErrState INT, @ErrNumber INT, @IdentityCatchError INT;
 
         SELECT 
               @ErrMsg      = ERROR_MESSAGE(),
+              @ErrNumber   = ERROR_NUMBER(),
               @ErrSeverity = ERROR_SEVERITY(),
               @ErrState    = ERROR_STATE();
+
+        -- أخطاء الأعمال/المستخدم لا تسجل في ErrorLog
+        -- 50000: غالباً ناتج RAISERROR برسالة مخصصة
+        -- 50001-50999: نطاق أخطاء الأعمال المعتمد في النظام
+        IF @ErrNumber BETWEEN 50000 AND 50999
+        BEGIN
+            SELECT 0 AS IsSuccessful, @ErrMsg AS Message_;
+            RETURN;
+        END
 
         INSERT INTO  dbo.ErrorLog
         (

@@ -344,6 +344,7 @@ BEGIN
              INSERT INTO [DATACORE].[Housing].[Bills]
             (
                   [residentInfoID_FK]
+                 ,[generalNo_FK]
                  ,[buildingDetailsID]
                  ,[BillChargeTypeID_FK]
                  ,[buildingRentTypeID_FK]
@@ -362,6 +363,7 @@ BEGIN
             SELECT 
             @residentInfoID,
             @buildingDetailsID,
+            @GeneralNo,
             1,
             1,
             DATEPART(MONTH,r.CalcFromDate),

@@ -38,18 +38,23 @@ BEGIN
 
     -- تحويلات رقمية آمنة
     DECLARE @IdaraID_INT INT = TRY_CONVERT(INT, NULLIF(@idaraID_FK, ''));
-    DECLARE @DeductType_INT INT = (select t.deductTypeID_FK from Housing.BuildingPaymentType t where t.buildingPaymentTypeID = @PaymentType);
+    DECLARE @DeductType_INT INT = (select top (1) t.deductTypeID_FK from Housing.BuildingPaymentType t where t.buildingPaymentTypeID = @PaymentType order by t.buildingPaymentTypeID desc);
 
 
     DECLARE @Amount_Decimal DECIMAL(18,2);
-
+    IF @Action = N'FINANCIALAUDITFOREXTENDANDEVICTIONS'
+    begin
+    SET @Amount_Decimal = TRY_CONVERT(DECIMAL(18,2), 0);
+    end
+    else
+    begin
     SET @Amount_Decimal = TRY_CONVERT(DECIMAL(18,2), @Amount);
     
     IF @Amount_Decimal IS NULL
     BEGIN
         ;THROW 50001, N'قيمة المبلغ غير صحيحة', 1;
     END
-
+    end
 
     
    
@@ -195,7 +200,7 @@ BEGIN
             9999
             END
             from Housing.V_WaitingList w
-            where w.residentInfoID = @residentInfoID
+            where w.residentInfoID = @residentInfoID and w.buildingDetailsID = @buildingDetailsID
 
             IF 
             (
@@ -230,10 +235,8 @@ BEGIN
                 , entryData
                 , hostName
             )
-            
-             VALUES
-            (
-                  @buildingActionTypeID_FK
+            select
+              @buildingActionTypeID_FK
                 , @residentInfoID
                 , @GeneralNo
                 , @ExtendLetterNo
@@ -245,11 +248,33 @@ BEGIN
                 , @LastActionID
                 , @ExtendStartDate
                 , @ExtendEndDate
-                , @LastActionExtendReasonTypeID
+                , w.LastActionExtendReasonTypeID
                 , @IdaraID_INT
                 , @entryData
                 , @hostName
-            );
+              from Housing.V_WaitingList w
+            where w.residentInfoID = @residentInfoID 
+            and w.buildingDetailsID = @buildingDetailsID
+            
+            -- VALUES
+            --(
+            --      @buildingActionTypeID_FK
+            --    , @residentInfoID
+            --    , @GeneralNo
+            --    , @ExtendLetterNo
+            --    , @ExtendLetterDate
+            --    , @buildingDetailsID
+            --    , @buildingDetailsNo
+            --    , 1
+            --    , @Notes
+            --    , @LastActionID
+            --    , @ExtendStartDate
+            --    , @ExtendEndDate
+            --    , @LastActionExtendReasonTypeID
+            --    , @IdaraID_INT
+            --    , @entryData
+            --    , @hostName
+            --);
 
 
             
@@ -291,7 +316,7 @@ BEGIN
             VALUES
             (
                   N'[Housing].[BuildingAction]'
-                , N'ASSIGNHOUSE'
+                , N'FINANCIALAUDITFOREXTENDANDEVICTIONS'
                 , @ActionID
                 , @entryData
                 , @Note
@@ -320,14 +345,14 @@ BEGIN
                 , buildingActionNote
                 , buildingActionParentID
                 , buildingActionDate
+                , buildingActionDecisionDate
+                , buildingActionDecisionNo
                 , ExtendReasonTypeID_FK
                 , IdaraId_FK
                 , entryData
                 , hostName
             )
-            
-             VALUES
-            (
+            SELECT
                   @buildingActionTypeID_FK
                 , @residentInfoID
                 , @GeneralNo
@@ -336,12 +361,33 @@ BEGIN
                 , 1
                 , @Notes
                 , @LastActionID
-                , @ExitDate
+                , GETDATE() 
+                , w.ActionDecisionDate
+                , w.ActionDecisionNo
                 , @LastActionExtendReasonTypeID
                 , @IdaraID_INT
                 , @entryData
                 , @hostName
-            );
+
+            from Housing.V_WaitingList w
+            where w.residentInfoID = @residentInfoID 
+            and w.buildingDetailsID = @buildingDetailsID
+            -- VALUES
+            --(
+            --      @buildingActionTypeID_FK
+            --    , @residentInfoID
+            --    , @GeneralNo
+            --    , @buildingDetailsID
+            --    , @buildingDetailsNo
+            --    , 1
+            --    , @Notes
+            --    , @LastActionID
+            --    , @ExitDate
+            --    , @LastActionExtendReasonTypeID
+            --    , @IdaraID_INT
+            --    , @entryData
+            --    , @hostName
+            --);
 
 
             
@@ -383,7 +429,7 @@ BEGIN
             VALUES
             (
                   N'[Housing].[BuildingAction]'
-                , N'ASSIGNHOUSE'
+                , N'FINANCIALAUDITFOREXTENDANDEVICTIONS'
                 , @ActionID
                 , @entryData
                 , @Note
@@ -453,6 +499,46 @@ BEGIN
          BEGIN
                 set @InsertedAmount = @Amount_Decimal * -1
          END
+
+
+          
+           Declare @AvailableAmountForToChargeTypeForPayment decimal(18,2),@FinalAvailableAmountForToChargeTypeForPayment decimal(18,2);
+            set @AvailableAmountForToChargeTypeForPayment = 
+            (select TRY_CONVERT(DECIMAL(18,2),isnull(s.Remaining,0.00)) 
+               FROM Housing.BillChargeType bt
+               LEFT JOIN Housing.V_SumBillsTotalPriceAndTotalPaidForResident s
+                      ON s.BillChargeTypeID = bt.BillChargeTypeID
+                     AND s.residentInfoID = @residentInfoID
+                     AND (s.buildingDetailsID = @buildingDetailsID OR s.buildingDetailsID IS NULL)
+               LEFT JOIN Housing.V_GetGeneralListForBuilding b
+                      ON s.buildingDetailsID = b.buildingDetailsID
+                      where bt.BillChargeTypeID = @BillChargeTypeID_FK
+             )
+
+             IF (select b.buildingPaymentDestainationID_FK from [DATACORE].[Housing].[BuildingPaymentType] b where b.buildingPaymentTypeID = @PaymentType) = 1
+         BEGIN
+           
+           set @FinalAvailableAmountForToChargeTypeForPayment = @AvailableAmountForToChargeTypeForPayment
+                 
+         END
+        else
+        BEGIN
+           
+           set @FinalAvailableAmountForToChargeTypeForPayment = @AvailableAmountForToChargeTypeForPayment * -1
+                 
+         END
+
+
+         IF @Amount_Decimal > @FinalAvailableAmountForToChargeTypeForPayment
+             BEGIN
+             declare @msg1112 nvarchar(1000)
+             set @msg1112 = N'المبلغ المدخل اكبر من المبلغ المطلوب في الخدمه المعالجة والمبلغ المطلوب هو : ' + CONVERT(NVARCHAR(100), @FinalAvailableAmountForToChargeTypeForPayment)
+                 ;THROW 50001, @msg1112, 1;
+             END
+
+             
+            
+             
 
 
 
@@ -786,7 +872,7 @@ BEGIN
          
             Declare @AvailableAmountForToChargeType decimal(18,2);
             set @AvailableAmountForToChargeType = 
-            (select TRY_CONVERT(DECIMAL(18,2),s.Remaining) 
+            (select TRY_CONVERT(DECIMAL(18,2),isnull(s.Remaining,0.00)) 
                FROM Housing.BillChargeType bt
                LEFT JOIN Housing.V_SumBillsTotalPriceAndTotalPaidForResident s
                       ON s.BillChargeTypeID = bt.BillChargeTypeID
