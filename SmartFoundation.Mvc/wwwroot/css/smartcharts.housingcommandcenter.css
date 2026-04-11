@@ -308,10 +308,26 @@
     color: var(--gov-text);
     line-height: 1.45;
     padding-right: 4px;
+    position: relative;
+    display: inline-block;
+}
+
+
+.sf-hccm-title-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    min-width: 6px;
+    border-radius: 50%;
+    margin-left: 6px;
+    vertical-align: middle;
+    position: relative;
+    top: -1px;
+    box-shadow: 0 0 0 2px rgba(0,0,0,.06);
 }
 
 .sf-hccm-metric-subtitle {
-    margin-top: 3px;
+    margin-top: 5px;
     color: var(--hccm-muted);
     font-size: .67rem;
     line-height: 1.55;
@@ -382,11 +398,46 @@
 }
 
 .sf-hccm-metric-hint {
-    margin-top: 6px;
-    font-size: .63rem;
-    color: var(--hccm-muted);
-    line-height: 1.6;
-    padding-right: 4px;
+    margin-top: 8px;
+    font-size: .64rem;
+    color: #6b5a10;
+    line-height: 1.65;
+    padding: 8px 10px 8px 8px;
+    background: linear-gradient(135deg, #fef9e7 0%, #fdf6dc 100%);
+    border: 1px solid rgba(201, 162, 39, 0.25);
+    border-radius: 8px;
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    direction: rtl;
+    text-align: right;
+    box-shadow: 0 1px 3px rgba(139, 105, 20, 0.06);
+}
+
+    .sf-hccm-metric-hint::before {
+        content: "";
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 3px;
+        background: linear-gradient(180deg, #c9a227 0%, #a88a1d 100%);
+        border-radius: 8px 0 0 8px;
+    }
+
+.sf-hccm-metric-hint-icon {
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.sf-hccm-metric-hint-text {
+    flex: 1;
+    min-width: 0;
 }
 
 .sf-hccm-metric-ranking {
@@ -573,7 +624,7 @@
 
 .sf-hccm-th-main {
     font-size: .80rem;
-    font-weight: 500;
+    font-weight: 600;
     color: var(--gov-navy);
     line-height: 1.5;
 }
@@ -1164,6 +1215,7 @@
     line-height: 1.65;
     padding: 0;
     border-radius: 13px;
+    /*border: 1px solid #c4d0e0;*/
     box-shadow: 0 0 0 1px rgba(26,58,92,.06), 0 8px 22px rgba(14,28,50,.14);
     direction: rtl;
     text-align: right;
@@ -1523,3 +1575,28 @@
         cursor: default;
         pointer-events: none;
     }
+
+/* ── ميدالية المراكز الأولى ── */
+.sf-hccm-dep-card-medal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.sf-hccm-dep-card-medal-placeholder {
+    width: 28px;
+    min-width: 28px;
+    flex-shrink: 0;
+}
+
+.sf-hccm-medal-svg {
+    width: 28px;
+    height: 35px;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,.15));
+    transition: transform .2s ease;
+}
+
+.sf-hccm-dep-card:hover .sf-hccm-medal-svg {
+    transform: scale(1.08);
+}

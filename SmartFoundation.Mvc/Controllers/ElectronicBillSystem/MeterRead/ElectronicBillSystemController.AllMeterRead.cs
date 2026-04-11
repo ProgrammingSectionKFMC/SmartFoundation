@@ -439,7 +439,9 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                             || c.ColumnName.Equals("PriceForSlide7", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("PriceForSlide8", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("PriceForSlide9", StringComparison.OrdinalIgnoreCase)
-                                            || c.ColumnName.Equals("PriceForSlide10", StringComparison.OrdinalIgnoreCase);
+                                            || c.ColumnName.Equals("PriceForSlide10", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("BillsID", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("BillNumber", StringComparison.OrdinalIgnoreCase);
 
                             }
                             else if (MeterServiceTypeID_ == "2")
@@ -447,7 +449,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                 isHidden = c.ColumnName.Equals("meterID", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("idaraID_FK", StringComparison.OrdinalIgnoreCase)
-                                            //|| c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("entryData", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("avrageNo", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("entryDate", StringComparison.OrdinalIgnoreCase)
@@ -460,7 +462,9 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                             || c.ColumnName.Equals("PriceForSlide7", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("PriceForSlide8", StringComparison.OrdinalIgnoreCase)
                                             || c.ColumnName.Equals("PriceForSlide9", StringComparison.OrdinalIgnoreCase)
-                                            || c.ColumnName.Equals("PriceForSlide10", StringComparison.OrdinalIgnoreCase);
+                                            || c.ColumnName.Equals("PriceForSlide10", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("BillsID", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("BillNumber", StringComparison.OrdinalIgnoreCase);
 
                             }
                             else if (MeterServiceTypeID_ == "3")
@@ -468,7 +472,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                 isHidden = c.ColumnName.Equals("meterID", StringComparison.OrdinalIgnoreCase)
                                              || c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase)
                                              || c.ColumnName.Equals("idaraID_FK", StringComparison.OrdinalIgnoreCase)
-                                            // || c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase)
                                              || c.ColumnName.Equals("entryData", StringComparison.OrdinalIgnoreCase)
                                              || c.ColumnName.Equals("avrageNo", StringComparison.OrdinalIgnoreCase)
                                              || c.ColumnName.Equals("entryDate", StringComparison.OrdinalIgnoreCase)
@@ -485,7 +489,9 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                              || c.ColumnName.Equals("PriceForSlide7", StringComparison.OrdinalIgnoreCase)
                                              || c.ColumnName.Equals("PriceForSlide8", StringComparison.OrdinalIgnoreCase)
                                              || c.ColumnName.Equals("PriceForSlide9", StringComparison.OrdinalIgnoreCase)
-                                             || c.ColumnName.Equals("PriceForSlide10", StringComparison.OrdinalIgnoreCase);
+                                             || c.ColumnName.Equals("PriceForSlide10", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("BillsID", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("BillNumber", StringComparison.OrdinalIgnoreCase);
 
                             }
                             else 
@@ -493,7 +499,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                 isHidden = c.ColumnName.Equals("meterID", StringComparison.OrdinalIgnoreCase)
                                              || c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase)
                                              || c.ColumnName.Equals("idaraID_FK", StringComparison.OrdinalIgnoreCase)
-                                             //|| c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("meterReadID", StringComparison.OrdinalIgnoreCase)
                                              || c.ColumnName.Equals("entryData", StringComparison.OrdinalIgnoreCase)
                                              || c.ColumnName.Equals("avrageNo", StringComparison.OrdinalIgnoreCase)
                                              || c.ColumnName.Equals("entryDate", StringComparison.OrdinalIgnoreCase)
@@ -511,7 +517,9 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                              || c.ColumnName.Equals("PriceForSlide7", StringComparison.OrdinalIgnoreCase)
                                              || c.ColumnName.Equals("PriceForSlide8", StringComparison.OrdinalIgnoreCase)
                                              || c.ColumnName.Equals("PriceForSlide9", StringComparison.OrdinalIgnoreCase)
-                                             || c.ColumnName.Equals("PriceForSlide10", StringComparison.OrdinalIgnoreCase);
+                                             || c.ColumnName.Equals("PriceForSlide10", StringComparison.OrdinalIgnoreCase)
+                                             || c.ColumnName.Equals("BillsID", StringComparison.OrdinalIgnoreCase)
+                                            || c.ColumnName.Equals("BillNumber", StringComparison.OrdinalIgnoreCase);
 
                             }
 

@@ -71,11 +71,7 @@ namespace SmartFoundation.Mvc.Controllers.Vehicle
                     if (permissionName == "DELETE") canCancel = true;
                 }
 
-                if (!canAccess && !canSelect)
-                {
-                    TempData["Error"] = "تم رصد دخول غير مصرح به انت لاتملك صلاحية للوصول الى هذه الصفحة";
-                    return RedirectToAction("Index", "Home");
-                }
+               
 
                 var dataTable = dt3 ?? dt2 ?? dt1;
 
