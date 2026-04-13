@@ -412,3 +412,8 @@ docs/PRD.md
 /SmartFoundation.Mvc/Controllers/MastersCrudController.cs
 /SmartFoundation.Mvc/AiModels/qwen2.5-7b-instruct-q5_k_m.gguf
 
+
+# AI Models
+*.gguf
+AiModels/
+
