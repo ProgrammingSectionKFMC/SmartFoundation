@@ -419,3 +419,9 @@ docs/PRD.md
 # Temp docx extraction
 _tmp_wh_docx/
 
+# Word extracted junk
+_tmp_wh_docx/
+unz/
+word/
+docProps/
+*.xml
