@@ -416,4 +416,6 @@ docs/PRD.md
 # AI Models
 *.gguf
 
+# Temp docx extraction
+_tmp_wh_docx/
 

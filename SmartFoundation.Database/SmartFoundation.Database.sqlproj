@@ -520,6 +520,9 @@
     <Build Include="WH\Views\V_column.sql" />
     <Build Include="WH\Views\V_building.sql" />
     <Build Include="WH\Views\V_warehouse.sql" />
+    <Build Include="WH\Views\V_organization.sql" />
+    <Build Include="WH\Views\V_idara.sql" />
+    <Build Include="WH\Views\V_warehouseZone.sql" />
     <Build Include="VIC\Views\V_ActiveTransferRequests.sql" />
     <Build Include="VIC\Views\V_Dashboard_VehicleStatus.sql" />
     <Build Include="Security\KFMCMODA_63100004.sql" />
