@@ -27,6 +27,8 @@
     [userActive]                    BIT            NULL,
     [userNote]                      NVARCHAR (400) NULL,
     [usersAuthTypeID_FK]            INT            CONSTRAINT [DF_UsersDetails_IsAdmin] DEFAULT ((0)) NULL,
+    [UDendDate]                     DATETIME       NULL,
+    [canceldBy]                     NVARCHAR (500) NULL,
     [IdaraID]                       INT            NULL,
     [entryDate]                     DATETIME       CONSTRAINT [DF_UsersDetails_entryDate] DEFAULT (getdate()) NULL,
     [entryData]                     NVARCHAR (20)  NULL,
@@ -43,6 +45,8 @@
     CONSTRAINT [FK_UsersDetails_Users] FOREIGN KEY ([usersID_FK]) REFERENCES [dbo].[Users] ([usersID]),
     CONSTRAINT [FK_UsersDetails_UserType] FOREIGN KEY ([userTypeID_FK]) REFERENCES [dbo].[UserType] ([userTypeID])
 );
+
+
 
 
 GO

@@ -138,7 +138,7 @@ BEGIN
                 where m.MeterServiceTypeLinkedWithIdaraActive = 1 and m.Idara_FK = @idaraID and m.MeterServiceTypeID_FK = 1) ElectrictyService
                 ,(select count(*) from Housing.MeterServiceTypeLinkedWithIdara m 
                   inner join Housing.MeterServiceTypeFixedAmount f on m.MeterServiceTypeID_FK = f.MeterServiceTypeID_FK
-                where m.MeterServiceTypeLinkedWithIdaraActive = 1 and m.Idara_FK = 1 and m.MeterServiceTypeID_FK = 2) WaterService
+                where m.MeterServiceTypeLinkedWithIdaraActive = 1 and m.Idara_FK = @idaraID and m.MeterServiceTypeID_FK = 2) WaterService
                 ,(select count(*) from Housing.MeterServiceTypeLinkedWithIdara m
                   inner join Housing.MeterServiceTypeFixedAmount f on m.MeterServiceTypeID_FK = f.MeterServiceTypeID_FK
                   where m.MeterServiceTypeLinkedWithIdaraActive = 1 and m.Idara_FK = @idaraID and m.MeterServiceTypeID_FK = 3) GasService

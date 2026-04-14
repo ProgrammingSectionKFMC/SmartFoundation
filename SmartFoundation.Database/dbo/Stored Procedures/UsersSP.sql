@@ -675,7 +675,7 @@ END
             
             UPDATE  dbo.UsersDetails SET 
             
-                  userActive = 0
+                  userActive = 0,canceldBy = cast(@entryData as nvarchar(50)),UDendDate=GETDATE(),userNote =  N' سبب اخر تعديل : ' +@userNote
                   where usersID_FK = @usersID
                
 
@@ -1057,7 +1057,7 @@ END
             
             UPDATE  dbo.UsersDetails SET 
             
-                  userActive = 0
+                  userActive = 0,UDendDate = GETDATE(),canceldBy = cast(@entryData as nvarchar(50))+','+convert(nvarchar(10),GETDATE(),23),userNote =  N' تم التعطيل بسبب : ' +@userNote
                   where usersID_FK = @usersID
                
 

@@ -91,16 +91,6 @@ BEGIN
         IF @tc = 0
             BEGIN TRAN;
 
-        -- دعم فصل صلاحيات صفحة مهامي:
-        -- نسمح للواجهة بإرسال page/action خاصين بالموظف
-        -- ثم نعيد التوجيه داخليًا إلى مسار تنفيذ المهام الحالي.
-        IF @pageName_ = N'SupportMyTasks'
-           AND UPPER(ISNULL(@ActionType, N'')) = N'SMY_UPDATE_TASK_STATUS'
-        BEGIN
-            SET @pageName_ = N'SupportTicketDetails';
-            SET @ActionType = N'STD_UPDATE_TASK_STATUS';
-        END
-
         -- reset outbox
         SET @SendNotif = 0;
         SET @NotifTitle = NULL;
@@ -422,7 +412,7 @@ BEGIN
                   , @religionID_FK                   = @parameter_26
                   , @maritalStatusID_FK              = @parameter_27
                   , @educationID_FK                  = @parameter_28
-                  , @userNote                        = @parameter_20
+                  , @userNote                        = @parameter_35
                   , @distributorID                   = @parameter_36
                   , @idaraID_FK                      = @idaraID
                   , @entryData                       = @entrydata
@@ -460,7 +450,7 @@ BEGIN
                   , @religionID_FK                   = @parameter_26
                   , @maritalStatusID_FK              = @parameter_27
                   , @educationID_FK                  = @parameter_28
-                  , @userNote                        = @parameter_20
+                  , @userNote                        = @parameter_35
                   , @distributorID                   = @parameter_36
                   , @idaraID_FK                      = @idaraID
                   , @entryData                       = @entrydata
@@ -645,6 +635,7 @@ BEGIN
         ----------------------------------------------------------------
         -- BuildingUtilityType
         ----------------------------------------------------------------
+      
         ELSE IF @pageName_ = 'BuildingUtilityType'
         BEGIN
             IF (
@@ -3344,9 +3335,190 @@ BEGIN
 
 
 
+        ----------------------------------------------------------------
+          --نظام الدعم الفني للموقع 
+----------------------------------------------------------------
 
+       ----------------------------------------------------------------
+        -- SupportMyTickets
+        ----------------------------------------------------------------
+        ELSE IF @pageName_ = 'SupportMyTickets'
+        BEGIN
+            IF (
+                SELECT COUNT(*) FROM dbo.V_GetListUserPermission v
+                WHERE v.userID = @entrydata AND v.menuName_E = @pageName_ AND v.permissionTypeName_E = @ActionType
+            ) <= 0
+            BEGIN
+                SET @ok = 0; SET @msg = N'عفوا لاتملك صلاحية لهذه العملية'; GOTO Finish;
+            END
 
+            DELETE FROM @Result;
 
+            IF @ActionType = 'SMT_CREATE_TICKET'
+            BEGIN
+                INSERT INTO @Result(IsSuccessful, Message_)
+                EXEC [support].[SupportMyTicketsSP]
+                      @Action             = @ActionType
+                    , @ticketTypeID       = @parameter_01
+                    , @priorityID         = @parameter_02
+                    , @ticketTitle        = @parameter_03
+                    , @ticketDescription  = @parameter_04
+                    , @affectedPageName   = @parameter_05
+                    , @affectedPageUrl    = @parameter_06
+                    , @affectedActionName = @parameter_07
+                    , @errorDetails       = @parameter_08
+                    , @entryData          = @entrydata
+                    , @hostName           = @hostName;
+            END
+            ELSE
+            BEGIN
+                SET @ok = 0; SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType'; GOTO Finish;
+            END
+
+            SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+            GOTO Finish;
+        END
+
+        ----------------------------------------------------------------
+        -- SupportTicketDetails
+        ----------------------------------------------------------------
+        ELSE IF @pageName_ = 'SupportPhoneTickets'
+        BEGIN
+            IF (
+                SELECT COUNT(*) FROM dbo.V_GetListUserPermission v
+                WHERE v.userID = @entrydata AND v.menuName_E = @pageName_ AND v.permissionTypeName_E = @ActionType
+            ) <= 0
+            BEGIN
+                SET @ok = 0; SET @msg = N'عفوا لاتملك صلاحية لهذه العملية'; GOTO Finish;
+            END
+
+            DELETE FROM @Result;
+
+            IF @ActionType = 'SPT_CREATE_TICKET'
+            BEGIN
+                INSERT INTO @Result(IsSuccessful, Message_)
+                EXEC [support].[SupportPhoneTicketsSP]
+                      @Action             = @ActionType
+                    , @ticketTypeID       = @parameter_01
+                    , @priorityID         = @parameter_02
+                    , @ticketTitle        = @parameter_03
+                    , @ticketDescription  = @parameter_04
+                    , @affectedPageName   = @parameter_05
+                    , @affectedPageUrl    = @parameter_06
+                    , @affectedActionName = @parameter_07
+                    , @errorDetails       = @parameter_08
+                    , @callerUserID       = @parameter_09
+                    , @entryData          = @entrydata
+                    , @hostName           = @hostName;
+            END
+            ELSE
+            BEGIN
+                SET @ok = 0; SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType'; GOTO Finish;
+            END
+
+            SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+            GOTO Finish;
+        END
+
+        ----------------------------------------------------------------
+        -- SupportTicketDetails
+        ----------------------------------------------------------------
+        ELSE IF @pageName_ = 'SupportTicketDetails'
+        BEGIN
+            IF (
+                SELECT COUNT(*) FROM dbo.V_GetListUserPermission v
+                WHERE v.userID = @entrydata AND v.menuName_E = @pageName_ AND v.permissionTypeName_E = @ActionType
+            ) <= 0
+            BEGIN
+                SET @ok = 0; SET @msg = N'عفوا لاتملك صلاحية لهذه العملية'; GOTO Finish;
+            END
+
+            DELETE FROM @Result;
+
+            INSERT INTO @Result(IsSuccessful, Message_)
+            EXEC [support].[SupportTicketDetailsSP]
+                  @Action               = @ActionType
+                , @ticketID             = @parameter_01
+                , @replyText            = @parameter_02
+                , @isInternal           = @parameter_03
+                , @statusID             = @parameter_04
+                , @assignToTeamMemberID = @parameter_05
+                , @assignmentNote       = @parameter_06
+                , @taskTitle            = @parameter_07
+                , @taskDescription      = @parameter_08
+                , @taskPriorityID       = @parameter_09
+                , @taskAssignToMemberID = @parameter_10
+                , @taskDueDate          = @parameter_11
+                , @taskID               = @parameter_12
+                , @taskStatusID         = @parameter_13
+                , @entryData            = @entrydata
+                , @hostName             = @hostName;
+
+            SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+            GOTO Finish;
+        END
+
+        ----------------------------------------------------------------
+        -- SupportInbox
+        ----------------------------------------------------------------
+        ELSE IF @pageName_ = 'SupportInbox'
+        BEGIN
+            IF (
+                SELECT COUNT(*) FROM dbo.V_GetListUserPermission v
+                WHERE v.userID = @entrydata AND v.menuName_E = @pageName_ AND v.permissionTypeName_E = @ActionType
+            ) <= 0
+            BEGIN
+                SET @ok = 0; SET @msg = N'عفوا لاتملك صلاحية لهذه العملية'; GOTO Finish;
+            END
+
+            DELETE FROM @Result;
+
+            INSERT INTO @Result(IsSuccessful, Message_)
+            EXEC [support].[SupportInboxSP]
+                  @Action               = @ActionType
+                , @ticketID             = @parameter_01
+                , @statusID             = @parameter_02
+                , @assignToTeamMemberID = @parameter_03
+                , @assignmentNote       = @parameter_04
+                , @ticketIDsCsv         = @parameter_05
+                , @entryData            = @entrydata
+                , @hostName             = @hostName;
+
+            SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+            GOTO Finish;
+        END
+
+        ----------------------------------------------------------------
+        -- SupportTeamManagement
+        ----------------------------------------------------------------
+        ELSE IF @pageName_ = 'SupportTeamManagement'
+        BEGIN
+            IF (
+                SELECT COUNT(*) FROM dbo.V_GetListUserPermission v
+                WHERE v.userID = @entrydata AND v.menuName_E = @pageName_ AND v.permissionTypeName_E = @ActionType
+            ) <= 0
+            BEGIN
+                SET @ok = 0; SET @msg = N'عفوا لاتملك صلاحية لهذه العملية'; GOTO Finish;
+            END
+
+            DELETE FROM @Result;
+
+            INSERT INTO @Result(IsSuccessful, Message_)
+            EXEC [support].[SupportTeamManagementSP]
+                  @Action            = @ActionType
+                , @teamMemberID      = @parameter_01
+                , @userID            = @parameter_02
+                , @canReceiveTickets = @parameter_03
+                , @canAssignTickets  = @parameter_04
+                , @memberActive      = @parameter_05
+                , @teamMemberRoleID  = @parameter_06
+                , @roleID            = @parameter_07
+                , @entryData         = @entrydata
+                , @hostName          = @hostName;
+
+            SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+            GOTO Finish;
+        END
 
 
 
@@ -3360,7 +3532,7 @@ ELSE IF @pageName_ = 'Custody_Close'
 BEGIN
     IF (
         SELECT COUNT(*)
-        FROM DATACOREV.dbo.V_GetListUserPermission v
+        FROM DATACORE.dbo.V_GetListUserPermission v
         WHERE v.userID = @entrydata
           AND v.menuName_E = @pageName_
           AND v.permissionTypeName_E = @ActionType
@@ -3402,7 +3574,7 @@ ELSE IF @pageName_ = 'Custody_Create'
 BEGIN
     IF (
         SELECT COUNT(*)
-        FROM DATACOREV.dbo.V_GetListUserPermission v
+        FROM DATACORE.dbo.V_GetListUserPermission v
         WHERE v.userID = @entrydata
           AND v.menuName_E = @pageName_
           AND v.permissionTypeName_E = @ActionType
@@ -3452,7 +3624,7 @@ ELSE IF @pageName_ = 'Custody_Transfer'
 BEGIN
     IF (
         SELECT COUNT(*)
-        FROM DATACOREV.dbo.V_GetListUserPermission v
+        FROM DATACORE.dbo.V_GetListUserPermission v
         WHERE v.userID = @entrydata
           AND v.menuName_E = @pageName_
           AND v.permissionTypeName_E = @ActionType
@@ -3503,7 +3675,7 @@ ELSE IF @pageName_ = 'Handover_Create'
 BEGIN
     IF (
         SELECT COUNT(*)
-        FROM DATACOREV.dbo.V_GetListUserPermission v
+        FROM DATACORE.dbo.V_GetListUserPermission v
         WHERE v.userID = @entrydata
           AND v.menuName_E = @pageName_
           AND v.permissionTypeName_E = @ActionType
@@ -3599,7 +3771,7 @@ ELSE IF @pageName_ = 'MaintenanceDetails_Delete'
 BEGIN
     IF (
         SELECT COUNT(*)
-        FROM DATACOREV.dbo.V_GetListUserPermission v
+        FROM DATACORE.dbo.V_GetListUserPermission v
         WHERE v.userID = @entrydata
           AND v.menuName_E = @pageName_
           AND v.permissionTypeName_E = @ActionType
@@ -3639,7 +3811,7 @@ ELSE IF @pageName_ = 'MaintenanceTemplate_Delete'
 BEGIN
     IF (
         SELECT COUNT(*)
-        FROM DATACOREV.dbo.V_GetListUserPermission v
+        FROM DATACORE.dbo.V_GetListUserPermission v
         WHERE v.userID = @entrydata
           AND v.menuName_E = @pageName_
           AND v.permissionTypeName_E = @ActionType
@@ -3677,7 +3849,7 @@ ELSE IF @pageName_ = 'MaintenanceTemplate_Upsert'
 BEGIN
     IF (
         SELECT COUNT(*)
-        FROM DATACOREV.dbo.V_GetListUserPermission v
+        FROM DATACORE.dbo.V_GetListUserPermission v
         WHERE v.userID = @entrydata
           AND v.menuName_E = @pageName_
           AND v.permissionTypeName_E = @ActionType
@@ -3732,7 +3904,7 @@ ELSE IF @pageName_ = 'MaintenanceDetails_Upsert'
 BEGIN
     IF (
         SELECT COUNT(*)
-        FROM DATACOREV.dbo.V_GetListUserPermission v
+        FROM DATACORE.dbo.V_GetListUserPermission v
         WHERE v.userID = @entrydata
           AND v.menuName_E = @pageName_
           AND v.permissionTypeName_E = @ActionType
@@ -3801,7 +3973,7 @@ ELSE IF @pageName_ = 'MaintenanceOrder_Close'
 BEGIN
     IF (
         SELECT COUNT(*)
-        FROM DATACOREV.dbo.V_GetListUserPermission v
+        FROM DATACORE.dbo.V_GetListUserPermission v
         WHERE v.userID = @entrydata
           AND v.menuName_E = @pageName_
           AND v.permissionTypeName_E = @ActionType
@@ -3842,7 +4014,7 @@ ELSE IF @pageName_ = 'MaintenanceOrder_Upsert'
 BEGIN
     IF (
         SELECT COUNT(*)
-        FROM DATACOREV.dbo.V_GetListUserPermission v
+        FROM DATACORE.dbo.V_GetListUserPermission v
         WHERE v.userID = @entrydata
           AND v.menuName_E = @pageName_
           AND v.permissionTypeName_E = @ActionType
@@ -4037,7 +4209,7 @@ ELSE IF @pageName_ = 'Scrap_Action'
 BEGIN
     IF (
         SELECT COUNT(*)
-        FROM DATACOREV.dbo.V_GetListUserPermission v
+        FROM DATACORE.dbo.V_GetListUserPermission v
         WHERE v.userID = @entrydata
           AND v.menuName_E = @pageName_
           AND v.permissionTypeName_E = @ActionType
@@ -4080,7 +4252,7 @@ ELSE IF @pageName_ = 'Scrap_Upsert'
 BEGIN
     IF (
         SELECT COUNT(*)
-        FROM DATACOREV.dbo.V_GetListUserPermission v
+        FROM DATACORE.dbo.V_GetListUserPermission v
         WHERE v.userID = @entrydata
           AND v.menuName_E = @pageName_
           AND v.permissionTypeName_E = @ActionType
@@ -4529,7 +4701,7 @@ ELSE IF @pageName_ = 'Vehicle_Upsert'
 BEGIN
     IF (
         SELECT COUNT(*)
-        FROM DATACOREV.dbo.V_GetListUserPermission v
+        FROM DATACORE.dbo.V_GetListUserPermission v
         WHERE v.userID = @entrydata
           AND v.menuName_E = @pageName_
           AND v.permissionTypeName_E = @ActionType
@@ -5145,18 +5317,6 @@ Finish:
         IF @ErrNumber BETWEEN 50001 AND 50999
         BEGIN
             SELECT 0 AS IsSuccessful, @ErrMsg AS Message_;
-            RETURN;
-        END
-
-        ----------------------------------------------------------------
-        -- ✅ تعارضات أعمال متوقعة في نظام الدعم
-        -- (تكرار مهمة نشطة لنفس التذكرة ونفس الموظف)
-        ----------------------------------------------------------------
-        IF @ErrNumber IN (2601, 2627)
-           AND @ErrMsg LIKE N'%UX_support_TicketTask_Ticket_Assignee_Active%'
-        BEGIN
-            SELECT 0 AS IsSuccessful,
-                   N'تم إسناد مهمة نشطة لهذا الموظف على نفس التذكرة مسبقاً' AS Message_;
             RETURN;
         END
 

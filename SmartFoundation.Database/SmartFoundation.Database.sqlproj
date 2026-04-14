@@ -82,6 +82,10 @@
     <Folder Include="WH\Functions\" />
     <Folder Include="WH\Stored Procedures\" />
     <Folder Include="VIC\Stored Procedures\" />
+    <Folder Include="support\" />
+    <Folder Include="support\Tables\" />
+    <Folder Include="support\Stored Procedures\" />
+    <Folder Include="support\Sequences\" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="Housing\Tables\RentBillsAdjustment.sql" />
@@ -443,12 +447,16 @@
     <Build Include="dbo\Stored Procedures\GetSessionInfoForMVC.sql" />
     <Build Include="Housing\Stored Procedures\HousingResidentSP.sql" />
     <Build Include="Housing\Stored Procedures\MeterReadForOccubentAndExitSP.sql" />
-    <Build Include="dbo\Stored Procedures\Masters_CRUD.sql" />
+    <Build Include="dbo\Stored Procedures\Masters_CRUD.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
     <Build Include="Housing\Stored Procedures\BuildingTypeSP.sql" />
     <Build Include="Housing\Stored Procedures\HousingExitSP.sql" />
     <Build Include="dbo\Stored Procedures\UsersSP.sql" />
     <Build Include="dbo\Stored Procedures\Notifications_Create.sql" />
-    <Build Include="dbo\Stored Procedures\Masters_DataLoad.sql" />
+    <Build Include="dbo\Stored Procedures\Masters_DataLoad.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
     <Build Include="Housing\Stored Procedures\UploadExcel_ImportSelected3Cols.sql" />
     <Build Include="dbo\Stored Procedures\sp_AiChat_SaveCitation.sql" />
     <Build Include="Housing\Stored Procedures\BuildingTypeDL.sql" />
@@ -615,6 +623,73 @@
     <Build Include="Security\VIC.sql" />
     <Build Include="Security\Tickets.sql" />
     <Build Include="Security\KFMCMODA_63100004_1.sql" />
+    <Build Include="WH\Tables\WarehousePartType1.sql" />
+    <Build Include="WH\Tables\WarehousePart1.sql" />
+    <Build Include="support\Tables\TicketTask.sql" />
+    <Build Include="support\Tables\TicketAssignmentHistory.sql" />
+    <Build Include="support\Tables\TicketAttachment.sql" />
+    <Build Include="support\Tables\TicketReply.sql" />
+    <Build Include="support\Tables\Ticket.sql" />
+    <Build Include="support\Tables\TeamMemberRole.sql" />
+    <Build Include="support\Tables\TeamMember.sql" />
+    <Build Include="support\Tables\TicketStatus.sql" />
+    <Build Include="support\Tables\TicketPriority.sql" />
+    <Build Include="support\Tables\TicketType.sql" />
+    <Build Include="WH\Views\V_warehouseZone_1.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="WH\Views\V_warehouse_1.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="WH\Views\V_shelf_1.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="WH\Views\V_row_1.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="WH\Views\V_organization_1.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="WH\Views\V_MasterViewForLocations_1.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="WH\Views\V_idara_1.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="WH\Views\V_column_1.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="WH\Views\V_building_1.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="dbo\Views\V_GetFullSystemUsersDetails_2026_04_11.sql" />
+    <Build Include="dbo\Stored Procedures\UsersDL.sql" />
+    <Build Include="support\Stored Procedures\SupportPhoneTicketsSP.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="support\Stored Procedures\SupportPhoneTicketsDL.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="support\Stored Procedures\SupportTeamManagementSP.sql" />
+    <Build Include="support\Stored Procedures\SupportTeamManagementDL.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="support\Stored Procedures\SupportInboxSP.sql" />
+    <Build Include="support\Stored Procedures\SupportInboxDL.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="support\Stored Procedures\SupportTicketDetailsSP.sql" />
+    <Build Include="support\Stored Procedures\SupportTicketDetailsDL.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="support\Stored Procedures\SupportMyTicketsSP.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="support\Stored Procedures\SupportMyTicketsDL.sql">
+      <QuotedIdentifier>Off</QuotedIdentifier>
+    </Build>
+    <Build Include="Security\support.sql" />
+    <Build Include="support\Sequences\SeqTicketNo.sql" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Condition="'$(NetCoreBuild)' == 'true'">

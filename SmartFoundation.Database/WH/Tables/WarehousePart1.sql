@@ -1,4 +1,4 @@
-﻿CREATE TABLE [WH].[WarehousePart] (
+﻿CREATE TABLE [WH].[WarehousePart1] (
     [warehousePartID]             BIGINT         IDENTITY (1, 1) NOT NULL,
     [warehousePartTypeID_FK]      INT            NULL,
     [warehousePartName]           NVARCHAR (100) NULL,
@@ -10,8 +10,7 @@
     [warehousePartIsChecked]      BIT            NULL,
     [IdaraID_FK]                  BIGINT         NULL,
     [hostName]                    NVARCHAR (200) NULL,
-    [entryDate]                   DATETIME       CONSTRAINT [DF_WarehousePart_entryDate] DEFAULT (getdate()) NULL,
-    [entryData]                   NVARCHAR (20)  NULL,
-    CONSTRAINT [PK_WarehousePart_1] PRIMARY KEY CLUSTERED ([warehousePartID] ASC)
+    [entryDate]                   DATETIME       NULL,
+    [entryData]                   NVARCHAR (20)  NULL
 );
 

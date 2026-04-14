@@ -64,6 +64,56 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             }
 
 
+            bool buildingUtilityIsRent = false;
+            string buildingUtilityIsRentValue = "0";
+
+            bool ElectrictyService = false;
+            string ElectrictyServiceValue = "0";
+
+            bool WaterService = false;
+            string WaterServiceValue = "0";
+
+            bool GasService = false;
+            string GasServiceValue = "0";
+
+            if (dt7 != null && dt7.Rows.Count > 0)
+            {
+                var row = dt7.Rows[0];
+
+                if (dt7.Columns.Contains("ElectrictyService"))
+                {
+                    ElectrictyServiceValue = row["ElectrictyService"]?.ToString()?.Trim() ?? "0";
+                    // ✅ قارن مع "1" بدلاً من "True"
+                    ElectrictyService = (ElectrictyServiceValue == "1" || ElectrictyServiceValue.Equals("True", StringComparison.OrdinalIgnoreCase));
+                }
+
+                if (dt7.Columns.Contains("WaterService"))
+                {
+                    WaterServiceValue = row["WaterService"]?.ToString()?.Trim() ?? "0";
+                    // ✅ قارن مع "1" بدلاً من "True"
+                    WaterService = (WaterServiceValue == "1" || WaterServiceValue.Equals("True", StringComparison.OrdinalIgnoreCase));
+                }
+
+                if (dt7.Columns.Contains("GasService"))
+                {
+                    GasServiceValue = row["GasService"]?.ToString()?.Trim() ?? "0";
+                    // ✅ قارن مع "1" بدلاً من "True"
+                    GasService = (GasServiceValue == "1" || GasServiceValue.Equals("True", StringComparison.OrdinalIgnoreCase));
+                }
+            }
+
+
+            if (dt2 != null && dt2.Columns.Contains("buildingUtilityIsRent"))
+            {
+                var row = dt2.AsEnumerable()
+                    .FirstOrDefault(r => r["buildingUtilityTypeID"]?.ToString() == UtilityTypeID_);
+
+                if (row != null)
+                {
+                    buildingUtilityIsRentValue = row["buildingUtilityIsRent"]?.ToString()?.Trim() ?? "0";
+                    buildingUtilityIsRent = (buildingUtilityIsRentValue == "True");
+                }
+            }
 
 
 
@@ -249,8 +299,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             var t = c.DataType;
                             if (t == typeof(bool)) colType = "bool";
                             else if (t == typeof(DateTime)) colType = "date";
+                            else if (t == typeof(decimal)) colType = "decimal";
                             else if (t == typeof(byte) || t == typeof(short) || t == typeof(int) || t == typeof(long)
-                                     || t == typeof(float) || t == typeof(double) || t == typeof(decimal))
+                                     || t == typeof(float) || t == typeof(double))
                                 colType = "number";
 
                             bool isbuildingDetailsID = c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase);
@@ -270,6 +321,41 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             bool isElectrcityServices = c.ColumnName.Equals("ElectrcityServices", StringComparison.OrdinalIgnoreCase);
                             bool isWaterServices = c.ColumnName.Equals("WaterServices", StringComparison.OrdinalIgnoreCase);
                             bool isGasServices = c.ColumnName.Equals("GasServices", StringComparison.OrdinalIgnoreCase);
+                            bool isElectrcityServicesView = c.ColumnName.Equals("ElectrcityServicesView", StringComparison.OrdinalIgnoreCase);
+                            bool isWaterServicesView = c.ColumnName.Equals("WaterServicesView", StringComparison.OrdinalIgnoreCase);
+                            bool isGasServicesView = c.ColumnName.Equals("GasServicesView", StringComparison.OrdinalIgnoreCase);
+
+                            
+                            bool isbuildingDetailsRooms = c.ColumnName.Equals("buildingDetailsRooms", StringComparison.OrdinalIgnoreCase);
+                            bool isbuildingLevelsCount = c.ColumnName.Equals("buildingLevelsCount", StringComparison.OrdinalIgnoreCase);
+                            bool isbuildingDetailsArea = c.ColumnName.Equals("buildingDetailsArea", StringComparison.OrdinalIgnoreCase);
+                            bool isbuildingTypeName_A = c.ColumnName.Equals("buildingTypeName_A", StringComparison.OrdinalIgnoreCase);
+                            bool ismilitaryLocationName_A = c.ColumnName.Equals("militaryLocationName_A", StringComparison.OrdinalIgnoreCase);
+                            bool isbuildingClassName_A = c.ColumnName.Equals("buildingClassName_A", StringComparison.OrdinalIgnoreCase);
+                            bool isbuildingRentTypeName_A = c.ColumnName.Equals("buildingRentTypeName_A", StringComparison.OrdinalIgnoreCase);
+                            bool isbuildingRentAmount = c.ColumnName.Equals("buildingRentAmount", StringComparison.OrdinalIgnoreCase);
+
+
+                            bool hideElectricityColumn = isElectrcityServicesView && !ElectrictyService;
+                            bool hideWaterColumn = isWaterServicesView && !WaterService;
+                            bool hideGasColumn = isGasServicesView && !GasService;
+
+                            List<OptionItem> filterOpts = new();
+                            if (isbuildingDetailsRooms || isbuildingLevelsCount || isbuildingDetailsArea || isbuildingTypeName_A || ismilitaryLocationName_A || isbuildingClassName_A || isbuildingRentTypeName_A || isbuildingRentAmount)
+                            {
+                                var field = c.ColumnName;
+
+                                var distinctVals = dt1.AsEnumerable()
+                                    .Select(r => (r[field] == DBNull.Value ? "" : r[field]?.ToString())?.Trim())
+                                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                                    .Distinct()
+                                    .OrderBy(s => s)
+                                    .ToList();
+
+                                filterOpts = distinctVals
+                                    .Select(s => new OptionItem { Value = s!, Text = s! })
+                                    .ToList();
+                            }
 
                             dynamicColumns.Add(new TableColumn
                             {
@@ -281,7 +367,19 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 ,
                                 Visible = !(isbuildingDetailsID || isbuildingTypeID_FK || isbuildingUtilityTypeID_FK || ismilitaryLocationID_FK
                                 || isbuildingClassID_FK || isbuildingDetailsStartDate || isbuildingDetailsEndDate || isbuildingDetailsActive
-                                || isbuildingRentStartDate || isbuildingRentEndDate || isIdaraId_FK || isbuildingDetailsTel_1 || isbuildingDetailsTel_2 || isbuildingRentTypeID|| isElectrcityServices || isWaterServices || isGasServices)
+                                || isbuildingRentStartDate || isbuildingRentEndDate || isIdaraId_FK || isbuildingDetailsTel_1 || isbuildingDetailsTel_2 || isbuildingRentTypeID|| isElectrcityServices || isWaterServices || isGasServices|| hideElectricityColumn || hideWaterColumn || hideGasColumn),
+
+                                Filter = (isbuildingDetailsRooms || isbuildingLevelsCount || isbuildingDetailsArea || isbuildingTypeName_A || ismilitaryLocationName_A || isbuildingClassName_A || isbuildingRentTypeName_A || isbuildingRentAmount)
+                                    ? new TableColumnFilter
+                                    {
+                                        Enabled = true,
+                                        Type = "select",
+                                        Options = filterOpts,
+                                    }
+                                    : new TableColumnFilter
+                                    {
+                                        Enabled = false
+                                    }
                             });
                         }
 
@@ -294,7 +392,18 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             foreach (DataColumn c in dt1.Columns)
                             {
                                 var val = r[c];
-                                dict[c.ColumnName] = val == DBNull.Value ? null : val;
+                                if (c.ColumnName.Equals("buildingDetailsArea", StringComparison.OrdinalIgnoreCase) && val != DBNull.Value)
+                                {
+                                    dict[c.ColumnName] = Convert.ToDecimal(val).ToString("0.00");
+                                }
+                                else if (c.ColumnName.Equals("buildingRentAmount", StringComparison.OrdinalIgnoreCase) && val != DBNull.Value)
+                                {
+                                    dict[c.ColumnName] = Convert.ToDecimal(val).ToString("0.00");
+                                }
+                                else
+                                {
+                                    dict[c.ColumnName] = val == DBNull.Value ? null : val;
+                                }
                             }
 
                             // Ensure the row id key actually exists with correct casing
@@ -376,56 +485,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
             // Check in dt2 for buildingUtilityIsRent == "1"
-            bool buildingUtilityIsRent = false;
-            string buildingUtilityIsRentValue = "0";
-
-            bool ElectrictyService = false;
-            string ElectrictyServiceValue = "0";
-
-            bool WaterService = false;
-            string WaterServiceValue = "0";
-
-            bool GasService = false;
-            string GasServiceValue = "0";
-
-            if (dt7 != null && dt7.Rows.Count > 0)
-            {
-                var row = dt7.Rows[0];
-
-                if (dt7.Columns.Contains("ElectrictyService"))
-                {
-                    ElectrictyServiceValue = row["ElectrictyService"]?.ToString()?.Trim() ?? "0";
-                    // ✅ قارن مع "1" بدلاً من "True"
-                    ElectrictyService = (ElectrictyServiceValue == "1" || ElectrictyServiceValue.Equals("True", StringComparison.OrdinalIgnoreCase));
-                }
-
-                if (dt7.Columns.Contains("WaterService"))
-                {
-                    WaterServiceValue = row["WaterService"]?.ToString()?.Trim() ?? "0";
-                    // ✅ قارن مع "1" بدلاً من "True"
-                    WaterService = (WaterServiceValue == "1" || WaterServiceValue.Equals("True", StringComparison.OrdinalIgnoreCase));
-                }
-
-                if (dt7.Columns.Contains("GasService"))
-                {
-                    GasServiceValue = row["GasService"]?.ToString()?.Trim() ?? "0";
-                    // ✅ قارن مع "1" بدلاً من "True"
-                    GasService = (GasServiceValue == "1" || GasServiceValue.Equals("True", StringComparison.OrdinalIgnoreCase));
-                }
-            }
-
-
-            if (dt2 != null && dt2.Columns.Contains("buildingUtilityIsRent"))
-            {
-                var row = dt2.AsEnumerable()
-                    .FirstOrDefault(r => r["buildingUtilityTypeID"]?.ToString() == UtilityTypeID_);
-
-                if (row != null)
-                {
-                    buildingUtilityIsRentValue = row["buildingUtilityIsRent"]?.ToString()?.Trim() ?? "0";
-                    buildingUtilityIsRent = (buildingUtilityIsRentValue == "True");
-                }
-            }
+           
 
 
             var addFields = new List<FieldConfig>
@@ -691,6 +751,11 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 AllowExport = true,
                 PageTitle = "المباني",
                 PanelTitle = "المباني ",
+                EnableCellCopy = true,
+                ShowColumnVisibility = true,
+                ShowFilter = true,
+                FilterRow = true,
+                FilterDebounce = 250,
 
                 Toolbar = new TableToolbarConfig
                 {
