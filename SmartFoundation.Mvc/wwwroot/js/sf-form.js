@@ -152,10 +152,16 @@ function sfInitSelect2(root = document) {
     if (!window.jQuery || !jQuery.fn || !jQuery.fn.select2) return;
 
     const $root = jQuery(root);
+    const stripSelect2Title = ($select) => {
+        if (!$select || !$select.length) return;
+        const $container = $select.next(".select2");
+        $container.find(".select2-selection__rendered").removeAttr("title");
+        $container.find(".select2-selection").removeAttr("title");
+    };
 
     $root
-        .find('select.js-select2')
-        .add($root.is('select.js-select2') ? $root : [])
+        .find('select.js-select2:not([data-sf-select2-skip-global="1"])')
+        .add($root.is('select.js-select2:not([data-sf-select2-skip-global="1"])') ? $root : [])
         .each(function () {
             const $s = jQuery(this);
             if ($s.data('select2')) return;
@@ -173,6 +179,10 @@ function sfInitSelect2(root = document) {
                         : 0
             });
 
+            stripSelect2Title($s);
+            $s.on("change.sfNoTitle select2:select.sfNoTitle select2:clear.sfNoTitle select2:unselect.sfNoTitle select2:open.sfNoTitle", function () {
+                stripSelect2Title($s);
+            });
         });
 }
 
@@ -186,7 +196,10 @@ function sfInitSelect2(root = document) {
         for (const m of mutations) {
             for (const node of m.addedNodes) {
                 if (node.nodeType !== 1) continue;
-                if (node.matches?.("select.js-select2") || node.querySelector?.("select.js-select2")) {
+                if (
+                    node.matches?.('select.js-select2:not([data-sf-select2-skip-global="1"])') ||
+                    node.querySelector?.('select.js-select2:not([data-sf-select2-skip-global="1"])')
+                ) {
                     sfInitSelect2(node);
                 }
             }

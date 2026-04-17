@@ -156,26 +156,36 @@
 
                     <div class="toolbar-actions">
 
-                        <div class="inline-flex flex-wrap items-center gap-2">
+                        <div class="toolbar-utility">
 
                             @if (Model.ShowFilter)
                             {
                                 <button type="button"
-                                        class="sf-filter-btn"
+                                        class="sf-filter-btn sf-toolbar-tool"
                                         x-on:click="toggleFilters()"
                                         :aria-pressed="String(!!showFilters)"
-                                        title="إظهار/إخفاء صف الفلاتر">
-                                    <i class="fa fa-filter"></i>
-                                    فلترة
+                                        :class="{ 'is-active': !!showFilters }"
+                                        title="إظهار/إخفاء صف الفلاتر"
+                                        aria-label="فلترة">
+                                    <span class="sf-toolbar-tool__icon" aria-hidden="true">
+                                        <i class="fa fa-filter"></i>
+                                    </span>
+                                    <span class="sf-toolbar-tool__label">فلترة</span>
                                 </button>
 
                                 <button type="button"
-                                        class="sf-filter-clear"
+                                        class="sf-filter-clear sf-toolbar-tool sf-toolbar-tool--danger"
                                         x-show="hasActiveColumnFilters()"
                                         x-on:click="clearFiltersUI()"
-                                        title="مسح جميع الفلاتر">
-                                    <i class="fa fa-eraser"></i>
-                                    مسح الفلاتر
+                                        title="مسح جميع الفلاتر"
+                                        aria-label="مسح الفلاتر">
+                                    <span class="sf-toolbar-tool__icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M5 12h10"></path>
+                                            <path d="M15.5 8.5l3.5 3.5-3.5 3.5"></path>
+                                        </svg>
+                                    </span>
+                                    <span class="sf-toolbar-tool__label">مسح الفلاتر</span>
                                 </button>
                             }
 
@@ -183,13 +193,17 @@
                                 <div class="sf-colvis" x-data="{ open:false }">
 
                                     <button type="button"
-                                            class="sf-filter-btn sf-colvis-btn"
+                                            class="sf-filter-btn sf-colvis-btn sf-toolbar-tool"
                                             x-on:click="open = !open"
                                             :aria-expanded="String(open)"
-                                            title="إظهار/إخفاء الأعمدة">
+                                            :class="{ 'is-active': open }"
+                                            title="إظهار/إخفاء الأعمدة"
+                                            aria-label="الأعمدة">
+                                    <span class="sf-toolbar-tool__icon" aria-hidden="true">
                                         <i class="fa fa-columns"></i>
-                                        الأعمدة
-                                    </button>
+                                    </span>
+                                    <span class="sf-toolbar-tool__label">الأعمدة</span>
+                                </button>
 
                                     <div x-show="open"
                                          x-transition
@@ -245,8 +259,8 @@
                             </template>
 
                             <template x-if="showPageSizeSelector">
-                                <div class="inline-flex items-center gap-2">
-                                    <label class="label-sm whitespace-nowrap" for="pageSizeSelect">عرض</label>
+                                <div class="sf-page-size">
+                                    <label class="label-sm whitespace-nowrap sf-page-size__label" for="pageSizeSelect">عرض</label>
                                     <select id="pageSizeSelect"
                                             class="sf-input select-sm"
                                             x-model.number="pageSize"
@@ -421,11 +435,12 @@
                                     x-bind:style="col.width ? 'width:' + col.width + ';' : ''">
 
                                     <template x-if="isColFilterEnabled(col)">
-                                        <div class="sf-filter-wrap">
+                                        <div class="sf-filter-wrap sf-form">
 
                                             <template x-if="getColFilterType(col) === 'text'">
                                                 <input type="text"
                                                        class="sf-filter-input"
+                                                       x-bind:data-field="col.field"
                                                        x-bind:placeholder="getColFilterPlaceholder(col)"
                                                        x-bind:aria-label="'فلتر: ' + (col.title || col.header || col.field)"
                                                        autocomplete="off"
@@ -439,6 +454,7 @@
                                             <template x-if="getColFilterType(col) === 'number'">
                                                 <input type="text"
                                                        class="sf-filter-input"
+                                                       x-bind:data-field="col.field"
                                                        placeholder="مثال: >=10"
                                                        x-bind:aria-label="'فلتر رقمي: ' + (col.title || col.header || col.field)"
                                                        autocomplete="off"
@@ -452,6 +468,7 @@
                                             <template x-if="getColFilterType(col) === 'date'">
                                                 <input type="text"
                                                        class="sf-filter-input"
+                                                       x-bind:data-field="col.field"
                                                        placeholder="YYYY-MM-DD أو .."
                                                        x-bind:aria-label="'فلتر تاريخ: ' + (col.title || col.header || col.field)"
                                                        autocomplete="off"
@@ -463,10 +480,14 @@
                                             </template>
 
                                             <template x-if="getColFilterType(col) === 'bool'">
-                                                <select class="sf-filter-input"
-                                                        x-bind:aria-label="'فلتر نعم/لا: ' + (col.title || col.header || col.field)"
-                                                        x-model="columnFilters[col.field]"
-                                                        x-on:change="onColumnFilterInput()">
+      <select class="sf-filter-input sf-filter-select2 js-select2"
+              data-s2-min-results="0"
+              data-s2-placeholder="الكل"
+              data-sf-select2-skip-global="1"
+              x-bind:aria-label="'فلتر نعم/لا: ' + (col.title || col.header || col.field)"
+              x-bind:data-field="col.field"
+              x-model="columnFilters[col.field]"
+              x-on:change="onColumnFilterInput()">
                                                     <option value="">الكل</option>
                                                     <option value="true">نعم</option>
                                                     <option value="false">لا</option>
@@ -474,11 +495,14 @@
                                             </template>
 
                                             <template x-if="getColFilterType(col) === 'select'">
-                                                <select class="sf-filter-input sf-filter-select2"
-                                                        x-bind:data-field="col.field"
-                                                        x-bind:aria-label="'فلتر قائمة: ' + (col.title || col.header || col.field)"
-                                                        x-model="columnFilters[col.field]"
-                                                        x-on:change="onColumnFilterInput()">
+      <select class="sf-filter-input sf-filter-select2 js-select2"
+              x-bind:data-field="col.field"
+              data-s2-min-results="0"
+              data-s2-placeholder="الكل"
+              data-sf-select2-skip-global="1"
+              x-bind:aria-label="'فلتر قائمة: ' + (col.title || col.header || col.field)"
+              x-model="columnFilters[col.field]"
+              x-on:change="onColumnFilterInput()">
                                                     <option value="">الكل</option>
                                                     <template x-for="opt in getColFilterOptions(col)"
                                                               :key="String(opt.value ?? opt.Value ?? opt.text ?? opt.Text)">
@@ -948,7 +972,7 @@
 
                 @if (Model.ShowTabCount)
                 {
-                    <span class="sf-tab-panel__count">(@Model.TabCount)</span>
+                    <span class="sf-tab-panel__count">@Model.TabCount</span>
                 }
             </button>
 

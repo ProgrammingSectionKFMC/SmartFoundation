@@ -1697,7 +1697,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                             PillEnabled = true,
                             PillField = "BillsStatus",
                             PillTextField = "BillsStatus",
-                            PillCssClass = "pill pill-green",
+                            PillCssClass = "pill pill-gray",
                             PillMode = "replace"
                         },
 
@@ -1743,7 +1743,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                             PillEnabled = true,
                             PillField = "Remaining",
                             PillTextField = "Remaining",
-                            PillCssClass = "pill pill-green",
+                            PillCssClass = "pill pill-gray",
                             PillMode = "replace"
                         },
 
@@ -1793,7 +1793,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                             PillEnabled = true,
                             PillField = "Remaining",
                             PillTextField = "Remaining",
-                            PillCssClass = "pill pill-green",
+                            PillCssClass = "pill pill-gray",
                             PillMode = "replace"
                         },
 
@@ -1839,7 +1839,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                             PillEnabled = true,
                             PillField = "BillsStatus",
                             PillTextField = "BillsStatus",
-                            PillCssClass = "pill pill-green",
+                            PillCssClass = "pill pill-gray",
                             PillMode = "replace"
                         },
 
