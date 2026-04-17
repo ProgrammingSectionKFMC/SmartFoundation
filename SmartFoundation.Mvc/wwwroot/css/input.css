@@ -582,7 +582,7 @@ textarea[readonly] {
     padding: 0;
     background: #ffffff;
     border: 1px solid #d6e0da;
-    border-radius: 0 0 10px 10px;
+    border-radius: 0;
     box-shadow: none;
     overflow: hidden;
     direction: rtl;
@@ -604,6 +604,7 @@ textarea[readonly] {
     border-right: 1px solid #dce5df;
     border-left: 1px solid #dce5df;
     border-bottom: 1px solid #dce5df;
+    border-radius: 0;
     overflow-anchor: none;
     scroll-behavior: auto;
     /* Firefox */
@@ -692,6 +693,14 @@ textarea[readonly] {
     .th-cell:first-child {
         border-right: none;
     }
+
+.sf-table thead .th-cell:first-child,
+.sf-table thead .th-cell:last-child,
+.sf-table thead tr:first-child .th-cell {
+    border-radius: 0 !important;
+    border-top-left-radius: 0 !important;
+    border-top-right-radius: 0 !important;
+}
 
     .th-cell.cursor-pointer {
         cursor: pointer;
@@ -1337,12 +1346,12 @@ textarea[readonly] {
     }
 
     .toolbar + .sf-table-wrapper {
-        border-radius: 10px;
+        border-radius: 0;
     }
 
     .toolbar + .table-box {
         border-top-color: #d6ddd9;
-        border-radius: 10px 10px 0 0;
+        border-radius: 0;
     }
 
 @media (min-width: 768px) {
