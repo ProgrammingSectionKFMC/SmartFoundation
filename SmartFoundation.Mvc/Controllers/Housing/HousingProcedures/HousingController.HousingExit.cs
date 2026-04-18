@@ -215,6 +215,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ["buildingDetailsNo"] = "رقم المنزل",
                             ["penaltyPrice"] = "مبلغ الغرامة",
                             ["PenaltyReason"] = "سبب الغرامة",
+                            ["OccupentDate"] = "تاريخ السكن",
+                            ["ExitDate"] = "تاريخ الاخلاء",
                             ["WaitingListOrder"] = "الترتيب"
                         };
 
@@ -298,6 +300,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             dict["p40"] = Get("penaltyPrice");
                             dict["p41"] = Get("BillsID");
                             dict["p42"] = Get("meterscount");
+                            dict["p43"] = Get("OccupentDate");
+                            dict["p44"] = Get("ExitDate");
 
 
 
@@ -343,13 +347,15 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p43", Label = "OccupentDate", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p44", Label = "ExitDate", Type = "hidden", ColCss = "3", Readonly = true },
 
 
                 
                 new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "date", ColCss = "3",Required = true },
 
 
-                new FieldConfig { Name = "p12", Label = "ملاحظات", Type = "textarea", ColCss = "12",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
+                new FieldConfig { Name = "p12", Label = "ملاحظات", Type = "textarea", ColCss = "6",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
 
                 new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
@@ -387,7 +393,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
-
+                new FieldConfig { Name = "p43", Label = "OccupentDate", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p44", Label = "ExitDate", Type = "hidden", ColCss = "3", Readonly = true },
 
 
                 new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "text", ColCss = "3",Required = true,Readonly = true },
@@ -436,7 +443,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
-
+                new FieldConfig { Name = "p43", Label = "OccupentDate", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p44", Label = "ExitDate", Type = "hidden", ColCss = "3", Readonly = true },
 
 
                 new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "date", ColCss = "3",Required = true },
@@ -481,10 +489,11 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p43", Label = "OccupentDate", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p44", Label = "ExitDate", Type = "hidden", ColCss = "3", Readonly = true },
 
 
-
-                new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "date", ColCss = "3",Required = true },
+                new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "text", ColCss = "3",Required = true, Readonly = true },
 
 
                 new FieldConfig { Name = "p26", Label = "ملاحظات", Type = "textarea", ColCss = "12",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
@@ -526,7 +535,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
-
+                new FieldConfig { Name = "p43", Label = "OccupentDate", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p44", Label = "ExitDate", Type = "hidden", ColCss = "3", Readonly = true },
 
 
                 new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "text", ColCss = "3",Required = true, Readonly = true},
@@ -572,7 +582,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
-
+                new FieldConfig { Name = "p43", Label = "OccupentDate", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p44", Label = "ExitDate", Type = "hidden", ColCss = "3", Readonly = true },
 
 
                 new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "text", ColCss = "3",Required = true, Readonly = true },
@@ -694,7 +705,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                     Print1 = new TableAction
                     {
-                        Label = "طباعة اشعار مراجعة",
+                        Label = "طباعة خطاب ايقاف الحسم",
                         Icon = "fa fa-print",
                         Color = "info",
                         OnClickJs = @"
@@ -715,7 +726,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 rowId: rowId,
                 NID: nid
             },
-            busy: { title: 'طباعة بيانات المستفيدين' }
+            busy: { title: 'طباعة خطاب ايقاف الحسم' }
         });
     }
 "
@@ -725,27 +736,26 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         RequireSelection = true,
                         MinSelection = 1,
                         MaxSelection = 1
-                        //,
+                        ,
 
-                        //Guards = new TableActionGuards
-                        //{
-                        //    AppliesTo = "any",
-                        //    DisableWhenAny = new List<TableActionRule>
-                        //   {
+                        Guards = new TableActionGuards
+                        {
+                            AppliesTo = "any",
+                            DisableWhenAny = new List<TableActionRule>
+                        {
 
-                        //        new TableActionRule
-                        //      {
-                        //          Field = "LastActionTypeID",
-                        //          Op = "neq",
-                        //          Value = "24",
-                        //          Message = "لايمكن طباعة الطلب لعدم انتهاء امهال الساكن",
-                        //          Priority = 3
-                        //      },
+                              new TableActionRule
+                            {
+                                Field = "LastActionTypeID",
+                                Op = "neq",
+                                Value = "3",
+                                Message = "لايمكن خطاب ايقاف الحسم المستفيد حتى تتم اجراءات الاخلاء بشكل نهائي",
+                                Priority = 3
+                            },
 
 
-
-                        //   }
-                        //}
+                          }
+                        }
                     },
 
                         Edit = new TableAction
@@ -1219,11 +1229,20 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             },
                                new TableStyleRule
                             {
+                                Target="row", Field="LastActionTypeID", Op="eq", Value="58", Priority=1,
+                                PillEnabled=true,
+                                PillField="buildingActionTypeResidentAlias",
+                                PillTextField="buildingActionTypeResidentAlias",
+                                PillCssClass="pill pill-yellow",
+                                PillMode="replace"
+                            },
+                               new TableStyleRule
+                            {
                                 Target="row", Field="LastActionTypeID", Op="eq", Value="60", Priority=1,
                                 PillEnabled=true,
                                 PillField="buildingActionTypeResidentAlias",
                                 PillTextField="buildingActionTypeResidentAlias",
-                                PillCssClass="pill pill-grey",
+                                PillCssClass="pill pill-gray",
                                 PillMode="replace"
                             },
                                new TableStyleRule
@@ -1389,7 +1408,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 string extendFromDateStr = extendFromDate?.ToString("yyyy/MM/dd") ?? "";
                 string extendToDateStr = extendToDate?.ToString("yyyy/MM/dd") ?? "";
 
-                var logo = Path.Combine(_env.WebRootPath, "img", "ppng.png");
+                var logo = Path.Combine(_env.WebRootPath, "img", "Royal_Saudi_Land_Forces.png");
 
                 var header = new Dictionary<string, string>
                 {
@@ -1447,7 +1466,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             new LetterTableCell
             {
                 Text = "الجهة",
-                Bold = true,
+                Bold = false,
                 Align = TextAlign.Center,
                 BackgroundColor = "#F3F3F3",
                 FontSize = 11

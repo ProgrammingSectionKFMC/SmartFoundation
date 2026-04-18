@@ -410,12 +410,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             if (!dict.ContainsKey(rowIdField))
                             {
                                 // Try to copy from a differently cased variant
-                                if (rowIdField.Equals("permissionID", StringComparison.OrdinalIgnoreCase) &&
-                                    dict.TryGetValue("permissionID", out var alt))
-                                    dict["permissionID"] = alt;
-                                else if (rowIdField.Equals("permissionID", StringComparison.OrdinalIgnoreCase) &&
-                                         dict.TryGetValue("permissionID", out var alt2))
-                                    dict["permissionID"] = alt2;
+                                if (rowIdField.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase) &&
+                                    dict.TryGetValue("buildingDetailsID", out var alt))
+                                    dict["buildingDetailsID"] = alt;
+                                else if (rowIdField.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase) &&
+                                         dict.TryGetValue("buildingDetailsID", out var alt2))
+                                    dict["buildingDetailsID"] = alt2;
                             }
 
                             // Prefill pXX fields on the row so Edit form (which uses pXX names) loads the selected row values
@@ -612,7 +612,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p03", Label = "عدد الغرف", Type = "number", ColCss = "3", Required = true },
                 new FieldConfig { Name = "p04", Label = "عدد الطوابق", Type = "number", ColCss = "3", Required = true },
                 new FieldConfig { Name = "p05", Label = "مساحة المبنى", Type = "number", ColCss = "3", Required = true },
-                new FieldConfig { Name = "p06", Label = "احداثيات المبنى", Type = "number", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p06", Label = "احداثيات المبنى", Type = "text", ColCss = "3", Required = true },
                 new FieldConfig { Name = "p07", Label = "نوع المبنى", Type = "select", ColCss = "3", Required = true,   Options =         BuildingTypeOptions },
                 new FieldConfig { Name = "p08", Label = "نوع المرفق", Type = "hidden", ColCss = "3", Required = true,   Value= UtilityTypeID_ },
                 new FieldConfig { Name = "p09", Label = "موقع المبنى", Type = "select", ColCss = "6", Required = true,  Options =        MilitaryLocationOptions },

@@ -53,7 +53,7 @@ public static class OfficialLetterHeaderComponent
                                             .AlignCenter()
                                             .Text(text)
                                             .FontSize(size)
-                                            .FontColor("#222222");
+                                            .FontColor("#000000");
 
                                         if (bold)
                                             item.SemiBold();
@@ -63,7 +63,8 @@ public static class OfficialLetterHeaderComponent
                                     RightRow(right2);
                                     RightRow(right3);
                                     RightRow(right4);
-                                    RightRow(right5, true);
+                                    RightRow(right5);
+                                    //RightRow(right5, true);
                                 });
 
                             // فراغ للوسط
@@ -71,7 +72,8 @@ public static class OfficialLetterHeaderComponent
 
                             // بيانات الخطاب
                             row.RelativeItem(1)
-                                .PaddingTop(16)   // ✅ إنزال العمود الأيسر
+                                .PaddingTop(28)   // ✅ إنزال العمود الأيسر
+                                .PaddingRight(40)
                                 .Column(left =>
                                 {
                                     left.Spacing(1);
@@ -85,7 +87,7 @@ public static class OfficialLetterHeaderComponent
                                             .AlignRight()
                                             .Text(t =>
                                             {
-                                                t.DefaultTextStyle(x => x.FontSize(10).FontColor("#222222"));
+                                                t.DefaultTextStyle(x => x.FontSize(10).FontColor("#000000"));
                                                 t.Span(label).SemiBold();
 
                                                 var valueSpan = t.Span(value);
@@ -93,11 +95,11 @@ public static class OfficialLetterHeaderComponent
                                                     valueSpan.SemiBold();
                                             });
                                     }
-
+                                    
                                     LeftRow("الرقم: ", leftNo);
                                     LeftRow("التاريخ: ", leftDate);
                                     LeftRow("المرفقات: ", leftAttach);
-                                    LeftRow("الموضوع: ", leftSubject, true);
+                                    LeftRow("الموضوع: ", leftSubject);
                                 });
                         });
 
@@ -116,7 +118,7 @@ public static class OfficialLetterHeaderComponent
                                         .Text(bismillah)
                                         .FontSize(11)
                                         .SemiBold()
-                                        .FontColor("#222222");
+                                        .FontColor("#000000");
                                 }
 
                                 if (!string.IsNullOrWhiteSpace(report.LogoPath))
@@ -135,7 +137,7 @@ public static class OfficialLetterHeaderComponent
                                         .AlignCenter()
                                         .Text(midCaption)
                                         .FontSize(8.5f)
-                                        .FontColor("#555555");
+                                        .FontColor("#000000");
                                 }
                             });
                     });

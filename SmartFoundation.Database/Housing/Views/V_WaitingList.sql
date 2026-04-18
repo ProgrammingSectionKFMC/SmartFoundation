@@ -5,7 +5,7 @@
 
 
 
-CREATE VIEW [Housing].[V_WaitingList]
+ALTER VIEW [Housing].[V_WaitingList]
 AS
 WITH d AS
 (
@@ -36,6 +36,24 @@ WITH d AS
         ON x.buildingActionParentID = d.buildingActionID
 
         where x.buildingActionActive = 1
+),
+action_dates AS
+(
+    SELECT
+        d.RootActionID,
+        MIN(CASE WHEN ba.buildingActionTypeID_FK = 2 THEN ba.buildingActionDate END) AS ResidentMoveInDate,
+        COALESCE
+        (
+            MAX(CASE WHEN ba.buildingActionTypeID_FK = 3 THEN ba.buildingActionDate END),
+            MAX(CASE WHEN ba.buildingActionTypeID_FK = 54 THEN ba.buildingActionDate END)
+        ) AS ResidentMoveOutDate
+    FROM d
+    INNER JOIN Housing.BuildingAction rb
+        ON rb.buildingActionID = d.RootActionID
+       AND rb.buildingActionTypeID_FK IN (1, 7)
+    INNER JOIN Housing.BuildingAction ba
+        ON ba.buildingActionID = d.buildingActionID
+    GROUP BY d.RootActionID
 ),
 leaf AS
 (
@@ -115,9 +133,14 @@ SELECT
     la.entryDate AS LastActionEntryDate,
     la.entryData AS LastActionEntryData,
     la.ExtendReasonTypeID_FK as LastActionExtendReasonTypeID,
-    rd.IdaraId_FK ResidentIdaraID
+    rd.IdaraId_FK ResidentIdaraID,
+
+    ad.ResidentMoveInDate,
+    ad.ResidentMoveOutDate
     
 FROM Housing.BuildingAction b
+LEFT JOIN action_dates ad
+    ON ad.RootActionID = b.buildingActionID
 LEFT JOIN leaf l
     ON l.RootActionID = b.buildingActionID
    AND l.rn = 1

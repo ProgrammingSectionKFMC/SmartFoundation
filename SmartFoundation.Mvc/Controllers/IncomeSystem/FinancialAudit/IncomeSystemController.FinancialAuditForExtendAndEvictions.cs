@@ -88,6 +88,9 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             string LastActionDatevalue = "";
             string LastActionExtendReasonTypeIDvalue = "";
 
+            string OccupentDatevalue = "";
+            string ExitDatevalue = "";
+
 
             decimal insuranceRentAmount = 0m;
             decimal buildingRentAmount = 0m;
@@ -125,6 +128,12 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
                 if (dt1.Columns.Contains("LastActionExtendReasonTypeID") && rows["LastActionExtendReasonTypeID"] != DBNull.Value)
                     LastActionExtendReasonTypeIDvalue = rows["LastActionExtendReasonTypeID"].ToString();
+
+                if (dt1.Columns.Contains("OccupentDate") && rows["OccupentDate"] != DBNull.Value)
+                    OccupentDatevalue = rows["OccupentDate"].ToString();
+
+                if (dt1.Columns.Contains("ExitDate") && rows["ExitDate"] != DBNull.Value)
+                    ExitDatevalue = rows["ExitDate"].ToString();
 
 
 
@@ -505,6 +514,8 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                             bool isBillsStatusID = c.ColumnName.Equals("BillsStatusID", StringComparison.OrdinalIgnoreCase);
                             bool isLastActionExtendReasonTypeID = c.ColumnName.Equals("LastActionExtendReasonTypeID", StringComparison.OrdinalIgnoreCase);
                             bool isLastActionDate = c.ColumnName.Equals("LastActionDate", StringComparison.OrdinalIgnoreCase);
+                            bool isOccupentDate = c.ColumnName.Equals("OccupentDate", StringComparison.OrdinalIgnoreCase);
+                            bool isExitDate = c.ColumnName.Equals("ExitDate", StringComparison.OrdinalIgnoreCase);
 
 
                            
@@ -516,7 +527,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                                 Type = colType,
                                 Sortable = true
                                  ,
-                                Visible = !(isfirstName_A || isfirstName_E || issecondName_A || issecondName_E || isthirdName_A || isthirdName_E || islastName_A || islastName_E || isrankID_FK || ismilitaryUnitID_FK || ismartialStatusID_FK || isnationalityID_FK || isgenderID_FK || isFullName_E || isbirthdate || isnote || isIdaraID || isIdaraName || isbuildingDetailsID || isLastActionID || isLastActionTypeID || isActionID || isBillsStatusID || isLastActionID || isLastActionExtendReasonTypeID || isLastActionDate)
+                                Visible = !(isfirstName_A || isfirstName_E || issecondName_A || issecondName_E || isthirdName_A || isthirdName_E || islastName_A || islastName_E || isrankID_FK || ismilitaryUnitID_FK || ismartialStatusID_FK || isnationalityID_FK || isgenderID_FK || isFullName_E || isbirthdate || isnote || isIdaraID || isIdaraName || isbuildingDetailsID || isLastActionID || isLastActionTypeID || isActionID || isBillsStatusID || isLastActionID || isLastActionExtendReasonTypeID || isLastActionDate || isOccupentDate || isExitDate)
                             });
                         }
 
@@ -819,6 +830,8 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true,Value=LastActionIDvalue },
                 new FieldConfig { Name = "p22", Label = "ActionID", Type = "hidden", ColCss = "3", Readonly = true,Value=ActionIDvalue },
+                new FieldConfig { Name = "p35", Label = "OccupentDate", Type = "hidden", ColCss = "3", Readonly = true,Value=OccupentDatevalue },
+                new FieldConfig { Name = "p36", Label = "ExitDate", Type = "hidden", ColCss = "3", Readonly = true,Value=ExitDatevalue },
 
 
             };

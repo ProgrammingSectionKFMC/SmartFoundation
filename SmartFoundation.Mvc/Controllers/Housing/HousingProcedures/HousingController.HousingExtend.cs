@@ -264,6 +264,18 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             object? rem = Get("Remaining");
                             dict["p28"] = rem == null ? null : rem.ToString();
 
+                            object? buildingRentAmount = Get("buildingRentAmount");
+                            dict["p29"] = buildingRentAmount == null ? null : buildingRentAmount.ToString();
+
+                            object? InsuranceAmount = Get("InsuranceAmount");
+                            dict["p30"] = InsuranceAmount == null ? null : InsuranceAmount.ToString();
+
+                            object? InsuranceAmountWithRemaining = Get("InsuranceAmountWithRemaining");
+                            dict["p31"] = InsuranceAmountWithRemaining == null ? null : InsuranceAmountWithRemaining.ToString();
+
+
+                            
+
                             //object? rent = Get("buildingRentAmount");
                             //dict["p29"] = rent == null ? null : rent.ToString();
 
@@ -276,10 +288,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             //dict["p32"] = Get("ExtendReasonTypeName_A");
 
                             //dict["p28"] = Get("Remaining");
-                            dict["p29"] = Get("buildingRentAmount");
-                            dict["p30"] = Get("InsuranceAmount");
-                            dict["p31"] = Get("InsuranceAmountWithRemaining");
+                            //dict["p29"] = Get("buildingRentAmount");
+                            //dict["p30"] = Get("InsuranceAmount");
+                            //dict["p31"] = Get("InsuranceAmountWithRemaining");
                             dict["p32"] = Get("ExtendReasonTypeName_A");
+
+                            dict["p45"] = Get("OccupentDate");
 
 
 
@@ -320,11 +334,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p07", Label = "WaitingClassID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p19", Label = "رقم المبنى", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p45", Label = "تاريخ السكن", Type = "hidden", ColCss = "4", Readonly = true },
 
 
                 
@@ -372,7 +387,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p19", Label = "رقم المبنى", Type = "text", ColCss = "3", Readonly = true },
-
+                new FieldConfig { Name = "p45", Label = "تاريخ السكن", Type = "hidden", ColCss = "4", Readonly = true },
 
                 new FieldConfig { Name = "p22", Label = "تاريخ خطاب موافقة الامهال", Type = "date", ColCss = "3",Required = true },
                 new FieldConfig { Name = "p23", Label = "رقم خطاب موافقة الامهال", Type = "text", ColCss = "3",Required = true },
@@ -418,7 +433,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p19", Label = "رقم المبنى", Type = "text", ColCss = "3", Readonly = true },
-
+                new FieldConfig { Name = "p45", Label = "تاريخ السكن", Type = "hidden", ColCss = "4", Readonly = true },
 
                 new FieldConfig { Name = "p22", Label = "تاريخ خطاب موافقة الامهال", Type = "date", ColCss = "3",Required = true, Readonly = true },
                 new FieldConfig { Name = "p23", Label = "رقم خطاب موافقة الامهال", Type = "text", ColCss = "3",Required = true, Readonly = true },
@@ -464,7 +479,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p19", Label = "رقم المبنى", Type = "text", ColCss = "3", Readonly = true },
-
+                new FieldConfig { Name = "p45", Label = "تاريخ السكن", Type = "hidden", ColCss = "4", Readonly = true },
 
                 new FieldConfig { Name = "p22", Label = "تاريخ خطاب موافقة الامهال", Type = "date", ColCss = "3",Required = true , Readonly = true },
                 new FieldConfig { Name = "p23", Label = "رقم خطاب موافقة الامهال", Type = "text", ColCss = "3",Required = true , Readonly = true },
@@ -511,7 +526,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p19", Label = "رقم المبنى", Type = "text", ColCss = "3", Readonly = true },
-
+                new FieldConfig { Name = "p45", Label = "تاريخ السكن", Type = "hidden", ColCss = "4", Readonly = true },
 
                 new FieldConfig { Name = "p22", Label = "تاريخ خطاب موافقة الامهال", Type = "date", ColCss = "3",Required = true, Readonly = true },
                 new FieldConfig { Name = "p23", Label = "رقم خطاب موافقة الامهال", Type = "text", ColCss = "3",Required = true, Readonly = true },
@@ -557,7 +572,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p19", Label = "رقم المبنى", Type = "text", ColCss = "3", Readonly = true },
-
+                new FieldConfig { Name = "p45", Label = "تاريخ السكن", Type = "hidden", ColCss = "4", Readonly = true },
 
 
                 new FieldConfig { Name = "p22", Label = "تاريخ خطاب موافقة الامهال", Type = "date", ColCss = "3",Required = true, Readonly = true },
@@ -817,6 +832,14 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 Op = "eq",
                                 Value = "52",
                                 Message = "تم انشاء الطلب مسبقا",
+                                Priority = 3
+                            },
+                                      new TableActionRule
+                            {
+                                Field = "LastActionTypeID",
+                                Op = "eq",
+                                Value = "24",
+                                Message = "تم امهال المستفيد مسبقا",
                                 Priority = 3
                             },
 
