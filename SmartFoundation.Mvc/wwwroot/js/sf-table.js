@@ -100,6 +100,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             filtersTimer: null,
             columnFilters: (cfg.columnFilters && typeof cfg.columnFilters === "object") ? cfg.columnFilters : {},
             showFilters: false,
+            filterToggleSeq: 0,
             // ✅ NEW: cache for select options
             filterOptionsCache: {},   // key -> [{value,text}]
             filterOptionsLoading: {}, // key -> true/false (اختياري)
@@ -241,6 +242,35 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 return Array.from(uniq.keys()).sort().map(x => ({ value: x, text: x }));
             },
 
+            normalizeFilterText(value) {
+                return String(value ?? "")
+                    .replace(/\u0640/g, "")
+                    .replace(/[أإآ]/g, "ا")
+                    .replace(/ى/g, "ي")
+                    .replace(/\s+/g, " ")
+                    .trim()
+                    .toLowerCase();
+            },
+
+            getColFilterOptionText(col, value) {
+                const currentValue = String(value ?? "").trim();
+                if (!currentValue) return "";
+
+                const options = this.getColFilterOptions(col) || [];
+                const hit = options.find((opt) => {
+                    const optValue = String(opt?.value ?? opt?.Value ?? "").trim();
+                    return optValue === currentValue;
+                });
+
+                return String(
+                    hit?.text ??
+                    hit?.Text ??
+                    hit?.value ??
+                    hit?.Value ??
+                    ""
+                ).trim();
+            },
+
 
 
             async fetchFilterOptionsForCol(col) {
@@ -292,6 +322,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
 
             onColumnFilterInput() {
+                this.syncColumnFiltersFromDom();
                 clearTimeout(this.filtersTimer);
                 this.filtersTimer = setTimeout(() => {
                     this.page = 1;
@@ -310,12 +341,91 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
             clearAllColumnFilters() {
                 const cols = Array.isArray(this.columns) ? this.columns : [];
+                const nextFilters = { ...(this.columnFilters || {}) };
                 for (const c of cols) {
                     const f = String(c?.field || "");
                     if (!f) continue;
-                    this.columnFilters[f] = "";
+                    nextFilters[f] = "";
                 }
+                this.columnFilters = nextFilters;
+                this.$nextTick(() => this.refreshFilterControlsUI());
                 this.onColumnFilterInput();
+            },
+
+            normalizeColumnFilterValue(value) {
+                if (value == null) return "";
+                if (Array.isArray(value)) return this.normalizeColumnFilterValue(value[0]);
+                if (typeof value === "string") return value.trim();
+                if (typeof value === "number" || typeof value === "boolean") return String(value);
+                return "";
+            },
+
+            setColumnFilterValue(field, value) {
+                const key = String(field || "").trim();
+                if (!key) return false;
+
+                const normalized = this.normalizeColumnFilterValue(value);
+                const current = this.normalizeColumnFilterValue(this.columnFilters?.[key]);
+                if (current === normalized) return false;
+
+                this.columnFilters = {
+                    ...(this.columnFilters || {}),
+                    [key]: normalized
+                };
+
+                return true;
+            },
+
+            syncColumnFiltersFromDom() {
+                if (!this.showFilters || !this.$el) return false;
+
+                const controls = this.$el.querySelectorAll(".sf-filter-row [data-field]");
+                if (!controls.length) return false;
+
+                const nextFilters = { ...(this.columnFilters || {}) };
+                let changed = false;
+
+                controls.forEach((el) => {
+                    const field = String(el.getAttribute("data-field") || "").trim();
+                    if (!field) return;
+
+                    const value = this.normalizeColumnFilterValue(el.value);
+                    const current = this.normalizeColumnFilterValue(nextFilters[field]);
+                    if (current === value) return;
+
+                    nextFilters[field] = value;
+                    changed = true;
+                });
+
+                if (changed) {
+                    this.columnFilters = nextFilters;
+                }
+
+                return changed;
+            },
+
+            refreshFilterControlsUI() {
+                if (!this.showFilters || !this.$el) return;
+
+                const controls = this.$el.querySelectorAll(".sf-filter-row [data-field]");
+                controls.forEach((el) => {
+                    const field = String(el.getAttribute("data-field") || "").trim();
+                    if (!field) return;
+
+                    const value = this.normalizeColumnFilterValue(this.columnFilters?.[field]);
+
+                    if (el.tagName === "SELECT" && window.jQuery && jQuery.fn) {
+                        const $el = jQuery(el);
+                        if ($el.data("select2")) {
+                            $el.val(value).trigger("change.select2");
+                            return;
+                        }
+                    }
+
+                    if ((el.value ?? "") !== value) {
+                        el.value = value;
+                    }
+                });
             },
 
             matchText(hay, needle) {
@@ -424,10 +534,20 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     } else if (type === "bool") {
                         if (!this.matchBool(cell, fval)) return false;
                     } else if (type === "select") {
-                        // ✅ select = مساواة دقيقة
-                        const a = String(cell ?? "").trim();
-                        const b = String(fval ?? "").trim();
-                        if (a !== b) return false;
+                        const cellValue = String(cell ?? "").trim();
+                        const filterValue = String(fval ?? "").trim();
+                        const cellNorm = this.normalizeFilterText(cellValue);
+                        const filterNorm = this.normalizeFilterText(filterValue);
+
+                        // أولاً: طابق القيمة الخام مباشرة
+                        if (cellNorm === filterNorm) continue;
+
+                        // ثانياً: لو قيمة الـ option مختلفة عن النص الظاهر، طابق النص المعروض
+                        const optionText = this.getColFilterOptionText(col, fval);
+                        const optionTextNorm = this.normalizeFilterText(optionText);
+                        if (optionTextNorm && cellNorm === optionTextNorm) continue;
+
+                        return false;
                     } else {
                         // text
                         const m = this.getColFilterMatch(col);
@@ -448,6 +568,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
 
             hasActiveColumnFilters() {
+                this.syncColumnFiltersFromDom();
                 if (!this.columnFilters || typeof this.columnFilters !== "object") return false;
                 for (const k of Object.keys(this.columnFilters)) {
                     const v = this.columnFilters[k];
@@ -471,6 +592,84 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     const root = this.$el; // جذر الكومبوننت
                     const selects = root.querySelectorAll("select.sf-filter-select2");
 
+                    const measureFilterDropdownWidth = (selectEl, placeholderText = "الكل") => {
+                        const rect = selectEl.getBoundingClientRect();
+                        const triggerWidth = Math.ceil(rect.width || 0);
+                        const viewportWidth = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+
+                        const texts = Array.from(selectEl.options || [])
+                            .map((opt) => (opt?.textContent || "").trim())
+                            .filter(Boolean);
+
+                        if (placeholderText) {
+                            texts.push(String(placeholderText).trim());
+                        }
+
+                        const probe = document.createElement("span");
+                        probe.style.position = "fixed";
+                        probe.style.top = "-9999px";
+                        probe.style.left = "-9999px";
+                        probe.style.visibility = "hidden";
+                        probe.style.whiteSpace = "nowrap";
+                        probe.style.fontFamily = '"Tajawal", "Inter", "Segoe UI", sans-serif';
+                        probe.style.fontSize = "13.5px";
+                        probe.style.fontWeight = "500";
+                        probe.style.lineHeight = "1";
+                        document.body.appendChild(probe);
+
+                        let widest = triggerWidth;
+                        texts.forEach((text) => {
+                            probe.textContent = text;
+                            widest = Math.max(widest, Math.ceil(probe.getBoundingClientRect().width));
+                        });
+
+                        probe.remove();
+
+                        const paddedWidth = widest + 84;
+                        const maxWidth = Math.max(triggerWidth, Math.min(560, viewportWidth - 24));
+                        return Math.max(triggerWidth, Math.min(paddedWidth, maxWidth));
+                    };
+
+                    const positionFilterDropdown = (selectEl, preferredWidth) => {
+                        const $open = jQuery(".select2-container--open").filter(function () {
+                            return jQuery(this).find(".select2-dropdown.sf-filter-dropdown").length > 0;
+                        }).last();
+
+                        if (!$open.length) return;
+
+                        const rect = selectEl.getBoundingClientRect();
+                        const viewportWidth = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+                        const scrollX = window.pageXOffset || document.documentElement.scrollLeft || 0;
+                        const minViewportGap = 12;
+                        const width = Math.max(Math.ceil(rect.width || 0), preferredWidth || 0);
+
+                        let left = Math.round(rect.right + scrollX - width);
+                        const minLeft = scrollX + minViewportGap;
+                        const maxLeft = scrollX + viewportWidth - width - minViewportGap;
+                        left = Math.max(minLeft, Math.min(left, maxLeft));
+
+                        $open.addClass("sf-filter-dropdown-host");
+                        $open.css({
+                            minWidth: `${Math.ceil(rect.width || 0)}px`,
+                            width: `${width}px`,
+                            maxWidth: `${Math.max(width, viewportWidth - (minViewportGap * 2))}px`,
+                            left: `${left}px`,
+                            right: "auto"
+                        });
+
+                        $open.find(".select2-dropdown.sf-filter-dropdown").css({
+                            width: "100%",
+                            minWidth: `${Math.ceil(rect.width || 0)}px`
+                        });
+                    };
+
+                    const stripSelect2Title = ($select) => {
+                        if (!$select || !$select.length) return;
+                        const $container = $select.next(".select2");
+                        $container.find(".select2-selection__rendered").removeAttr("title");
+                        $container.find(".select2-selection").removeAttr("title");
+                    };
+
                     selects.forEach((el) => {
                         const $el = jQuery(el);
 
@@ -480,29 +679,59 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             $el.select2("destroy");
                         }
 
+                        const minResults = el.getAttribute("data-s2-min-results");
+                        const ph =
+                            el.getAttribute("data-s2-placeholder") ||
+                            $el.find('option[value=""]').first().text() ||
+                            "الكل";
+
                         // dropdownParent مهم جداً عشان ما ينقص داخل sticky/overflow
                         const dropdownParent = jQuery("body");
-
-
 
                         $el.select2({
                             width: "100%",
                             dir: "rtl",
                             dropdownParent,
-                            minimumResultsForSearch: 10
+                            containerCssClass: "sf-form",
+                            dropdownCssClass: "sf-form sf-filter-dropdown",
+                            dropdownAutoWidth: true,
+                            placeholder: ph,
+                            allowClear: false,
+                            minimumResultsForSearch:
+                                (minResults === undefined || minResults === null || minResults === "")
+                                    ? 0
+                                    : Number(minResults)
                         });
+
+                        stripSelect2Title($el);
 
                         // sync value من Alpine -> select2
                         const field = el.getAttribute("data-field");
                         const v = this.columnFilters?.[field] ?? "";
                         $el.val(v).trigger("change.select2");
+                        stripSelect2Title($el);
 
-                        // on change: حدّث Alpine ثم فلترة
-                        $el.on("change.sfFilter", () => {
-                            const f = el.getAttribute("data-field");
-                            this.columnFilters[f] = $el.val() ?? "";
-                            this.onColumnFilterInput();
+                        $el.on("select2:open.sfFilter", () => {
+                            const preferredWidth = measureFilterDropdownWidth(el, ph);
+                            stripSelect2Title($el);
+                            requestAnimationFrame(() => {
+                                positionFilterDropdown(el, preferredWidth);
+                            });
+                            setTimeout(() => {
+                                positionFilterDropdown(el, preferredWidth);
+                            }, 0);
                         });
+
+                        const syncFilterFromSelect = () => {
+                            const f = el.getAttribute("data-field");
+                            stripSelect2Title($el);
+                            this.setColumnFilterValue(f, $el.val());
+                            this.onColumnFilterInput();
+                        };
+
+                        // on change/select: حدّث Alpine ثم فلترة
+                        $el.on("change.sfFilter", syncFilterFromSelect);
+                        $el.on("select2:select.sfFilter select2:clear.sfFilter select2:unselect.sfFilter", syncFilterFromSelect);
                     });
                         });
 
@@ -537,22 +766,38 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             //},
 
             async toggleFilters() {
-                this.showFilters = !this.showFilters;
+                const nextState = !this.showFilters;
+                this.showFilters = nextState;
 
-                if (this.showFilters) {
+                // token يمنع سباق الضغطات السريعة (open/close/open)
+                const seq = ++this.filterToggleSeq;
 
+                if (!nextState) {
+                    this.destroyFilterSelect2();
+                    return;
+                }
+
+                try {
                     // 1) حمّل الخيارات أولًا (لو Server)
                     await this.preloadSelectFilters();
+
+                    // لو تغيرت الحالة أثناء الانتظار، لا تكمل
+                    if (seq !== this.filterToggleSeq || !this.showFilters) return;
 
                     // 2) انتظر Alpine يرسم الـ DOM (x-for للـ options)
                     await this.$nextTick();
 
+                    if (seq !== this.filterToggleSeq || !this.showFilters) return;
+
                     // 3) أعد تهيئة Select2 بعد ما تظهر الفلاتر فعليًا
                     this.destroyFilterSelect2();
                     this.initFilterSelect2();
-
-                } else {
-                    this.destroyFilterSelect2();
+                } catch (e) {
+                    // لا نكسر زر الفلترة عند أي خطأ تحميل/تهيئة
+                    console.error("toggleFilters failed", e);
+                    if (seq === this.filterToggleSeq) {
+                        this.destroyFilterSelect2();
+                    }
                 }
             },
 
@@ -1178,6 +1423,12 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 if (!window.jQuery || !jQuery.fn || !jQuery.fn.select2) return;
 
                 const $modal = jQuery(modalEl);
+                const stripSelect2Title = ($select) => {
+                    if (!$select || !$select.length) return;
+                    const $container = $select.next(".select2");
+                    $container.find(".select2-selection__rendered").removeAttr("title");
+                    $container.find(".select2-selection").removeAttr("title");
+                };
                 $modal.find("select.js-select2").each(function () {
                     const $sel = jQuery(this);
 
@@ -1207,9 +1458,12 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             (minResults === undefined || minResults === null) ? 0 : Number(minResults)
                     });
 
+                    stripSelect2Title($sel);
+
                     $sel.on("select2:select.sfS2Bridge select2:clear.sfS2Bridge select2:unselect.sfS2Bridge", function (e) {
                         const el = this;
                         const value = $sel.val();
+                        stripSelect2Title($sel);
 
                         queueMicrotask(() => {
                             el.dispatchEvent(new Event("input", { bubbles: true }));
@@ -1343,7 +1597,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             Params: {
                                 q: this.q || null,
                                 sortField: this.sort.field || null,
-                                sortDir: this.sort.dir || "asc"
+                                sortDir: this.sort.dir || "asc",
+                                columnFilters: this.columnFilters || {}
                             }
                         };
                         const json = await this.postJson(this.endpoint, body);
@@ -1409,6 +1664,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             },
 
             applyFiltersAndSort() {
+                this.syncColumnFiltersFromDom();
                 let filtered = [...this.allRows];
 
                 // 1) Global search (q)
