@@ -233,15 +233,10 @@ body {
             box-sizing: border-box;
             position: relative;
             top: 0;
-            border-radius: 10px 10px 0 0;
+            line-height: 1;
+            border-radius: 6px 6px 0 0;
             overflow: hidden;
         }
-
-    .section-legend {
-        display: block;
-        line-height: 1;
-        border-radius: 10px 10px 0 0;
-    }
 
     .section-legend__text {
         display: inline-flex;
@@ -249,8 +244,8 @@ body {
         gap: 9px;
         color: #16372d;
         font-family: "Tajawal", "Inter", "Segoe UI", sans-serif;
-        font-size: 14px;
-        font-weight: 700;
+        font-size: 15px;
+        font-weight: 500;
         line-height: 1.2;
         letter-spacing: 0;
     }
@@ -261,7 +256,7 @@ body {
             height: 6px;
             flex: 0 0 6px;
             border-radius: 50%;
-            background: #059669;
+            background: #007900;
             box-shadow: none;
         }
 
@@ -3780,13 +3775,13 @@ header,
     padding: 0.08rem 0 0.4rem;
     white-space: nowrap;
     line-height: 1.2;
-    font-size: 1.08rem;
-    font-weight: 800;
+    font-size: 1.2rem;
+    font-weight: 500;
     color: #16372d;
     letter-spacing: -0.2px;
 }
 
-    /* الخط الملون مربوط بعرض العنوان نفسه */
+    
     .sf-panel-title::after {
         content: "";
         position: absolute;
@@ -3829,11 +3824,13 @@ header,
         color: #047857;
     }
 
-/* نص العنوان */
 .sf-panel-title__text {
     display: inline-block;
-    color: #16372d;
-    text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+    color: #5c5c5c;
+    text-shadow: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: 0.2px;
 }
 
 /* جسم البانل */
@@ -4920,8 +4917,10 @@ body.sf-navigating .sf-select-panel {
         font-size: 11.5px;
     }
 }
+
+
 /* ===============================
-   SF Tabs
+   SF Tabs - Refined Clean Style
    =============================== */
 
 .sf-tab-panel {
@@ -4931,7 +4930,28 @@ body.sf-navigating .sf-select-panel {
     font-family: "Tajawal", "Inter", "Segoe UI", sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    --sf-tab-header-bg: #fbfcfe; /* نفس لون الهيدر الأصلي */
+    --sf-tab-surface: #ffffff;
+    --sf-tab-border: #dde5e0;
+    --sf-tab-border-strong: #ced9d3;
+    --sf-tab-text: #4f6259;
+    --sf-tab-text-hover: #2f3b46;
+    --sf-tab-text-active: #153e32;
+    --sf-tab-muted: #7b8c85;
+    --sf-tab-hover-bg: #f3f5f7;
+    --sf-tab-active-bg: #ffffff;
+    --sf-tab-active-tint: #f6faf8;
+    --sf-tab-accent: #0f766e;
+    --sf-tab-accent-soft: #dcefe7;
+    --sf-tab-count-bg: #eef4f1;
+    --sf-tab-count-text: #315347;
+    --sf-tab-count-border: #dbe7e0;
+    --sf-tab-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
+
+/* ===============================
+   Header
+   =============================== */
 
 .sf-tab-panel__header {
     width: 100%;
@@ -4941,9 +4961,9 @@ body.sf-navigating .sf-select-panel {
     flex-wrap: wrap;
     margin-bottom: 0;
     padding: 0.5rem;
-    background: #fbfcfe;
-    border: 1px solid #dde5e0;
-    border-bottom: 1px solid #dde5e0;
+    background: var(--sf-tab-header-bg);
+    border: 1px solid var(--sf-tab-border);
+    border-bottom: 1px solid var(--sf-tab-border);
     border-radius: 10px 10px 0 0;
     position: relative;
     box-shadow: none;
@@ -4955,94 +4975,67 @@ body.sf-navigating .sf-select-panel {
     box-shadow: none !important;
 }
 
+/* ===============================
+   Tab Button
+   =============================== */
+
 .sf-tab-panel__tab {
     appearance: none;
     -webkit-appearance: none;
-    border: 1px solid #dbe4df;
-    background: #fdfefe;
-    color: #4f6259;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--sf-tab-text);
     border-radius: 8px 8px 0 0;
-    padding: 0 0.78rem;
+    padding: 0 0.88rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 3px;
-    font-size: 12.35px;
-    font-weight: 600;
+    gap: 4px;
+    font-size: 14px;
+    font-weight: 500;
     font-family: "Tajawal", "Inter", "Segoe UI", sans-serif;
     line-height: 1;
     cursor: pointer;
-    transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+    transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
     position: relative;
     top: 0;
     text-align: center;
-    min-height: 40px;
+    min-height: 45px;
     white-space: nowrap;
     box-shadow: none !important;
     outline: none;
     overflow: hidden;
 }
 
-    .sf-tab-panel__tab::before {
-        content: "";
-        position: absolute;
-        bottom: 0;
-        right: 10px;
-        left: 10px;
-        height: 2px;
-        border-radius: 999px;
-        background: transparent;
-        opacity: 0;
-        transform: translateY(1px);
-        transition: opacity 140ms ease, background-color 140ms ease;
-        pointer-events: none;
-    }
-
+    .sf-tab-panel__tab::before,
     .sf-tab-panel__tab::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        border-radius: 8px 8px 0 0;
-        pointer-events: none;
-        background: transparent;
-        transition: background-color 120ms ease;
+        content: none !important;
     }
 
     .sf-tab-panel__tab:hover {
-        background: #f3f5f7;
+        background: var(--sf-tab-hover-bg);
         border-color: #d5dde5;
-        color: #2f3b46;
+        color: var(--sf-tab-text-hover);
     }
-
-        .sf-tab-panel__tab:hover::after {
-            background: transparent;
-        }
 
     .sf-tab-panel__tab:focus,
     .sf-tab-panel__tab:focus-visible {
         outline: none !important;
-        box-shadow: none !important;
+        box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.08) !important;
     }
 
     .sf-tab-panel__tab.is-active {
-        background: #ffffff;
-        color: #153e32;
-        font-weight: 700;
-        font-size: 12.15px;
-        border-color: #cddbd4;
-        margin-bottom: 0;
+        background: linear-gradient(180deg, var(--sf-tab-active-bg) 0%, var(--sf-tab-active-tint) 100%);
+        color: var(--sf-tab-text-active);
+        font-weight: 500; 
+        border-color: var(--sf-tab-border-strong);
+        box-shadow: var(--sf-tab-shadow);
         z-index: 2;
-        box-shadow: none !important;
     }
 
-        .sf-tab-panel__tab.is-active::before {
-            background: #047857;
-            opacity: 1;
-        }
-
-        .sf-tab-panel__tab.is-active::after {
-            background: transparent;
-        }
+/* ===============================
+   Tab Main
+   =============================== */
 
 .sf-tab-panel__tabMain {
     display: inline-flex;
@@ -5052,12 +5045,12 @@ body.sf-navigating .sf-select-panel {
 }
 
     .sf-tab-panel__tabMain i {
-        color: #7b8c85;
+        color: var(--sf-tab-muted);
         font-size: 10.5px;
         width: 13px;
         text-align: center;
         flex: 0 0 auto;
-        transition: color 120ms ease;
+        transition: color 140ms ease;
     }
 
 .sf-tab-panel__tab:hover .sf-tab-panel__tabMain i {
@@ -5065,11 +5058,7 @@ body.sf-navigating .sf-select-panel {
 }
 
 .sf-tab-panel__tab.is-active .sf-tab-panel__tabMain i {
-    color: #047857;
-}
-
-.sf-tab-panel__tab.is-active .sf-tab-panel__tabMain span:last-child {
-    color: #153e32;
+    color: var(--sf-tab-accent);
 }
 
 .sf-tab-panel__tabMain span:last-child {
@@ -5078,35 +5067,49 @@ body.sf-navigating .sf-select-panel {
     text-overflow: ellipsis;
 }
 
+/* ===============================
+   Count Badge
+   =============================== */
+
 .sf-tab-panel__count {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 18px;
-    height: 16px;
-    padding: 0 5px;
-    background: #046c4e;
-    color: #ffffff;
-    border: 1px solid #046c4e;
+    min-width: 20px;
+    height: 17px;
+    padding: 0 6px;
+    background: var(--sf-tab-count-bg);
+    color: var(--sf-tab-count-text);
+    border: 1px solid var(--sf-tab-count-border);
     border-radius: 999px;
     font-size: 10px;
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1;
-    transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+    transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.sf-tab-panel__tab:hover .sf-tab-panel__count {
+    background: #e9f1ed;
+    color: #26483c;
+    border-color: #d5e1db;
 }
 
 .sf-tab-panel__tab.is-active .sf-tab-panel__count {
-    background: #046c4e;
-    color: #ffffff;
-    border-color: #046c4e;
+    background: var(--sf-tab-accent-soft);
+    color: var(--sf-tab-accent);
+    border-color: #c7e4d9;
 }
+
+/* ===============================
+   Content
+   =============================== */
 
 .sf-tab-panel__content {
     width: 100%;
     display: none;
     padding: 0.72rem 1rem 1rem;
-    background: #ffffff;
-    border: 1px solid #dde5e0;
+    background: var(--sf-tab-surface);
+    border: 1px solid var(--sf-tab-border);
     border-top: none;
     border-radius: 0 0 10px 10px;
     box-shadow: none !important;
@@ -5132,9 +5135,9 @@ body.sf-navigating .sf-select-panel {
     gap: 6px;
     flex-wrap: wrap;
     padding: 0.56rem;
-    background: #fbfcfe;
-    border: 1px solid #dde5e0;
-    border-bottom: 1px solid #dde5e0;
+    background: var(--sf-tab-header-bg);
+    border: 1px solid var(--sf-tab-border);
+    border-bottom: 1px solid var(--sf-tab-border);
     border-radius: 10px 10px 0 0;
     box-shadow: none;
 }
@@ -5163,32 +5166,15 @@ body.sf-navigating .sf-select-panel {
     .sf-tab-panel__tab {
         width: 100%;
         justify-content: space-between;
-        border-radius: 3px;
+        border-radius: 8px;
         top: 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.18);
-        background: rgba(255, 255, 255, 0.13);
         min-height: 42px;
+        padding-inline: 0.85rem;
     }
 
-        .sf-tab-panel__tab::after {
-            top: auto;
-            bottom: 0;
-            right: 0;
-            left: 0;
-            height: 1px;
-            border-radius: 0 0 2px 2px;
-        }
-
         .sf-tab-panel__tab.is-active {
-            border-bottom-color: #d6e0da;
-            background: #ffffff;
-            margin-bottom: 0;
+            background: linear-gradient(180deg, #ffffff 0%, #f7fbf9 100%);
         }
-
-            .sf-tab-panel__tab.is-active::after {
-                background: transparent;
-                height: 1px;
-            }
 
     .sf-tab-panel__content {
         border-top: 1px solid #d6e0da;
@@ -5197,12 +5183,28 @@ body.sf-navigating .sf-select-panel {
     }
 }
 
+@media (max-width: 480px) {
+    .sf-tab-panel__tab {
+        font-size: 12.5px;
+    }
+
+    .sf-tab-panel__count {
+        min-width: 19px;
+        height: 16px;
+        font-size: 9.5px;
+    }
+}
+
+
 
 /* =========================================================
    SmartTable — Pill
    ========================================================= */
 
-/* ─── Base ──────────────────────────────────────────────── */
+/* =========================================================
+   SmartTable — Pill
+   ========================================================= */
+
 .pill {
     display: inline-flex;
     align-items: center;
@@ -5210,21 +5212,30 @@ body.sf-navigating .sf-select-panel {
     gap: 6px;
     max-width: 100%;
     min-width: 0;
-    padding: 4px 10px;
-    border-radius: 12px !important;
-    border: 1px solid transparent;
+    padding: 2.5px 8.5px;
+    min-height: 25px;
+    border-radius: 9999px !important;
+    border: 0.9px solid transparent;
+    box-sizing: border-box;
     background-clip: padding-box;
+    background-origin: border-box;
     font-family: "Tajawal", "Inter", "Segoe UI", sans-serif;
-    font-size: 12.5px;
+    font-size: 11.7px;
     font-weight: 500;
-    line-height: 1;
+    line-height: 1.1;
     white-space: nowrap;
     vertical-align: middle;
     letter-spacing: 0;
-    text-rendering: geometricPrecision;
+    text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-variant-numeric: tabular-nums;
+    background: transparent;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+    isolation: isolate;
+    will-change: auto;
     transition: background-color 0.1s ease, border-color 0.1s ease, color 0.1s ease;
 }
 
@@ -5255,10 +5266,12 @@ body.sf-navigating .sf-select-panel {
 .pill > span,
 .pill > strong,
 .pill > small {
+    display: block;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    line-height: 1.1;
 }
 
 .pill i,
@@ -5276,86 +5289,94 @@ body.sf-navigating .sf-select-panel {
     fill: currentColor !important;
     stroke: currentColor !important;
     opacity: 1 !important;
+    shape-rendering: geometricPrecision;
 }
 
 /* ─── Official color variants ──────────────────────────── */
 .pill-green {
-    background: #047857;
-    color: #ffffff;
-    border-color: #047857;
+    background: rgba(22, 163, 74, 0.075);
+    color: #13723a;
+    border-color: #159447;
 }
 
 .pill-yellow {
-    background: #b45309;
-    color: #ffffff;
-    border-color: #b45309;
+    background: rgba(202, 138, 4, 0.075);
+    color: #935b06;
+    border-color: #b97f04;
 }
 
 .pill-red {
-    background: #b91c1c;
-    color: #ffffff;
-    border-color: #b91c1c;
+    background: rgba(220, 38, 38, 0.075);
+    color: #aa1f1f;
+    border-color: #c92525;
 }
 
 .pill-blue {
-    background: #2563eb;
-    color: #ffffff;
-    border-color: #2563eb;
+    background: rgba(37, 99, 235, 0.075);
+    color: #245bd6;
+    border-color: #3474df;
 }
 
 .pill-gray {
-    background: #6b7280;
-    color: #ffffff;
-    border-color: #6b7280;
+    background: rgba(100, 116, 139, 0.075);
+    color: #445163;
+    border-color: #5e6c81;
 }
 
 /* ─── Optional extra variants aligned with table theme ─── */
 .pill-orange {
-    background: #c2410c;
-    color: #ffffff;
-    border-color: #c2410c;
+    background: rgba(234, 88, 12, 0.075);
+    color: #af4010;
+    border-color: #d4510c;
 }
 
 .pill-purple {
-    background: #7c3aed;
-    color: #ffffff;
-    border-color: #7c3aed;
+    background: rgba(124, 58, 237, 0.075);
+    color: #733bd7;
+    border-color: #8253e8;
 }
 
 /* ─── Hover polish (very subtle) ───────────────────────── */
 .pill-green:hover {
-    background: #065f46;
-    border-color: #065f46;
+    background: rgba(22, 163, 74, 0.1);
+    border-color: #159447;
+    color: #13723a;
 }
 
 .pill-yellow:hover {
-    background: #92400e;
-    border-color: #92400e;
+    background: rgba(202, 138, 4, 0.1);
+    border-color: #b97f04;
+    color: #935b06;
 }
 
 .pill-red:hover {
-    background: #991b1b;
-    border-color: #991b1b;
+    background: rgba(220, 38, 38, 0.1);
+    border-color: #c92525;
+    color: #aa1f1f;
 }
 
 .pill-blue:hover {
-    background: #1d4ed8;
-    border-color: #1d4ed8;
+    background: rgba(37, 99, 235, 0.1);
+    border-color: #3474df;
+    color: #245bd6;
 }
 
 .pill-gray:hover {
-    background: #5b6472;
-    border-color: #5b6472;
+    background: rgba(100, 116, 139, 0.1);
+    border-color: #5e6c81;
+    color: #445163;
 }
 
 .pill-orange:hover {
-    background: #9a3412;
-    border-color: #9a3412;
+    background: rgba(234, 88, 12, 0.1);
+    border-color: #d4510c;
+    color: #af4010;
 }
 
 .pill-purple:hover {
-    background: #6d28d9;
-    border-color: #6d28d9;
+    background: rgba(124, 58, 237, 0.1);
+    border-color: #8253e8;
+    color: #733bd7;
 }
 
 /* ─── Focus ────────────────────────────────────────────── */
@@ -5370,53 +5391,54 @@ body.sf-navigating .sf-select-panel {
 }
 
 /* ─── Row harmony with SmartTable row variants ─────────── */
+
 .tr-row.row-green .pill-green,
 tr.row-green .pill-green {
-    background: #dff1e6;
-    border-color: #9ec9b0;
-    color: #065f46;
+    background: rgba(22, 163, 74, 0.075);
+    border-color: #159447;
+    color: #13723a;
 }
 
 .tr-row.row-yellow .pill-yellow,
 tr.row-yellow .pill-yellow {
-    background: #f6edc2;
-    border-color: #d9c35f;
-    color: #7a5508;
+    background: rgba(202, 138, 4, 0.075);
+    border-color: #b97f04;
+    color: #935b06;
 }
 
 .tr-row.row-red .pill-red,
 tr.row-red .pill-red {
-    background: #f5dddd;
-    border-color: #d8a0a0;
-    color: #7f1d1d;
+    background: rgba(220, 38, 38, 0.075);
+    border-color: #c92525;
+    color: #aa1f1f;
 }
 
 .tr-row.row-blue .pill-blue,
 tr.row-blue .pill-blue {
-    background: #e1ebfa;
-    border-color: #adc3ea;
-    color: #1e3a8a;
+    background: rgba(37, 99, 235, 0.075);
+    border-color: #3474df;
+    color: #245bd6;
 }
 
 .tr-row.row-gray .pill-gray,
 tr.row-gray .pill-gray {
-    background: #ecefed;
-    border-color: #c2cbc6;
-    color: #374151;
+    background: rgba(100, 116, 139, 0.075);
+    border-color: #5e6c81;
+    color: #445163;
 }
 
 .tr-row.row-orange .pill-orange,
 tr.row-orange .pill-orange {
-    background: #f7e2d5;
-    border-color: #dfb392;
-    color: #7c2d12;
+    background: rgba(234, 88, 12, 0.075);
+    border-color: #d4510c;
+    color: #af4010;
 }
 
 .tr-row.row-purple .pill-purple,
 tr.row-purple .pill-purple {
-    background: #e9e0f8;
-    border-color: #c5afe7;
-    color: #6b21a8;
+    background: rgba(124, 58, 237, 0.075);
+    border-color: #8253e8;
+    color: #733bd7;
 }
 
 /* ─── Selected row harmony ─────────────────────────────── */
@@ -5426,8 +5448,10 @@ tr.row-purple .pill-purple {
 
 /* ─── Compact density ──────────────────────────────────── */
 .sf-table[data-density="compact"] .pill {
-    padding: 3px 8px;
-    font-size: 11.5px;
+    padding: 2px 6px;
+    min-height: 22px;
+    font-size: 10.7px;
+    line-height: 1.05;
     gap: 5px;
 }
 
@@ -5494,7 +5518,6 @@ tr.row-purple .pill-purple {
 .sf-icon-only--muted {
     color: #6b7280;
 }
-
 
 .pill-svg,
 .sf-icon-only > span {
@@ -5914,23 +5937,38 @@ select.sf-filter-input:disabled {
 /* ===================== 
     Column Visibility UI
 ======================== */
+/* =====================
+   Column Visibility UI
+===================== */
+
 .sf-colvis {
     position: relative;
-    display: inline-block;
-    z-index: 9999;
+    display: inline-flex;
+    align-items: center;
+}
+
+.sf-colvis-layer {
+    position: fixed;
+    inset: 0;
+    background: transparent;
+    z-index: 2147483646;
 }
 
 .sf-colvis__panel {
     position: fixed;
-    top: auto;
+    top: 0;
+    left: 0;
     right: auto;
+    bottom: auto;
     width: 320px;
-    max-width: 90vw;
+    max-width: calc(100vw - 24px);
     background: #fff;
     border: 1px solid #e5e7eb;
     border-radius: 10px;
     box-shadow: 0 14px 30px rgba(0,0,0,.12);
-    z-index: 999999;
+    z-index: 2147483647;
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
 }
 
@@ -5941,6 +5979,7 @@ select.sf-filter-input:disabled {
     padding: 10px 12px;
     border-bottom: 1px solid #eef2f7;
     background: #f9fafb;
+    flex: 0 0 auto;
 }
 
 .sf-colvis__title {
@@ -5968,6 +6007,7 @@ select.sf-filter-input:disabled {
 .sf-colvis__search {
     padding: 10px 12px;
     border-bottom: 1px solid #eef2f7;
+    flex: 0 0 auto;
 }
 
 .sf-colvis__actions {
@@ -5975,10 +6015,12 @@ select.sf-filter-input:disabled {
     gap: 8px;
     padding: 8px 12px;
     border-bottom: 1px solid #eef2f7;
+    flex: 0 0 auto;
 }
 
 .sf-colvis__list {
-    max-height: 260px;
+    flex: 1 1 auto;
+    min-height: 0;
     overflow: auto;
     padding: 8px 12px;
 }
@@ -6012,6 +6054,7 @@ select.sf-filter-input:disabled {
     border-top: 1px solid #eef2f7;
     display: flex;
     justify-content: flex-end;
+    flex: 0 0 auto;
 }
 
 .sf-colvis__search .sf-input:focus,
@@ -6019,19 +6062,6 @@ select.sf-filter-input:disabled {
 .sf-colvis__search input:focus,
 .sf-colvis__search input:focus-visible {
     border-color: #047857;
-}
-
-.sf-panel, .sf-panel-body, .sf-table, .sf-table-wrap, .sf-table-card, .sf-table-shell {
-    overflow: visible !important;
-}
-
-.sf-table__scroller, .sf-table__body-scroll {
-    overflow: auto;
-}
-
-.sf-panel, .sf-table, .sf-table-wrap {
-    transform: none !important;
-    isolation: isolate;
 }
 /* =========================================================
    SF FileUpload — Field-like (NO overlap, RTL correct) ✅

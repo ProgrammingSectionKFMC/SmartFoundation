@@ -7,6 +7,8 @@
     --footer-h: 70px;
     --sidebar-w: 16rem;
     --sidebar-w-collapsed: 4.5rem;
+    --sf-tab-header-bg: #fbfcfe;
+    --sf-tab-border: #dde5e0;
     /* متغيرات الإشعارات */
     --nd-shell: #053b2d;
     --nd-shell-2: #042f26;
@@ -86,14 +88,16 @@ html, body {
 /* =========================
    شريط رأس الصفحة (Page Header)
    ========================= */
+
+
 #page-header {
     position: fixed;
     top: var(--top-header-h);
     right: 0;
     left: 0;
     height: var(--page-header-h);
-    background: #ffffff;
-    border-bottom: 1px solid #e4eae6;
+    background: var(--sf-tab-header-bg);
+    border-bottom: 1px solid var(--sf-tab-border);
     box-shadow: none !important;
     z-index: 40;
     display: flex;
