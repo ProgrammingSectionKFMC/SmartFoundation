@@ -12815,13 +12815,9 @@ body {
     box-sizing: border-box;
     position: relative;
     top: 0;
-    border-radius: 10px 10px 0 0;
-    overflow: hidden;
-  }
-  .section-legend {
-    display: block;
     line-height: 1;
-    border-radius: 10px 10px 0 0;
+    border-radius: 6px 6px 0 0;
+    overflow: hidden;
   }
   .section-legend__text {
     display: inline-flex;
@@ -12829,8 +12825,8 @@ body {
     gap: 9px;
     color: #16372d;
     font-family: "Tajawal", "Inter", "Segoe UI", sans-serif;
-    font-size: 14px;
-    font-weight: 700;
+    font-size: 15px;
+    font-weight: 500;
     line-height: 1.2;
     letter-spacing: 0;
   }
@@ -12840,7 +12836,7 @@ body {
     height: 6px;
     flex: 0 0 6px;
     border-radius: 50%;
-    background: #059669;
+    background: #007900;
     box-shadow: none;
   }
   .section-box .form-row {
@@ -15742,8 +15738,8 @@ header, .sf-header, .navbar {
   padding: 0.08rem 0 0.4rem;
   white-space: nowrap;
   line-height: 1.2;
-  font-size: 1.08rem;
-  font-weight: 800;
+  font-size: 1.2rem;
+  font-weight: 500;
   color: #16372d;
   letter-spacing: -0.2px;
 }
@@ -15787,8 +15783,11 @@ header, .sf-header, .navbar {
 }
 .sf-panel-title__text {
   display: inline-block;
-  color: #16372d;
-  text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+  color: #5c5c5c;
+  text-shadow: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: 0.2px;
 }
 .sf-panel-body {
   position: relative;
