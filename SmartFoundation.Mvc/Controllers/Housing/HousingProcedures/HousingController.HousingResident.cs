@@ -146,6 +146,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ["FullName_A"] = "الاسم",
                             ["buildingActionTypeResidentAlias"] = "الحالة",
                             ["buildingDetailsNo"] = "رقم المنزل (إن وجد)",
+                            ["OccupentDate"] = "تاريخ السكن",
                             ["WaitingListOrder"] = "الترتيب"
                         };
 

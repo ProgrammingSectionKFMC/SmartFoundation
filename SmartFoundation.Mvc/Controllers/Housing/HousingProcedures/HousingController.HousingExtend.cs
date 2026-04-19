@@ -133,6 +133,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ["ExtendReasonTypeName_A"] = "سبب الامهال",
                             ["InsuranceStatusName"] = "حالة التأمين",
                             ["rankNameA"] = "الرتبة",
+                            ["OccupentDate"] = "تاريخ السكن",
                             ["WaitingListOrder"] = "الترتيب"
                         };
 

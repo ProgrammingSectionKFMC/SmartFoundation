@@ -288,6 +288,8 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                             bool isAssignPeriodID = c.ColumnName.Equals("AssignPeriodID", StringComparison.OrdinalIgnoreCase);
                             bool isbuildingDetailsID = c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase);
                             bool isLastActionID = c.ColumnName.Equals("LastActionID", StringComparison.OrdinalIgnoreCase);
+                            bool isLastActionDecisionDate = c.ColumnName.Equals("LastActionDecisionDate", StringComparison.OrdinalIgnoreCase);
+                            bool isLastActionDecisionNo = c.ColumnName.Equals("LastActionDecisionNo", StringComparison.OrdinalIgnoreCase);
                           
                             bool isActionDecisionNo = c.ColumnName.Equals("ActionDecisionNo", StringComparison.OrdinalIgnoreCase);
                             bool isActionDecisionDate = c.ColumnName.Equals("ActionDecisionDate", StringComparison.OrdinalIgnoreCase);
@@ -321,7 +323,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID || isAssignPeriodID || isbuildingDetailsID || isLastActionID|| isActionDecisionNo || isActionDecisionDate || isWaitingOrderTypeName || isNationalID || isGeneralNo || isWaitingClassName || isFullName_A ||  isbuildingActionTypeResidentAlias  || ismeterReadID|| isLastActionTypeID || ismeterID || ismeterServiceTypeID || isReadSizeStatus || isLastActionDate|| isbuildingActionRoot || isBillsID || isReadStatusInt)
+                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID || isAssignPeriodID || isbuildingDetailsID || isLastActionID|| isActionDecisionNo || isActionDecisionDate || isWaitingOrderTypeName || isNationalID || isGeneralNo || isWaitingClassName || isFullName_A ||  isbuildingActionTypeResidentAlias  || ismeterReadID|| isLastActionTypeID || ismeterID || ismeterServiceTypeID || isReadSizeStatus || isLastActionDate|| isbuildingActionRoot || isBillsID || isReadStatusInt || isLastActionDecisionDate || isLastActionDecisionNo)
 
                                 
                             });
