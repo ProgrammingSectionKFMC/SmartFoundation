@@ -17328,20 +17328,30 @@ input.sf-filter-input[type="text"], input.sf-filter-input[type="number"], input.
 }
 .sf-colvis {
   position: relative;
-  display: inline-block;
-  z-index: 9999;
+  display: inline-flex;
+  align-items: center;
+}
+.sf-colvis-layer {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  z-index: 2147483646;
 }
 .sf-colvis__panel {
   position: fixed;
-  top: auto;
+  top: 0;
+  left: 0;
   right: auto;
+  bottom: auto;
   width: 320px;
-  max-width: 90vw;
+  max-width: calc(100vw - 24px);
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 10px;
   box-shadow: 0 14px 30px rgba(0,0,0,.12);
-  z-index: 999999;
+  z-index: 2147483647;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 .sf-colvis__head {
@@ -17351,6 +17361,7 @@ input.sf-filter-input[type="text"], input.sf-filter-input[type="number"], input.
   padding: 10px 12px;
   border-bottom: 1px solid #eef2f7;
   background: #f9fafb;
+  flex: 0 0 auto;
 }
 .sf-colvis__title {
   display: inline-flex;
@@ -17374,15 +17385,18 @@ input.sf-filter-input[type="text"], input.sf-filter-input[type="number"], input.
 .sf-colvis__search {
   padding: 10px 12px;
   border-bottom: 1px solid #eef2f7;
+  flex: 0 0 auto;
 }
 .sf-colvis__actions {
   display: flex;
   gap: 8px;
   padding: 8px 12px;
   border-bottom: 1px solid #eef2f7;
+  flex: 0 0 auto;
 }
 .sf-colvis__list {
-  max-height: 260px;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
   padding: 8px 12px;
 }
@@ -17411,19 +17425,10 @@ input.sf-filter-input[type="text"], input.sf-filter-input[type="number"], input.
   border-top: 1px solid #eef2f7;
   display: flex;
   justify-content: flex-end;
+  flex: 0 0 auto;
 }
 .sf-colvis__search .sf-input:focus, .sf-colvis__search .sf-input:focus-visible, .sf-colvis__search input:focus, .sf-colvis__search input:focus-visible {
   border-color: #047857;
-}
-.sf-panel, .sf-panel-body, .sf-table, .sf-table-wrap, .sf-table-card, .sf-table-shell {
-  overflow: visible !important;
-}
-.sf-table__scroller, .sf-table__body-scroll {
-  overflow: auto;
-}
-.sf-panel, .sf-table, .sf-table-wrap {
-  transform: none !important;
-  isolation: isolate;
 }
 :root {
   --sf-field-h: 44px;

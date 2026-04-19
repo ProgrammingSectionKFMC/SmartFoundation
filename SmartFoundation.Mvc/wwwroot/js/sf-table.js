@@ -839,12 +839,27 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             // ===========================
             
 
+            // ===========================
+            // Column Visibility (Alpine)
+            // ===========================
+
+            // ===========================
+            // Column Visibility (Alpine)
+            // ===========================
+
+            colVisOpen: false,
             colVisSearch: "",
             colVisMap: {},
-            colVisLoaded: true, // ✅ نعتبره "محمل" من البداية عشان لا يحاول يقرأ من التخزين
+            colVisLoaded: true,
+            colVisAnchorRect: null,
+            colVisPlacement: {
+                top: 0,
+                left: 0,
+                width: 320,
+                maxHeight: 420
+            },
 
             colVisStorageKey() {
-                // (لم يعد يُستخدم) لكن نخليه لو عندك مراجع ثانية
                 const base =
                     (cfg && (cfg.storageKey || cfg.StorageKey)) ||
                     `sfTable:${cfg?.spName || cfg?.StoredProcedureName || "sp"}:${cfg?.operation || cfg?.Operation || "op"}`;
@@ -859,18 +874,15 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 return false;
             },
 
-            // ✅ لا تحميل من localStorage
             colVisLoad() {
                 return;
             },
 
-            // ✅ لا حفظ في localStorage
             colVisSave() {
                 return;
             },
 
             colVisIsShown(col) {
-                // ✅ بدون Load / Storage: يعتمد فقط على colVisMap داخل الجلسة + default visible
                 const def = (col?.visible ?? col?.Visible);
                 const v = this.colVisMap?.[col.field];
                 return (typeof v === "boolean") ? v : !!def;
@@ -878,9 +890,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
             colVisToggle(col) {
                 if (this.colVisIsLocked(col)) return;
-                const now = this.colVisIsShown(col);
 
-                // ✅ reassign object (Alpine reactivity)
+                const now = this.colVisIsShown(col);
                 const next = { ...(this.colVisMap || {}) };
                 next[col.field] = !now;
                 this.colVisMap = next;
@@ -889,17 +900,20 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             colVisShowAll() {
                 const cols = this.colVisBaseColumns();
                 const next = { ...(this.colVisMap || {}) };
-                cols.forEach(c => { if (!this.colVisIsLocked(c)) next[c.field] = true; });
+
+                cols.forEach(c => {
+                    if (!this.colVisIsLocked(c)) next[c.field] = true;
+                });
+
                 this.colVisMap = next;
             },
 
             colVisReset() {
-                // ✅ يرجع لاختيار الافتراضي (يعتمد على col.visible)
                 this.colVisMap = {};
             },
 
             colVisApply() {
-                // ✅ لا شيء (ما فيه تخزين)
+                return;
             },
 
             colVisFilteredColumns() {
@@ -919,7 +933,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 return String(col?.label ?? col?.title ?? col?.header ?? col?.field ?? "").trim();
             },
 
-           
             colVisBaseColumns() {
                 return (this.columns || []).filter(c => {
                     const hasHeader = !!(c.label || c.title || c.header);
@@ -933,6 +946,157 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 });
             },
 
+            toggleColVis(e) {
+                if (this.colVisOpen) {
+                    this.closeColVis();
+                    return;
+                }
+
+                const btn = e?.currentTarget || this.$refs?.colVisBtn || null;
+                if (btn) {
+                    this.colVisAnchorRect = btn.getBoundingClientRect();
+                }
+
+                this.colVisOpen = true;
+
+                this.$nextTick(() => {
+                    this.updateColVisPosition();
+
+                    if (!this.__colVisBound) {
+                        this.__colVisBound = true;
+
+                        this.__colVisResizeHandler = () => {
+                            if (!this.colVisOpen) return;
+                            const liveBtn = this.$refs?.colVisBtn;
+                            if (liveBtn) this.colVisAnchorRect = liveBtn.getBoundingClientRect();
+                            this.updateColVisPosition();
+                        };
+
+                        this.__colVisScrollHandler = () => {
+                            if (!this.colVisOpen) return;
+                            const liveBtn = this.$refs?.colVisBtn;
+                            if (liveBtn) this.colVisAnchorRect = liveBtn.getBoundingClientRect();
+                            this.updateColVisPosition();
+                        };
+
+                        window.addEventListener("resize", this.__colVisResizeHandler, { passive: true });
+                        window.addEventListener("scroll", this.__colVisScrollHandler, true);
+                    }
+                });
+            },
+
+            closeColVis() {
+                this.colVisOpen = false;
+                this.colVisAnchorRect = null;
+            },
+
+            colVisPanelStyle() {
+                const p = this.colVisPlacement || {};
+
+                return [
+                    "position:fixed",
+                    "z-index:2147483647",
+                    "top:" + (p.top || 0) + "px",
+                    "left:" + (p.left || 0) + "px",
+                    "right:auto",
+                    "bottom:auto",
+                    "width:" + (p.width || 320) + "px",
+                    "max-width:calc(100vw - 24px)",
+                    "max-height:" + (p.maxHeight || 420) + "px",
+                    "display:flex",
+                    "flex-direction:column",
+                    "overflow:hidden"
+                ].join(";");
+            },
+
+            updateColVisPosition() {
+                const panel = this.$refs?.colVisPanel;
+                const btn = this.$refs?.colVisBtn;
+
+                if (!panel) return;
+
+                const anchorRect =
+                    this.colVisAnchorRect ||
+                    btn?.getBoundingClientRect?.() ||
+                    null;
+
+                if (!anchorRect) return;
+
+                const GAP = 8;
+                const MARGIN = 12;
+                const viewportW = window.innerWidth;
+                const viewportH = window.innerHeight;
+                const panelWidth = Math.min(320, viewportW - (MARGIN * 2));
+
+                panel.style.visibility = "hidden";
+                panel.style.display = "flex";
+                panel.style.flexDirection = "column";
+                panel.style.width = panelWidth + "px";
+                panel.style.maxHeight = "420px";
+                panel.style.left = "-99999px";
+                panel.style.top = "-99999px";
+
+                let panelRect = panel.getBoundingClientRect();
+                let measuredHeight = Math.ceil(panelRect.height || 320);
+
+                const spaceBelow = viewportH - anchorRect.bottom - GAP - MARGIN;
+                const spaceAbove = anchorRect.top - GAP - MARGIN;
+
+                let top = 0;
+                let maxHeight = 420;
+
+                if (spaceBelow >= Math.min(measuredHeight, 420) || spaceBelow >= spaceAbove) {
+                    maxHeight = Math.max(180, spaceBelow);
+                    panel.style.maxHeight = maxHeight + "px";
+
+                    panelRect = panel.getBoundingClientRect();
+                    measuredHeight = Math.ceil(panelRect.height || measuredHeight);
+
+                    top = anchorRect.bottom + GAP;
+
+                    if (top + measuredHeight > viewportH - MARGIN) {
+                        top = viewportH - measuredHeight - MARGIN;
+                    }
+                } else {
+                    maxHeight = Math.max(180, spaceAbove);
+                    panel.style.maxHeight = maxHeight + "px";
+
+                    panelRect = panel.getBoundingClientRect();
+                    measuredHeight = Math.ceil(panelRect.height || measuredHeight);
+
+                    top = anchorRect.top - measuredHeight - GAP;
+
+                    if (top < MARGIN) {
+                        top = MARGIN;
+                    }
+                }
+
+                let left = anchorRect.right - panelWidth;
+
+                if (left < MARGIN) {
+                    left = anchorRect.left;
+                }
+
+                if (left + panelWidth > viewportW - MARGIN) {
+                    left = viewportW - panelWidth - MARGIN;
+                }
+
+                if (left < MARGIN) {
+                    left = MARGIN;
+                }
+
+                top = Math.max(MARGIN, Math.min(top, viewportH - measuredHeight - MARGIN));
+
+                panel.style.visibility = "";
+                panel.style.display = "";
+
+                this.colVisPlacement = {
+                    top,
+                    left,
+                    width: panelWidth,
+                    maxHeight
+                };
+            },
 
             
 
@@ -1303,11 +1467,18 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 this.loadStoredPreferences();
                 this.initColumnFilters();
 
-                
+                if (!this.__colVisEscBound) {
+                    this.__colVisEscBound = true;
+
+                    document.addEventListener("keydown", (e) => {
+                        if (e.key === "Escape" && this.colVisOpen) {
+                            this.closeColVis();
+                        }
+                    });
+                }
 
                 this.bindPrintListenerOnce();
 
-                
                 if (!this.enablePagination) {
                     this.page = 1;
                     this.pages = 1;
@@ -1316,11 +1487,9 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         : this.pageSize;
                 }
 
-               
                 this.load();
                 this.setupEventListeners();
 
-                
                 this.$nextTick(() => {
                     if (this.filtersEnabled && this.filtersRow && this.showFilters) {
                         this.initFilterSelect2();
