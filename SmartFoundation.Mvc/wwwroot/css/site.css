@@ -11588,6 +11588,34 @@ input[readonly], textarea[readonly] {
   text-align: center !important;
   vertical-align: middle !important;
 }
+.th-cell.col-row-actions, .td-cell.col-row-actions {
+  min-width: 170px;
+  width: 170px;
+  text-align: center !important;
+  white-space: nowrap;
+}
+.sf-table thead .th-cell.col-row-actions {
+  background: #0a7257 !important;
+  color: #ffffff !important;
+  border-bottom: 1px solid rgba(8, 92, 73, 0.72) !important;
+}
+.sf-table thead .th-cell.col-row-actions .th-inner {
+  color: #ffffff !important;
+  justify-content: center;
+}
+.td-cell.col-row-actions .sf-row-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding-inline: 4px;
+}
+.td-cell.col-row-actions .btn {
+  height: 28px;
+  min-height: 28px;
+  padding: 0 8px;
+  font-size: 12px;
+}
 .th-cell.col-checkbox .th-inner, .sf-filter-row th.col-checkbox .th-inner {
   justify-content: center;
   padding: 0;

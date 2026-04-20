@@ -26,7 +26,7 @@
         enablePagination = Model.EnablePagination,
         autoRefresh = true,
         columns = Model.Columns ?? new List<TableColumn>(),
-        actions = new List<object>(),
+        actions = Model.RowActions ?? new List<TableAction>(),
         selectable = Model.Selectable,
         singleSelect = true,
         rowIdField = Model.RowIdField ?? "Id",
@@ -314,7 +314,7 @@
                                       { action: toolbar.print1, show: toolbar.showPrint1, enable: true, type: 'print1' },
                                       ...(toolbar.customActions || []).map(a=>
                                 ({ action: a, show: true, enable: true, type: 'custom' }))
-                                ].filter(x => x.action && x.show !== false && (x.action.placement ?? 'Button') !== 'ActionsMenu')"
+                                ].filter(x => x.action && x.show !== false && normalizePlacement(x.action.placement ?? x.action.Placement) === 'button')"
                                 :key="actIdx">
 
                                 <button type="button"
@@ -449,6 +449,12 @@
                                     </div>
                                 </th>
                             </template>
+
+                            <th x-show="hasRowEndActions()"
+                                class="th-cell col-row-actions"
+                                x-bind:style="headerColor ? 'background-color:' + headerColor + ';color:#fff;' : 'background:#0a7257;color:#fff;'">
+                                <span class="th-inner">الإجراءات</span>
+                            </th>
                         </tr>
 
                         <tr x-show="filtersEnabled && filtersRow && showFilters" class="sf-filter-row">
@@ -542,13 +548,15 @@
 
                                 </th>
                             </template>
+
+                            <th x-show="hasRowEndActions()" class="th-cell sf-filter-cell col-row-actions"></th>
                         </tr>
                     </thead>
 
                     <tbody>
                         <template x-if="loading">
                             <tr>
-                                <td x-bind:colspan="visibleColumns().length + (selectable ? 1 : 0)" class="td-loading">
+                                <td x-bind:colspan="visibleColumns().length + (selectable ? 1 : 0) + (hasRowEndActions() ? 1 : 0)" class="td-loading">
                                     <i class="fa fa-spinner animate-spin"></i> جاري التحميل...
                                 </td>
                             </tr>
@@ -556,7 +564,7 @@
 
                         <template x-if="!loading && error">
                             <tr>
-                                <td x-bind:colspan="Math.max(1, visibleColumns().length + (selectable ? 1 : 0))"
+                                <td x-bind:colspan="Math.max(1, visibleColumns().length + (selectable ? 1 : 0) + (hasRowEndActions() ? 1 : 0))"
                                     class="td-empty">
                                     <div class="flex items-center justify-center py-6">
                                         <span x-text="error"></span>
@@ -567,7 +575,7 @@
 
                         <template x-if="!loading && !error && rows.length === 0">
                             <tr>
-                                <td x-bind:colspan="visibleColumns().length + (selectable ? 1 : 0)"
+                                <td x-bind:colspan="visibleColumns().length + (selectable ? 1 : 0) + (hasRowEndActions() ? 1 : 0)"
                                     class="py-6 text-center">
                                     لا توجد بيانات.
                                 </td>
@@ -789,6 +797,25 @@
                                         </template>
                                     </td>
                                 </template>
+
+                                <td x-show="hasRowEndActions()" class="td-cell col-row-actions" x-on:click.stop>
+                                    <div class="sf-row-actions">
+                                        <template x-for="(act, actIdx) in rowEndActions()" :key="`${actIdx}-${row[rowIdField] ?? idx}`">
+                                            <button type="button"
+                                                    class="btn"
+                                                    :class="'btn-' + (act.action.color ?? 'secondary')"
+                                                    x-on:click.stop="runRowAction(act.action, row)">
+                                                <template x-if="act.action.icon && !(act.action.icon.startsWith('/') || act.action.icon.includes('.svg') || act.action.icon.includes('.png') || act.action.icon.includes('.jpg') || act.action.icon.includes('.jpeg') || act.action.icon.includes('.webp'))">
+                                                    <i :class="act.action.icon"></i>
+                                                </template>
+                                                <template x-if="act.action.icon && (act.action.icon.startsWith('/') || act.action.icon.includes('.svg') || act.action.icon.includes('.png') || act.action.icon.includes('.jpg') || act.action.icon.includes('.jpeg') || act.action.icon.includes('.webp'))">
+                                                    <img :src="act.action.icon" alt="" class="sf-action-icon-img" />
+                                                </template>
+                                                <span x-text="act.action.label"></span>
+                                            </button>
+                                        </template>
+                                    </div>
+                                </td>
                             </tr>
                         </template>
                     </tbody>

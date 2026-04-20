@@ -1277,6 +1277,62 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             storageKey: cfg.storageKey || null,
             // Toolbar
             toolbar: cfg.toolbar || {},
+            normalizePlacement(value) {
+                const p = String(value ?? "Button").trim().toLowerCase();
+                if (p === "actionsmenu") return "actionsmenu";
+                if (p === "rowend") return "rowend";
+                return "button";
+            },
+            toolbarActionEntries() {
+                const tb = this.toolbar || {};
+                const items = [
+                    { action: tb.add, show: tb.showAdd, enable: tb.enableAdd ?? true },
+                    { action: tb.add1, show: tb.showAdd1, enable: tb.enableAdd1 ?? true },
+                    { action: tb.add2, show: tb.showAdd2, enable: tb.enableAdd2 ?? true },
+                    { action: tb.edit, show: tb.showEdit, enable: tb.enableEdit ?? true },
+                    { action: tb.edit1, show: tb.showEdit1, enable: tb.enableEdit1 ?? true },
+                    { action: tb.edit2, show: tb.showEdit2, enable: tb.enableEdit2 ?? true },
+                    { action: tb.delete, show: tb.showDelete, enable: tb.enableDelete ?? true },
+                    { action: tb.delete1, show: tb.showDelete1, enable: tb.enableDelete1 ?? true },
+                    { action: tb.delete2, show: tb.showDelete2, enable: tb.enableDelete2 ?? true },
+                    { action: tb.print, show: tb.showPrint, enable: true },
+                    { action: tb.print1, show: tb.showPrint1, enable: true },
+                    { action: tb.print2, show: tb.showPrint2, enable: true },
+                    { action: tb.print3, show: tb.showPrint3, enable: true }
+                ].filter(x => x.action && x.show !== false);
+
+                const custom = Array.isArray(tb.customActions) ? tb.customActions : [];
+                custom.forEach(a => items.push({ action: a, show: true, enable: true }));
+
+                return items;
+            },
+            rowEndActions() {
+                const toolbarItems = this.toolbarActionEntries();
+                const inlineItems = (Array.isArray(this.actions) ? this.actions : []).map(a => ({
+                    action: a,
+                    show: (a?.show ?? a?.Show ?? true),
+                    enable: true
+                }));
+
+                return [...toolbarItems, ...inlineItems]
+                    .filter(x => x.action && x.show !== false && this.normalizePlacement(x.action.placement ?? x.action.Placement) === "rowend");
+            },
+            hasRowEndActions() {
+                return this.rowEndActions().length > 0;
+            },
+            runRowAction(action, row) {
+                const requireSelection = !!(action?.requireSelection ?? action?.RequireSelection);
+                if (requireSelection && row && this.rowIdField) {
+                    const rowId = row[this.rowIdField];
+                    this.selectedKeys.clear();
+                    if (rowId !== undefined && rowId !== null) {
+                        this.selectedKeys.add(rowId);
+                    }
+                    this.selectAll = false;
+                }
+
+                return this.doAction(action, row || null);
+            },
             // ===== Internal State =====
             q: "",
             page: 1,
