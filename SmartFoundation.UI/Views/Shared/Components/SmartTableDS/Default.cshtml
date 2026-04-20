@@ -354,18 +354,46 @@
                                 ({ action: a, show: true, enable: true }))
                                 ].some(x => x.action && x.show !== false && x.action.placement === 'ActionsMenu')">
 
-                                <div class="relative" x-data="{ open:false }">
+                                <div class="relative sf-actions-menu"
+                                     x-data="{
+                                        menuId: 'tb-actions-' + Math.random().toString(36).slice(2),
+                                        panelStyle:'',
+                                        placePanel() {
+                                            if (!this.$refs?.btn) return;
+                                            const r = this.$refs.btn.getBoundingClientRect();
+                                            const panelW = 220;
+                                            const gap = 6;
+                                            let left = r.right - panelW;
+                                            if (left < 8) left = 8;
+                                            if (left + panelW > window.innerWidth - 8) {
+                                                left = window.innerWidth - panelW - 8;
+                                            }
+
+                                            const estimatedH = 220;
+                                            let top = r.bottom + gap;
+                                            if (top + estimatedH > window.innerHeight - 8) {
+                                                top = Math.max(8, r.top - estimatedH - gap);
+                                            }
+
+                                            this.panelStyle = `position:fixed; top:${top}px; left:${left}px; width:${panelW}px; z-index:99999;`;
+                                        }
+                                     }"
+                                     x-on:keydown.escape.window="closeAllMenus()">
                                     <button type="button"
                                             class="btn btn-outline-secondary"
-                                            x-on:click="open = !open">
+                                            x-ref="btn"
+                                            x-on:click.stop="if (isMenuOpen(menuId)) { closeAllMenus(); } else { if (typeof closeRowMenusExcept === 'function') closeRowMenusExcept(null); $dispatch('sf-row-menu-opened', ''); openOnlyMenu(menuId); $nextTick(() => placePanel()); }">
                                         <i class="fa fa-ellipsis-v"></i>
                                         الإجراءات
                                     </button>
 
-                                    <div x-show="open"
+                                    <div x-show="isMenuOpen(menuId)"
                                          x-transition
-                                         x-on:click.outside="open=false"
-                                         class="absolute right-0 z-50 mt-2 w-56 rounded border bg-white shadow">
+                                         x-bind:style="panelStyle"
+                                         x-on:resize.window="isMenuOpen(menuId) && placePanel()"
+                                         x-on:scroll.window="isMenuOpen(menuId) && placePanel()"
+                                         x-on:click.outside="closeAllMenus()"
+                                         class="sf-actions-menu__panel">
 
                                         <template x-for="(act, actIdx) in [
                                                   { action: toolbar.add, show: toolbar.showAdd, enable: toolbar.enableAdd ?? true },
@@ -388,20 +416,20 @@
                                                   :data-tip="!act.enable ? 'هذا الإجراء غير متاح حالياً' : (act.action.requireSelection && selectedKeys.size !== 1) ? 'يتطلب اختيار صف' : null">
 
                                                 <button type="button"
-                                                        class="w-full px-3 py-2 text-right hover:bg-gray-100"
+                                                        class="sf-actions-menu__item"
                                                         :class="!act.enable ? 'cursor-not-allowed opacity-50' : ''"
-                                                        x-on:click="act.enable ? (doAction(act.action, act.action.requireSelection ? getSingleSelection() : null), open=false) : toastr.warning('هذا الإجراء غير متاح حالياً')"
+                                                        x-on:click="act.enable ? (doAction(act.action, act.action.requireSelection ? getSingleSelection() : null), closeAllMenus()) : toastr.warning('هذا الإجراء غير متاح حالياً')"
                                                         :disabled="!act.enable || (act.action.requireSelection && selectedKeys.size !== 1)">
 
                                                     <template x-if="act.action.icon && !(act.action.icon.startsWith('/') || act.action.icon.includes('.svg') || act.action.icon.includes('.png') || act.action.icon.includes('.jpg') || act.action.icon.includes('.jpeg') || act.action.icon.includes('.webp'))">
-                                                        <i :class="act.action.icon"></i>
+                                                        <i :class="[act.action.icon, 'sf-actions-menu__icon']"></i>
                                                     </template>
 
                                                     <template x-if="act.action.icon && (act.action.icon.startsWith('/') || act.action.icon.includes('.svg') || act.action.icon.includes('.png') || act.action.icon.includes('.jpg') || act.action.icon.includes('.jpeg') || act.action.icon.includes('.webp'))">
-                                                        <img :src="act.action.icon" alt="" class="sf-action-icon-img" />
+                                                        <img :src="act.action.icon" alt="" class="sf-action-icon-img sf-actions-menu__icon" />
                                                     </template>
 
-                                                    <span x-text="act.action.label"></span>
+                                                    <span class="sf-actions-menu__text" x-text="act.action.label"></span>
                                                 </button>
 
                                             </span>
@@ -814,6 +842,65 @@
                                                 <span x-text="act.action.label"></span>
                                             </button>
                                         </template>
+
+                                        <div class="sf-row-menu"
+                                             x-data="{
+                                                open:false,
+                                                menuId: 'row-actions-' + Math.random().toString(36).slice(2),
+                                                panelStyle:'',
+                                                placePanel() {
+                                                    if (!this.$refs?.btn) return;
+                                                    const r = this.$refs.btn.getBoundingClientRect();
+                                                    const panelW = 220;
+                                                    const gap = 6;
+                                                    let left = r.right - panelW;
+                                                    if (left < 8) left = 8;
+                                                    if (left + panelW > window.innerWidth - 8) {
+                                                        left = window.innerWidth - panelW - 8;
+                                                    }
+
+                                                    const estimatedH = 180;
+                                                    let top = r.bottom + gap;
+                                                    if (top + estimatedH > window.innerHeight - 8) {
+                                                        top = Math.max(8, r.top - estimatedH - gap);
+                                                    }
+
+                                                    this.panelStyle = `position:fixed; top:${top}px; left:${left}px; width:${panelW}px; z-index:99999;`;
+                                                }
+                                             }"
+                                             x-on:click.outside="open=false"
+                                             x-on:sf-row-menu-opened.window="if ($event.detail !== menuId) open=false"
+                                             x-on:keydown.escape.window="open=false"
+                                             x-on:resize.window="open && placePanel()"
+                                             x-on:scroll.window="open && placePanel()"
+                                             x-show="rowEndMenuActions().length > 0">
+                                            <button type="button"
+                                                    class="btn btn-secondary sf-row-menu__btn"
+                                                    x-ref="btn"
+                                                    x-on:click.stop="if (open) { open = false; } else { if (typeof closeRowMenusExcept === 'function') closeRowMenusExcept(menuId); $dispatch('sf-row-menu-opened', menuId); open = true; placePanel(); }">
+                                                <i class="fa fa-ellipsis-v"></i>
+                                                الإجراءات
+                                            </button>
+
+                                            <div x-show="open"
+                                                 x-transition
+                                                 x-bind:style="panelStyle"
+                                                 class="sf-row-menu__panel">
+                                                <template x-for="(act, actIdx) in rowEndMenuActions()" :key="`menu-${actIdx}-${row[rowIdField] ?? idx}`">
+                                                    <button type="button"
+                                                            class="sf-row-menu__item"
+                                                            x-on:click.stop="runRowAction(act.action, row); open=false">
+                                                        <template x-if="act.action.icon && !(act.action.icon.startsWith('/') || act.action.icon.includes('.svg') || act.action.icon.includes('.png') || act.action.icon.includes('.jpg') || act.action.icon.includes('.jpeg') || act.action.icon.includes('.webp'))">
+                                                            <i :class="[act.action.icon, 'sf-row-menu__icon']"></i>
+                                                        </template>
+                                                        <template x-if="act.action.icon && (act.action.icon.startsWith('/') || act.action.icon.includes('.svg') || act.action.icon.includes('.png') || act.action.icon.includes('.jpg') || act.action.icon.includes('.jpeg') || act.action.icon.includes('.webp'))">
+                                                            <img :src="act.action.icon" alt="" class="sf-action-icon-img sf-row-menu__icon" />
+                                                        </template>
+                                                        <span class="sf-row-menu__text" x-text="act.action.label"></span>
+                                                    </button>
+                                                </template>
+                                            </div>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>

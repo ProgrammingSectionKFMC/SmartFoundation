@@ -154,7 +154,8 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
     {
         Button,       // زر مباشر في التولبار (الافتراضي)
         ActionsMenu,  // داخل قائمة "الإجراءات"
-        RowEnd        // عمود إجراءات بنهاية كل صف
+        RowEnd,       // زر مباشر داخل عمود الإجراءات لكل صف
+        RowEndMenu    // داخل منيو زر واحد في عمود الإجراءات لكل صف
     }
 
     public class TableAction

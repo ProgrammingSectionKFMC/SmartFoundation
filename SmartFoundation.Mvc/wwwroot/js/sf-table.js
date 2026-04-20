@@ -1281,6 +1281,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 const p = String(value ?? "Button").trim().toLowerCase();
                 if (p === "actionsmenu") return "actionsmenu";
                 if (p === "rowend") return "rowend";
+                if (p === "rowendmenu") return "rowendmenu";
                 return "button";
             },
             toolbarActionEntries() {
@@ -1306,7 +1307,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                 return items;
             },
-            rowEndActions() {
+            rowEndActionEntries() {
                 const toolbarItems = this.toolbarActionEntries();
                 const inlineItems = (Array.isArray(this.actions) ? this.actions : []).map(a => ({
                     action: a,
@@ -1315,10 +1316,40 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 }));
 
                 return [...toolbarItems, ...inlineItems]
-                    .filter(x => x.action && x.show !== false && this.normalizePlacement(x.action.placement ?? x.action.Placement) === "rowend");
+                    .filter(x => x.action && x.show !== false);
+            },
+            rowEndActions() {
+                return this.rowEndActionEntries()
+                    .filter(x => this.normalizePlacement(x.action.placement ?? x.action.Placement) === "rowend");
+            },
+            rowEndMenuActions() {
+                return this.rowEndActionEntries()
+                    .filter(x => this.normalizePlacement(x.action.placement ?? x.action.Placement) === "rowendmenu");
             },
             hasRowEndActions() {
-                return this.rowEndActions().length > 0;
+                return this.rowEndActions().length > 0 || this.rowEndMenuActions().length > 0;
+            },
+            activeMenuId: null,
+            isMenuOpen(menuId) {
+                return !!menuId && this.activeMenuId === menuId;
+            },
+            openOnlyMenu(menuId) {
+                this.activeMenuId = menuId || null;
+            },
+            closeAllMenus() {
+                this.activeMenuId = null;
+            },
+            closeRowMenusExcept(menuId) {
+                const root = this.$el || document;
+                const keepId = menuId || null;
+                root.querySelectorAll(".sf-row-menu").forEach((el) => {
+                    const data = el.__x?.$data;
+                    if (!data) return;
+                    const currentId = data.menuId || null;
+                    if (currentId !== keepId) {
+                        data.open = false;
+                    }
+                });
             },
             runRowAction(action, row) {
                 const requireSelection = !!(action?.requireSelection ?? action?.RequireSelection);
