@@ -72,10 +72,10 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
             }
 
             string rowIdField = "";
-            bool canInsert = false;
+            bool canInsertPERMISSION = false;
             bool canInsertFullAccess = false;
-            bool canUpdate = false;
-            bool canDelete = false;
+            bool canUpdatePERMISSION = false;
+            bool canDeletePERMISSION = false;
 
 
             List<OptionItem> permissionsOptions = new();
@@ -380,9 +380,9 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                     {
                         var permissionName = row["permissionTypeName_E"]?.ToString()?.Trim().ToUpper();
 
-                        if (permissionName == "INSERT") canInsert = true;
-                        if (permissionName == "UPDATE") canUpdate = true;
-                        if (permissionName == "DELETE") canDelete = true;
+                        if (permissionName == "INSERTPERMISSION") canInsertPERMISSION = true;
+                        if (permissionName == "UPDATEPERMISSION") canUpdatePERMISSION = true;
+                        if (permissionName == "DELETEPERMISSION") canDeletePERMISSION = true;
                         if (permissionName == "INSERTFULLACCESS") canInsertFullAccess = true;
                     }
 
@@ -596,7 +596,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
             addFields.Insert(0, new FieldConfig { Name = "hostname", Type = "hidden", Value = HostName });
             addFields.Insert(0, new FieldConfig { Name = "entrydata", Type = "hidden", Value = usersId });
             addFields.Insert(0, new FieldConfig { Name = "idaraID", Type = "hidden", Value = IdaraId });
-            addFields.Insert(0, new FieldConfig { Name = "ActionType", Type = "hidden", Value = "INSERT" }); // upper-case
+            addFields.Insert(0, new FieldConfig { Name = "ActionType", Type = "hidden", Value = "INSERTPERMISSION" }); // upper-case
             addFields.Insert(0, new FieldConfig { Name = "pageName_", Type = "hidden", Value = PageName });
 
 
@@ -672,7 +672,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 new FieldConfig { Name = "redirectController",  Type = "hidden", Value = ControllerName },
                 new FieldConfig { Name = "redirectUrl",  Type = "hidden", Value = currentUrl },
                 new FieldConfig { Name = "pageName_",           Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",          Type = "hidden", Value = "UPDATE" },
+                new FieldConfig { Name = "ActionType",          Type = "hidden", Value = "UPDATEPERMISSION" },
                 new FieldConfig { Name = "idaraID",             Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",           Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",            Type = "hidden", Value = HostName},
@@ -714,7 +714,7 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "DELETE" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "DELETEPERMISSION" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -763,10 +763,10 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                     ShowColumns = true,
                     ShowExportCsv = false,
                     ShowExportExcel = false,
-                    ShowAdd = canInsert,
-                    ShowAdd1 = canInsertFullAccess,
-                    ShowEdit = canUpdate,
-                    ShowDelete = canDelete,
+                    ShowAdd = canInsertPERMISSION,
+                    ShowAdd1 = false,
+                    ShowEdit = canUpdatePERMISSION,
+                    ShowDelete = canDeletePERMISSION,
                     ShowBulkDelete = false,
 
                     Add = new TableAction

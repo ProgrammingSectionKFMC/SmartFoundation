@@ -6,13 +6,17 @@ using SmartFoundation.UI.ViewModels.SmartTable;
 using System.Data;
 using System.Linq;
 using System.Text.Json;
+using SmartFoundation.MVC.Reports;
+using SmartFoundation.UI.ViewModels.SmartPrint;
+using System.Linq;
+
 
 
 namespace SmartFoundation.Mvc.Controllers.Housing
 {
     public partial class HousingController : Controller
     {
-        public async Task<IActionResult> BuildingDetails()
+        public async Task<IActionResult> BuildingDetails(int pdf = 0)
         {
 
             if (!InitPageContext(out IActionResult? redirectResult))
@@ -76,6 +80,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             bool GasService = false;
             string GasServiceValue = "0";
 
+
+           
+
             if (dt7 != null && dt7.Rows.Count > 0)
             {
                 var row = dt7.Rows[0];
@@ -116,11 +123,15 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             }
 
 
+           
+
+
+
 
             string rowIdField = "";
-            bool canInsert = false;
-            bool canUpdate = false;
-            bool canDelete = false;
+            bool canInsertBUILDINGDETAILS = false;
+            bool canUpdateBUILDINGDETAILS = false;
+            bool canDeleteBUILDINGDETAILS = false;
 
 
 
@@ -249,14 +260,14 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     {
                         var permissionName = row["permissionTypeName_E"]?.ToString()?.Trim().ToUpper();
 
-                        if (permissionName == "INSERT")
-                            canInsert = true;
+                        if (permissionName == "INSERTBUILDINGDETAILS")
+                            canInsertBUILDINGDETAILS = true;
 
-                        if (permissionName == "UPDATE")
-                            canUpdate = true;
+                        if (permissionName == "UPDATEBUILDINGDETAILS")
+                            canUpdateBUILDINGDETAILS = true;
 
-                        if (permissionName == "DELETE")
-                            canDelete = true;
+                        if (permissionName == "DELETEBUILDINGDETAILS")
+                            canDeleteBUILDINGDETAILS = true;
                     }
 
                     if (ds != null && ds.Tables.Count > 0)
@@ -272,6 +283,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         //For change table name to arabic 
                         var headerMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                         {
+                            ["buildingDetailsID"] = "الرقم المرجعي",
                             ["buildingDetailsNo"] = "رقم المبنى",
                             ["buildingDetailsRooms"] = "عدد الغرف",
                             ["buildingLevelsCount"] = "عدد الطوابق",
@@ -284,7 +296,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ["buildingDetailsTel_1"] = "تليفون 1",
                             ["buildingDetailsTel_2"] = "تليفون 2",
                             ["buildingDetailsRemark"] = "ملاحظات",
-                            ["buildingRentTypeName_A"] = "نوع الايجار",
+                            ["buildingDetailsRemark"] = "ملاحظات",
+                            ["buildingActionTypeBuildingAlias"] = "حالة المبنى",
                             ["ElectrcityServicesView"] = "كهرباء",
                             ["WaterServicesView"] = "ماء",
                             ["GasServicesView"] = "غاز",
@@ -334,11 +347,18 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             bool isbuildingClassName_A = c.ColumnName.Equals("buildingClassName_A", StringComparison.OrdinalIgnoreCase);
                             bool isbuildingRentTypeName_A = c.ColumnName.Equals("buildingRentTypeName_A", StringComparison.OrdinalIgnoreCase);
                             bool isbuildingRentAmount = c.ColumnName.Equals("buildingRentAmount", StringComparison.OrdinalIgnoreCase);
+                            bool isbuildingActionTypeBuildingAlias = c.ColumnName.Equals("buildingActionTypeBuildingAlias", StringComparison.OrdinalIgnoreCase);
 
 
                             bool hideElectricityColumn = isElectrcityServicesView && !ElectrictyService;
                             bool hideWaterColumn = isWaterServicesView && !WaterService;
                             bool hideGasColumn = isGasServicesView && !GasService;
+                            bool hideRent = isbuildingRentAmount && !buildingUtilityIsRent;
+                            bool hideBuildingStatus = isbuildingActionTypeBuildingAlias && !buildingUtilityIsRent;
+                            bool hideElectricityForBuildingNoRent = isElectrcityServicesView && !buildingUtilityIsRent;
+                            bool hideWaterForBuildingNoRent = isWaterServicesView && !buildingUtilityIsRent;
+                            bool hideGasForBuildingNoRent = isGasServicesView && !buildingUtilityIsRent;
+
 
                             List<OptionItem> filterOpts = new();
                             if (isbuildingDetailsRooms || isbuildingLevelsCount || isbuildingDetailsArea || isbuildingTypeName_A || ismilitaryLocationName_A || isbuildingClassName_A || isbuildingRentTypeName_A || isbuildingRentAmount)
@@ -365,9 +385,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 Sortable = true
                                 //if u want to hide any column 
                                 ,
-                                Visible = !(isbuildingDetailsID || isbuildingTypeID_FK || isbuildingUtilityTypeID_FK || ismilitaryLocationID_FK
+                                Visible = !( isbuildingTypeID_FK || isbuildingUtilityTypeID_FK || ismilitaryLocationID_FK
                                 || isbuildingClassID_FK || isbuildingDetailsStartDate || isbuildingDetailsEndDate || isbuildingDetailsActive
-                                || isbuildingRentStartDate || isbuildingRentEndDate || isIdaraId_FK || isbuildingDetailsTel_1 || isbuildingDetailsTel_2 || isbuildingRentTypeID|| isElectrcityServices || isWaterServices || isGasServices|| hideElectricityColumn || hideWaterColumn || hideGasColumn),
+                                || isbuildingRentStartDate || isbuildingRentEndDate || isIdaraId_FK || isbuildingDetailsTel_1 || isbuildingDetailsTel_2 || isbuildingRentTypeID|| isElectrcityServices || isWaterServices || isGasServices|| hideElectricityColumn || hideWaterColumn || hideGasColumn || isbuildingRentTypeName_A || hideRent || hideBuildingStatus || hideElectricityForBuildingNoRent || hideWaterForBuildingNoRent || hideGasForBuildingNoRent),
 
                                 Filter = (isbuildingDetailsRooms || isbuildingLevelsCount || isbuildingDetailsArea || isbuildingTypeName_A || ismilitaryLocationName_A || isbuildingClassName_A || isbuildingRentTypeName_A || isbuildingRentAmount)
                                     ? new TableColumnFilter
@@ -531,7 +551,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
             // ✅ استخدم notesIndex بدلاً من 19، 20
-            if (ElectrictyService)
+            if (ElectrictyService && buildingUtilityIsRent)
             {
                 addFields.Insert(notesIndex, new FieldConfig
                 {
@@ -546,7 +566,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             }
 
 
-            if (WaterService)
+            if (WaterService && buildingUtilityIsRent)
             {
                 addFields.Insert(notesIndex, new FieldConfig
                 {
@@ -561,7 +581,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             }
 
 
-            if (GasService)
+            if (GasService && buildingUtilityIsRent)
             {
                 addFields.Insert(notesIndex, new FieldConfig
                 {
@@ -583,7 +603,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             addFields.Insert(0, new FieldConfig { Name = "hostname", Type = "hidden", Value = HostName });
             addFields.Insert(0, new FieldConfig { Name = "entrydata", Type = "hidden", Value = usersId });
             addFields.Insert(0, new FieldConfig { Name = "idaraID", Type = "hidden", Value = IdaraId });
-            addFields.Insert(0, new FieldConfig { Name = "ActionType", Type = "hidden", Value = "INSERT" });
+            addFields.Insert(0, new FieldConfig { Name = "ActionType", Type = "hidden", Value = "INSERTBUILDINGDETAILS" });
             addFields.Insert(0, new FieldConfig { Name = "pageName_", Type = "hidden", Value = PageName });
 
             addFields.Insert(0, new FieldConfig { Name = "redirectUrl", Type = "hidden", Value = currentUrl });
@@ -600,7 +620,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "redirectController",  Type = "hidden", Value = ControllerName },
                 new FieldConfig { Name = "redirectUrl",  Type = "hidden", Value = currentUrl },
                 new FieldConfig { Name = "pageName_",           Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",          Type = "hidden", Value = "UPDATE" },
+                new FieldConfig { Name = "ActionType",          Type = "hidden", Value = "UPDATEBUILDINGDETAILS" },
                 new FieldConfig { Name = "idaraID",             Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",           Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",            Type = "hidden", Value = HostName},
@@ -659,7 +679,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
             // ✅ استخدم notesIndex بدلاً من 19، 20
-            if (ElectrictyService)
+            if (ElectrictyService && buildingUtilityIsRent)
             {
                 updateFields.Insert(notesIndexu, new FieldConfig
                 {
@@ -674,7 +694,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             }
 
 
-            if (WaterService)
+            if (WaterService && buildingUtilityIsRent)
             {
                 updateFields.Insert(notesIndexu, new FieldConfig
                 {
@@ -689,7 +709,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             }
 
 
-            if (GasService)
+            if (GasService && buildingUtilityIsRent)
             {
                 updateFields.Insert(notesIndexu, new FieldConfig
                 {
@@ -711,7 +731,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "DELETE" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "DELETEBUILDINGDETAILS" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = HostName },
@@ -763,10 +783,49 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowColumns = true,
                     ShowExportCsv = false,
                     ShowExportExcel = false,
-                    ShowAdd = canInsert,
-                    ShowEdit = canUpdate,
-                    ShowDelete = canDelete,
+                    ShowAdd = canInsertBUILDINGDETAILS,
+                    ShowEdit = canUpdateBUILDINGDETAILS,
+                    ShowDelete = canDeleteBUILDINGDETAILS,
+                    ShowPrint1 = canInsertBUILDINGDETAILS,
                     ShowBulkDelete = false,
+                    Print1 = new TableAction
+                    {
+                        Label = "طباعة تقرير",
+                        Icon = "fa fa-print",
+                        Color = "info",
+                        RequireSelection = false,
+                        OnClickJs = @"
+                        (function () {
+                            var u = window.UtilityTypeID_ || '';
+                        
+                            sfPrintWithBusy(table, {
+                              pdf: 1,
+                              extraParams: { U: u },
+                              busy: { title: 'طباعة سجلات انتظار' }
+                            });
+                        })();
+                        ",
+
+                        Guards = new TableActionGuards
+                        {
+                            AppliesTo = "any",
+                            DisableWhenAny = new List<TableActionRule>
+                                                   {
+
+                                                         new TableActionRule
+                                                       {
+                                                           Field = "LastActionTypeID",
+                                                           Op = "eq",
+                                                           Value = "48",
+                                                           Message = "تم انشاء الطلب مسبقا",
+                                                           Priority = 3
+                                                       },
+
+
+
+                                                     }
+                        }
+                    },
 
                     Add = new TableAction
                     {
@@ -1070,6 +1129,112 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             };
 
+
+            if (pdf == 1)
+            {
+
+                if (dt1 == null || dt1.Rows.Count == 0)
+                    return Content("لا توجد بيانات للطباعة." + dt1.Rows.Count.ToString());
+
+                string class_ = dt1.Rows[0]["buildingUtilityTypeName_A"]?.ToString() ?? "";
+
+                // جدول جديد خفيف للطباعة
+                var printTable = new DataTable();
+                printTable.Columns.Add("seq", typeof(int));
+                printTable.Columns.Add("buildingDetailsNo", typeof(string));
+                printTable.Columns.Add("buildingDetailsRooms", typeof(string));
+                printTable.Columns.Add("buildingLevelsCount", typeof(string));
+                printTable.Columns.Add("buildingDetailsArea", typeof(string));
+                printTable.Columns.Add("buildingDetailsCoordinates", typeof(string));
+                printTable.Columns.Add("buildingTypeName_A", typeof(string));
+                printTable.Columns.Add("buildingUtilityTypeName_A", typeof(string));
+                printTable.Columns.Add("militaryLocationName_A", typeof(string));
+                printTable.Columns.Add("buildingClassName_A", typeof(string));
+                printTable.Columns.Add("buildingActionTypeBuildingAlias", typeof(string));
+                printTable.Columns.Add("buildingRentAmount", typeof(string));
+
+
+                int seq = 1;
+                foreach (DataRow r in dt1.Rows)
+                {
+                    printTable.Rows.Add(
+                         seq++,
+                        r["buildingDetailsNo"],
+                        r["buildingDetailsRooms"],
+                        r["buildingLevelsCount"],
+                        r["buildingDetailsArea"],
+                        r["buildingDetailsCoordinates"],
+                        r["buildingTypeName_A"],
+                        r["buildingUtilityTypeName_A"],
+                        r["militaryLocationName_A"],
+                        r["buildingClassName_A"],
+                        r["buildingActionTypeBuildingAlias"],
+                        r["buildingRentAmount"]
+                    );
+                }
+
+                if (printTable.Rows.Count == 0)
+                    return Content("لا توجد بيانات للطباعة.");
+
+                var reportColumns = new List<ReportColumn>
+    {
+                        new("seq", "م", Align:"center", Weight:1, FontSize:9),
+                        new("buildingDetailsNo", "رقم المبنى", Align:"center", Weight:2, FontSize:9),
+                        new("buildingDetailsRooms", "عدد الغرف", Align:"center", Weight:5, FontSize:9),
+                        new("buildingLevelsCount", "عدد الطوابق", Align:"center", Weight:2, FontSize:9),
+                        new("buildingDetailsArea", "المساحة", Align:"center", Weight:2, FontSize:9),
+                        new("buildingDetailsCoordinates", "الاحداثيات", Align:"center", Weight:3, FontSize:9),
+                        new("buildingTypeName_A", "نوع المبنى", Align:"center", Weight:3, FontSize:9),
+                        new("buildingUtilityTypeName_A", "نوع المرفق", Align:"center", Weight:2, FontSize:9),
+                        new("militaryLocationName_A", "موقع المبنى", Align:"center", Weight:2, FontSize:9),
+                        new("buildingClassName_A", "فئة المبنى", Align:"center", Weight:2, FontSize:9),
+                        new("buildingActionTypeBuildingAlias", "حالة المبنى", Align:"center", Weight:2, FontSize:9),
+                        new("buildingRentAmount", "الايجار", Align:"center", Weight:2, FontSize:9),
+        //new("WaitingOrderTypeName", "نوع سجل الانتظار", Align:"center", Weight:2, FontSize:9),
+    };
+
+                var logo = Path.Combine(_env.WebRootPath, "img", "Royal_Saudi_Land_Forces.png");
+                var header = new Dictionary<string, string>
+                {
+                    ["no"] = "",
+                    ["date"] = DateTime.Now.ToString("yyyy/MM/dd"),
+                    ["attach"] = "—",
+                    ["subject"] = "قائمة المباني لفئة " + class_,
+                    ["right1"] = "المملكة العربية السعودية",
+                    ["right2"] = "وزارة الدفاع",
+                    ["right3"] = "القوات البرية الملكية السعودية",
+                    ["right4"] = "الادارة الهندسية للتشغيل والصيانة",
+                    ["right5"] = IdaraName,
+                    ["midCaption"] = ""
+                };
+
+                var report = DataTableReportBuilder.FromDataTable(
+                    reportId: "BuildingType",
+                    title: "سجلات الانتظار لفئة " + class_,
+                    table: printTable,
+                    columns: reportColumns,
+                    headerFields: header,
+                    footerFields: new Dictionary<string, string>
+                    {
+                        ["تمت الطباعة بواسطة"] = FullName ?? "",
+                        ["ملاحظة"] = "هذا التقرير للاستخدام الرسمي",
+                        ["عدد السجلات"] = printTable.Rows.Count.ToString(),
+                        ["تاريخ ووقت الطباعة"] = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")
+                    },
+                    orientation: ReportOrientation.Landscape,
+                    headerType: ReportHeaderType.LetterOfficial,
+                    logoPath: logo,
+                    headerRepeat: ReportHeaderRepeat.FirstPageOnly
+                );
+
+                var pdfBytes = QuestPdfReportRenderer.Render(report);
+                Response.Headers["Content-Disposition"] = "inline; filename=BuildingType.pdf";
+                return File(pdfBytes, "application/pdf");
+            }
+
+         
+
+            ViewBag.UtilityTypeID = UtilityTypeID_;
             return View("HousingDefinitions/BuildingDetails", vm);
         }
     }

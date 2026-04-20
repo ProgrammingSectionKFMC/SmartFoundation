@@ -84,9 +84,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             }
 
             string rowIdField = "";
-            bool canInsert = false;
-            bool canUpdate = false;
-            bool canDelete = false;
+            bool canInsertRESIDENTS = false;
+            bool canUpdateRESIDENTS = false;
+            bool canDeleteRESIDENTS = false;
             bool canUPDATENATIONALIDFORRESIDENT = false;
 
             // استخرج القوائم — نستخدم .Result لأن Tasks خلصت بالفعل، DeserializeOptionItems تتعامل مع null بأمان
@@ -108,9 +108,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     {
                         var permissionName = row["permissionTypeName_E"]?.ToString()?.Trim().ToUpper();
 
-                        if (permissionName == "INSERT") canInsert = true;
-                        if (permissionName == "UPDATE") canUpdate = true;
-                        if (permissionName == "DELETE") canDelete = true;
+                        if (permissionName == "INSERTRESIDENTS") canInsertRESIDENTS = true;
+                        if (permissionName == "UPDATERESIDENTS") canUpdateRESIDENTS = true;
+                        if (permissionName == "DELETERESIDENTS") canDeleteRESIDENTS = true;
                         if (permissionName == "UPDATENATIONALIDFORRESIDENT") canUPDATENATIONALIDFORRESIDENT = true;
                     }
 
@@ -288,7 +288,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             {
                 new FieldConfig { Name = rowIdField, Type = "hidden" },
 
-                new FieldConfig { Name = "p01", Label = "رقم الهوية", Type = "number", ColCss = "6",Icon = "fa-solid fa-address-card", Required = true},
+                new FieldConfig { Name = "p01", Label = "رقم الهوية", Type = "number", ColCss = "6",Icon = "fa-solid fa-address-card", Required = true,MaxLength = 10},
                 new FieldConfig { Name = "p02", Label = "الرقم العام", Type = "number", ColCss = "6", Required = true , Icon = "fa-solid fa-user-tag",Autocomplete="off" },
                 
 
@@ -323,7 +323,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             addFields.Insert(0, new FieldConfig { Name = "hostname",Type="hidden",Value = Request.Host.Value });
             addFields.Insert(0, new FieldConfig { Name = "entrydata",Type="hidden",Value =usersId.ToString() });
             addFields.Insert(0, new FieldConfig { Name = "idaraID",Type="hidden",Value =IdaraId.ToString() });
-            addFields.Insert(0, new FieldConfig { Name = "ActionType",Type="hidden",Value="INSERT" });
+            addFields.Insert(0, new FieldConfig { Name = "ActionType",Type="hidden",Value= "INSERTRESIDENTS" });
             addFields.Insert(0, new FieldConfig { Name = "pageName_",Type ="hidden",Value=PageName });
             addFields.Insert(0, new FieldConfig { Name = "redirectAction",Type="hidden", Value=PageName });
             addFields.Insert(0, new FieldConfig { Name = "redirectController",Type="hidden",Value=ControllerName });
@@ -334,7 +334,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "redirectAction",Type="hidden", Value = PageName },
                 new FieldConfig { Name = "redirectController",Type = "hidden", Value = ControllerName},
                 new FieldConfig { Name = "pageName_",Type="hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",Type="hidden", Value = "UPDATE" },
+                new FieldConfig { Name = "ActionType",Type="hidden", Value = "UPDATERESIDENTS" },
                 new FieldConfig { Name = "idaraID",Type ="hidden", Value = IdaraId.ToString() },
                 new FieldConfig { Name = "entrydata",Type="hidden", Value = usersId.ToString() },
                 new FieldConfig { Name = "hostname",Type="hidden", Value = Request.Host.Value },
@@ -377,7 +377,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "redirectAction",Type = "hidden", Value = PageName },
                 new FieldConfig { Name = "redirectController",Type="hidden", Value = ControllerName },
                 new FieldConfig { Name = "pageName_",Type="hidden",Value=PageName },
-                new FieldConfig { Name = "ActionType",Type="hidden",Value="DELETE" },
+                new FieldConfig { Name = "ActionType",Type="hidden",Value="DELETERESIDENTS" },
                 new FieldConfig { Name = "idaraID",Type="hidden",Value= IdaraId.ToString() },
                 new FieldConfig { Name = "hostname",Type ="hidden",Value = Request.Host.Value },
                 new FieldConfig { Name = "entrydata",Type="hidden", Value = usersId.ToString() },
@@ -393,195 +393,6 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p07", Label = "الاسم الاخير بالعربي",Type ="text",  Readonly=true, Placeholder = "حقل عربي فقط",  Icon = "fa-solid fa-user", ColCss = "3", MaxLength = 50, TextMode = "arabic",},
 
             };
-
-            // ----------------- قوالب الميتا داتا -----------------
-
-            //جزء مشترك (أنصحك تحفظه وتعيد استخدامه)
-            var extraCtx = new Dictionary<string, object?>
-            {
-                ["idaraID"] = IdaraId,
-                ["entrydata"] = usersId,
-                ["hostname"] = HostName
-            };
-
-            var extraRequestBase = new Dictionary<string, object?>
-            {
-                ["pageName_"] = PageName,          // ديناميك حسب الصفحة
-                ["ActionType"] = "ResidentActions",// غيّره حسب احتياجك
-                ["tableIndex"] = 0
-            };
-
-            //1) جدول فقط داخل المودل (Load on open) xxx
-            var extraMeta_TableOnly_LoadOnOpen = new Dictionary<string, object?>
-            {
-                ["useRowExtra"] = true,
-                ["lazyExtra"] = true,
-                ["extraEndpoint"] = "/crud/extradataload",
-                ["allowNoSelection"] = true,
-
-                ["ctx"] = extraCtx,
-                ["extraRequest"] = extraRequestBase,
-
-                // حمّل عند فتح المودل (بدون انتظار اختيار)
-                ["extraLoadOnOpen"] = true,
-
-                // قيم ثابتة/افتراضية تُرسل عند الفتح (اختياري)
-                ["extraParams"] = new Dictionary<string, object?>
-                {
-                    ["parameter_01"] = "14143"
-                },
-
-                ["pageSize"] = 10,
-                ["showMeta"] = true,
-                ["enableSearch"] = true,
-                ["sortable"] = true,
-                ["showRowNumbers"] = true,
-                ["emptyText"] = "لا يوجد بيانات",
-            };
-
-
-            //2) جدول + فورم ويتغير الجدول حسب قيمة قائمة منسدلة (Depends) ooo
-            var extraMeta_TableAndForm_DependsOnSelect = new Dictionary<string, object?>
-            {
-                ["useRowExtra"] = true,
-                ["lazyExtra"] = true,
-                ["extraEndpoint"] = "/crud/extradataload",
-                ["allowNoSelection"] = true,
-
-                ["ctx"] = extraCtx,
-                ["extraRequest"] = extraRequestBase,
-
-                // يعتمد على اختيار من داخل المودل
-                ["extraDependsOn"] = "p01",              // اسم حقل الفورم (select)
-                ["extraParamName"] = "parameter_01",     // اسم البراميتر المرسل للـ ExtraDataLoad
-                ["extraLoadOnOpen"] = false,             // لا تحمل عند فتح المودل
-                ["extraEmptyTextBeforeSelect"] = "اختر أولاً لعرض الجدول",
-
-                ["pageSize"] = 10,
-                ["showMeta"] = true,
-                ["enableSearch"] = true,
-                ["sortable"] = true,
-                ["showRowNumbers"] = true,
-                ["emptyText"] = "لا يوجد بيانات",
-                ["Searchable"] = true,
-                ["visibleFields"] = new List<string>
-                                {
-                                    "generalNo_FK","buildingActionID","residentInfoID_FK","buildingActionDecisionNo","buildingActionDecisionDate","buildingActionTypeID_FK"
-                                },
-                ["headerMap"] = new Dictionary<string, string>
-                {
-                    ["generalNo_FK"] = "رقم الهوية",
-                    ["buildingActionID"] = "الاسم الكامل",
-                    ["residentInfoID_FK"] = "الرتبة",
-
-                }
-            };
-
-            //3) جدول + فورم والجدول ثابت من بداية فتح المودل (Static Params) xxx
-            var extraMeta_TableAndForm_StaticLoad = new Dictionary<string, object?>
-            {
-                ["useRowExtra"] = true,
-                ["lazyExtra"] = true,
-                ["extraEndpoint"] = "/crud/extradataload",
-                ["allowNoSelection"] = true,
-
-                ["ctx"] = extraCtx,
-                ["extraRequest"] = extraRequestBase,
-
-                // تحميل عند الفتح
-                ["extraLoadOnOpen"] = true,
-
-                // باراميترات ثابتة تُرسل للجدول عند الفتح
-                ["extraParams"] = new Dictionary<string, object?>
-                {
-                    ["parameter_01"] = 14143
-                },
-
-                ["pageSize"] = 10,
-                ["showMeta"] = true,
-                ["enableSearch"] = true,
-                ["sortable"] = true,
-                ["showRowNumbers"] = true,
-                ["emptyText"] = "لا يوجد بيانات",
-            };
-
-
-            //4) إرسال أكثر من براميتر لـ ExtraLoad (Multi Params) xxx
-            var extraMeta_DependsOnSelect_MultiParams = new Dictionary<string, object?>
-            {
-                ["useRowExtra"] = true,
-                ["lazyExtra"] = true,
-                ["extraEndpoint"] = "/crud/extradataload",
-                ["allowNoSelection"] = true,
-
-                ["ctx"] = extraCtx,
-                ["extraRequest"] = extraRequestBase,
-
-                // يعتمد على اختيار
-                ["extraDependsOn"] = "p01",
-                ["extraLoadOnOpen"] = false,
-                ["extraEmptyTextBeforeSelect"] = "اختر أولاً لعرض الجدول",
-
-                // ✅ جديد: خارطة باراميترات متعددة من فورم المودل
-                // p01 -> parameter_01
-                // p02 -> parameter_02
-                ["extraParamMap"] = new Dictionary<string, object?>
-                {
-                    ["parameter_01"] = "p01"
-                    //,
-                    //["parameter_02"] = "p02"
-                },
-
-                // (اختياري) باراميترات ثابتة إضافية مع الخريطة
-                ["extraParams"] = new Dictionary<string, object?>
-                {
-                    //["parameter_03"] = "STATIC",
-                    ["parameter_02"] = 1
-                },
-
-                ["pageSize"] = 10,
-                ["showMeta"] = true,
-                ["enableSearch"] = true,
-                ["sortable"] = true,
-                ["showRowNumbers"] = true,
-                ["emptyText"] = "لا يوجد بيانات",
-            };
-
-            //4-B) Static Multi Params (تحميل عند الفتح)
-            var extraMeta_Static_MultiParams_LoadOnOpen = new Dictionary<string, object?>
-            {
-                ["useRowExtra"] = true,
-                ["lazyExtra"] = true,
-                ["extraEndpoint"] = "/crud/extradataload",
-                ["allowNoSelection"] = true,
-
-                ["ctx"] = extraCtx,
-                ["extraRequest"] = extraRequestBase,
-
-                ["extraLoadOnOpen"] = true,
-
-                // ✅ باراميترات متعددة ثابتة
-                ["extraParams"] = new Dictionary<string, object?>
-                {
-                    ["parameter_01"] = 14143,
-                    ["parameter_02"] = 7,
-                    ["parameter_03"] = "X",
-                    ["parameter_04"] = "2026-03-04"
-                },
-
-                ["pageSize"] = 10,
-                ["showMeta"] = true,
-                ["enableSearch"] = true,
-                ["sortable"] = true,
-                ["showRowNumbers"] = true,
-                ["emptyText"] = "لا يوجد بيانات",
-            };
-
-
-            // ----------------- نهاية قوالب الميتا داتا -----------------
-
-
-
 
 
 
@@ -615,11 +426,11 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowExportCsv = false,
                     ShowExportExcel = false,
                     ShowExportPdf = false,
-                    ShowAdd = canInsert,
-                    ShowEdit = canUpdate,
-                    ShowDelete = canDelete,
+                    ShowAdd = canInsertRESIDENTS,
+                    ShowEdit = canUpdateRESIDENTS,
+                    ShowDelete = canDeleteRESIDENTS,
                     ShowDelete1 = false,
-                    ShowPrint1 = true,
+                    ShowPrint1 = canInsertRESIDENTS,
                     ShowBulkDelete = false,
                     Print1 = new TableAction
                     {
@@ -897,8 +708,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "success" },
                                 new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
                             }
-                        },
-                        Meta = extraMeta_TableAndForm_DependsOnSelect
+                        }
                     },
 
                     Edit = new TableAction

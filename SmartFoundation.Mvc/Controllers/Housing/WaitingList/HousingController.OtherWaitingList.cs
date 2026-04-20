@@ -550,7 +550,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
         //new("WaitingOrderTypeName", "نوع سجل الانتظار", Align:"center", Weight:2, FontSize:9),
     };
 
-                var logo = Path.Combine(_env.WebRootPath, "img", "ppng.png");
+                var logo = Path.Combine(_env.WebRootPath, "img", "Royal_Saudi_Land_Forces.png");
                 var header = new Dictionary<string, string>
                 {
                     ["no"] = "",
@@ -561,7 +561,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ["right2"] = "وزارة الدفاع",
                     ["right3"] = "القوات البرية الملكية السعودية",
                     ["right4"] = "الادارة الهندسية للتشغيل والصيانة",
-                    ["right5"] = "إدارة مدينة الملك فيصل العسكرية",
+                    ["right5"] = IdaraName,
                     ["midCaption"] = ""
                 };
 

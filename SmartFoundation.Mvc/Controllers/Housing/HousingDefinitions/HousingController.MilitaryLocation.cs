@@ -44,9 +44,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             }
 
             string rowIdField = "";
-            bool canInsert = false;
-            bool canUpdate = false;
-            bool canDelete = false;
+            bool canInsertMILITARYLOCATION = false;
+            bool canUpdateMILITARYLOCATION = false;
+            bool canDeleteMILITARYLOCATION = false;
 
             // ---------------------- DDLValues ----------------------
 
@@ -80,9 +80,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     {
                         var permissionName = row["permissionTypeName_E"]?.ToString()?.Trim().ToUpper();
 
-                        if (permissionName == "INSERT") canInsert = true;
-                        if (permissionName == "UPDATE") canUpdate = true;
-                        if (permissionName == "DELETE") canDelete = true;
+                        if (permissionName == "INSERTMILITARYLOCATION") canInsertMILITARYLOCATION = true;
+                        if (permissionName == "UPDATEMILITARYLOCATION") canUpdateMILITARYLOCATION = true;
+                        if (permissionName == "DELETEMILITARYLOCATION") canDeleteMILITARYLOCATION = true;
                     }
 
                     if (dt1 != null && dt1.Rows.Count > 0)
@@ -192,7 +192,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             addFields.Insert(0, new FieldConfig { Name = "hostname", Type = "hidden", Value = Request.Host.Value });
             addFields.Insert(0, new FieldConfig { Name = "entrydata", Type = "hidden", Value = usersId.ToString() });
             addFields.Insert(0, new FieldConfig { Name = "idaraID", Type = "hidden", Value = IdaraId.ToString() });
-            addFields.Insert(0, new FieldConfig { Name = "ActionType", Type = "hidden", Value = "INSERT" });
+            addFields.Insert(0, new FieldConfig { Name = "ActionType", Type = "hidden", Value = "INSERTMILITARYLOCATION" });
             addFields.Insert(0, new FieldConfig { Name = "pageName_", Type = "hidden", Value = PageName });
             addFields.Insert(0, new FieldConfig { Name = "redirectAction", Type = "hidden", Value = PageName });
             addFields.Insert(0, new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName });
@@ -203,7 +203,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "redirectAction",      Type = "hidden", Value = PageName },
                 new FieldConfig { Name = "redirectController",  Type = "hidden", Value = ControllerName},
                 new FieldConfig { Name = "pageName_",           Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",          Type = "hidden", Value = "UPDATE" },
+                new FieldConfig { Name = "ActionType",          Type = "hidden", Value = "UPDATEMILITARYLOCATION" },
                 new FieldConfig { Name = "idaraID",             Type = "hidden", Value = IdaraId.ToString() },
                 new FieldConfig { Name = "entrydata",           Type = "hidden", Value = usersId.ToString() },
                 new FieldConfig { Name = "hostname",            Type = "hidden", Value = Request.Host.Value },
@@ -225,7 +225,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
                 new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "DELETE" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "DELETEMILITARYLOCATION" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId.ToString() },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId.ToString() },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = Request.Host.Value },
@@ -259,9 +259,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowColumns = true,
                     ShowExportCsv = false,
                     ShowExportExcel = true,
-                    ShowAdd = canInsert,
-                    ShowEdit = canUpdate,
-                    ShowDelete = canDelete,
+                    ShowAdd = canInsertMILITARYLOCATION,
+                    ShowEdit = canUpdateMILITARYLOCATION,
+                    ShowDelete = canDeleteMILITARYLOCATION,
                     ShowBulkDelete = false,
 
                     Add = new TableAction

@@ -49,9 +49,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             }
 
             string rowIdField = "";
-            bool canInsert = false;
-            bool canUpdate = false;
-            bool canDelete = false;
+            bool canInsertBUILDINGTYPE = false;
+            bool canUpdateBUILDINGTYPE = false;
+            bool canDeleteBUILDINGTYPE = false;
 
             try
             {
@@ -62,9 +62,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     {
                         var permissionName = row["permissionTypeName_E"]?.ToString()?.Trim().ToUpper();
 
-                        if (permissionName == "INSERT") canInsert = true;
-                        if (permissionName == "UPDATE") canUpdate = true;
-                        if (permissionName == "DELETE") canDelete = true;
+                        if (permissionName == "INSERTBUILDINGTYPE") canInsertBUILDINGTYPE = true;
+                        if (permissionName == "UPDATEBUILDINGTYPE") canUpdateBUILDINGTYPE = true;
+                        if (permissionName == "DELETEBUILDINGTYPE") canDeleteBUILDINGTYPE = true;
                     }
 
                     if (dt1 != null && dt1.Columns.Count > 0)
@@ -149,7 +149,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             addFields.Insert(0, new FieldConfig { Name = "hostname", Type = "hidden", Value = Request.Host.Value });
             addFields.Insert(0, new FieldConfig { Name = "entrydata", Type = "hidden", Value = usersId.ToString() });
             addFields.Insert(0, new FieldConfig { Name = "idaraID", Type = "hidden", Value = IdaraId.ToString() });
-            addFields.Insert(0, new FieldConfig { Name = "ActionType", Type = "hidden", Value = "INSERT" });
+            addFields.Insert(0, new FieldConfig { Name = "ActionType", Type = "hidden", Value = "INSERTBUILDINGTYPE" });
             addFields.Insert(0, new FieldConfig { Name = "pageName_", Type = "hidden", Value = PageName });
             addFields.Insert(0, new FieldConfig { Name = "redirectAction", Type = "hidden", Value = PageName });
             addFields.Insert(0, new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName });
@@ -160,7 +160,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "redirectAction",      Type = "hidden", Value = PageName },
                 new FieldConfig { Name = "redirectController",  Type = "hidden", Value = ControllerName},
                 new FieldConfig { Name = "pageName_",           Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",          Type = "hidden", Value = "UPDATE" },
+                new FieldConfig { Name = "ActionType",          Type = "hidden", Value = "UPDATEBUILDINGTYPE" },
                 new FieldConfig { Name = "idaraID",             Type = "hidden", Value = IdaraId.ToString() },
                 new FieldConfig { Name = "entrydata",           Type = "hidden", Value = usersId.ToString() },
                 new FieldConfig { Name = "hostname",            Type = "hidden", Value = Request.Host.Value },
@@ -180,7 +180,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
                 new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "DELETE" },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "DELETEBUILDINGTYPE" },
                 new FieldConfig { Name = "idaraID",            Type = "hidden", Value = IdaraId.ToString() },
                 new FieldConfig { Name = "entrydata",          Type = "hidden", Value = usersId.ToString() },
                 new FieldConfig { Name = "hostname",           Type = "hidden", Value = Request.Host.Value },
@@ -212,9 +212,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowColumns = true,
                     ShowExportCsv = false,
                     ShowExportExcel = false,
-                    ShowAdd = canInsert,
-                    ShowEdit = canUpdate,
-                    ShowDelete = canDelete,
+                    ShowAdd = canInsertBUILDINGTYPE,
+                    ShowEdit = canUpdateBUILDINGTYPE,
+                    ShowDelete = canDeleteBUILDINGTYPE,
                     ShowPrint = false, // شرطك
                     ShowPrint1 = false, // شرطك
                     ShowBulkDelete = false,

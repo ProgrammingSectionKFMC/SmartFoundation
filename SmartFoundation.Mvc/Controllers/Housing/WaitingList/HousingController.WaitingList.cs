@@ -512,6 +512,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                 // جدول جديد خفيف للطباعة
                 var printTable = new DataTable();
+                
                 printTable.Columns.Add("WaitingListOrder", typeof(string));
                 printTable.Columns.Add("FullName_A", typeof(string));
                 printTable.Columns.Add("NationalID", typeof(string));
@@ -522,9 +523,11 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 printTable.Columns.Add("WaitingClassName", typeof(string));
                 //printTable.Columns.Add("WaitingOrderTypeName", typeof(string));
 
+                
                 foreach (DataRow r in dt1.Rows)
                 {
                     printTable.Rows.Add(
+                        
                         r["WaitingListOrder"]?.ToString() ?? "",
                         r["FullName_A"]?.ToString() ?? "",
                         r["NationalID"]?.ToString() ?? "",
@@ -543,6 +546,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                 var reportColumns = new List<ReportColumn>
     {
+        
         new("WaitingListOrder", "الترتيب", Align:"center", Weight:1, FontSize:9),
         new("FullName_A", "الاسم", Align:"center", Weight:5, FontSize:9),
         new("NationalID", "رقم الهوية", Align:"center", Weight:2, FontSize:9),
@@ -554,7 +558,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
         //new("WaitingOrderTypeName", "نوع سجل الانتظار", Align:"center", Weight:2, FontSize:9),
     };
 
-                var logo = Path.Combine(_env.WebRootPath, "img", "ppng.png");
+                var logo = Path.Combine(_env.WebRootPath, "img", "Royal_Saudi_Land_Forces.png");
                 var header = new Dictionary<string, string>
                 {
                     ["no"] = "",
@@ -565,7 +569,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ["right2"] = "وزارة الدفاع",
                     ["right3"] = "القوات البرية الملكية السعودية",
                     ["right4"] = "الادارة الهندسية للتشغيل والصيانة",
-                    ["right5"] = "إدارة مدينة الملك فيصل العسكرية",
+                    ["right5"] = IdaraName,
                     ["midCaption"] = ""
                 };
 
