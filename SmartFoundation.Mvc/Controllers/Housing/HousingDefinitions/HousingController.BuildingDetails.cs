@@ -1134,64 +1134,78 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             {
 
                 if (dt1 == null || dt1.Rows.Count == 0)
-                    return Content("لا توجد بيانات للطباعة." + dt1.Rows.Count.ToString());
+                    return Content("لا توجد بيانات للطباعة." + (dt1?.Rows.Count ?? 0).ToString());
 
                 string class_ = dt1.Rows[0]["buildingUtilityTypeName_A"]?.ToString() ?? "";
 
-                // جدول جديد خفيف للطباعة
+                // lightweight print table — include rent/status columns only when buildingUtilityIsRent == true
                 var printTable = new DataTable();
                 printTable.Columns.Add("seq", typeof(int));
                 printTable.Columns.Add("buildingDetailsNo", typeof(string));
+                printTable.Columns.Add("militaryLocationName_A", typeof(string));
+                printTable.Columns.Add("buildingClassName_A", typeof(string));
+                printTable.Columns.Add("buildingTypeName_A", typeof(string));
+                printTable.Columns.Add("buildingUtilityTypeName_A", typeof(string));
                 printTable.Columns.Add("buildingDetailsRooms", typeof(string));
                 printTable.Columns.Add("buildingLevelsCount", typeof(string));
                 printTable.Columns.Add("buildingDetailsArea", typeof(string));
                 printTable.Columns.Add("buildingDetailsCoordinates", typeof(string));
-                printTable.Columns.Add("buildingTypeName_A", typeof(string));
-                printTable.Columns.Add("buildingUtilityTypeName_A", typeof(string));
-                printTable.Columns.Add("militaryLocationName_A", typeof(string));
-                printTable.Columns.Add("buildingClassName_A", typeof(string));
-                printTable.Columns.Add("buildingActionTypeBuildingAlias", typeof(string));
-                printTable.Columns.Add("buildingRentAmount", typeof(string));
 
+                if (buildingUtilityIsRent)
+                {
+                    // show building status and rent only for rent-enabled utilities
+                    printTable.Columns.Add("buildingActionTypeBuildingAlias", typeof(string));
+                    printTable.Columns.Add("buildingRentAmount", typeof(string));
+                }
 
                 int seq = 1;
                 foreach (DataRow r in dt1.Rows)
                 {
-                    printTable.Rows.Add(
-                         seq++,
+                    var rowValues = new List<object?>
+                    {
+                        seq++,
                         r["buildingDetailsNo"],
+                        r["militaryLocationName_A"],
+                        r["buildingClassName_A"],
+                        r["buildingTypeName_A"],
+                        r["buildingUtilityTypeName_A"],
                         r["buildingDetailsRooms"],
                         r["buildingLevelsCount"],
                         r["buildingDetailsArea"],
                         r["buildingDetailsCoordinates"],
-                        r["buildingTypeName_A"],
-                        r["buildingUtilityTypeName_A"],
-                        r["militaryLocationName_A"],
-                        r["buildingClassName_A"],
-                        r["buildingActionTypeBuildingAlias"],
-                        r["buildingRentAmount"]
-                    );
+                    };
+
+                    if (buildingUtilityIsRent)
+                    {
+                        rowValues.Add(r["buildingActionTypeBuildingAlias"]);
+                        rowValues.Add(r["buildingRentAmount"]);
+                    }
+
+                    printTable.Rows.Add(rowValues.ToArray());
                 }
 
                 if (printTable.Rows.Count == 0)
                     return Content("لا توجد بيانات للطباعة.");
 
                 var reportColumns = new List<ReportColumn>
-    {
-                        new("seq", "م", Align:"center", Weight:1, FontSize:9),
-                        new("buildingDetailsNo", "رقم المبنى", Align:"center", Weight:2, FontSize:9),
-                        new("buildingDetailsRooms", "عدد الغرف", Align:"center", Weight:5, FontSize:9),
-                        new("buildingLevelsCount", "عدد الطوابق", Align:"center", Weight:2, FontSize:9),
-                        new("buildingDetailsArea", "المساحة", Align:"center", Weight:2, FontSize:9),
-                        new("buildingDetailsCoordinates", "الاحداثيات", Align:"center", Weight:3, FontSize:9),
-                        new("buildingTypeName_A", "نوع المبنى", Align:"center", Weight:3, FontSize:9),
-                        new("buildingUtilityTypeName_A", "نوع المرفق", Align:"center", Weight:2, FontSize:9),
-                        new("militaryLocationName_A", "موقع المبنى", Align:"center", Weight:2, FontSize:9),
-                        new("buildingClassName_A", "فئة المبنى", Align:"center", Weight:2, FontSize:9),
-                        new("buildingActionTypeBuildingAlias", "حالة المبنى", Align:"center", Weight:2, FontSize:9),
-                        new("buildingRentAmount", "الايجار", Align:"center", Weight:2, FontSize:9),
-        //new("WaitingOrderTypeName", "نوع سجل الانتظار", Align:"center", Weight:2, FontSize:9),
-    };
+                {
+                    new("seq", "م", Align:"center", Weight:2, FontSize:9),
+                    new("buildingDetailsNo", "رقم المبنى", Align:"center", Weight:2, FontSize:9),
+                    new("militaryLocationName_A", "موقع المبنى", Align:"center", Weight:4, FontSize:9),
+                    new("buildingClassName_A", "فئة المبنى", Align:"center", Weight:3, FontSize:9),
+                    new("buildingTypeName_A", "نوع المبنى", Align:"center", Weight:2, FontSize:9),
+                    new("buildingUtilityTypeName_A", "نوع المرفق", Align:"center", Weight:3, FontSize:9),
+                    new("buildingDetailsRooms", "الغرف", Align:"center", Weight:2, FontSize:9),
+                    new("buildingLevelsCount", "الطوابق", Align:"center", Weight:2, FontSize:9),
+                    new("buildingDetailsArea", "المساحة", Align:"center", Weight:2, FontSize:9),
+                    new("buildingDetailsCoordinates", "الاحداثيات", Align:"center", Weight:4, FontSize:9),
+                };
+
+                if (buildingUtilityIsRent)
+                {
+                    reportColumns.Add(new("buildingActionTypeBuildingAlias", "حالة المبنى", Align:"center", Weight:3, FontSize:9));
+                    reportColumns.Add(new("buildingRentAmount", "الايجار", Align:"center", Weight:2, FontSize:9));
+                }
 
                 var logo = Path.Combine(_env.WebRootPath, "img", "Royal_Saudi_Land_Forces.png");
                 var header = new Dictionary<string, string>
@@ -1210,7 +1224,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                 var report = DataTableReportBuilder.FromDataTable(
                     reportId: "BuildingType",
-                    title: "سجلات الانتظار لفئة " + class_,
+                    title: "سجلات المباني لفئة " + class_,
                     table: printTable,
                     columns: reportColumns,
                     headerFields: header,
@@ -1224,14 +1238,14 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     orientation: ReportOrientation.Landscape,
                     headerType: ReportHeaderType.LetterOfficial,
                     logoPath: logo,
-                    headerRepeat: ReportHeaderRepeat.FirstPageOnly
+                    headerRepeat: ReportHeaderRepeat.AllPages
+                // headerRepeat: ReportHeaderRepeat.FirstPageOnly
                 );
 
                 var pdfBytes = QuestPdfReportRenderer.Render(report);
                 Response.Headers["Content-Disposition"] = "inline; filename=BuildingType.pdf";
                 return File(pdfBytes, "application/pdf");
             }
-
          
 
             ViewBag.UtilityTypeID = UtilityTypeID_;

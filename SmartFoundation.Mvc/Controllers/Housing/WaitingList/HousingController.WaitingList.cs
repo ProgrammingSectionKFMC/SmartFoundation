@@ -589,7 +589,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     orientation: ReportOrientation.Landscape,
                     headerType: ReportHeaderType.LetterOfficial,
                     logoPath: logo,
-                    headerRepeat: ReportHeaderRepeat.FirstPageOnly
+                    headerRepeat: ReportHeaderRepeat.AllPages
+                // headerRepeat: ReportHeaderRepeat.FirstPageOnly
                 );
 
                 var pdfBytes = QuestPdfReportRenderer.Render(report);
