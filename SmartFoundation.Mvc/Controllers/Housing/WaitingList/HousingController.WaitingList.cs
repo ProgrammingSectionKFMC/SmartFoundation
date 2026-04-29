@@ -568,7 +568,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ["right1"] = "المملكة العربية السعودية",
                     ["right2"] = "وزارة الدفاع",
                     ["right3"] = "القوات البرية الملكية السعودية",
-                    ["right4"] = "الادارة الهندسية للتشغيل والصيانة",
+                    ["right4"] = OrganizationName,
                     ["right5"] = IdaraName,
                     ["midCaption"] = ""
                 };

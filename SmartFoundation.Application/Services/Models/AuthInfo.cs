@@ -30,6 +30,8 @@ public sealed record AuthInfo(
     string? GeneralNo,
     string? AdminTypeID,
     string? AdminTypeName,
-    int? ChangedPassword
+    int? ChangedPassword,
+    string? OrganaiztionLogo,
+    string? IdaraLogo
 
     );

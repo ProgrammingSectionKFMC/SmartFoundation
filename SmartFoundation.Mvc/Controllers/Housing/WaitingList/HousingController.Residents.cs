@@ -848,7 +848,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ["right2"] = "وزارة الدفاع",
                     ["right3"] = "القوات البرية الملكية السعودية",
                     ["right4"] = "الادارة الهندسية للتشغيل والصيانة",
-                    ["right5"] = "إدارة مدينة الملك فيصل العسكرية",
+                    ["right5"] = IdaraName,
 
                     //["bismillah"] = "بسم الله الرحمن الرحيم",
                     ["midCaption"] = ""
@@ -898,7 +898,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ["right2"] = "وزارة الدفاع",
                     ["right3"] = "القوات البرية الملكية السعودية",
                     ["right4"] = "الادارة الهندسية للتشغيل والصيانة",
-                    ["right5"] = "إدارة مدينة الملك فيصل العسكرية",
+                    ["right5"] = IdaraName,
 
                     ["bismillah"] = "بسم الله الرحمن الرحيم",
                     ["midCaption"] = ""

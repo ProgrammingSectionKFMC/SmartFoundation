@@ -196,6 +196,9 @@ namespace SmartFoundation.Mvc.Controllers.Login
             HttpContext.Session.SetString("AdminTypeID", auth.AdminTypeID ?? "");
             HttpContext.Session.SetString("AdminTypeName", auth.AdminTypeName ?? "");
             HttpContext.Session.SetString("ChangedPassword", auth.ChangedPassword?.ToString() ?? "0");
+            HttpContext.Session.SetString("OrganaiztionLogo", auth.OrganaiztionLogo ?? "");  // ✅ FIXED: Changed from auth.Photo to auth.photoBase64
+            HttpContext.Session.SetString("IdaraLogo", auth.IdaraLogo ?? "");  // ✅ FIXED: Changed from auth.Photo to auth.photoBase64
+
 
 
             // ✅ Add warning message if password needs to be changed
