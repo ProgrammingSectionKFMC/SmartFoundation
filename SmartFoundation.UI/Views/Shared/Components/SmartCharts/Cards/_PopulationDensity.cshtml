@@ -1,0 +1,114 @@
+﻿@model SmartFoundation.UI.ViewModels.SmartCharts.ChartCardConfig
+@using System.Text.Json
+@using System.Text.Encodings.Web
+@using SmartFoundation.UI.ViewModels.SmartCharts
+
+@{
+    var hostId = $"pdm_{Model.Id}";
+    var cfgId = $"pdm_cfg_{Model.Id}";
+
+    string Nz(string? value, string fallback)
+        => string.IsNullOrWhiteSpace(value) ? fallback : value;
+
+    var boardOptions = Model.PopulationDensityBoardOptions;
+
+    var json = JsonSerializer.Serialize(new
+    {
+        id = Model.Id,
+        title = Nz(Model.Title, "الكثافة السكانية في الأحياء السكنية"),
+        subtitle = Nz(Model.Subtitle, "لوحة تحليل الكثافة والتوزيع السكاني"),
+        boardOptions = new
+        {
+            titleText = Nz(boardOptions?.TitleText, Nz(Model.Title, "الكثافة السكانية في الأحياء السكنية")),
+            subtitleText = Nz(boardOptions?.SubtitleText, Nz(Model.Subtitle, "لوحة تحليل الكثافة والتوزيع السكاني")),
+            showHeader = boardOptions?.ShowHeader ?? true,
+            showFooter = boardOptions?.ShowFooter ?? true,
+            topPopulationCount = boardOptions?.TopPopulationCount ?? 10,
+            topHousingCount = boardOptions?.TopHousingCount ?? 10,
+            topDensityCount = boardOptions?.TopDensityCount ?? 10,
+            totalPopulationOverride = boardOptions?.TotalPopulationOverride,
+            totalMaleOverride = boardOptions?.TotalMaleOverride,
+            totalFemaleOverride = boardOptions?.TotalFemaleOverride
+        },
+        neighborhoods = (Model.PopulationDensityNeighborhoods ?? new List<PopulationDensityNeighborhood>())
+            .Select(x => new
+            {
+                name = x.Name,
+                population = x.Population,
+                housingUnits = x.HousingUnits,
+                malePopulation = x.MalePopulation,
+                femalePopulation = x.FemalePopulation
+            })
+    },
+    new JsonSerializerOptions
+    {
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    });
+}
+
+<div id="@hostId" class="sf-pdm" dir="@Model.Dir">
+    <div class="sf-pdm-shell">
+        <section class="sf-pdm-header" data-pdm-header>
+            <h1 class="sf-pdm-title" data-pdm-title>@Nz(boardOptions?.TitleText, Nz(Model.Title, "الكثافة السكانية في الأحياء السكنية"))</h1>
+            <div class="sf-pdm-subtitle" data-pdm-subtitle>@Nz(boardOptions?.SubtitleText, Nz(Model.Subtitle, "لوحة تحليل الكثافة والتوزيع السكاني"))</div>
+        </section>
+
+        <section class="sf-pdm-kpis" data-pdm-kpis>
+            <div class="sf-pdm-empty">جاري تحميل المؤشرات...</div>
+        </section>
+
+        <section class="sf-pdm-main">
+            <article class="sf-pdm-card sf-pdm-summary-card">
+                <header class="sf-pdm-card-head"><h4>📋 ملخص الحالة</h4></header>
+                <div class="sf-pdm-card-body sf-pdm-summary-body">
+                    <ul class="sf-pdm-summary-list" data-pdm-summary>
+                        <li>جاري تجهيز الملخص...</li>
+                    </ul>
+                </div>
+            </article>
+
+            <article class="sf-pdm-card sf-pdm-main-chart">
+                <header class="sf-pdm-card-head"><h4>📈 نسبة السكان من إجمالي الأحياء</h4></header>
+                <div class="sf-pdm-card-body sf-pdm-share-body">
+                    <div class="sf-pdm-share-layout">
+                        <div class="sf-pdm-share-details" data-pdm-share-details>
+                            جاري تجهيز تفاصيل الحصص...
+                        </div>
+                        <div class="sf-pdm-share-chart-wrap">
+                            <canvas data-pdm-canvas="share"></canvas>
+                            <div class="sf-pdm-donut-center" data-pdm-center="share"></div>
+                        </div>
+                    </div>
+                </div>
+                <footer class="sf-pdm-card-foot" data-pdm-meta="share"></footer>
+            </article>
+        </section>
+
+        <section class="sf-pdm-lower">
+            <article class="sf-pdm-card">
+                <header class="sf-pdm-card-head"><h4>👥 توزيع السكان حسب الأحياء</h4></header>
+                <div class="sf-pdm-card-body"><canvas data-pdm-canvas="population"></canvas></div>
+            </article>
+
+            <article class="sf-pdm-card">
+                <header class="sf-pdm-card-head"><h4>🏠 توزيع المساكن حسب الأحياء</h4></header>
+                <div class="sf-pdm-card-body"><canvas data-pdm-canvas="housing"></canvas></div>
+            </article>
+        </section>
+
+        <footer class="sf-pdm-footer" data-pdm-footer>
+            جاري تحميل الخلاصة التنفيذية...
+        </footer>
+    </div>
+
+    <script id="@cfgId" type="application/json">@Html.Raw(json)</script>
+</div>
+
+<script>
+    (function () {
+        window.SmartCharts = window.SmartCharts || {};
+        if (typeof window.SmartCharts.renderPopulationDensity === 'function') {
+            window.SmartCharts.renderPopulationDensity('@hostId', '@cfgId');
+        }
+    })();
+</script>

@@ -24,7 +24,9 @@
     // ✅ Debug: Log the value
     
     // ✅ Decision logic
-    var mustChangePassword = sessionChangedPassword == "0";
+     var mustChangePassword = sessionChangedPassword == "0";
+    //var mustChangePassword = true;
+
 
   
 }
@@ -1539,12 +1541,11 @@
 @if (mustChangePassword)
 {
     <div id="force-change-password-modal"
-         class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md">
-        <div class="relative w-full max-w-2xl p-4">
-            <!-- ✅ Changed to max-w-2xl for wider modal -->
-            <div class="animate-pulse-border relative rounded-lg border-2 border-red-500 bg-slate-800 shadow-2xl">
+         class="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/85 px-4 py-6 backdrop-blur-md">
+        <div class="relative mt-8 w-full max-w-4xl md:mt-10">
+            <div class="relative rounded-lg border-2 border-slate-600/50 bg-slate-800 shadow-2xl">
                 <!-- Modal header -->
-                <div class="flex items-center justify-between border-b border-slate-700 bg-gradient-to-r from-red-900/30 to-orange-900/30 p-5">
+                <div class="flex items-center justify-between border-b border-slate-700 bg-gradient-to-r from-red-900/30 to-orange-900/30 p-4 md:p-5">
                     <div class="flex items-center gap-3">
                         <div class="relative">
                             <i class="fa-solid fa-shield-halved animate-pulse text-4xl text-red-400"></i>
@@ -1560,21 +1561,21 @@
                 </div>
                 
                 <!-- Modal body -->
-                <div class="p-6" dir="rtl">
+                <div class="p-4 md:p-6" dir="rtl">
                     <!-- ✅ Enhanced warning message -->
-                    <div class="animate-pulse-slow mb-6 rounded-lg border-2 border-yellow-500 bg-gradient-to-r from-yellow-900/30 to-red-900/30 p-5">
+                    <div class="animate-pulse-slow mb-5 rounded-lg border border-slate-600/80 bg-gradient-to-r from-yellow-900/30 to-red-900/30 p-4 md:p-5">
                         <div class="flex items-start gap-4">
-                            <i class="fa-solid fa-triangle-exclamation animate-bounce-slow mt-1 text-3xl text-yellow-400"></i>
-                            <div>
-                                <h4 class="mb-3 text-xl font-bold text-yellow-200">
+                            <i class="fa-solid fa-triangle-exclamation animate-bounce-slow mt-1 text-2xl text-yellow-400 md:text-3xl"></i>
+                            <div class="min-w-0 flex-1">
+                                <h4 class="mb-2 text-lg font-bold text-yellow-200 md:text-xl">
                                     يجب تغيير كلمة المرور فوراً
                                 </h4>
-                                <p class="mb-4 text-base leading-relaxed text-yellow-100">
+                                <p class="mb-3 text-sm leading-7 text-yellow-100 md:text-base">
                                     لأسباب أمنية، <strong>لن تتمكن من استخدام أي وظيفة في النظام</strong> حتى تقوم بتغيير كلمة المرور الافتراضية.
                                 </p>
-                                <div class="rounded-lg bg-black/20 p-3">
+                                <div class="rounded-lg border border-slate-700/60 bg-black/20 p-3">
                                     <h5 class="mb-2 text-sm font-semibold text-yellow-300">🔒 القيود الحالية:</h5>
-                                    <ul class="space-y-2 text-sm text-yellow-200">
+                                    <ul class="grid gap-2 text-sm text-yellow-200 md:grid-cols-2">
                                         <li class="flex items-center gap-2">
                                             <i class="fa-solid fa-ban text-red-400"></i>
                                             جميع القوائم والصفحات محظورة
@@ -1594,7 +1595,7 @@
                     </div>
 
                     <form id="force-change-password-form">
-                        <div class="space-y-4">
+                        <div class="space-y-3 md:space-y-4">
                             <!-- Current Password -->
                             <div>
                                 <label for="force-current-password" class="mb-2 block text-sm font-medium text-white">
@@ -1604,7 +1605,7 @@
                                     <input type="password"
                                            id="force-current-password"
                                            name="currentPassword"
-                                           class="block w-full rounded-lg border border-slate-600 bg-slate-700 p-3 pe-12 text-base text-white focus:border-red-500 focus:ring-red-500"
+                                           class="block w-full rounded-lg border border-slate-600 bg-slate-700 p-2.5 pe-12 text-sm text-white focus:border-red-500 focus:ring-red-500 md:p-3 md:text-base"
                                            placeholder="أدخل كلمة المرور الحالية"
                                            required>
                                     <button type="button"
@@ -1624,7 +1625,7 @@
                                     <input type="password"
                                            id="force-new-password"
                                            name="newPassword"
-                                           class="block w-full rounded-lg border border-slate-600 bg-slate-700 p-3 pe-12 text-base text-white focus:border-red-500 focus:ring-red-500"
+                                           class="block w-full rounded-lg border border-slate-600 bg-slate-700 p-2.5 pe-12 text-sm text-white focus:border-red-500 focus:ring-red-500 md:p-3 md:text-base"
                                            placeholder="أدخل كلمة المرور الجديدة"
                                            minlength="8"
                                            required>
@@ -1646,7 +1647,7 @@
                                     <input type="password"
                                            id="force-confirm-password"
                                            name="confirmPassword"
-                                           class="block w-full rounded-lg border border-slate-600 bg-slate-700 p-3 pe-12 text-base text-white focus:border-red-500 focus:ring-red-500"
+                                           class="block w-full rounded-lg border border-slate-600 bg-slate-700 p-2.5 pe-12 text-sm text-white focus:border-red-500 focus:ring-red-500 md:p-3 md:text-base"
                                            placeholder="أعادة إدخال كلمة المرور الجديدة"
                                            required>
                                     <button type="button"
@@ -1690,14 +1691,14 @@
                         </div>
 
                         <!-- Modal footer -->
-                        <div class="mt-5 flex items-center gap-3 border-t border-slate-700 pt-5">
+                        <div class="mt-4 grid grid-cols-1 gap-3 border-t border-slate-700 pt-4 md:mt-5 md:grid-cols-2 md:pt-5">
                             <button type="submit"
-                                    class="flex-1 rounded-lg bg-red-600 px-6 py-3 text-center text-base font-medium text-white hover:bg-red-700 focus:ring-4 focus:ring-red-300 focus:outline-none">
+                                    class="rounded-lg bg-red-600 px-6 py-3 text-center text-base font-medium text-white hover:bg-red-700 focus:ring-4 focus:ring-red-300 focus:outline-none">
                                 <i class="fa-solid fa-shield-halved me-2"></i>
                                 تغيير كلمة المرور الآن
                             </button>
                             <a href="/Login/Logout"
-                                   class="flex-1 rounded-lg border border-slate-600 bg-slate-700 px-6 py-3 text-center text-base font-medium text-slate-300 hover:bg-slate-600 hover:text-white">
+                                   class="rounded-lg border border-slate-600 bg-slate-700 px-6 py-3 text-center text-base font-medium text-slate-300 hover:bg-slate-600 hover:text-white">
                                 <i class="fa-solid fa-right-from-bracket me-2"></i>
                                 تسجيل الخروج
                             </a>

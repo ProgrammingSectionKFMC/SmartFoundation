@@ -250,6 +250,10 @@
                                     @await Html.PartialAsync("~/Views/Shared/Components/SmartCharts/Cards/_HousingCommandCenter.cshtml", card)
                                     break;
 
+                                case ChartCardType.PopulationDensity:
+                                    @await Html.PartialAsync("~/Views/Shared/Components/SmartCharts/Cards/_PopulationDensity.cshtml", card)
+                                    break;
+
                                 default:
 
 

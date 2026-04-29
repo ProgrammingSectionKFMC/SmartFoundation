@@ -25,12 +25,41 @@ namespace SmartFoundation.UI.ViewModels.SmartCharts
         HealthKpiRoadmap,
         HealthKpiPulse,
         HealthKpiAnnual,
-        HousingCommandCenter
+        HousingCommandCenter,
+        PopulationDensity
     }
 
     public enum ChartTone { Neutral, Success, Warning, Danger, Info }
     public enum ChartCardSize { Sm, Md, Lg }
     public enum ChartCardVariant { Soft, Outline, Solid }
+
+
+    #region PopulationDensity
+
+    public class PopulationDensityNeighborhood
+    {
+        public string Name { get; set; } = "";
+        public int Population { get; set; }
+        public int HousingUnits { get; set; }
+        public int MalePopulation { get; set; }
+        public int FemalePopulation { get; set; }
+    }
+
+    public class PopulationDensityBoardOptions
+    {
+        public string? TitleText { get; set; }
+        public string? SubtitleText { get; set; }
+        public bool ShowHeader { get; set; } = true;
+        public bool ShowFooter { get; set; } = true;
+        public int TopPopulationCount { get; set; } = 10;
+        public int TopHousingCount { get; set; } = 10;
+        public int TopDensityCount { get; set; } = 10;
+        public int? TotalPopulationOverride { get; set; }
+        public int? TotalMaleOverride { get; set; }
+        public int? TotalFemaleOverride { get; set; }
+    }
+
+    #endregion
 
 
 
@@ -1020,6 +1049,9 @@ namespace SmartFoundation.UI.ViewModels.SmartCharts
         public HousingCommandCenterSummaryRow? HousingCommandCenterSummaryRow { get; set; }
 
 
+        // -------- PopulationDensity --------
+        public PopulationDensityBoardOptions? PopulationDensityBoardOptions { get; set; }
+        public List<PopulationDensityNeighborhood> PopulationDensityNeighborhoods { get; set; } = new();
 
 
 
