@@ -599,7 +599,9 @@ namespace SmartFoundation.Application.Services
                     null,                        // GeneralNo
                     null,                        // AdminTypeID
                     null,                        // AdminTypeName
-                    0                            // ✅ ChangedPassword
+                    0,
+                    null,
+                    null
                 );
             }
 
@@ -614,7 +616,9 @@ namespace SmartFoundation.Application.Services
                     null,
                     null,   // AdminTypeID
                     null,   // AdminTypeName
-                    0       // ✅ ChangedPassword
+                     0,
+                    null,
+                    null       // ✅ ChangedPassword
                 );
             }
 
@@ -631,7 +635,9 @@ namespace SmartFoundation.Application.Services
                     null,
                     null,   // AdminTypeID
                     null,   // AdminTypeName
-                    0       // ✅ ChangedPassword
+                     0,
+                    null,
+                    null       // ✅ ChangedPassword
                 );
             }
 
@@ -697,7 +703,9 @@ namespace SmartFoundation.Application.Services
                 GeneralNo,            // 19
                 AdminTypeID,          // 20
                 AdminTypeName,        // 21
-                ChangedPassword ?? 0  // 22 ✅ ChangedPassword (default to 0 if not found)
+                ChangedPassword ?? 0,
+                    null,
+                    null  // 22 ✅ ChangedPassword (default to 0 if not found)
             );
         }
 

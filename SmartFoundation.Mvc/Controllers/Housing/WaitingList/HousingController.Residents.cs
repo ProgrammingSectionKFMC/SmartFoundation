@@ -836,7 +836,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         new("residentcontactDetails", "رقم الجوال", Align:"center", Weight:2, FontSize:9),
                     };
 
-                var logo = Path.Combine(_env.WebRootPath, "img", "ppng.png");
+                var logo = Path.Combine(_env.WebRootPath, "img", "Royal_Saudi_Land_Forces.png");
                 var header = new Dictionary<string, string>
                 {
                     ["no"] = usersId,//"١٢٣/٤٥",
