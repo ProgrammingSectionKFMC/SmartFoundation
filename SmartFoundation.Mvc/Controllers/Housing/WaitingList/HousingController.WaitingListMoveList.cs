@@ -219,15 +219,15 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p18", Type = "hidden", MirrorName = "LastActionTypeID" },
                 
                 // ✅ Readonly fields للعرض
-                new FieldConfig { Name = "p05", Label = "اسم المستفيد", Type = "text", ColCss = "4", Readonly = true },
-                new FieldConfig { Name = "p03", Label = "رقم الهوية", Type = "text", ColCss = "4", Readonly = true },
-                new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "4", Readonly = true },
-                new FieldConfig { Name = "p13", Label = "عدد سجلات الانتظار", Type = "text", ColCss = "4", Readonly = true },
-                new FieldConfig { Name = "p06", Label = "رقم قرار النقل", Type = "text", ColCss = "4", Readonly = true },
-                new FieldConfig { Name = "p07", Label = "تاريخ قرار النقل", Type = "text", ColCss = "4", Readonly = true },
-                new FieldConfig { Name = "p10", Label = "الإدارة المنقول منها", Type = "text", ColCss = "6", Readonly = true },
-                new FieldConfig { Name = "p12", Label = "الإدارة المنقول إليها", Type = "text", ColCss = "6", Readonly = true },
-                new FieldConfig { Name = "p23", Label = "ملاحظات القبول", Type = "textarea", ColCss = "6", Readonly = false, Required =true },
+                new FieldConfig { Name = "p05", Label = "اسم المستفيد", Type = "text", ColCss = "3", Readonly = true, Icon = "fa-solid fa-user" },
+                new FieldConfig { Name = "p03", Label = "رقم الهوية", Type = "text", ColCss = "3", Readonly = true, Icon = "fa-solid fa-address-card" },
+                new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "3", Readonly = true, Icon = "fa-solid fa-user-tag" },
+                new FieldConfig { Name = "p13", Label = "عدد سجلات الانتظار", Type = "text", ColCss = "3", Readonly = true, Icon = "fa-solid fa-list-ol" },
+                new FieldConfig { Name = "p06", Label = "رقم قرار النقل", Type = "text", ColCss = "3", Readonly = true, Icon = "fa-solid fa-file-signature" },
+                new FieldConfig { Name = "p07", Label = "تاريخ قرار النقل", Type = "text", ColCss = "3", Readonly = true, Icon = "fa-regular fa-calendar-days" },
+                new FieldConfig { Name = "p10", Label = "الإدارة المنقول منها", Type = "text", ColCss = "6", Readonly = true, Icon = "fa-solid fa-building-circle-arrow-right" },
+                new FieldConfig { Name = "p12", Label = "الإدارة المنقول إليها", Type = "text", ColCss = "6", Readonly = true, Icon = "fa-solid fa-building-circle-check" },
+                new FieldConfig { Name = "p23", Label = "ملاحظات القبول", Type = "textarea", ColCss = "12", Readonly = false, Required =true, Icon = "fa-regular fa-note-sticky" },
                 new FieldConfig { Name = "p09", Label = "sendidaraid", Type = "hidden", ColCss = "6", Readonly = false },
             };
 
@@ -254,15 +254,15 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p18", Type = "hidden", MirrorName = "LastActionTypeID" },
                 
                 // ✅ Readonly fields للعرض
-                new FieldConfig { Name = "p05", Label = "اسم المستفيد", Type = "text", ColCss = "4", Readonly = true },
-                new FieldConfig { Name = "p03", Label = "رقم الهوية", Type = "text", ColCss = "4", Readonly = true },
-                new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "4", Readonly = true },
-                new FieldConfig { Name = "p13", Label = "عدد سجلات الانتظار", Type = "text", ColCss = "4", Readonly = true },
-                new FieldConfig { Name = "p06", Label = "رقم قرار النقل", Type = "text", ColCss = "4", Readonly = true },
-                new FieldConfig { Name = "p07", Label = "تاريخ قرار النقل", Type = "text", ColCss = "4", Readonly = true },
-                new FieldConfig { Name = "p10", Label = "الإدارة المنقول منها", Type = "text", ColCss = "6", Readonly = true },
-                new FieldConfig { Name = "p12", Label = "الإدارة المنقول إليها", Type = "text", ColCss = "6", Readonly = true },
-                new FieldConfig { Name = "p23", Label = "ملاحظات الرفض", Type = "textarea", ColCss = "6", Readonly = false, Required =true },
+                new FieldConfig { Name = "p05", Label = "اسم المستفيد", Type = "text", ColCss = "3", Readonly = true, Icon = "fa-solid fa-user" },
+                new FieldConfig { Name = "p03", Label = "رقم الهوية", Type = "text", ColCss = "3", Readonly = true, Icon = "fa-solid fa-address-card" },
+                new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "3", Readonly = true, Icon = "fa-solid fa-user-tag" },
+                new FieldConfig { Name = "p13", Label = "عدد سجلات الانتظار", Type = "text", ColCss = "3", Readonly = true, Icon = "fa-solid fa-list-ol" },
+                new FieldConfig { Name = "p06", Label = "رقم قرار النقل", Type = "text", ColCss = "3", Readonly = true, Icon = "fa-solid fa-file-signature" },
+                new FieldConfig { Name = "p07", Label = "تاريخ قرار النقل", Type = "text", ColCss = "3", Readonly = true, Icon = "fa-regular fa-calendar-days" },
+                new FieldConfig { Name = "p10", Label = "الإدارة المنقول منها", Type = "text", ColCss = "6", Readonly = true, Icon = "fa-solid fa-building-circle-arrow-right" },
+                new FieldConfig { Name = "p12", Label = "الإدارة المنقول إليها", Type = "text", ColCss = "6", Readonly = true, Icon = "fa-solid fa-building-circle-check" },
+                new FieldConfig { Name = "p23", Label = "ملاحظات الرفض", Type = "textarea", ColCss = "12", Readonly = false, Required =true, Icon = "fa-regular fa-note-sticky" },
                 new FieldConfig { Name = "p09", Label = "sendidaraid", Type = "hidden", ColCss = "6", Readonly = false },
 
             };

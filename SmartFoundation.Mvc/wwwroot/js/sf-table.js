@@ -1,19 +1,17 @@
-﻿// wwwroot/js/sf-table.js - Complete Rewrite
-
-window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
+﻿window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
 (function () {
     const register = () => {
         Alpine.data("sfTable", (cfg) => ({
-            // ===== Configuration Properties =====
+
+            // Core configuration
             endpoint: cfg.endpoint || "/smart/execute",
             spName: cfg.spName || "",
             operation: cfg.operation || "select",
-            /*operation: cfg.operation || "select",*/
 
-            //  NEW: Profile View — Full block)
-            viewMode: (cfg.viewMode ?? "Table"), // "Table" | "Profile"
-            // إعدادات البروفايل من الكنترول)
+            // Profile view configuration
+            viewMode: (cfg.viewMode ?? "Table"),
+
             profileTitleField: (cfg.profileTitleField ?? null),
             profileSubtitleField: (cfg.profileSubtitleField ?? null),
             profileBadges: Array.isArray(cfg.profileBadges) ? cfg.profileBadges : [],
@@ -24,11 +22,12 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             profileShowHeader: (cfg.profileShowHeader !== false),
             profileIcon: (cfg.profileIcon ?? "fa-solid fa-id-card"),
             profileTitleText: (cfg.profileTitleText ?? "البيانات الأساسية"),
-            // ===== Helpers =====
+
+            // Profile helpers
             normalizeFieldName(v) {
                 if (v == null) return "";
                 if (typeof v === "string") return v.trim();
-                // لو جاك object من السيرفر
+
                 return String(v.field ?? v.Field ?? v.name ?? v.Name ?? "").trim();
             },
             getProfileTitle(row) {
@@ -90,20 +89,18 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             profileColumnsCount() {
                 return (this.profileColumnsList?.() || []).length;
             },
-            //========End Profile=============//
 
-
-            // ===== Column Filters (NEW) =====
-            filtersEnabled: (cfg.filtersEnabled !== false),          // افتراضي مفعلة
-            filtersRow: (cfg.filtersRow !== false),                  // إظهار صف الفلاتر تحت الهيدر
+            // Column filter state
+            filtersEnabled: (cfg.filtersEnabled !== false),
+            filtersRow: (cfg.filtersRow !== false),
             filtersDebounce: Number(cfg.filtersDebounce || 250),
             filtersTimer: null,
             columnFilters: (cfg.columnFilters && typeof cfg.columnFilters === "object") ? cfg.columnFilters : {},
             showFilters: false,
             filterToggleSeq: 0,
-            // ✅ NEW: cache for select options
-            filterOptionsCache: {},   // key -> [{value,text}]
-            filterOptionsLoading: {}, // key -> true/false (اختياري)
+
+            filterOptionsCache: {},
+            filterOptionsLoading: {},
             showColumnVisibility: (cfg.showColumnVisibility === true),
             enableColumnReorder: !!cfg.enableColumnReorder,
             dragColField: null,
@@ -114,25 +111,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             ghostOffsetY: 0,
             boundGhostMove: null,
 
-
-            // تجهيز القيم الافتراضية للفلاتر لكل عمود
-            //initColumnFilters() {
-            //    const cols = Array.isArray(this.columns) ? this.columns : [];
-            //    if (!this.columnFilters || typeof this.columnFilters !== "object") this.columnFilters = {};
-
-            //    for (const c of cols) {
-            //        const f = String(c?.field || "");
-            //        if (!f) continue;
-
-            //        // إذا ما فيه قيمة موجودة، حط default
-            //        if (this.columnFilters[f] === undefined) {
-            //            const def = c?.filter?.defaultValue ?? c?.Filter?.DefaultValue ?? "";
-            //            this.columnFilters[f] = (def ?? "");
-            //        }
-            //    }
-            //},
-
-
+            // Column filter initialization
             initColumnFilters() {
                 const cols = Array.isArray(this.columns) ? this.columns : [];
                 if (!this.columnFilters || typeof this.columnFilters !== "object") this.columnFilters = {};
@@ -141,10 +120,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     const f = String(c?.field || "");
                     if (!f) continue;
 
-                    // لا تكتب فوق قيمة موجودة (خصوصًا اللي جاية من localStorage)
                     if (this.columnFilters[f] !== undefined) continue;
 
-                    // DefaultValue فقط إذا كانت قيمة حقيقية
                     const raw = (c?.filter?.defaultValue ?? c?.Filter?.DefaultValue);
 
                     let val = "";
@@ -153,41 +130,37 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     } else if (typeof raw === "string") {
                         val = raw.trim();
                     } else if (typeof raw === "number" || typeof raw === "boolean") {
-                        // مهم: لا نعتبر 0/false كفلتر افتراضي
+
                         val = "";
                     } else {
                         val = "";
                     }
 
-                    // حماية إضافية لو أحد رجّع "فلترة..." بالغلط
                     if (val === "فلترة..." || val === "فلترة…") val = "";
 
                     this.columnFilters[f] = val;
                 }
             },
 
-
+            // Column filter definitions
             getColFilterDef(col) {
                 const cf = col?.filter || col?.Filter || null;
                 return cf;
             },
 
-            //  NEW: هل العمود مسموح له فلترة؟ (افتراضي: لا)
             isColFilterEnabled(col) {
                 const def = this.getColFilterDef(col);
-                if (!def) return false; //  أهم سطر: بدون Filter = ما فيه فلتر
+                if (!def) return false;
 
                 const en = (def.enabled ?? def.Enabled);
                 return en === true || String(en).toLowerCase() === "true";
             },
-
 
             getColFilterType(col) {
                 const def = this.getColFilterDef(col);
                 const t = (def?.type || def?.Type || "").toLowerCase();
                 if (t) return t;
 
-                // استنتاج النوع من col.type إذا ما فيه Filter
                 const ct = String(col?.type || col?.Type || "").toLowerCase();
                 if (["date", "datetime"].includes(ct)) return "date";
                 if (["bool", "boolean"].includes(ct)) return "bool";
@@ -200,7 +173,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 return String(def.match || def.Match || "contains").toLowerCase();
             },
 
-
             getColFilterPlaceholder(col) {
                 const def = this.getColFilterDef(col);
                 return def?.placeholder || def?.Placeholder || "فلترة…";
@@ -211,11 +183,9 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 const type = this.getColFilterType(col);
                 if (type !== "select") return [];
 
-                // 1) لو Options جاهزة من السيرفر في cfg
                 const inline = def.options || def.Options;
                 if (Array.isArray(inline) && inline.length) return inline;
 
-                // 2) لو مصدرها server: رجّع من الكاش (لو ما انوجد = يرجع فاضي لين يحمّل)
                 const src = String(def.optionsSource || def.OptionsSource || "client").toLowerCase();
                 const key = String(def.optionsKey || def.OptionsKey || col?.field || "").trim();
 
@@ -223,7 +193,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     return this.filterOptionsCache[key] || [];
                 }
 
-                // 3) fallback: client-side unique values
                 const field = String(col?.field || "");
                 if (!field) return [];
 
@@ -240,6 +209,35 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     if (uniq.size >= 150) break;
                 }
                 return Array.from(uniq.keys()).sort().map(x => ({ value: x, text: x }));
+            },
+            renderColFilterOptions(selectEl, col) {
+                if (!selectEl) return;
+
+                const options = this.getColFilterOptions(col);
+                const field = String(col?.field || "");
+                const currentValue = String(this.columnFilters?.[field] ?? selectEl.value ?? "");
+                const signature = JSON.stringify(options.map(opt => [
+                    String(opt?.value ?? opt?.Value ?? ""),
+                    String(opt?.text ?? opt?.Text ?? opt?.value ?? opt?.Value ?? "")
+                ]));
+
+                if (selectEl.dataset.sfOptionsSignature === signature) return;
+                selectEl.dataset.sfOptionsSignature = signature;
+                selectEl.innerHTML = "";
+
+                const allOption = document.createElement("option");
+                allOption.value = "";
+                allOption.textContent = "الكل";
+                selectEl.appendChild(allOption);
+
+                options.forEach(opt => {
+                    const option = document.createElement("option");
+                    option.value = String(opt?.value ?? opt?.Value ?? "");
+                    option.textContent = String(opt?.text ?? opt?.Text ?? opt?.value ?? opt?.Value ?? "");
+                    selectEl.appendChild(option);
+                });
+
+                selectEl.value = currentValue;
             },
 
             normalizeFilterText(value) {
@@ -271,8 +269,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 ).trim();
             },
 
-
-
             async fetchFilterOptionsForCol(col) {
                 const def = this.getColFilterDef(col) || {};
                 const type = this.getColFilterType(col);
@@ -284,15 +280,13 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 const key = String(def.optionsKey || def.OptionsKey || col?.field || "").trim();
                 if (!key) return;
 
-                // ✅ كاش
                 if (this.filterOptionsCache[key]) return;
 
-                // ✅ منع تكرار التحميل
                 if (this.filterOptionsLoading[key]) return;
                 this.filterOptionsLoading[key] = true;
 
                 try {
-                    // غيّر الرابط حسب API عندك
+
                     const url = `/smart/table/filter-options?key=${encodeURIComponent(key)}&sp=${encodeURIComponent(this.spName)}`;
 
                     const res = await fetch(url, { credentials: "same-origin" });
@@ -300,7 +294,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                     this.filterOptionsCache[key] = Array.isArray(data) ? data : [];
                 } catch (e) {
-                    console.error("fetchFilterOptionsForCol failed", e);
                     this.filterOptionsCache[key] = [];
                 } finally {
                     this.filterOptionsLoading[key] = false;
@@ -313,14 +306,13 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     if (!this.isColFilterEnabled(col)) continue;
                     const def = this.getColFilterDef(col);
 
-
                     if (this.getColFilterType(col) === "select") {
                         await this.fetchFilterOptionsForCol(col);
                     }
                 }
             },
 
-
+            // Column filter actions
             onColumnFilterInput() {
                 this.syncColumnFiltersFromDom();
                 clearTimeout(this.filtersTimer);
@@ -328,10 +320,10 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     this.page = 1;
 
                     if (this.serverPaging) {
-                        // سيرفر سايد: load() (بعد override تحت)
+
                         this.load();
                     } else {
-                        // كلاينت سايد: applyFiltersAndSort() (بعد override تحت)
+
                         this.applyFiltersAndSort();
                     }
 
@@ -428,11 +420,12 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 });
             },
 
+            // Column filter matching
             matchText(hay, needle) {
                 const h = (hay == null) ? "" : String(hay).toLowerCase();
                 const n = (needle == null) ? "" : String(needle).toLowerCase().trim();
                 if (!n) return true;
-                // دعم tokens AND (نفس أسلوب البحث العام)
+
                 const tokens = n.split(/\s+/).filter(Boolean);
                 return tokens.every(t => h.includes(t));
             },
@@ -443,7 +436,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 const n = Number(val);
                 if (Number.isNaN(n)) return false;
 
-                // دعم: >10, >=10, <10, <=10, =10, 10
                 const m = s.match(/^(>=|<=|>|<|=)?\s*(-?\d+(\.\d+)?)$/);
                 if (!m) return false;
                 const op = m[1] || "=";
@@ -464,15 +456,11 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 const d = new Date(val);
                 if (Number.isNaN(d.getTime())) return false;
 
-                // دعم:
-                // 1) YYYY-MM-DD
-                // 2) YYYY-MM-DD..YYYY-MM-DD (range)
-                // 3) >=YYYY-MM-DD, <=YYYY-MM-DD
                 const range = s.split("..").map(x => x.trim());
                 const toDay = (x) => {
                     const z = new Date(x);
                     if (Number.isNaN(z.getTime())) return null;
-                    // نطبع اليوم فقط
+
                     return new Date(z.getFullYear(), z.getMonth(), z.getDate());
                 };
 
@@ -518,7 +506,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     const field = String(col?.field || "");
                     if (!field) continue;
 
-                    //  لا تطبق فلتر إلا على الأعمدة اللي عندها Filter و Enabled=true
                     if (!this.isColFilterEnabled(col)) continue;
 
                     const fval = this.columnFilters?.[field];
@@ -539,17 +526,15 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         const cellNorm = this.normalizeFilterText(cellValue);
                         const filterNorm = this.normalizeFilterText(filterValue);
 
-                        // أولاً: طابق القيمة الخام مباشرة
                         if (cellNorm === filterNorm) continue;
 
-                        // ثانياً: لو قيمة الـ option مختلفة عن النص الظاهر، طابق النص المعروض
                         const optionText = this.getColFilterOptionText(col, fval);
                         const optionTextNorm = this.normalizeFilterText(optionText);
                         if (optionTextNorm && cellNorm === optionTextNorm) continue;
 
                         return false;
                     } else {
-                        // text
+
                         const m = this.getColFilterMatch(col);
                         if (m === "eq") {
                             const a = String(cell ?? "").trim();
@@ -560,12 +545,9 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         }
                     }
                 }
-                // إذا عدّت كل الفلاتر بدون رفض = الصف ناجح
+
                 return true;
             },
-
-
-
 
             hasActiveColumnFilters() {
                 this.syncColumnFiltersFromDom();
@@ -579,160 +561,155 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 return false;
             },
 
-
+            // Select2 filter controls
             initFilterSelect2() {
-                // لازم jQuery + select2 تكون محملة
+
                 if (!window.jQuery || !jQuery.fn || !jQuery.fn.select2) return;
 
-                /*this.$nextTick(() => {*/
                 this.$nextTick(() => {
                     requestAnimationFrame(() => {
                         requestAnimationFrame(() => {
 
-                    const root = this.$el; // جذر الكومبوننت
-                    const selects = root.querySelectorAll("select.sf-filter-select2");
+                            const root = this.$el;
+                            const selects = root.querySelectorAll("select.sf-filter-select2");
 
-                    const measureFilterDropdownWidth = (selectEl, placeholderText = "الكل") => {
-                        const rect = selectEl.getBoundingClientRect();
-                        const triggerWidth = Math.ceil(rect.width || 0);
-                        const viewportWidth = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+                            const measureFilterDropdownWidth = (selectEl, placeholderText = "الكل") => {
+                                const rect = selectEl.getBoundingClientRect();
+                                const triggerWidth = Math.ceil(rect.width || 0);
+                                const viewportWidth = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
 
-                        const texts = Array.from(selectEl.options || [])
-                            .map((opt) => (opt?.textContent || "").trim())
-                            .filter(Boolean);
+                                const texts = Array.from(selectEl.options || [])
+                                    .map((opt) => (opt?.textContent || "").trim())
+                                    .filter(Boolean);
 
-                        if (placeholderText) {
-                            texts.push(String(placeholderText).trim());
-                        }
+                                if (placeholderText) {
+                                    texts.push(String(placeholderText).trim());
+                                }
 
-                        const probe = document.createElement("span");
-                        probe.style.position = "fixed";
-                        probe.style.top = "-9999px";
-                        probe.style.left = "-9999px";
-                        probe.style.visibility = "hidden";
-                        probe.style.whiteSpace = "nowrap";
-                        probe.style.fontFamily = '"Tajawal", "Inter", "Segoe UI", sans-serif';
-                        probe.style.fontSize = "13.5px";
-                        probe.style.fontWeight = "500";
-                        probe.style.lineHeight = "1";
-                        document.body.appendChild(probe);
+                                const probe = document.createElement("span");
+                                probe.style.position = "fixed";
+                                probe.style.top = "-9999px";
+                                probe.style.left = "-9999px";
+                                probe.style.visibility = "hidden";
+                                probe.style.whiteSpace = "nowrap";
+                                probe.style.fontFamily = '"Tajawal", "Inter", "Segoe UI", sans-serif';
+                                probe.style.fontSize = "13.5px";
+                                probe.style.fontWeight = "500";
+                                probe.style.lineHeight = "1";
+                                document.body.appendChild(probe);
 
-                        let widest = triggerWidth;
-                        texts.forEach((text) => {
-                            probe.textContent = text;
-                            widest = Math.max(widest, Math.ceil(probe.getBoundingClientRect().width));
-                        });
+                                let widest = triggerWidth;
+                                texts.forEach((text) => {
+                                    probe.textContent = text;
+                                    widest = Math.max(widest, Math.ceil(probe.getBoundingClientRect().width));
+                                });
 
-                        probe.remove();
+                                probe.remove();
 
-                        const paddedWidth = widest + 84;
-                        const maxWidth = Math.max(triggerWidth, Math.min(560, viewportWidth - 24));
-                        return Math.max(triggerWidth, Math.min(paddedWidth, maxWidth));
-                    };
+                                const paddedWidth = widest + 84;
+                                const maxWidth = Math.max(triggerWidth, Math.min(560, viewportWidth - 24));
+                                return Math.max(triggerWidth, Math.min(paddedWidth, maxWidth));
+                            };
 
-                    const positionFilterDropdown = (selectEl, preferredWidth) => {
-                        const $open = jQuery(".select2-container--open").filter(function () {
-                            return jQuery(this).find(".select2-dropdown.sf-filter-dropdown").length > 0;
-                        }).last();
+                            const positionFilterDropdown = (selectEl, preferredWidth) => {
+                                const $open = jQuery(".select2-container--open").filter(function () {
+                                    return jQuery(this).find(".select2-dropdown.sf-filter-dropdown").length > 0;
+                                }).last();
 
-                        if (!$open.length) return;
+                                if (!$open.length) return;
 
-                        const rect = selectEl.getBoundingClientRect();
-                        const viewportWidth = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
-                        const scrollX = window.pageXOffset || document.documentElement.scrollLeft || 0;
-                        const minViewportGap = 12;
-                        const width = Math.max(Math.ceil(rect.width || 0), preferredWidth || 0);
+                                const rect = selectEl.getBoundingClientRect();
+                                const viewportWidth = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0);
+                                const scrollX = window.pageXOffset || document.documentElement.scrollLeft || 0;
+                                const minViewportGap = 12;
+                                const width = Math.max(Math.ceil(rect.width || 0), preferredWidth || 0);
 
-                        let left = Math.round(rect.right + scrollX - width);
-                        const minLeft = scrollX + minViewportGap;
-                        const maxLeft = scrollX + viewportWidth - width - minViewportGap;
-                        left = Math.max(minLeft, Math.min(left, maxLeft));
+                                let left = Math.round(rect.right + scrollX - width);
+                                const minLeft = scrollX + minViewportGap;
+                                const maxLeft = scrollX + viewportWidth - width - minViewportGap;
+                                left = Math.max(minLeft, Math.min(left, maxLeft));
 
-                        $open.addClass("sf-filter-dropdown-host");
-                        $open.css({
-                            minWidth: `${Math.ceil(rect.width || 0)}px`,
-                            width: `${width}px`,
-                            maxWidth: `${Math.max(width, viewportWidth - (minViewportGap * 2))}px`,
-                            left: `${left}px`,
-                            right: "auto"
-                        });
+                                $open.addClass("sf-filter-dropdown-host");
+                                $open.css({
+                                    minWidth: `${Math.ceil(rect.width || 0)}px`,
+                                    width: `${width}px`,
+                                    maxWidth: `${Math.max(width, viewportWidth - (minViewportGap * 2))}px`,
+                                    left: `${left}px`,
+                                    right: "auto"
+                                });
 
-                        $open.find(".select2-dropdown.sf-filter-dropdown").css({
-                            width: "100%",
-                            minWidth: `${Math.ceil(rect.width || 0)}px`
-                        });
-                    };
+                                $open.find(".select2-dropdown.sf-filter-dropdown").css({
+                                    width: "100%",
+                                    minWidth: `${Math.ceil(rect.width || 0)}px`
+                                });
+                            };
 
-                    const stripSelect2Title = ($select) => {
-                        if (!$select || !$select.length) return;
-                        const $container = $select.next(".select2");
-                        $container.find(".select2-selection__rendered").removeAttr("title");
-                        $container.find(".select2-selection").removeAttr("title");
-                    };
+                            const stripSelect2Title = ($select) => {
+                                if (!$select || !$select.length) return;
+                                const $container = $select.next(".select2");
+                                $container.find(".select2-selection__rendered").removeAttr("title");
+                                $container.find(".select2-selection").removeAttr("title");
+                            };
 
-                    selects.forEach((el) => {
-                        const $el = jQuery(el);
+                            selects.forEach((el) => {
+                                const $el = jQuery(el);
 
-                        // لو متهيء من قبل: دمّره
-                        if ($el.data("select2")) {
-                            $el.off(".sfFilter");
-                            $el.select2("destroy");
-                        }
+                                if ($el.data("select2")) {
+                                    $el.off(".sfFilter");
+                                    $el.select2("destroy");
+                                }
 
-                        const minResults = el.getAttribute("data-s2-min-results");
-                        const ph =
+                                const minResults = el.getAttribute("data-s2-min-results");
+                                const ph =
                             el.getAttribute("data-s2-placeholder") ||
                             $el.find('option[value=""]').first().text() ||
                             "الكل";
 
-                        // dropdownParent مهم جداً عشان ما ينقص داخل sticky/overflow
-                        const dropdownParent = jQuery("body");
+                                const dropdownParent = jQuery("body");
 
-                        $el.select2({
-                            width: "100%",
-                            dir: "rtl",
-                            dropdownParent,
-                            containerCssClass: "sf-form",
-                            dropdownCssClass: "sf-form sf-filter-dropdown",
-                            dropdownAutoWidth: true,
-                            placeholder: ph,
-                            allowClear: false,
-                            minimumResultsForSearch:
+                                $el.select2({
+                                    width: "100%",
+                                    dir: "rtl",
+                                    dropdownParent,
+                                    containerCssClass: "sf-form",
+                                    dropdownCssClass: "sf-form sf-filter-dropdown",
+                                    dropdownAutoWidth: true,
+                                    placeholder: ph,
+                                    allowClear: false,
+                                    minimumResultsForSearch:
                                 (minResults === undefined || minResults === null || minResults === "")
                                     ? 0
                                     : Number(minResults)
-                        });
+                                });
 
-                        stripSelect2Title($el);
+                                stripSelect2Title($el);
 
-                        // sync value من Alpine -> select2
-                        const field = el.getAttribute("data-field");
-                        const v = this.columnFilters?.[field] ?? "";
-                        $el.val(v).trigger("change.select2");
-                        stripSelect2Title($el);
+                                const field = el.getAttribute("data-field");
+                                const v = this.columnFilters?.[field] ?? "";
+                                $el.val(v).trigger("change.select2");
+                                stripSelect2Title($el);
 
-                        $el.on("select2:open.sfFilter", () => {
-                            const preferredWidth = measureFilterDropdownWidth(el, ph);
-                            stripSelect2Title($el);
-                            requestAnimationFrame(() => {
-                                positionFilterDropdown(el, preferredWidth);
+                                $el.on("select2:open.sfFilter", () => {
+                                    const preferredWidth = measureFilterDropdownWidth(el, ph);
+                                    stripSelect2Title($el);
+                                    requestAnimationFrame(() => {
+                                        positionFilterDropdown(el, preferredWidth);
+                                    });
+                                    setTimeout(() => {
+                                        positionFilterDropdown(el, preferredWidth);
+                                    }, 0);
+                                });
+
+                                const syncFilterFromSelect = () => {
+                                    const f = el.getAttribute("data-field");
+                                    stripSelect2Title($el);
+                                    this.setColumnFilterValue(f, $el.val());
+                                    this.onColumnFilterInput();
+                                };
+
+                                $el.on("change.sfFilter", syncFilterFromSelect);
+                                $el.on("select2:select.sfFilter select2:clear.sfFilter select2:unselect.sfFilter", syncFilterFromSelect);
                             });
-                            setTimeout(() => {
-                                positionFilterDropdown(el, preferredWidth);
-                            }, 0);
-                        });
-
-                        const syncFilterFromSelect = () => {
-                            const f = el.getAttribute("data-field");
-                            stripSelect2Title($el);
-                            this.setColumnFilterValue(f, $el.val());
-                            this.onColumnFilterInput();
-                        };
-
-                        // on change/select: حدّث Alpine ثم فلترة
-                        $el.on("change.sfFilter", syncFilterFromSelect);
-                        $el.on("select2:select.sfFilter select2:clear.sfFilter select2:unselect.sfFilter", syncFilterFromSelect);
-                    });
                         });
 
                     });
@@ -753,23 +730,10 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 });
             },
 
-
-            //toggleFilters() {
-            //    this.showFilters = !this.showFilters;
-
-            //    if (this.showFilters) {
-            //        this.preloadSelectFilters();
-            //        this.initFilterSelect2();     //  تهيئة select2
-            //    } else {
-            //        this.destroyFilterSelect2();  //  اختياري
-            //    }
-            //},
-
             async toggleFilters() {
                 const nextState = !this.showFilters;
                 this.showFilters = nextState;
 
-                // token يمنع سباق الضغطات السريعة (open/close/open)
                 const seq = ++this.filterToggleSeq;
 
                 if (!nextState) {
@@ -778,75 +742,67 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 }
 
                 try {
-                    // 1) حمّل الخيارات أولًا (لو Server)
+
                     await this.preloadSelectFilters();
 
-                    // لو تغيرت الحالة أثناء الانتظار، لا تكمل
                     if (seq !== this.filterToggleSeq || !this.showFilters) return;
 
-                    // 2) انتظر Alpine يرسم الـ DOM (x-for للـ options)
                     await this.$nextTick();
 
                     if (seq !== this.filterToggleSeq || !this.showFilters) return;
 
-                    // 3) أعد تهيئة Select2 بعد ما تظهر الفلاتر فعليًا
                     this.destroyFilterSelect2();
                     this.initFilterSelect2();
                 } catch (e) {
-                    // لا نكسر زر الفلترة عند أي خطأ تحميل/تهيئة
-                    console.error("toggleFilters failed", e);
+
                     if (seq === this.filterToggleSeq) {
                         this.destroyFilterSelect2();
                     }
                 }
             },
 
-
-
-
             clearFiltersUI() {
-                this.clearAllColumnFilters(); 
+                this.clearAllColumnFilters();
             },
 
-
-            // Pagination
+            // Table options
             pageSize: cfg.pageSize || 10,
             pageSizes: cfg.pageSizes || [10, 25, 50, 100],
             enablePagination: cfg.enablePagination !== false,
             showPageSizeSelector: cfg.showPageSizeSelector === true,
-            // NEW: Server paging (fast mode) - off by default
+
             serverPaging: !!cfg.serverPaging,
-            // Search
+
             searchable: !!cfg.searchable,
             searchPlaceholder: cfg.searchPlaceholder || "بحث…",
             quickSearchFields: cfg.quickSearchFields || [],
             searchDelay: 300,
             searchTimer: null,
-            // Display Options
+
             showHeader: cfg.showHeader !== false,
             showFooter: cfg.showFooter !== false,
             allowExport: !!cfg.allowExport,
             autoRefresh: !!(cfg.autoRefresh || cfg.autoRefreshOnSubmit),
             enableCellCopy: !!cfg.enableCellCopy,
-            // Structure
+
             columns: Array.isArray(cfg.columns) ? cfg.columns : [],
             actions: Array.isArray(cfg.actions) ? cfg.actions : [],
+            _columnsVersion: 0,
+            _visibleColumnsCache: null,
+            _visibleColumnsCacheVersion: -1,
+            _toolbarActionCache: null,
+            _toolbarButtonActionCache: null,
+            _toolbarMenuActionCache: null,
+            _rowEndActionCache: null,
+            _rowEndButtonActionCache: null,
+            _rowEndMenuActionCache: null,
+            _styleRuleIndex: null,
+            _styleRuleSource: null,
+            _cellPillCache: null,
+            _searchTextCache: null,
+            _savePreferencesTimer: null,
 
-
-
-            // ===========================
-            // Column Visibility (Alpine)
-            // ===========================
-            
-
-            // ===========================
-            // Column Visibility (Alpine)
-            // ===========================
-
-            // ===========================
-            // Column Visibility (Alpine)
-            // ===========================
-
+            // Column visibility state
             colVisOpen: false,
             colVisSearch: "",
             colVisMap: {},
@@ -859,6 +815,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 maxHeight: 420
             },
 
+            // Column visibility helpers
             colVisStorageKey() {
                 const base =
                     (cfg && (cfg.storageKey || cfg.StorageKey)) ||
@@ -887,6 +844,23 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 const v = this.colVisMap?.[col.field];
                 return (typeof v === "boolean") ? v : !!def;
             },
+            invalidateColumnCache() {
+                this._columnsVersion = (this._columnsVersion || 0) + 1;
+                this._visibleColumnsCache = null;
+                this._visibleColumnsCacheVersion = -1;
+            },
+            invalidateActionCache() {
+                this._toolbarActionCache = null;
+                this._toolbarButtonActionCache = null;
+                this._toolbarMenuActionCache = null;
+                this._rowEndActionCache = null;
+                this._rowEndButtonActionCache = null;
+                this._rowEndMenuActionCache = null;
+            },
+            invalidateRowCaches() {
+                this._searchTextCache = new WeakMap();
+                this._cellPillCache = new WeakMap();
+            },
 
             colVisToggle(col) {
                 if (this.colVisIsLocked(col)) return;
@@ -895,6 +869,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 const next = { ...(this.colVisMap || {}) };
                 next[col.field] = !now;
                 this.colVisMap = next;
+                this.invalidateColumnCache();
             },
 
             colVisShowAll() {
@@ -906,10 +881,12 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 });
 
                 this.colVisMap = next;
+                this.invalidateColumnCache();
             },
 
             colVisReset() {
                 this.colVisMap = {};
+                this.invalidateColumnCache();
             },
 
             colVisApply() {
@@ -1087,21 +1064,17 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                 top = Math.max(MARGIN, Math.min(top, viewportH - measuredHeight - MARGIN));
 
-                panel.style.visibility = "";
-                panel.style.display = "";
-
                 this.colVisPlacement = {
                     top,
                     left,
                     width: panelWidth,
                     maxHeight
                 };
+
+                panel.style.cssText = this.colVisPanelStyle();
             },
 
-            
-
-
-            // ===== Guards (NEW) =====
+            // Row selection helpers
             getSelectedRows() {
                 const ids = new Set(Array.from(this.selectedKeys || []).map(String));
                 const hay =
@@ -1168,25 +1141,25 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                 return { allowed: false, message: "غير مسموح" };
             },
-            // Client-side mode support (new)
+
+            // Data configuration
             clientSideMode: !!cfg.clientSideMode,
             headerColor: cfg.headerColor || "",
             initialRows: Array.isArray(cfg.rows) ? cfg.rows : [],
-            // Selection
+
             selectable: !!cfg.selectable,
             rowIdField: cfg.rowIdField || "Id",
-            singleSelect: !!cfg.singleSelect, // NEW: read from config
+            singleSelect: !!cfg.singleSelect,
+            // Cell utilities
             stripHtml(html) {
                 const div = document.createElement('div');
                 div.innerHTML = html ?? '';
                 return (div.textContent || div.innerText || '').trim();
             },
 
-            // ===== Cell Copy Tooltip (fixed over the clicked cell) =====
             showCellCopied(cellEl, msg = "تم النسخ") {
                 if (!cellEl) return;
 
-                // add styles once
                 if (!window.__sfCellToastStyleAdded) {
                     window.__sfCellToastStyleAdded = true;
                     const st = document.createElement("style");
@@ -1210,7 +1183,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     document.head.appendChild(st);
                 }
 
-                // remove any old tooltip
                 document.querySelectorAll(".sf-cell-copied").forEach(x => x.remove());
 
                 const rect = cellEl.getBoundingClientRect();
@@ -1220,14 +1192,11 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 tip.textContent = msg;
                 document.body.appendChild(tip);
 
-                // center tooltip over cell
                 const tipRect = tip.getBoundingClientRect();
                 const left = rect.left + (rect.width / 2) - (tipRect.width / 2);
                 const gap = 2;
                 const top = rect.top - tipRect.height - gap;
 
-
-                // keep inside viewport
                 const safeLeft = Math.max(8, Math.min(left, window.innerWidth - tipRect.width - 8));
                 const safeTop = Math.max(8, top);
 
@@ -1237,7 +1206,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 setTimeout(() => tip.remove(), 900);
             },
 
-            // ===== Modern Copy (NO execCommand) =====
             async copyCell(row, col, e) {
                 if (!this.enableCellCopy) return;
 
@@ -1248,14 +1216,12 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     const text = this.stripHtml(html);
                     if (!text) return;
 
-                    // 1) Secure context + Clipboard API
                     if (navigator.clipboard?.writeText && window.isSecureContext) {
                         await navigator.clipboard.writeText(text);
                         this.showCellCopied(cellEl, "تم النسخ");
                         return;
                     }
 
-                    // 2) Fallback: ClipboardItem (قد يعمل في بعض المتصفحات حتى لو غير secure)
                     if (navigator.clipboard?.write && typeof ClipboardItem !== "undefined") {
                         const blob = new Blob([text], { type: "text/plain" });
                         const item = new ClipboardItem({ "text/plain": blob });
@@ -1264,18 +1230,16 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         return;
                     }
 
-                    // 3) No supported method
                     this.showCellCopied(cellEl, "المتصفح يمنع النسخ");
                 } catch (err) {
-                    console.error("Copy cell failed:", err);
                     this.showCellCopied(cellEl, "فشل النسخ");
                 }
             },
 
-            // Grouping & Storage
+            // Toolbar and row actions
             groupBy: cfg.groupBy || null,
             storageKey: cfg.storageKey || null,
-            // Toolbar
+
             toolbar: cfg.toolbar || {},
             normalizePlacement(value) {
                 const p = String(value ?? "Button").trim().toLowerCase();
@@ -1284,7 +1248,21 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 if (p === "rowendmenu") return "rowendmenu";
                 return "button";
             },
+            tableHeaderStyle() {
+                return this.headerColor ? "background-color:" + this.headerColor + ";" : "";
+            },
+            columnHeaderStyle(col) {
+                return (col?.width ? "width:" + col.width + ";" : "") + this.tableHeaderStyle();
+            },
+            columnWidthStyle(col) {
+                return col?.width ? "width:" + col.width + ";" : "";
+            },
+            rowActionsHeaderStyle() {
+                return this.headerColor ? "background-color:" + this.headerColor + ";color:#fff;" : "background:#0a7257;color:#fff;";
+            },
             toolbarActionEntries() {
+                if (this._toolbarActionCache) return this._toolbarActionCache;
+
                 const tb = this.toolbar || {};
                 const items = [
                     { action: tb.add, show: tb.showAdd, enable: tb.enableAdd ?? true },
@@ -1305,9 +1283,27 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 const custom = Array.isArray(tb.customActions) ? tb.customActions : [];
                 custom.forEach(a => items.push({ action: a, show: true, enable: true }));
 
-                return items;
+                this._toolbarActionCache = items;
+                return this._toolbarActionCache;
+            },
+            toolbarButtonActions() {
+                if (this._toolbarButtonActionCache) return this._toolbarButtonActionCache;
+                this._toolbarButtonActionCache = this.toolbarActionEntries()
+                    .filter(x => this.normalizePlacement(x.action.placement ?? x.action.Placement) === "button");
+                return this._toolbarButtonActionCache;
+            },
+            toolbarMenuActions() {
+                if (this._toolbarMenuActionCache) return this._toolbarMenuActionCache;
+                this._toolbarMenuActionCache = this.toolbarActionEntries()
+                    .filter(x => this.normalizePlacement(x.action.placement ?? x.action.Placement) === "actionsmenu");
+                return this._toolbarMenuActionCache;
+            },
+            hasToolbarMenuActions() {
+                return this.toolbarMenuActions().length > 0;
             },
             rowEndActionEntries() {
+                if (this._rowEndActionCache) return this._rowEndActionCache;
+
                 const toolbarItems = this.toolbarActionEntries();
                 const inlineItems = (Array.isArray(this.actions) ? this.actions : []).map(a => ({
                     action: a,
@@ -1315,19 +1311,54 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     enable: true
                 }));
 
-                return [...toolbarItems, ...inlineItems]
+                this._rowEndActionCache = [...toolbarItems, ...inlineItems]
                     .filter(x => x.action && x.show !== false);
+                return this._rowEndActionCache;
             },
             rowEndActions() {
-                return this.rowEndActionEntries()
+                if (this._rowEndButtonActionCache) return this._rowEndButtonActionCache;
+                this._rowEndButtonActionCache = this.rowEndActionEntries()
                     .filter(x => this.normalizePlacement(x.action.placement ?? x.action.Placement) === "rowend");
+                return this._rowEndButtonActionCache;
             },
             rowEndMenuActions() {
-                return this.rowEndActionEntries()
+                if (this._rowEndMenuActionCache) return this._rowEndMenuActionCache;
+                this._rowEndMenuActionCache = this.rowEndActionEntries()
                     .filter(x => this.normalizePlacement(x.action.placement ?? x.action.Placement) === "rowendmenu");
+                return this._rowEndMenuActionCache;
             },
             hasRowEndActions() {
                 return this.rowEndActions().length > 0 || this.rowEndMenuActions().length > 0;
+            },
+            menuPanelState(prefix = "menu-", estimatedHeight = 220) {
+                return {
+                    open: false,
+                    menuId: prefix + Math.random().toString(36).slice(2),
+                    panelStyle: "",
+                    placePanel() {
+                        if (!this.$refs?.btn) return;
+
+                        const r = this.$refs.btn.getBoundingClientRect();
+                        const panelW = 220;
+                        const gap = 6;
+                        let left = r.right - panelW;
+
+                        if (left < 8) left = 8;
+                        if (left + panelW > window.innerWidth - 8) {
+                            left = window.innerWidth - panelW - 8;
+                        }
+
+                        let top = r.bottom + gap;
+                        if (top + estimatedHeight > window.innerHeight - 8) {
+                            top = Math.max(8, r.top - estimatedHeight - gap);
+                        }
+
+                        this.panelStyle = `position:fixed; top:${top}px; left:${left}px; width:${panelW}px; z-index:99999;`;
+                        if (this.$refs?.panel) {
+                            this.$refs.panel.style.cssText = this.panelStyle;
+                        }
+                    }
+                };
             },
             activeMenuId: null,
             isMenuOpen(menuId) {
@@ -1364,7 +1395,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                 return this.doAction(action, row || null);
             },
-            // ===== Internal State =====
+
+            // Runtime state
             q: "",
             page: 1,
             pages: 0,
@@ -1375,153 +1407,236 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             sort: { field: null, dir: "asc" },
             loading: false,
             error: null,
-            activeIndex: -1,  //  Keyboard row navigation
-            // Selection State
+            activeIndex: -1,
+
             selectedKeys: new Set(),
             selectAll: false,
             modal: {
                 open: false,
                 title: "",
-                message: "",   // جديد
-                messageClass: "",   // NEW
-                messageIcon: "",    // NEW
-                messageIsHtml: false, // NEW
+                message: "",
+                messageClass: "",
+                messageIcon: "",
+                messageIsHtml: false,
                 html: "",
                 action: null,
                 loading: false,
                 error: null
             },
-            //  Step 3: style rules from server
+
+            // Style rules
             styleRules: Array.isArray(cfg.styleRules) ? cfg.styleRules : [],
+            ruleValue(rule, key) {
+                if (!rule || !key) return undefined;
+                return rule[key] ?? rule[key[0].toUpperCase() + key.slice(1)];
+            },
+            ruleTarget(rule) {
+                return String(this.ruleValue(rule, "target") || "cell").toLowerCase();
+            },
+            ruleField(rule) {
+                return this.ruleValue(rule, "field");
+            },
+            getStyleRuleIndex() {
+                if (this._styleRuleIndex && this._styleRuleSource === this.styleRules) return this._styleRuleIndex;
 
-            applyStyleRules(row, col, target /* 'row' | 'cell' | 'column' */) {
-                const normTarget = String(target || 'cell').toLowerCase();
-
-                const rules = (this.styleRules || [])
-                    .filter(r => {
-                        const rt = String(r.target || 'cell').toLowerCase();
-
-                        //  لو target=cell شغّل معه قواعد column أيضًا
-                        if (normTarget === 'cell') return rt === 'cell' || rt === 'column';
-
-                        return rt === normTarget;
-                    })
-                    .filter(r => {
-                        const rt = String(r.target || 'cell').toLowerCase();
-                        // cell/column لازم Field يطابق العمود الحالي
-                        if ((rt === "cell" || rt === "column") && r.field) return r.field === col?.field;
-                        // row: لو فيه Field نطبّق حسبه، ولو ما فيه Field نطبّق دائمًا
-                        if (rt === "row") return true;
-                        return false;
-                    })
-                    .sort((a, b) => (a.priority || 0) - (b.priority || 0));
-                const isMatch = (r) => {
-                    const op = String(r.op || "eq").toLowerCase();
-                    const val = r.value;
-                    let left;
-                    const rt = String(r.target || 'cell').toLowerCase();
-                    if (rt === "row") {
-                        // rule صف عام بدون field = يطبق دائمًا
-                        if (!r.field) return true;
-                        left = row?.[r.field];
-                    } else {
-                        left = row?.[col?.field];
-                    }
-                    const l = left ?? "";
-                    const v = val ?? "";
-                    const ln = Number(l);
-                    const vn = Number(v);
-                    const bothNum = !Number.isNaN(ln) && !Number.isNaN(vn);
-                    switch (op) {
-                        case "eq": return String(l) === String(v);
-                        case "neq": return String(l) !== String(v);
-                        case "gt": return bothNum ? ln > vn : String(l) > String(v);
-                        case "gte": return bothNum ? ln >= vn : String(l) >= String(v);
-                        case "lt": return bothNum ? ln < vn : String(l) < String(v);
-                        case "lte": return bothNum ? ln <= vn : String(l) <= String(v);
-                        case "contains": return String(l).includes(String(v));
-                        case "startswith": return String(l).startsWith(String(v));
-                        case "endswith": return String(l).endsWith(String(v));
-                        case "in":
-                            if (Array.isArray(val)) return val.map(String).includes(String(l));
-                            return String(v).split(",").map(s => s.trim()).includes(String(l));
-                        default:
-                            return false;
-                    }
+                const index = {
+                    rowRules: [],
+                    cellRulesByField: new Map(),
+                    columnRulesByField: new Map(),
+                    pillRulesByField: new Map()
                 };
+
+                const addToMap = (map, field, rule) => {
+                    const key = String(field || "");
+                    if (!key) return;
+                    if (!map.has(key)) map.set(key, []);
+                    map.get(key).push(rule);
+                };
+
+                for (const rule of (this.styleRules || [])) {
+                    const target = this.ruleTarget(rule);
+                    const field = this.ruleField(rule);
+
+                    if (target === "row") {
+                        index.rowRules.push(rule);
+                    } else if (target === "column") {
+                        addToMap(index.columnRulesByField, field, rule);
+                    } else {
+                        addToMap(index.cellRulesByField, field, rule);
+                    }
+
+                    const pillEnabled = this.ruleValue(rule, "pillEnabled");
+                    if (pillEnabled === true || String(pillEnabled).toLowerCase() === "true") {
+                        addToMap(index.pillRulesByField, this.ruleValue(rule, "pillField") || field, rule);
+                    }
+                }
+
+                const sortRules = (items) => items.sort((a, b) => (this.ruleValue(a, "priority") || 0) - (this.ruleValue(b, "priority") || 0));
+                sortRules(index.rowRules);
+                index.cellRulesByField.forEach(sortRules);
+                index.columnRulesByField.forEach(sortRules);
+                index.pillRulesByField.forEach(sortRules);
+
+                this._styleRuleSource = this.styleRules;
+                this._styleRuleIndex = index;
+                return index;
+            },
+            ruleMatches(rule, row, col) {
+                const op = String(this.ruleValue(rule, "op") || "eq").toLowerCase();
+                const val = this.ruleValue(rule, "value");
+                const target = this.ruleTarget(rule);
+                const field = this.ruleField(rule);
+                const left = target === "row"
+                    ? (field ? row?.[field] : "")
+                    : row?.[col?.field];
+
+                if (target === "row" && !field) return true;
+
+                const l = left ?? "";
+                const v = val ?? "";
+                const ln = Number(l);
+                const vn = Number(v);
+                const bothNum = !Number.isNaN(ln) && !Number.isNaN(vn);
+
+                switch (op) {
+                    case "eq": return String(l) === String(v);
+                    case "neq": return String(l) !== String(v);
+                    case "gt": return bothNum ? ln > vn : String(l) > String(v);
+                    case "gte": return bothNum ? ln >= vn : String(l) >= String(v);
+                    case "lt": return bothNum ? ln < vn : String(l) < String(v);
+                    case "lte": return bothNum ? ln <= vn : String(l) <= String(v);
+                    case "contains": return String(l).includes(String(v));
+                    case "startswith": return String(l).startsWith(String(v));
+                    case "endswith": return String(l).endsWith(String(v));
+                    case "in":
+                        if (Array.isArray(val)) return val.map(String).includes(String(l));
+                        return String(v).split(",").map(s => s.trim()).includes(String(l));
+                    default:
+                        return false;
+                }
+            },
+            pillRuleMatches(rule, row) {
+                const op = String(this.ruleValue(rule, "op") || "eq").toLowerCase();
+                const val = this.ruleValue(rule, "value") ?? "";
+                const field = this.ruleField(rule);
+                const left = field ? (row?.[field] ?? "") : "";
+                const ln = Number(left);
+                const vn = Number(val);
+                const bothNum = !Number.isNaN(ln) && !Number.isNaN(vn);
+
+                switch (op) {
+                    case "eq": return String(left) === String(val);
+                    case "neq": return String(left) !== String(val);
+                    case "gt": return bothNum ? ln > vn : String(left) > String(val);
+                    case "gte": return bothNum ? ln >= vn : String(left) >= String(val);
+                    case "lt": return bothNum ? ln < vn : String(left) < String(val);
+                    case "lte": return bothNum ? ln <= vn : String(left) <= String(val);
+                    case "contains": return String(left).includes(String(val));
+                    case "startswith": return String(left).startsWith(String(val));
+                    case "endswith": return String(left).endsWith(String(val));
+                    case "in":
+                        if (Array.isArray(this.ruleValue(rule, "value"))) {
+                            return this.ruleValue(rule, "value").map(String).includes(String(left));
+                        }
+                        return String(val).split(",").map(s => s.trim()).includes(String(left));
+                    default:
+                        return false;
+                }
+            },
+
+            applyStyleRules(row, col, target  ) {
+                const normTarget = String(target || 'cell').toLowerCase();
+                const field = String(col?.field || "");
+                const index = this.getStyleRuleIndex();
+                const rules = normTarget === "row"
+                    ? index.rowRules
+                    : [
+                        ...(index.cellRulesByField.get(field) || []),
+                        ...(index.columnRulesByField.get(field) || [])
+                    ];
 
                 let classes = [];
                 for (const r of rules) {
-                    if (r && r.cssClass && isMatch(r)) {
-                        classes.push(r.cssClass);
-                        if (r.stopOnMatch) break;
+                    const cssClass = this.ruleValue(r, "cssClass");
+                    if (r && cssClass && this.ruleMatches(r, row, col)) {
+                        classes.push(cssClass);
+                        if (this.ruleValue(r, "stopOnMatch")) break;
                     }
                 }
                 return classes.join(" ");
             },
 
-
-
             getPillForCell(row, col) {
-                const pick = (r, k) => r?.[k] ?? r?.[k[0].toUpperCase() + k.slice(1)];
-
-                const rules = (this.styleRules || [])
-                    .filter(r => {
-                        const en = pick(r, "pillEnabled");
-                        return en === true || String(en).toLowerCase() === "true";
-                    })
-                    .sort((a, b) => (pick(a, "priority") || 0) - (pick(b, "priority") || 0));
-
-                const isMatch = (r) => {
-                    const op = String(pick(r, "op") || "eq").toLowerCase();
-                    const v = pick(r, "value") ?? "";
-                    const field = pick(r, "field");
-                    const l = field ? (row?.[field] ?? "") : "";
-
-                    const ln = Number(l), vn = Number(v);
-                    const bothNum = !Number.isNaN(ln) && !Number.isNaN(vn);
-
-                    switch (op) {
-                        case "eq": return String(l) === String(v);
-                        case "neq": return String(l) !== String(v);
-                        case "gt": return bothNum ? ln > vn : String(l) > String(v);
-                        case "gte": return bothNum ? ln >= vn : String(l) >= String(v);
-                        case "lt": return bothNum ? ln < vn : String(l) < String(v);
-                        case "lte": return bothNum ? ln <= vn : String(l) <= String(v);
-                        case "contains": return String(l).includes(String(v));
-                        case "startswith": return String(l).startsWith(String(v));
-                        case "endswith": return String(l).endsWith(String(v));
-                        case "in":
-                            if (Array.isArray(pick(r, "value"))) return pick(r, "value").map(String).includes(String(l));
-                            return String(v).split(",").map(s => s.trim()).includes(String(l));
-                        default: return false;
-                    }
-                };
+                const field = String(col?.field || "");
+                const rules = this.getStyleRuleIndex().pillRulesByField.get(field) || [];
 
                 for (const r of rules) {
-                    const pillField = pick(r, "pillField") || pick(r, "field");
-                    if (!pillField) continue;
+                    if (!this.pillRuleMatches(r, row)) continue;
 
-                    // لازم يطابق اسم العمود (col.field) بالضبط
-                    if (pillField === col?.field && isMatch(r)) {
-                        const text =
-                            (pick(r, "pillText") != null ? String(pick(r, "pillText")) :
-                                (pick(r, "pillTextField") ? String(row?.[pick(r, "pillTextField")] ?? "") : "")
-                            ).trim();
+                    const text =
+                        (this.ruleValue(r, "pillText") != null ? String(this.ruleValue(r, "pillText")) :
+                            (this.ruleValue(r, "pillTextField") ? String(row?.[this.ruleValue(r, "pillTextField")] ?? "") : "")
+                        ).trim();
 
-                        if (!text) continue;
+                    if (!text) continue;
 
-                        return {
-                            text,
-                            css: String(pick(r, "pillCssClass") || "pill"),
-                            mode: String(pick(r, "pillMode") || "replace").toLowerCase()
-                        };
-                    }
+                    return {
+                        text,
+                        css: String(this.ruleValue(r, "pillCssClass") || "pill"),
+                        mode: String(this.ruleValue(r, "pillMode") || "replace").toLowerCase()
+                    };
                 }
                 return null;
             },
+            cellPillRule(row, col) {
+                const field = String(col?.field || "");
+                if (!field) return null;
 
+                if (row && typeof row === "object") {
+                    if (!this._cellPillCache) this._cellPillCache = new WeakMap();
+                    let rowCache = this._cellPillCache.get(row);
+                    if (!rowCache) {
+                        rowCache = new Map();
+                        this._cellPillCache.set(row, rowCache);
+                    }
 
+                    if (rowCache.has(field)) return rowCache.get(field);
+
+                    const match = (this.getStyleRuleIndex().pillRulesByField.get(field) || [])
+                        .find(r => this.pillRuleMatches(r, row)) || null;
+                    rowCache.set(field, match);
+                    return match;
+                }
+
+                return (this.getStyleRuleIndex().pillRulesByField.get(field) || [])
+                    .find(r => this.pillRuleMatches(r, row)) || null;
+            },
+            hasCellPill(row, col) {
+                return !!this.cellPillRule(row, col);
+            },
+            isCellPillIconOnly(row, col) {
+                return !!this.ruleValue(this.cellPillRule(row, col), "iconOnly");
+            },
+            cellPillClass(row, col) {
+                const rule = this.cellPillRule(row, col);
+                return this.ruleValue(rule, "iconOnly")
+                    ? (this.ruleValue(rule, "iconOnlyCssClass") || "sf-icon-only")
+                    : (this.ruleValue(rule, "pillCssClass") || "pill");
+            },
+            cellPillTitle(row, col) {
+                const rule = this.cellPillRule(row, col);
+                return this.ruleValue(rule, "pillTitle") || this.ruleValue(rule, "pillText") || "";
+            },
+            cellPillSvg(row, col) {
+                return this.ruleValue(this.cellPillRule(row, col), "pillSvg") || "";
+            },
+            cellPillIcon(row, col) {
+                return this.ruleValue(this.cellPillRule(row, col), "pillIcon") || "";
+            },
+            cellPillText(row, col) {
+                const rule = this.cellPillRule(row, col);
+                return this.ruleValue(rule, "pillText") || row?.[col?.field] || "";
+            },
 
             escapeHtml(s) {
                 return String(s ?? "")
@@ -1533,7 +1648,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             },
 
             renderCellContent(row, col, baseHtml) {
-                // baseHtml: المحتوى الأساسي اللي يرجعه formatCell قبل الكبسولة
+
                 const safe = (baseHtml == null) ? "" : String(baseHtml);
 
                 const pill = this.getPillForCell(row, col);
@@ -1543,16 +1658,71 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                 if (pill.mode === "append") return `${safe} ${pillHtml}`;
                 if (pill.mode === "prepend") return `${pillHtml} ${safe}`;
-                return pillHtml; // replace
+                return pillHtml;
+            },
+            bindArabicValidationMessages() {
+                if (window.__sfArabicValidationBound) return;
+                window.__sfArabicValidationBound = true;
+
+                const messageFor = (el) => {
+                    if (el.validity?.valueMissing) return "الرجاء تعبئة هذا الحقل";
+                    if (el.validity?.typeMismatch) return "الرجاء إدخال قيمة صحيحة";
+                    if (el.validity?.patternMismatch) return el.getAttribute("data-pattern-message") || "القيمة المدخلة غير مطابقة للصيغة المطلوبة";
+                    if (el.validity?.tooShort) return "القيمة المدخلة أقصر من الحد المطلوب";
+                    if (el.validity?.tooLong) return "القيمة المدخلة أطول من الحد المسموح";
+                    if (el.validity?.rangeUnderflow) return "القيمة أقل من الحد المسموح";
+                    if (el.validity?.rangeOverflow) return "القيمة أعلى من الحد المسموح";
+                    return "الرجاء إدخال قيمة صحيحة";
+                };
+
+                const applyMessages = (form) => {
+                    if (!form) return;
+
+                    form.querySelectorAll("input, select, textarea").forEach((el) => {
+                        el.setCustomValidity("");
+
+                        if (!el.willValidate || el.checkValidity()) return;
+                        el.setCustomValidity(messageFor(el));
+                    });
+                };
+
+                document.addEventListener("invalid", (e) => {
+                    const el = e.target;
+                    if (!el?.closest?.(".sf-modal-form")) return;
+                    el.setCustomValidity(messageFor(el));
+                }, true);
+
+                document.addEventListener("pointerdown", (e) => {
+                    const btn = e.target?.closest?.('.sf-modal-form button[type="submit"], .sf-modal-form input[type="submit"]');
+                    if (!btn) return;
+                    applyMessages(btn.closest(".sf-modal-form"));
+                }, true);
+
+                document.addEventListener("submit", (e) => {
+                    const form = e.target;
+                    if (!form?.matches?.(".sf-modal-form")) return;
+                    applyMessages(form);
+                }, true);
+
+                document.addEventListener("input", (e) => {
+                    const el = e.target;
+                    if (!el?.closest?.(".sf-modal-form")) return;
+                    el.setCustomValidity("");
+                }, true);
+
+                document.addEventListener("change", (e) => {
+                    const el = e.target;
+                    if (!el?.closest?.(".sf-modal-form")) return;
+                    el.setCustomValidity("");
+                }, true);
             },
 
-
-
-
+            // Lifecycle
             init() {
                 this.colVisLoad();
                 this.loadStoredPreferences();
                 this.initColumnFilters();
+                this.bindArabicValidationMessages();
 
                 if (!this.__colVisEscBound) {
                     this.__colVisEscBound = true;
@@ -1584,7 +1754,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 });
             },
 
-
+            // Preferences
             loadStoredPreferences() {
                 if (!this.storageKey) return;
                 try {
@@ -1594,40 +1764,31 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         if (prefs.pageSize) this.pageSize = prefs.pageSize;
                         if (prefs.sort) this.sort = prefs.sort;
 
-
                         if (prefs.columnFilters && typeof prefs.columnFilters === "object") {
                             this.columnFilters = prefs.columnFilters;
 
-                            //  normalize values (لا تسمح بأي object/array يكسر الفلاتر)
                             for (const k of Object.keys(this.columnFilters)) {
                                 const v = this.columnFilters[k];
 
-                                // null/undefined
                                 if (v == null) { this.columnFilters[k] = ""; continue; }
 
-                                // string
                                 if (typeof v === "string") {
                                     const s = v.trim();
                                     this.columnFilters[k] = (s === "فلترة..." || s === "فلترة…") ? "" : s;
                                     continue;
                                 }
 
-                                // number/bool -> حولها لنص (عشان يشتغل فلتر الأرقام/البول)
                                 if (typeof v === "number" || typeof v === "boolean") {
                                     this.columnFilters[k] = String(v);
                                     continue;
                                 }
 
-                                // أي شيء ثاني (object/array) = امسحه
                                 this.columnFilters[k] = "";
                             }
                         }
 
-                        //  أكمل أي مفاتيح ناقصة بدون ما يضيف فلاتر
                         this.initColumnFilters();
 
-
-                        // Sanitize stored filters (لو كانت قيمة placeholder أو أشياء غريبة)
                         if (this.columnFilters && typeof this.columnFilters === "object") {
                             for (const k of Object.keys(this.columnFilters)) {
                                 const v = this.columnFilters[k];
@@ -1636,7 +1797,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             }
                         }
 
-
                         if (prefs.columns && Array.isArray(this.columns)) {
                             this.columns.forEach(col => {
                                 const storedCol = prefs.columns.find(c => c.field === col.field);
@@ -1644,23 +1804,28 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                     col.visible = storedCol.visible;
                                 }
                             });
+                            this.invalidateColumnCache();
                         }
                     }
                 } catch (e) {
-                    console.warn("Failed to load preferences:", e);
                 }
             },
             savePreferences() {
+                if (!this.storageKey) return;
+
+                clearTimeout(this._savePreferencesTimer);
+                this._savePreferencesTimer = setTimeout(() => {
+                    this.persistPreferences();
+                }, 150);
+            },
+            persistPreferences() {
                 if (!this.storageKey) return;
                 try {
                     const prefs = {
                         pageSize: this.pageSize,
                         sort: this.sort,
 
-
-                        columnFilters: this.columnFilters || {}, 
-
-
+                        columnFilters: this.columnFilters || {},
 
                         columns: this.columns.map(col => ({
                             field: col.field,
@@ -1669,12 +1834,10 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     };
                     localStorage.setItem(this.storageKey, JSON.stringify(prefs));
                 } catch (e) {
-                    console.warn("Failed to save preferences:", e);
                 }
             },
 
-           
-
+            // Modal controls
             initSelect2InModal(modalEl) {
                 if (!window.jQuery || !jQuery.fn || !jQuery.fn.select2) return;
 
@@ -1740,8 +1903,9 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 });
             },
 
+            // Event binding
             setupEventListeners() {
-                //  يمنع تكرار ربط الأحداث (لأنه Alpine يسوي instance لكل جدول)
+
                 if (window.__sfTableGlobalBound) return;
                 window.__sfTableGlobalBound = true;
 
@@ -1755,17 +1919,14 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     const api = window.__sfTableActive;
                     if (!api || !api.modal?.open) return;
 
-                    //  زر X أو زر إلغاء أو أي زر إغلاق
                     if (e.target.closest('.sf-modal-close,[data-modal-close],.sf-modal-cancel,.sf-modal-btn-cancel')) {
                         e.preventDefault();
                         api.closeModal();
                         return;
                     }
 
-                   
                 });
 
-                // depends dropdowns (listener واحد فقط)
                 document.addEventListener('change', async (e) => {
                     const parentSelect = e.target.closest('select');
                     if (!parentSelect) return;
@@ -1784,7 +1945,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                         const parentValue = parentSelect.value;
 
-                        // ❗ مهم: لا تستخدم return هنا
                         if (!parentValue || parentValue === '-1') {
                             dependentSelect.innerHTML = '<option value="-1">الرجاء الاختيار</option>';
                             continue;
@@ -1816,7 +1976,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             if (dependentSelect.classList.contains('js-select2')) {
                                 const modalEl = dependentSelect.closest('.sf-modal') || document.body;
 
-                                //  إذا كان متفعل select2 على العنصر: أعد تهيئته بعد تغيير الخيارات
                                 if (window.jQuery && jQuery.fn.select2) {
                                     const $sel = $(dependentSelect);
 
@@ -1824,13 +1983,11 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                         $sel.select2('destroy');
                                     }
 
-                                    // استخدم نفس إعداداتك (ومنها minResults/placeholder من data-attrs)
                                     this.initSelect2InModal(modalEl);
                                 }
                             }
 
                         } catch (error) {
-                            console.error('Error loading dependent options:', error);
                             dependentSelect.innerHTML = originalHtml;
                         } finally {
                             dependentSelect.disabled = false;
@@ -1843,7 +2000,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 this.loading = true;
                 this.error = null;
                 try {
-                    // ===== FAST MODE: server-side paging (only if enabled) =====
+
                     if (this.serverPaging) {
                         const body = {
                             Component: "Table",
@@ -1858,11 +2015,12 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             }
                         };
                         const json = await this.postJson(this.endpoint, body);
-                        // بيانات الصفحة الحالية فقط
+
                         this.rows = Array.isArray(json?.data) ? json.data : [];
-                        // إجمالي السجلات (إذا السيرفر يرجعه)
+                        this.invalidateRowCaches();
+
                         const total = json?.total ?? json?.count ?? json?.Total ?? json?.Count ?? null;
-                        // إذا ما رجع total، نخليها صفحة واحدة عشان ما ينكسر شيء
+
                         if (total == null) {
                             this.total = this.rows.length;
                             this.pages = 1;
@@ -1872,15 +2030,16 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             this.pages = Math.max(1, Math.ceil(this.total / this.pageSize));
                             this.page = Math.min(this.page, this.pages);
                         }
-                        // في وضع السيرفر ما نحتاج allRows/filteredRows
+
                         this.allRows = [];
                         this.filteredRows = [];
+                        this.invalidateRowCaches();
 
                         this.savePreferences();
                         this.updateSelectAllState();
                         return;
                     }
-                    // ===== OLD MODE (unchanged): client-side =====
+
                     if (this.allRows.length === 0) {
                         if (this.clientSideMode && Array.isArray(this.initialRows) && this.initialRows.length > 0) {
                             this.allRows = this.initialRows;
@@ -1895,6 +2054,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             const json = await this.postJson(this.endpoint, body);
                             this.allRows = Array.isArray(json?.data) ? json.data : [];
                         }
+                        this.invalidateRowCaches();
                     }
 
                     this.applyFiltersAndSort();
@@ -1905,13 +2065,13 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         this.rows = [];
                         this.allRows = [];
                         this.filteredRows = [];
+                        this.invalidateRowCaches();
                         this.total = 0;
                         this.pages = 1;
                         this.page = 1;
                         this.error = null;
                         return;
                     }
-                    console.error("Load error:", e);
                     this.error = msg || "خطأ في تحميل البيانات";
                 } finally {
                     this.loading = false;
@@ -1919,11 +2079,11 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
             },
 
+            // Data loading and filtering
             applyFiltersAndSort() {
                 this.syncColumnFiltersFromDom();
                 let filtered = [...this.allRows];
 
-                // 1) Global search (q)
                 if (this.q) {
                     const tokens = String(this.q)
                         .toLowerCase()
@@ -1931,26 +2091,23 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         .split(/\s+/)
                         .filter(Boolean);
 
-                    const fields = this.columns
-                        .filter(c => c.visible !== false && c.field)
+                    const fields = this.visibleColumns()
+                        .filter(c => c.field)
                         .map(c => c.field);
+                    const fieldsKey = fields.join("\u001f");
 
                     if (tokens.length) {
                         filtered = filtered.filter(row => {
-                            const haystack = fields
-                                .map(f => String(row?.[f] ?? "").toLowerCase())
-                                .join(" ");
+                            const haystack = this.getRowSearchText(row, fields, fieldsKey);
                             return tokens.every(t => haystack.includes(t));
                         });
                     }
                 }
 
-                // ✅ 2) Column filters (THE MISSING PART)
                 if (this.filtersEnabled && this.hasActiveColumnFilters?.()) {
                     filtered = filtered.filter(row => this.rowPassesColumnFilters(row));
                 }
 
-                // 3) Sorting
                 if (this.sort.field) {
                     filtered.sort((a, b) => {
                         let valA = a[this.sort.field];
@@ -1978,7 +2135,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     });
                 }
 
-                // 4) Pagination
                 this.filteredRows = filtered;
                 this.total = filtered.length;
                 this.pages = Math.max(1, Math.ceil(this.total / this.pageSize));
@@ -1990,14 +2146,30 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 this.savePreferences();
                 this.updateSelectAllState();
             },
+            getRowSearchText(row, fields, fieldsKey) {
+                if (!row || typeof row !== "object") {
+                    return fields.map(f => String(row?.[f] ?? "").toLowerCase()).join(" ");
+                }
 
+                if (!this._searchTextCache) this._searchTextCache = new WeakMap();
+
+                const cached = this._searchTextCache.get(row);
+                if (cached && cached.key === fieldsKey) return cached.text;
+
+                const text = fields
+                    .map(f => String(row?.[f] ?? "").toLowerCase())
+                    .join(" ");
+
+                this._searchTextCache.set(row, { key: fieldsKey, text });
+                return text;
+            },
 
             debouncedSearch() {
                 clearTimeout(this.searchTimer);
                 this.searchTimer = setTimeout(() => {
                     this.page = 1;
                     if (this.serverPaging) {
-                        this.load();            // ✅ سيرفر سايد
+                        this.load();
                     } else {
                         this.applyFiltersAndSort();
                     }
@@ -2009,13 +2181,16 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 this.load();
             },
 
-            // ===== Columns Management =====
-            //visibleColumns() {
-            //    return this.columns.filter(col => col.visible !== false);
-            //},
+            // Column helpers
             visibleColumns() {
+                if (this._visibleColumnsCache && this._visibleColumnsCacheVersion === this._columnsVersion) {
+                    return this._visibleColumnsCache;
+                }
+
                 const cols = Array.isArray(this.columns) ? this.columns : [];
-                return cols.filter(c => this.colVisIsShown(c));
+                this._visibleColumnsCache = cols.filter(c => this.colVisIsShown(c));
+                this._visibleColumnsCacheVersion = this._columnsVersion;
+                return this._visibleColumnsCache;
             },
 
             getColumnIndexByField(field) {
@@ -2098,6 +2273,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 currentCols.splice(toIndex, 0, movedCol);
 
                 this.columns = [...currentCols];
+                this.invalidateColumnCache();
 
                 this.dragColField = null;
                 this.dragOverColField = null;
@@ -2201,9 +2377,11 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
             toggleColumnVisibility(col) {
                 col.visible = col.visible === false;
+                this.invalidateColumnCache();
                 this.savePreferences();
             },
 
+            // Sorting and selection
             toggleSort(col) {
                 if (!col.sortable) return;
 
@@ -2222,14 +2400,12 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 }
             },
 
-
-            // ===== Selection Management =====
             toggleRow(row) {
                 const key = row?.[this.rowIdField];
                 if (key == null) return;
 
                 if (this.singleSelect) {
-                    // clicking selected row → clear all; else select only this row
+
                     if (this.selectedKeys.has(key)) {
                         this.selectedKeys.clear();
                     } else {
@@ -2237,7 +2413,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         this.selectedKeys.add(key);
                     }
                 } else {
-                    // original multi-select
+
                     if (this.selectedKeys.has(key)) {
                         this.selectedKeys.delete(key);
                     } else {
@@ -2250,7 +2426,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
             toggleSelectAll() {
                 if (this.singleSelect) {
-                    // In single-select mode, select first visible row or clear
+
                     if (this.selectAll && this.rows.length > 0) {
                         this.selectedKeys.clear();
                         this.selectedKeys.add(this.rows[0][this.rowIdField]);
@@ -2269,7 +2445,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
             updateSelectAllState() {
                 if (this.singleSelect) {
-                    // selectAll reflects whether one selected exists on current page
+
                     const pageKeys = new Set(this.rows.map(r => r[this.rowIdField]));
                     const hasOnPage = Array.from(this.selectedKeys).some(k => pageKeys.has(k));
                     this.selectAll = hasOnPage && this.selectedKeys.size === 1;
@@ -2296,29 +2472,24 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 this.selectAll = false;
             },
 
-
-            // ===== Export Functions (XLSX pdf true) =====
-            // ===== Export Functions (XLSX pdf true) =====
+            // Export actions
             exportData(type) {
                 if (!this.allowExport) return;
 
-                // PDF
                 if (type === "pdf") {
                     this.openExportPdfModal();
                     return;
                 }
 
-                // Excel
                 if (type === "excel") {
                     this.openExportExcelModal();
                     return;
                 }
 
-                // غير مدعوم
                 this.showToast("نوع التصدير غير مدعوم", "error");
             },
 
-
+            // Excel export modal
             openExportExcelModal() {
                 if (!window.XLSX) {
                     this.showToast("مكتبة XLSX غير موجودة. أضف xlsx.full.min.js قبل sf-table.js", "error");
@@ -2342,7 +2513,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 this.modal.error = null;
                 const defaultCount = 1;
 
-                // تحريك الدالة خارج الـ innerHTML وتثبيتها على window
                 window.toggleExportCount = function () {
                     const scope = document.getElementById("exportScope")?.value;
                     const countContainer = document.getElementById("countContainer");
@@ -2353,7 +2523,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 <form id="sfExportExcelForm" class="sf-modal-form" onsubmit="return false;">
                                     <div class="grid grid-cols-12 gap-4">
 
-                                        <!-- نطاق التصدير -->
                                         <div class="col-span-12 md:col-span-6">
                                             <label class="block text-sm font-medium mb-1">نطاق التصدير</label>
                                             <div class="sf-select-wrap">
@@ -2373,7 +2542,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                             </p>
                                         </div>
 
-                                        <!-- خيار العناوين -->
                                         <div class="col-span-12 md:col-span-6 flex items-center justify-start md:justify-end">
                                             <label class="flex items-center gap-2">
                                             <input type="checkbox" name="includeHeaders" checked class="sf-checkbox" />
@@ -2382,24 +2550,19 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                                         </div>
 
-                                        <!-- عدد الصفوف -->
                                         <div class="col-span-12 md:col-span-6" id="countContainer" style="display: none;">
                                             <label class="block text-sm font-medium mb-1">عدد الصفوف</label>
                                             <input name="count" type="number" min="1" value="1" class="sf-modal-input" />
                                             <p class="mt-1 text-xs text-gray-500">مثال: 1 لتصدير صف واحد، أو 100 لتصدير 100 صف.</p>
                                         </div>
 
-                                           <!-- أزرار -->
-                                            <!-- اختيار الأعمدة -->
                                             <div class="col-span-12">
                                                 <label class="block text-base font-medium mb-2">اختر الأعمدة المراد تصديرها :</label>
                                                 <div class="grid grid-cols-2 gap-2" id="columnsCheckboxes">
-                                                    <!-- سيتم تعبئة الأعمدة هنا عبر JavaScript -->
                                                 </div>
                                             </div>
 
-
-                                        <div class="col-span-12 flex justify-end gap-2 mt-4 sf-modal-actions">
+<div class="col-span-12 flex justify-end gap-2 mt-4 sf-modal-actions">
                                             <button type="button" class="btn btn-success" data-export-excel-confirm>تصدير</button>
                                             <button type="button" class="btn btn-secondary sf-modal-cancel">إلغاء</button>
                                         </div>
@@ -2430,7 +2593,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 });
 
                 this.$nextTick(() => {
-                    // 1) تحديث إظهار/إخفاء عدد الصفوف
+
                     if (window.toggleExportCount) {
                         window.toggleExportCount();
                     }
@@ -2516,16 +2679,13 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         return;
                     }
 
-                    // قراءة الأعمدة المختارة
                     const selectedFields = Array.from(document.querySelectorAll("input[name=exportCols]:checked")).map(i => i.value);
 
                     const allCols = exportVisibleOnly
                         ? this.visibleColumns().filter(c => c.showInExport !== false)
                         : (this.columns || []).filter(c => c.field && c.showInExport !== false);
 
-                    // فلترة الأعمدة بناء على اختيار المستخدم
                     const cols = allCols.filter(c => selectedFields.includes(c.field));
-
 
                     if (!cols.length) {
                         this.showToast("لا توجد أعمدة للتصدير", "error");
@@ -2536,11 +2696,11 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     this.closeModal();
 
                 } catch (e) {
-                    console.error(e);
                     this.showToast("فشل التصدير: " + (e.message || e), "error");
                 }
             },
 
+            // Excel export writer
             exportXlsx({ rows, cols, includeHeaders, rtl }) {
                 const aoa = [];
 
@@ -2607,14 +2767,13 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             const th = document.querySelector(`.sf-table thead tr th:nth-child(${idx + 1})`);
                             if (th) {
                                 const rect = th.getBoundingClientRect();
-                                // نحول من px إلى wpx تقريبًا (تقدير XLSX.js)
+
                                 const width = Math.ceil(rect.width);
                                 return { wpx: width };
                             }
                         } catch (e) {
-                            console.warn('فشل استخراج عرض العمود:', e);
                         }
-                        return { wpx: 150 }; // fallback
+                        return { wpx: 150 };
                     });
                     ws["!direction"] = "rtl";
                 }
@@ -2629,11 +2788,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 XLSX.writeFile(wb, `export_${new Date().toISOString().slice(0, 10)}.xlsx`);
             },
 
-            /*===== نهاية تصدير اكسل =====*/
-
-
-            /*===== بداية تصدير PDF =====*/
-
+            // PDF export modal
             openExportPdfModal() {
                 const cfg = (this.toolbar && this.toolbar.exportConfig) ? this.toolbar.exportConfig : {};
 
@@ -2810,7 +2965,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     this.closeModal();
 
                 } catch (e) {
-                    console.error(e);
                     this.showToast("فشل تصدير PDF: " + (e.message || e), "error");
 
                 } finally {
@@ -2848,6 +3002,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 return await resp.blob();
             },
 
+            // Download helpers
             downloadBlob(blob, filename) {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
@@ -2859,8 +3014,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
             },
-
-            /*===== نهاية تصدير PDF =====*/
 
             formatCellForExport(row, col) {
                 let value = row[col.field];
@@ -2900,19 +3053,16 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 URL.revokeObjectURL(url);
             },
 
-            // ===== Actions Management =====
-
             async doAction(action, row) {
                 if (!action) return;
 
                 try {
-                    // normalize (support both PascalCase + camelCase from backend)
+
                     const openModalFlag = !!(action.openModal ?? action.OpenModal);
                     const requireSelection = !!(action.requireSelection ?? action.RequireSelection);
                     const minSelection = Number(action.minSelection ?? action.MinSelection ?? 1) || 1;
                     const maxSelection = Number(action.maxSelection ?? action.MaxSelection ?? 0) || 0;
 
-                    // selection checks
                     if (requireSelection) {
                         const selectedCount = this.selectedKeys?.size || 0;
 
@@ -2928,24 +3078,20 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         if (!row) row = this.getSelectedRowFromCurrentData?.() || null;
                     }
 
-                    // Guards
                     const guardRes = this.evalGuards?.(action) || { allowed: true };
                     if (!guardRes.allowed) {
                         this.showToast(guardRes.message || "غير مسموح", "error");
                         return;
                     }
 
-                    // confirm (once only)
                     const confirmText = action.confirmText ?? action.ConfirmText ?? "";
                     if (confirmText && !confirm(confirmText)) return;
 
-                    // OnClickJs / onClickJs
                     const clickJs = action.onClickJs ?? action.OnClickJs ?? "";
                     if (clickJs && String(clickJs).trim()) {
                         try {
                             const code = String(clickJs).trim();
 
-                            // if it's a function name or a function call, try call window.fn(row, action, table)
                             const isFnCallOrName = /^[a-zA-Z_$][\w$]*(\s*\(.*\))?$/.test(code);
                             if (isFnCallOrName) {
                                 const fnName = code.split("(")[0].trim();
@@ -2956,19 +3102,16 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 }
                             }
 
-                            // otherwise run as snippet: (row, action, table)
                             const runner = new Function("row", "action", "table", code);
                             runner(row || null, action, this);
                             return;
 
                         } catch (err) {
-                            console.error("OnClickJs failed:", err);
                             this.showToast("فشل تنفيذ الأمر", "error");
                             return;
                         }
                     }
 
-                    // Open modal path (supports meta before open)
                     if (openModalFlag) {
                         const beforeJs = action.onBeforeOpenJs ?? action.OnBeforeOpenJs ?? "";
                         if (beforeJs && String(beforeJs).trim()) {
@@ -2978,7 +3121,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 runner(this, action, row || null);
 
                             } catch (err) {
-                                console.error("OnBeforeOpenJs failed:", err);
                                 this.showToast("فشل تجهيز المودال", "error");
                                 return;
                             }
@@ -2993,7 +3135,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         return;
                     }
 
-                    // Execute stored procedure (saveSp)
                     const saveSp = action.saveSp ?? action.SaveSp ?? "";
                     if (saveSp) {
                         const op = action.saveOp ?? action.SaveOp ?? "execute";
@@ -3006,7 +3147,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     }
 
                 } catch (e) {
-                    console.error("Action error:", e);
                     this.showToast("فشل في تنفيذ الإجراء: " + (e?.message || e), "error");
                 }
             },
@@ -3033,19 +3173,14 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     await this.refresh();
 
                 } catch (e) {
-                    console.error("Bulk delete error:", e);
                     this.showToast("فشل في الحذف: " + (e?.message || e), "error");
                 }
             },
 
-            // ===== Modal Management =====
-
             async openModal(action, row) {
-                console.log("[LazyExtra] openModal fired", { action, row });
                 this.modal.open = true;
                 window.__sfTableActive = this;
 
-                // reset/prepare
                 this.modal.title = action.modalTitle ?? action.ModalTitle ?? action.label ?? action.Label ?? "";
                 this.modal.message = action.modalMessage ?? action.ModalMessage ?? "";
                 this.modal.messageClass = action.modalMessageClass ?? action.ModalMessageClass ?? "";
@@ -3057,12 +3192,10 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 this.modal.error = null;
                 this.modal.html = "";
 
-                // internal modal state for "extra table"
                 this.modal.extraPage = Number(this.modal.extraPage || 1) || 1;
                 this.modal.extraQuery = String(this.modal.extraQuery || "");
-                this.modal.extraSort = this.modal.extraSort || null; // { key, dir: 'asc'|'desc' }
+                this.modal.extraSort = this.modal.extraSort || null;
 
-                // ✅ state لكل جدول (m1..m5)
                 this.modal.__extraStateMap = this.modal.__extraStateMap || Object.create(null);
 
                 const getState = (slotKey) => {
@@ -3077,7 +3210,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     return this.modal.__extraStateMap[slotKey];
                 };
 
-                // helpers
                 const esc = (v) => {
                     if (v == null) return "";
                     return String(v)
@@ -3117,17 +3249,14 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                     const field = modalRoot.querySelector(`[name="${toggleField}"]`);
                     if (!field) {
-                        console.warn("[ToggleField] field not found:", toggleField);
                         return;
                     }
 
                     const wrapper = field.closest(".form-group");
                     if (!wrapper) {
-                        console.warn("[ToggleField] wrapper not found for field:", toggleField);
                         return;
                     }
 
-                    // إذا ما فيه بيانات بعد، طبّق الحالة الافتراضية
                     if (!rows || !rows.length || !toggleColumn) {
                         wrapper.style.display = toggleDefaultHidden ? "none" : "";
 
@@ -3187,24 +3316,10 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         }
                     }
 
-                    console.log("[ToggleField]", {
-                        toggleField,
-                        toggleColumn,
-                        toggleOperator,
-                        toggleValue,
-                        toggleCompareColumn,
-                        leftRaw,
-                        rightRaw,
-                        show
-                    });
                 };
 
                 this.applyToggleFieldVisibility = applyToggleFieldVisibility;
 
-
-
-
-                // ============== Print Modal button =================
                 this.__printExtraTable = (slotKey = "m1") => {
                     slotKey = String(slotKey || "m1");
 
@@ -3424,7 +3539,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         link.onload = () => doPrint();
 
                         link.onerror = () => {
-                            console.error("Print CSS failed to load:", cssHref);
                             doPrint();
                         };
 
@@ -3435,8 +3549,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         doPrint();
                     }
                 };
-                // ============== End Print Modal button =================
-
 
                 const normalizeObjKeyLookup = (obj) => {
                     const map = {};
@@ -3475,15 +3587,12 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                     list.forEach((m, i) => {
                         if (!m.extraSlotKey && !m.ExtraSlotKey) m.extraSlotKey = `m${i + 1}`;
-                        /*if (!m.extraTitle && !m.ExtraTitle) m.extraTitle = `جدول ${i + 1}`;*/
+
                         if (!m.extraTitle && !m.ExtraTitle) m.extraTitle = ``;
                     });
 
                     return list;
                 };
-
-               
-                   
 
                 const resolveHeaderMap = (meta) => {
                     const hm = meta.headerMap ?? meta.HeaderMap ?? {};
@@ -3506,29 +3615,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     const slice = items.slice(start, start + pageSize);
                     return { page: p, pageSize, total, pages, slice, startIndex: start };
                 };
-
-//                const renderPager = ({ page, pages }, slotKey = "m1") => {
-//                    if (pages <= 1) return "";
-
-//                    const maxBtns = 7;
-//                    let start = Math.max(1, page - Math.floor(maxBtns / 2));
-//                    let end = Math.min(pages, start + maxBtns - 1);
-//                    start = Math.max(1, end - maxBtns + 1);
-
-//                    const btn = (p, label, cls = "") => `
-//<button type="button"
-//        class="sf-extra-page-btn ${cls}"
-//        onclick="window.__sfTableActive?.__setExtraPage?.('${slotKey}', ${p})">
-//    ${label}
-//</button>`;
-
-//                    let html = `<div class="sf-extra-pager">`;
-//                    html += btn(Math.max(1, page - 1), "السابق", page <= 1 ? "is-disabled" : "");
-//                    for (let p = start; p <= end; p++) html += btn(p, p, p === page ? "is-active" : "");
-//                    html += btn(Math.min(pages, page + 1), "التالي", page >= pages ? "is-disabled" : "");
-//                    html += `</div>`;
-//                    return html;
-//                };
 
                 const renderPager = ({ page, pages, total }, slotKey = "m1") => {
                     if (pages <= 1) return "";
@@ -3566,16 +3652,10 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 </div>`;
                 };
 
-
-
-
-
-                // filtering + sorting (safe defaults)
                 const applyFilterSort = (data, cols, meta, stateOverride = null) => {
                     let out = Array.isArray(data) ? data.slice() : [];
                     const state = stateOverride ?? { page: 1, query: "", sort: null };
 
-                    // filter
                     const enableSearch = toBool(meta.enableSearch ?? meta.EnableSearch, true);
                     const q = enableSearch ? String(state.query || "").trim().toLowerCase() : "";
 
@@ -3592,7 +3672,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         });
                     }
 
-                    // sort
                     const sortable = (meta.sortable ?? meta.Sortable ?? true) !== false;
                     const sort = sortable ? (state.sort || null) : null;
 
@@ -3621,14 +3700,10 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                     return out;
                 };
-                // filtering + sorting ...
-                // ===== Extra UI helpers (table / form / both) =====
 
-                // 1) يحدد وضع العرض: table | form | both
                 const resolveExtraUi = (meta) =>
                     String(meta.extraUi ?? meta.ExtraUi ?? "table").trim().toLowerCase();
 
-                // 2) رسالة/HTML الفراغ (مع أيقونة) — ممكن تخصصها من meta.extraEmptyHtml
                 const resolveEmptyHtml = (meta) => {
                     const emptyHtml = meta.extraEmptyHtml ?? meta.ExtraEmptyHtml ?? null;
                     if (typeof emptyHtml === "string" && emptyHtml.trim()) return emptyHtml;
@@ -3641,8 +3716,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 </div>`;
                 };
 
-                // 3) يرسم الفورم من meta.extraForm
-                // ✅ يرندر الفورم الرسمي عبر السيرفر (SmartForm ViewComponent)
                 const renderSmartFormHtml = async (meta, row) => {
                     const formConfig = meta.extraFormConfig ?? meta.ExtraFormConfig ?? null;
                     if (!formConfig) return "";
@@ -3664,7 +3737,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     return await resp.text();
                 };
 
-                // 4) يدمج الجدول + الفورم حسب extraUi
                 const renderExtraUi = async (meta, rows, row) => {
                     const ui = resolveExtraUi(meta);
 
@@ -3678,9 +3750,9 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                     if (ui === "form") return formHtml;
                     if (ui === "both") return formHtml + tableHtml;
-                    return tableHtml; // default
+                    return tableHtml;
                 };
-      
+
                 const renderExtraTable = (extraArray, metaOverride = null, stateOverride = null, slotKeyOverride = "m1") => {
                     const meta = metaOverride ?? action.meta ?? action.Meta ?? {};
                     const slotKey = String(meta.extraSlotKey ?? meta.ExtraSlotKey ?? slotKeyOverride ?? "m1");
@@ -3700,7 +3772,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     const enableSearch = (meta.enableSearch ?? meta.EnableSearch ?? true) !== false;
                     const sortable = (meta.sortable ?? meta.Sortable ?? true) !== false;
                     const showPrint = toBool(meta.showPrint ?? meta.ShowPrint, false);
-                    
 
                     let cols = buildColumnsFromArray(extraArray);
 
@@ -3819,12 +3890,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                     const showMeta = toBool(meta.showMeta ?? meta.ShowMeta, true);
 
-//                    const infoHtml = showMeta ? `
-//<div class="sf-extra-meta">
-//  <div>عدد السجلات: <b>${pg.total}</b></div>
-//  <div>الصفحة: <b>${pg.page}</b> / <b>${pg.pages}</b></div>
-                    //</div>` : "";
-
                     const infoHtml = "";
 
                     const searchBox = enableSearch ? `
@@ -3884,26 +3949,23 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 </div>`;
                 };
 
-
                 window.__sfTableActive.__renderExtraTable = renderExtraTable;
 
                 this.renderExtraTable = renderExtraTable;
 
-                // ===================== Multi Extra Slots (5 tables) =====================
                 const ensureExtraSlots = (modalEl, metas) => {
                     if (!modalEl) return;
 
                     const formEl = modalEl.querySelector("form");
                     if (!formEl) return;
 
-                    // container wrapper فوق الفورم
                     let wrap = modalEl.querySelector(".sf-extra-multi-wrap");
                     if (!wrap) {
                         wrap = document.createElement("div");
                         wrap.className = "sf-extra-multi-wrap";
                         formEl.insertAdjacentElement("beforebegin", wrap);
                     } else {
-                        // امسح الأقسام القديمة فقط
+
                         wrap.querySelectorAll(".sf-extra-section").forEach(x => x.remove());
                     }
 
@@ -3915,10 +3977,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         sec.className = "sf-extra-section";
                         sec.setAttribute("data-slot", slotKey);
 
-//                        sec.innerHTML = `
-//  <div class="sf-extra-section-title" style="margin:8px 0;font-weight:500;text-align:center;">${esc(title)}</div>
-//  <div class="sf-extra-section-body" id="sf-extra-${esc(slotKey)}"></div>
-//`;
                         sec.innerHTML = `
   ${title ? `<div class="sf-extra-section-title" style="margin:8px 0;font-weight:500;text-align:center;">${esc(title)}</div>` : ""}
   <div class="sf-extra-section-body" id="sf-extra-${esc(slotKey)}"></div>
@@ -3934,14 +3992,10 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     el.innerHTML = html;
                     return true;
                 };
-                // ========================================================================
-
-         
 
                 try {
                     const meta = action.meta ?? action.Meta ?? {};
 
-                    // -------- expose modal setters (stable + safe) --------
                     this.__setExtraPage = (slotKey, p) => {
                         slotKey = String(slotKey || "m1");
                         const st = this.modal.__extraStateMap?.[slotKey];
@@ -3959,8 +4013,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             this.$nextTick(() => this.initModalScripts?.());
                         }
                     };
-
-                    
 
                     this.__setExtraQuery = (slotKey, q) => {
                         slotKey = String(slotKey || "m1");
@@ -4026,24 +4078,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         }
                     };
 
-                    // ===================== Extra UI (table / form / both) =====================
-
-                    
-
-                
-
-               
-
-                    // template payload: يدعم $row.p01 و $ctx.idaraID
-              
-
-                    // يدمج العرض: table / form / both
-                
-
-                    // ===================== Extra Form Submit Handler =====================
-                   
-
-                    // -------- (A) dynamic modal (server) --------
                     if (action.__dynamicModal) {
                         const dyn = action.__dynamicModal;
 
@@ -4082,13 +4116,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         }
                     }
 
-
-                    // ✅ (B0) lazy load row extra قبل عرض useRowExtra
-                 
-                    // -------- (B) useRowExtra (from row[__extra]) + enhanced table --------
-                   
-
-                    // -------- (C) formUrl --------
                     else if (action.formUrl ?? action.FormUrl) {
                         const url = this.fillUrl(action.formUrl ?? action.FormUrl, row);
                         const resp = await fetch(url);
@@ -4096,31 +4123,17 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         this.modal.html = await resp.text();
                     }
 
-                    // -------- (D) openForm --------
                     else if (action.openForm ?? action.OpenForm) {
-                        console.log("[openModal] openForm branch fired", action.openForm ?? action.OpenForm);
 
                         const baseForm = action.openForm ?? action.OpenForm;
                         const meta = action.meta ?? action.Meta ?? {};
 
-                        console.log("[DynamicFieldsByRow][meta-check]", {
-                            action,
-                            meta,
-                            dynamicFieldsByRow: meta.dynamicFieldsByRow ?? meta.DynamicFieldsByRow,
-                            dynamicFieldsField: meta.dynamicFieldsField ?? meta.DynamicFieldsField,
-                            dynamicFieldsMap: meta.dynamicFieldsMap ?? meta.DynamicFieldsMap,
-                            row
-                        });
-
-                        // ننسخ الفورم حتى لا نعدل الأصل
                         const formToRender = JSON.parse(JSON.stringify(baseForm));
 
-                        // ✅ إذا ما فيه تفعيل للميزة، استخدم السلوك القديم كما هو
                         const isDynamicFields = (meta.dynamicFieldsByRow ?? meta.DynamicFieldsByRow) === true;
 
                         if (!isDynamicFields || !row) {
                             this.modal.html = this.generateFormHtml(formToRender, row);
-                            console.log("[openModal] generated html length =", (this.modal.html || "").length);
                         } else {
                             const targetField = String(meta.dynamicFieldsField ?? meta.DynamicFieldsField ?? "").trim();
                             const rawMap = meta.dynamicFieldsMap ?? meta.DynamicFieldsMap ?? null;
@@ -4153,30 +4166,15 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 formToRender.Fields = defaultFields;
                             }
 
-                            console.log("[DynamicFieldsByRow]", {
-                                targetField,
-                                rowValueRaw,
-                                rowValueNormalized,
-                                selectedFieldsCount: Array.isArray(formToRender.fields ?? formToRender.Fields)
-                                    ? (formToRender.fields ?? formToRender.Fields).length
-                                    : 0,
-                                selectedFieldNames: Array.isArray(formToRender.fields ?? formToRender.Fields)
-                                    ? (formToRender.fields ?? formToRender.Fields).map(f => f?.name ?? f?.Name ?? "(no-name)")
-                                    : []
-                            });
-
                             this.modal.html = this.generateFormHtml(formToRender, row);
-                            console.log("[openModal] generated html length =", (this.modal.html || "").length);
                         }
                     }
 
-                    // -------- (E) row details --------
                     else if (row) {
                         const columns = this.columns || this.table?.columns || this.$data?.columns || [];
                         this.modal.html = this.formatDetailView(row, columns);
                     }
 
-                    // -------- (F) modalSp (optional) --------
                     else if (action.modalSp ?? action.ModalSp) {
                         const columns = this.columns || this.table?.columns || this.$data?.columns || [];
                         const meta2 = action.meta ?? action.Meta ?? {};
@@ -4227,14 +4225,11 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         }
                     }
 
-                    // ----- after render -----
                     this.$nextTick(() => {
                         this.initModalScripts?.();
 
-                        // ================= Multi Meta Tables =================
                         try {
                             const metas = resolveMetas();
-                            console.log("[MultiMeta] metas count =", metas.length, metas);
 
                             const modalEl =
                                 document.querySelector(".sf-modal") ||
@@ -4259,17 +4254,11 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             metas.forEach((m) => this.bindExtraDepends(modalEl, m, action, row));
 
                         } catch (e) {
-                            console.warn("[MultiMeta] wiring failed:", e);
                         }
-                        // =====================================================
 
                         const modalEl =
                             document.querySelector(".sf-modal") ||
                             this.$el?.querySelector?.(".sf-modal");
-
-                        // ✅ Extra Table depends on normal <select> inside modal (NO select2)
-                        // ✅ Extra Table depends on selects inside modal (supports multi params)
-
 
                         if (!modalEl) return;
 
@@ -4277,11 +4266,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             window.Alpine.initTree(modalEl);
                         }
 
-
-                        //console.log("[openModal] modal html now =", this.modal.html);
-                        //console.log("[openModal] form exists =", !!modalEl.querySelector("form"));
-
-                        // bind save spinner once
                         const form = modalEl.querySelector("form");
 
                         const saveBtn =
@@ -4308,11 +4292,9 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 const verifyField = form.querySelector(`[name="${verifyFieldName}"]`);
                                 if (!verifyField) return;
 
-                                // القيمة الافتراضية عند فتح المودال
                                 verifyField.value = "0";
                                 setSaveEnabled(false);
 
-                                // إعادة الضبط عند تغيير الحقول المؤثرة
                                 (Array.isArray(verifyResetFields) ? verifyResetFields : []).forEach(fieldName => {
                                     const el = form.querySelector(`[name="${fieldName}"]`);
                                     if (!el || el.__verifyResetBound) return;
@@ -4328,7 +4310,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                     el.addEventListener("change", resetVerify);
                                 });
 
-                                // منع الحفظ إذا لم يتم التحقق
                                 if (!form.__verifySubmitBound) {
                                     form.__verifySubmitBound = true;
 
@@ -4354,9 +4335,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 }
                             });
                         } catch (e) {
-                            console.warn("[VerifyBeforeSave] init failed:", e);
                         }
-
 
                         if (form && !form.__saveBound) {
                             form.__saveBound = true;
@@ -4404,7 +4383,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                         this.initDatePickers?.(modalEl);
 
-                        // drag (safe)
                         (function () {
                             const modal = modalEl;
                             const header = modal?.querySelector?.(".sf-modal-header");
@@ -4459,147 +4437,130 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             const metas = resolveMetas();
                             metas.forEach(m => this.applyToggleFieldVisibility?.(m, []));
                         } catch (e) {
-                            console.warn("[ToggleField] init failed:", e);
                         }
 
-                     const extraBtns = modalEl.querySelectorAll("[data-extra-trigger='1']");
-                    if (extraBtns.length) {
-                        try {
-                            extraBtns.forEach(btn => {
-                                if (btn.__extraTriggerBound) return;
-                                btn.__extraTriggerBound = true;
+                        const extraBtns = modalEl.querySelectorAll("[data-extra-trigger='1']");
+                        if (extraBtns.length) {
+                            try {
+                                extraBtns.forEach(btn => {
+                                    if (btn.__extraTriggerBound) return;
+                                    btn.__extraTriggerBound = true;
 
-                                btn.addEventListener("click", async () => {
-                                    const slotKey = String(btn.getAttribute("data-extra-slot") || "m2");
-                                    const fieldName = String(btn.getAttribute("data-extra-field") || "");
-                                    const meta = this.__metaBySlot?.[slotKey];
+                                    btn.addEventListener("click", async () => {
+                                        const slotKey = String(btn.getAttribute("data-extra-slot") || "m2");
+                                        const fieldName = String(btn.getAttribute("data-extra-field") || "");
+                                        const meta = this.__metaBySlot?.[slotKey];
 
-                                    if (!meta) {
-                                        console.warn("[ExtraButton] meta not found for slot:", slotKey);
-                                        return;
-                                    }
+                                        if (!meta) {
+                                            return;
+                                        }
 
-                                    const input = modalEl.querySelector(`[name="${fieldName}"]`);
-                                    if (!input) {
-                                        console.warn("[ExtraButton] field not found:", fieldName);
-                                        return;
-                                    }
+                                        const input = modalEl.querySelector(`[name="${fieldName}"]`);
+                                        if (!input) {
+                                            return;
+                                        }
 
-                                    const val = String(input.value ?? "").trim();
-                                    if (!val || val === "-1" || val === "-99999") {
+                                        const val = String(input.value ?? "").trim();
+                                        if (!val || val === "-1" || val === "-99999") {
+                                            const slotBody = modalEl.querySelector(`#sf-extra-${slotKey}`);
+                                            if (slotBody) {
+                                                slotBody.innerHTML = `<div class="p-4 text-red-500">يرجى تعبئة الحقل أولاً</div>`;
+                                            }
+                                            input.focus?.();
+                                            return;
+                                        }
+
+                                        const req = meta.extraRequest ?? meta.ExtraRequest ?? {};
+                                        const ctx = meta.ctx ?? meta.Ctx ?? {};
+                                        const endpoint = meta.extraEndpoint ?? meta.ExtraEndpoint ?? "/crud/extradataload";
+                                        const paramMap = meta.extraParamMap ?? meta.ExtraParamMap ?? {};
+                                        const staticParams = meta.extraParams ?? meta.ExtraParams ?? null;
+
+                                        const payload = {
+                                            pageName_: req.pageName_,
+                                            ActionType: req.ActionType,
+                                            idaraID: Number(ctx.idaraID ?? 0) || null,
+                                            entrydata: ctx.entrydata ?? null,
+                                            hostname: ctx.hostname ?? null,
+                                            tableIndex: (req.tableIndex ?? req.TableIndex) ?? null,
+                                            parameters: {}
+                                        };
+
+                                        Object.keys(paramMap || {}).forEach(paramKey => {
+                                            const field = String(paramMap[paramKey] ?? "").trim();
+                                            if (!field) return;
+                                            const el = modalEl.querySelector(`[name="${field}"]`);
+                                            payload.parameters[paramKey] = el ? String(el.value ?? "").trim() : null;
+                                        });
+
+                                        if (staticParams && typeof staticParams === "object") {
+                                            Object.keys(staticParams).forEach(k => {
+                                                payload.parameters[k] = staticParams[k];
+                                            });
+                                        }
+
                                         const slotBody = modalEl.querySelector(`#sf-extra-${slotKey}`);
                                         if (slotBody) {
-                                            slotBody.innerHTML = `<div class="p-4 text-red-500">يرجى تعبئة الحقل أولاً</div>`;
+                                            slotBody.innerHTML = `<div class="p-4 text-gray-500">جاري التحقق...</div>`;
                                         }
-                                        input.focus?.();
-                                        return;
-                                    }
 
-                                    const req = meta.extraRequest ?? meta.ExtraRequest ?? {};
-                                    const ctx = meta.ctx ?? meta.Ctx ?? {};
-                                    const endpoint = meta.extraEndpoint ?? meta.ExtraEndpoint ?? "/crud/extradataload";
-                                    const paramMap = meta.extraParamMap ?? meta.ExtraParamMap ?? {};
-                                    const staticParams = meta.extraParams ?? meta.ExtraParams ?? null;
-
-                                    const payload = {
-                                        pageName_: req.pageName_,
-                                        ActionType: req.ActionType,
-                                        idaraID: Number(ctx.idaraID ?? 0) || null,
-                                        entrydata: ctx.entrydata ?? null,
-                                        hostname: ctx.hostname ?? null,
-                                        tableIndex: (req.tableIndex ?? req.TableIndex) ?? null,
-                                        parameters: {}
-                                    };
-
-                                    Object.keys(paramMap || {}).forEach(paramKey => {
-                                        const field = String(paramMap[paramKey] ?? "").trim();
-                                        if (!field) return;
-                                        const el = modalEl.querySelector(`[name="${field}"]`);
-                                        payload.parameters[paramKey] = el ? String(el.value ?? "").trim() : null;
-                                    });
-
-                                    if (staticParams && typeof staticParams === "object") {
-                                        Object.keys(staticParams).forEach(k => {
-                                            payload.parameters[k] = staticParams[k];
-                                        });
-                                    }
-
-                                    const slotBody = modalEl.querySelector(`#sf-extra-${slotKey}`);
-                                    if (slotBody) {
-                                        slotBody.innerHTML = `<div class="p-4 text-gray-500">جاري التحقق...</div>`;
-                                    }
-
-                                    const token =
+                                        const token =
                                         document.querySelector('input[name="__RequestVerificationToken"]')?.value ||
                                         document.querySelector('meta[name="RequestVerificationToken"]')?.content || "";
 
-                                    const resp = await fetch(endpoint, {
-                                        method: "POST",
-                                        headers: {
-                                            "Content-Type": "application/json",
-                                            "X-Requested-With": "XMLHttpRequest",
-                                            ...(token ? { "RequestVerificationToken": token } : {})
-                                        },
-                                        body: JSON.stringify(payload)
-                                    });
+                                        const resp = await fetch(endpoint, {
+                                            method: "POST",
+                                            headers: {
+                                                "Content-Type": "application/json",
+                                                "X-Requested-With": "XMLHttpRequest",
+                                                ...(token ? { "RequestVerificationToken": token } : {})
+                                            },
+                                            body: JSON.stringify(payload)
+                                        });
 
-                                    const txt = await resp.text();
-                                    let json = null;
-                                    try { json = txt ? JSON.parse(txt) : null; }
-                                    catch (e) { console.error("[ExtraButton] JSON parse error", e, txt); }
+                                        const txt = await resp.text();
+                                        let json = null;
+                                        try { json = txt ? JSON.parse(txt) : null; }
+                                        catch (e) { }
 
-                                    const rows =
+                                        const rows =
                                         (Array.isArray(json?.data) && json.data) ||
                                         (Array.isArray(json?.tables?.[0]?.rows) && json.tables[0].rows) ||
                                         (Array.isArray(json?.table?.rows) && json.table.rows) ||
                                         [];
 
-
-                    // =====================
-                    // Toggle field from meta
-                    // =====================
-                                    const verifyFieldName = meta.verifyField ?? meta.VerifyField;
-                                    if (verifyFieldName) {
-                                        const verifyField = modalEl.querySelector(`[name="${verifyFieldName}"]`);
-                                        if (verifyField) {
-                                            verifyField.value = "1";
-                                            setSaveEnabled(true);
+                                        const verifyFieldName = meta.verifyField ?? meta.VerifyField;
+                                        if (verifyFieldName) {
+                                            const verifyField = modalEl.querySelector(`[name="${verifyFieldName}"]`);
+                                            if (verifyField) {
+                                                verifyField.value = "1";
+                                                setSaveEnabled(true);
+                                            }
                                         }
-                                    }
 
+                                        const st = getState(slotKey);
+                                        st.cache = rows;
+                                        st.page = 1;
+                                        st.query = "";
+                                        st.sort = null;
 
-                                    const st = getState(slotKey);
-                                    st.cache = rows;
-                                    st.page = 1;
-                                    st.query = "";
-                                    st.sort = null;
+                                        const html = renderExtraTable(rows, meta, st, slotKey);
+                                        if (slotBody) slotBody.innerHTML = html;
 
+                                        this.applyToggleFieldVisibility?.(meta, rows);
 
-
-                                    const html = renderExtraTable(rows, meta, st, slotKey);
-                                    if (slotBody) slotBody.innerHTML = html;
-
-                                    this.applyToggleFieldVisibility?.(meta, rows);
-
-                                    if (window.Alpine && typeof window.Alpine.initTree === "function") {
-                                        window.Alpine.initTree(slotBody);
-                                    }
+                                        if (window.Alpine && typeof window.Alpine.initTree === "function") {
+                                            window.Alpine.initTree(slotBody);
+                                        }
+                                    });
                                 });
-                            });
-                        } catch (e) {
-                            console.warn("[ExtraButton] bind failed:", e);
+                            } catch (e) {
+                            }
                         }
-                    }
-                        
-
-                        // ✅ Extra table depends on a select inside modal (like DependsOn)
-                      
-
 
                     });
 
                 } catch (e) {
-                    console.error("Modal error:", e);
                     this.modal.error = e?.message || "فشل جلب البيانات";
                     this.modal.html = `<div class="p-4 text-red-600">${esc(this.modal.error)}</div>`;
                 } finally {
@@ -4607,14 +4568,11 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 }
             },
 
-  
+            // Dynamic field dependencies
             bindExtraDepends(modalEl, meta, action, row) {
                 try {
                     if (!modalEl || !meta) return;
 
-                    // =========================
-                    // Helpers (safe + local)
-                    // =========================
                     const esc = (v) => {
                         if (v == null) return "";
                         return String(v)
@@ -4633,8 +4591,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         return def;
                     };
 
-                    // داخل openModal عندك renderExtraTable كـ function محلية (مو method)
-                    // فنحتاج نستخدم اللي موجود في window.__sfTableActive إن وجد.
                     const renderTableHtml = (rows, stateForRender = null) => {
                         const st = stateForRender || this.modal.__extraStateMap?.[slotKey] || {
                             page: 1,
@@ -4642,17 +4598,14 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             sort: null
                         };
 
-                        // 1) لو component عنده method اسمها renderExtraTable
                         if (typeof this.renderExtraTable === "function") {
                             return this.renderExtraTable(rows, meta, st, slotKey);
                         }
 
-                        // 2) لو موجودة داخل component كـ function محلية
                         if (window.__sfTableActive && typeof window.__sfTableActive.__renderExtraTable === "function") {
                             return window.__sfTableActive.__renderExtraTable(rows, meta, st, slotKey);
                         }
 
-                        // 3) fallback
                         if (Array.isArray(rows) && rows.length === 0) {
                             return `<div class="p-4 text-gray-500">لا يوجد بيانات</div>`;
                         }
@@ -4660,17 +4613,11 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         return `<div class="p-4 text-gray-500">تعذر رسم الجدول (renderer غير موجود)</div>`;
                     };
 
-                    // لو تبي: خزن renderer من داخل openModal بعد تعريف renderExtraTable:
-                    // window.__sfTableActive.__renderExtraTable = renderExtraTable;
-
-                    // =========================
-                    // Read Meta
-                    // =========================
                     const endpoint = get(meta, "extraEndpoint", "ExtraEndpoint", "/crud/extradataload");
                     const ctx = get(meta, "ctx", "Ctx", {}) || {};
                     const req = get(meta, "extraRequest", "ExtraRequest", {}) || {};
 
-                    const dependsOn = get(meta, "extraDependsOn", "ExtraDependsOn", null);         // مثال: "p01"
+                    const dependsOn = get(meta, "extraDependsOn", "ExtraDependsOn", null);
                     const loadOnOpen = get(meta, "extraLoadOnOpen", "ExtraLoadOnOpen", false) === true;
                     const loadMode = String(get(meta, "extraLoadMode", "ExtraLoadMode", "change") || "change").toLowerCase();
                     const emptyBefore = get(meta, "extraEmptyTextBeforeSelect", "ExtraEmptyTextBeforeSelect", "اختر أولاً لعرض الجدول");
@@ -4678,54 +4625,26 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     const slotKey = String(get(meta, "extraSlotKey", "ExtraSlotKey", "m1") || "m1");
                     const triggerField = String(get(meta, "extraTriggerField", "ExtraTriggerField", "") || "");
                     const slotBody = modalEl.querySelector(`#sf-extra-${slotKey}`);
-                    console.log("[bindExtraDepends] slotKey =", slotKey, "slotBody exists =", !!slotBody);
                     if (!slotBody) {
-                        console.warn("[bindExtraDepends] slot not found:", slotKey);
                         return;
                     }
 
-                    // ✅ وضع العرض
-                    // table => جدول فقط
-                    // both  => جدول + فورم (OpenForm)
                     const uiMode = String(get(meta, "extraUi", "ExtraUi", "both") || "both").toLowerCase();
 
-                    // =========================
-                    // Param modes
-                    // =========================
-                    // (A) single param
-                    const singleParamName = get(meta, "extraParamName", "ExtraParamName", null); // مثال: "parameter_01"
+                    const singleParamName = get(meta, "extraParamName", "ExtraParamName", null);
 
-                    // (B) map params from modal fields
-                    // مثال:
-                    // ["extraParamMap"] = { ["parameter_01"]="p01", ["parameter_02"]="p02" }
                     const paramMap = get(meta, "extraParamMap", "ExtraParamMap", null);
 
-                    // (C) static extra params always sent
-                    // مثال:
-                    // ["extraParams"] = { ["parameter_03"]=1, ["parameter_04"]="X" }
                     const staticParams = get(meta, "extraParams", "ExtraParams", null);
 
-                    // =========================
-                    // Validate request
-                    // =========================
                     if (!endpoint || !req?.pageName_ || !req?.ActionType) {
-                        console.warn("[bindExtraDepends] Missing endpoint/pageName_/ActionType", { endpoint, req });
                         return;
                     }
 
-                    // =========================
-                    // Locate select/fields inside modal
-                    // =========================
                     const sel = dependsOn ? modalEl.querySelector(`[name="${dependsOn}"]`) : null;
 
-                    // ✅ إذا ما فيه dependsOn:
-                    // هذا يعني تحميل ثابت عند فتح المودل (بـ staticParams أو extraRequest.paramMap الخ..)
-                    // نخليه يشتغل لو loadOnOpen=true أو إذا ما فيه dependsOn أصلاً.
                     const isDependsFlow = !!sel;
-                    // =========================
-                    // Cleanup previous bindings (IMPORTANT)
-                    // =========================
-                    // نزيل أي ربط سابق على نفس المودل/نفس الحقل حتى ما تتعارض Actions
+
                     if (sel && sel.__sfExtraHandlerMap && sel.__sfExtraHandlerMap[slotKey]) {
                         sel.removeEventListener("change", sel.__sfExtraHandlerMap[slotKey]);
                         delete sel.__sfExtraHandlerMap[slotKey];
@@ -4738,9 +4657,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         triggerBtn.__sfExtraClickHandler = null;
                     }
 
-                    // =========================
-                    // Render placeholder (keep modal open)
-                    // =========================
                     const ensurePlaceholder = () => {
                         if (slotBody.querySelector(`[data-extra-placeholder="${slotKey}"]`)) return;
 
@@ -4760,13 +4676,10 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     const setPlaceholderText = (text) => {
                         ensurePlaceholder();
                         const ph = slotBody.querySelector(`[data-extra-placeholder="${slotKey}"]`);
-                        /*if (ph) ph.innerHTML = esc(text);*/
+
                         if (ph) ph.innerHTML = `<div style="text-align:center">${esc(text)}</div>`;
                     };
 
-                    // =========================
-                    // Build payload from modal values
-                    // =========================
                     const buildPayload = (pickedVal) => {
                         const payload = {
                             pageName_: req.pageName_,
@@ -4778,25 +4691,21 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             parameters: {}
                         };
 
-                        // 1) static params (always)
                         if (staticParams && typeof staticParams === "object") {
                             Object.keys(staticParams).forEach(k => {
                                 payload.parameters[k] = staticParams[k];
                             });
                         }
 
-                        // 2) map params from modal inputs (extraParamMap)
                         if (paramMap && typeof paramMap === "object") {
                             Object.keys(paramMap).forEach(paramKey => {
-                                const fieldName = paramMap[paramKey]; // مثال "p01"
+                                const fieldName = paramMap[paramKey];
                                 const input = modalEl.querySelector(`[name="${fieldName}"]`);
                                 const v = input ? String(input.value ?? "").trim() : "";
                                 payload.parameters[paramKey] = v;
                             });
                         }
 
-                        // 3) single param fallback (extraParamName + dependsOn)
-                        // إذا ما أعطيت extraParamMap و أعطيت extraParamName
                         if ((!paramMap || typeof paramMap !== "object") && singleParamName) {
                             payload.parameters[singleParamName] = String(pickedVal ?? "").trim();
                         }
@@ -4804,9 +4713,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         return payload;
                     };
 
-                    // =========================
-                    // Fetch + render rows
-                    // =========================
                     const fetchRows = async (payload) => {
                         const token =
                             document.querySelector('input[name="__RequestVerificationToken"]')?.value ||
@@ -4825,7 +4731,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         const txt = await resp.text();
                         let json = null;
                         try { json = txt ? JSON.parse(txt) : null; } catch (e) {
-                            console.error("[bindExtraDepends] JSON parse error", e, txt);
                         }
 
                         const rows =
@@ -4853,23 +4758,17 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                         const tableHtml = renderTableHtml(this.modal.__extraCache, state);
 
-                        // ارسم داخل slot الخاص بهذه meta فقط
                         slotBody.innerHTML = tableHtml;
                         showExtraSlot(slotKey);
 
-                        // إعادة تهيئة Alpine لو موجود
                         if (window.Alpine && typeof window.Alpine.initTree === "function") {
                             window.Alpine.initTree(slotBody);
                         }
                     };
 
-                    // =========================
-                    // Main load function
-                    // =========================
                     const loadTable = async (pickedVal) => {
                         const val = String(pickedVal ?? "").trim();
 
-                        // إذا DependsOn: لا تحمل قبل اختيار
                         if (isDependsFlow) {
                             if (!val || val === "-1" || val === "-99999") {
                                 this.modal.__extraCache = [];
@@ -4879,26 +4778,17 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             }
                         }
 
-
                         showExtraSlot(slotKey);
                         const payload = buildPayload(val);
-
-                        // ✅ لو paramMap موجود: تأكد ما فيه قيم ناقصة (اختياري)
-                        // (لا نفرض هذا شرط لأن بعض الصفحات ممكن ما تحتاج كل الحقول)
-                        console.log("[bindExtraDepends] POST", endpoint, payload);
 
                         setPlaceholderText("جاري تحميل الجدول...");
 
                         const rows = await fetchRows(payload);
-                        console.log("[bindExtraDepends] rows:", rows.length);
 
                         renderRowsIntoModal(rows);
                         this.applyToggleFieldVisibility?.(meta, rows);
                     };
 
-                    // =========================
-                    // Wire events
-                    // =========================
                     const triggerMode = String(get(meta, "extraTriggerMode", "ExtraTriggerMode", "") || "").toLowerCase();
 
                     if (triggerMode === "button") {
@@ -4911,7 +4801,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             : null;
 
                         if (!triggerBtn) {
-                            console.warn("[bindExtraDepends] trigger button not found for slot:", slotKey);
                             return;
                         }
 
@@ -4957,19 +4846,18 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     }
 
                 } catch (e) {
-                    console.error("[bindExtraDepends] error:", e);
                 }
             },
 
+            // Modal lifecycle
             closeModal() {
-                // cancel print sessions safely
+
                 if (this.__printHandle && typeof this.__printHandle.cancel === "function") {
                     this.__printHandle.cancel();
                     this.__printHandle = null;
                 }
                 if (window.__sfPrintSession?.active) window.__sfPrintSession.canceled = true;
 
-                // clear modal
                 this.modal.open = false;
                 this.modal.html = "";
                 this.modal.action = null;
@@ -4979,13 +4867,11 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 this.modal.messageIcon = "";
                 this.modal.messageIsHtml = false;
 
-                // clear extra state (do not affect other pages)
                 this.modal.extraPage = 1;
                 this.modal.extraQuery = "";
                 this.modal.extraSort = null;
                 this.modal.__extraCache = null;
 
-                // remove exposed handlers
                 this.__setExtraPage = null;
                 this.__setExtraQuery = null;
                 this.__setExtraSort = null;
@@ -4993,7 +4879,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 if (window.__sfTableActive === this) window.__sfTableActive = null;
             },
 
-            // ===== Form Generation =====
+            // Form rendering
             generateFormHtml(formConfig, rowData) {
                 if (!formConfig) return "";
 
@@ -5003,7 +4889,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                 let html = `<form id="${formId}" method="${method}" action="${action}" class="sf-modal-form">`;
                 html += `<div class="grid grid-cols-12 gap-4">`;
-                // Generate fields
+
                 (formConfig.fields || []).forEach(field => {
                     if (field.isHidden || field.type === "hidden") {
                         const value = rowData ? (rowData[field.name] || field.value || "") : (field.value || "");
@@ -5016,14 +4902,13 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         html += this.generateFieldHtml(field, rowData);
                     }
                 });
-                // Generate buttons
+
                 if (formConfig.buttons && formConfig.buttons.length > 0) {
                     html += `<div class="col-span-12 flex justify-end gap-2 mt-4">`;
                     formConfig.buttons.forEach(btn => {
                         if (btn.show !== false) {
                             const btnType = btn.type || "button";
 
-                            // تحديد هل هو زر إلغاء
                             const isCancel =
                                 btn.isCancel === true ||
                                 btn.role === 'cancel' ||
@@ -5033,12 +4918,10 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                     btn.text.toLowerCase() === 'cancel'
                                 ));
 
-                            // نضيف كلاس sf-modal-cancel لزر الإلغاء
                             const extraClasses = isCancel ? ' sf-modal-cancel' : '';
                             const btnClass = `btn btn-${btn.color || 'secondary'}${extraClasses}`;
                             const icon = btn.icon ? `<i class="${btn.icon}"></i> ` : "";
 
-                            // لا نضع onclick لزر الإلغاء (الـ listener العام يتولى الإغلاق)
                             const onClick = (!isCancel && btn.type !== 'submit') ? (btn.onClickJs || "") : "";
 
                             html += `<button type="${btnType}" class="${btnClass}" ${onClick ? `onclick="${onClick}"` : ""}>${icon}${btn.text}</button>`;
@@ -5046,29 +4929,26 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     });
                     html += `</div>`;
                 } else {
-                    // Default buttons
+
                     html += `<div class="col-span-12 flex justify-end gap-2 mt-4 sf-modal-actions">`;
 
-                    // زر حفظ
-                    /*html += `<button type="submit" class="btn btn-success sf-modal-btn-save">حفظ</button>`;*/
                     html += `<button type="submit" class="btn btn-success sf-modal-btn-save"><i class="fas fa-check"></i> تنفيذ</button>`;
 
-                    // زر إلغاء
                     html += `<button type="button" class="btn btn-secondary sf-modal-btn-cancel sf-modal-cancel">إلغاء</button>`;
 
                     html += `</div>`;
-
 
                 }
                 html += `</div></form>`;
                 return html;
             },
 
+            // Modal drag and resize
             enableModalDrag(modalEl) {
                 if (!modalEl) return;
                 const header = modalEl.querySelector('.sf-modal-header');
                 if (!header) return;
-                //  منع تكرار الربط لو فتحته أكثر من مرة
+
                 if (modalEl.__dragBound) return;
                 modalEl.__dragBound = true;
                 let isDragging = false;
@@ -5089,7 +4969,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 };
 
                 header.addEventListener('mousedown', (e) => {
-                    // لا تسحب إذا ضغطت على زر الإغلاق
+
                     if (e.target.closest('.sf-modal-close,[data-modal-close],button,a,input,select,textarea')) return;
                     e.preventDefault();
                     isDragging = true;
@@ -5098,7 +4978,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     startY = e.clientY;
                     startLeft = rect.left;
                     startTop = rect.top;
-                    // أول سحب: فك التمركز translate
+
                     modalEl.style.transform = 'none';
                     modalEl.style.left = startLeft + 'px';
                     modalEl.style.top = startTop + 'px';
@@ -5109,7 +4989,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
             enableModalResize(modalEl) {
                 if (!modalEl) return;
-                // منع تكرار الربط
+
                 if (modalEl.__resizeBound) return;
                 modalEl.__resizeBound = true;
                 const computed = getComputedStyle(modalEl);
@@ -5152,22 +5032,22 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     let newH = startH;
                     let newL = startL;
                     let newT = startT;
-                    // يمين/يسار
+
                     if (dir.includes('e')) newW = startW + dx;
                     if (dir.includes('w')) { newW = startW - dx; newL = startL + dx; }
-                    // أعلى/أسفل
+
                     if (dir.includes('s')) newH = startH + dy;
                     if (dir.includes('n')) { newH = startH - dy; newT = startT + dy; }
-                    // clamp
+
                     newW = clamp(newW, minW, maxW);
                     newH = clamp(newH, minH, maxH);
-                    // تصحيح left/top عند السحب من w/n
+
                     if (dir.includes('w')) newL = startL + (startW - newW);
                     if (dir.includes('n')) newT = startT + (startH - newH);
-                    // تثبيت داخل الشاشة
+
                     newL = clamp(newL, 16, vw - newW - 16);
                     newT = clamp(newT, 16, vh - newH - 16);
-                    // فك التمركز
+
                     modalEl.style.transform = 'none';
                     modalEl.style.left = newL + 'px';
                     modalEl.style.top = newT + 'px';
@@ -5199,7 +5079,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     document.addEventListener('mouseup', onUp);
                 });
 
-               
                 modalEl.addEventListener('touchstart', (e) => {
                     const h = e.target.closest('.sf-resize-handle');
                     if (!h) return;
@@ -5220,6 +5099,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 }, { passive: false });
             },
 
+            // Date picker setup
             initDatePickers(rootEl) {
                 if (typeof flatpickr === "undefined") return;
                 (rootEl || document)
@@ -5229,7 +5109,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         flatpickr(el, {
                             locale: flatpickr.l10ns.ar,
                             dateFormat: "Y-m-d",
-                            altInput: false,      
+                            altInput: false,
                             defaultDate: null,
                             allowInput: true,
                             disableMobile: true
@@ -5237,6 +5117,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     });
             },
 
+            // Field rendering
             generateFieldHtml(field, rowData) {
                 if (!field || !field.name) return "";
                 const value = rowData
@@ -5278,8 +5159,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         oninput = `oninput="this.value=this.value.replace(/[^A-Za-z\\s]/g,'')"`;
                         pattern = 'pattern="[A-Za-z\\s]+"';
                         break;
-
-                 
 
                     case "numeric":
                         oninput = `oninput="this.value=this.value.replace(/[^0-9]/g,'')"`;
@@ -5434,21 +5313,12 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
         </div>
     </div>
     ${field.helpText
-                                ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
-                                : ''}
+                ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
+                : ''}
 </div>`;
                         break;
                     }
 
-                
-
-
-                    // =======================
-                    // 1) FORM GENERATOR (case "fileupload") ✅ (100% compatible)
-                    // - keeps your dataset (data-*) for the JS component
-                    // - adds hidden inputs (*__folder/*__subfolder/*__max*) for server-side CRUD (AutoUpload=false)
-                    //  NEW: clicking inside the field opens file picker (via label/for)
-                    // =======================
                     case "fileupload": {
                         const val = (a, b, d = undefined) => (a !== undefined && a !== null ? a : (b !== undefined && b !== null ? b : d));
 
@@ -5468,8 +5338,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         const uploadFolder = val(field.uploadFolder, field.UploadFolder, "");
                         const uploadSubFolder = val(field.uploadSubFolder, field.UploadSubFolder, "");
 
-                        const saveMode = val(field.saveMode, field.SaveMode, "physical");          // physical | db
-                        const fileNameMode = val(field.fileNameMode, field.FileNameMode, "uuid"); // uuid | original | timestamp
+                        const saveMode = val(field.saveMode, field.SaveMode, "physical");
+                        const fileNameMode = val(field.fileNameMode, field.FileNameMode, "uuid");
                         const overwrite = val(field.overwrite, field.Overwrite, false) ? "true" : "false";
                         const keepExt = val(field.keepOriginalExtension, field.KeepOriginalExtension, true) ? "true" : "false";
 
@@ -5488,14 +5358,13 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         const showProgress = val(field.showUploadProgress, field.ShowUploadProgress, true) ? "true" : "false";
 
                         const enablePreview = val(field.enablePreview, field.EnablePreview, false) ? "true" : "false";
-                        const previewMode = val(field.previewMode, field.PreviewMode, "modal"); // modal | newtab
+                        const previewMode = val(field.previewMode, field.PreviewMode, "modal");
                         const previewTypes = val(field.previewableTypes, field.PreviewableTypes, ".pdf,.jpg,.png");
                         const previewTitle = val(field.previewTitle, field.PreviewTitle, "معاينة");
                         const previewHeight = val(field.previewHeight, field.PreviewHeight, 600);
 
-                        //  IMPORTANT: make A4 OPTIONAL (default empty)
-                        const previewPaper = val(field.previewPaper, field.PreviewPaper, ""); // "a4" or ""
-                        const previewOrientation = val(field.previewOrientation, field.PreviewOrientation, "portrait"); // portrait|landscape
+                        const previewPaper = val(field.previewPaper, field.PreviewPaper, "");
+                        const previewOrientation = val(field.previewOrientation, field.PreviewOrientation, "portrait");
 
                         const readOnlyFiles = val(field.readOnlyFiles, field.ReadOnlyFiles, false) ? "true" : "false";
                         const autoUpload = val(field.autoUpload, field.AutoUpload, false) ? "true" : "false";
@@ -5575,7 +5444,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             <div class="sf-file-bar">
                               <label class="sf-file-btn" for="${inputId}">إرفاق ملف</label>
 
-                              <!-- ✅ NEW: make the whole field clickable -->
                               <label class="sf-file-meta sf-file-field" for="${inputId}">
                                 <span class="sf-file-picked">لم يتم اختيار ملفات</span>
                               </label>
@@ -5592,10 +5460,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                               ${disabledAttr}
                             />
 
-                            <!--  used when AutoUpload=true (stores server file IDs as JSON) -->
                             <input type="hidden" name="${safeName}__uploaded" class="sf-file-uploaded" value="[]" />
 
-                            <!--  NEW: server-side settings (AutoUpload=false uses these) -->
                             <input type="hidden" name="${safeName}__folder" value="${this.escapeHtml(uploadFolder)}" />
                             <input type="hidden" name="${safeName}__subfolder" value="${this.escapeHtml(uploadSubFolder)}" />
                             <input type="hidden" name="${safeName}__maxFiles" value="${maxFiles ?? ""}" />
@@ -5611,18 +5477,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         </div>`;
                         break;
                     }
-
-
-
-
-
-
-
-                        
-
-
-
-
 
                     case "textarea": {
                         const acRaw = field.autocomplete ?? field.Autocomplete;
@@ -5649,21 +5503,15 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 ${autocompleteAttr}
                             >${this.escapeHtml(value)}</textarea>
                             ${field.helpText
-                                ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
-                                : ''}
+                ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
+                : ''}
                             </div>`;
                         break;
                     }
 
-
-
-
                     case "select": {
                         let options = "";
 
-                        // =========================
-                        // 1) Placeholder
-                        // =========================
                         options += `<option value="" disabled ${!value ? "selected" : ""}>${this.escapeHtml(field.placeholder || "الرجاء الاختيار")}</option>`;
 
                         (field.options || []).forEach(opt => {
@@ -5673,27 +5521,20 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             options += `<option value="${this.escapeHtml(optValue)}" ${selected}>${this.escapeHtml(optText)}</option>`;
                         });
 
-                        // =========================
-                        // 2) onchange / depends
-                        // =========================
                         let onChangeHandler = field.onChangeJs || "";
 
-                        //  onchange (لأن listener العام يتولى)
                         if (!(field.dependsUrl && field.dependsOn) && onChangeHandler && !field.dependsUrl) {
                             onChangeHandler = `${onChangeHandler}`;
                         }
                         const onChangeAttr = onChangeHandler ? `onchange="${this.escapeHtml(onChangeHandler)}"` : "";
                         const dependsOnAttr = field.dependsOn ? `data-depends-on="${this.escapeHtml(field.dependsOn)}"` : "";
                         const dependsUrlAttr = field.dependsUrl ? `data-depends-url="${this.escapeHtml(field.dependsUrl)}"` : "";
-                        // =========================
-                        // 3)  Select2 switch (من الكنترول)
-                        // =========================
-                        // يدعم camelCase و PascalCase
+
                         const useSelect2 = !!(field.select2 ?? field.Select2);
-                        // اختياري (لو ما تبيها احذفها من هنا ومن FieldConfig)
+
                         const minResults = field.select2MinResultsForSearch ?? field.Select2MinResultsForSearch;
                         const s2Placeholder = field.select2Placeholder ?? field.Select2Placeholder;
-                        // إذا Select2=true ضف الكلاس + data attributes
+
                         const select2Class = useSelect2 ? "js-select2" : "";
                         const s2MinAttr = (useSelect2 && minResults !== undefined && minResults !== null)
                             ? `data-s2-min-results="${this.escapeHtml(minResults)}"`
@@ -5701,9 +5542,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         const s2PhAttr = (useSelect2 && s2Placeholder)
                             ? `data-s2-placeholder="${this.escapeHtml(s2Placeholder)}"`
                             : "";
-                        // =========================
-                        // 4) HTML
-                        // =========================
+
                         fieldHtml = `
                         <div class="form-group ${colCss}">
                             <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -5736,7 +5575,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         fieldHtml = `
                         <div class="form-group ${colCss}">
                             <label class="inline-flex items-center">
-                                <input type="checkbox" name="${this.escapeHtml(field.name)}" value="1" 
+                                <input type="checkbox" name="${this.escapeHtml(field.name)}" value="1"
                                        ${checked} ${required} ${disabled}
                                        class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
                                 <span class="ml-2 text-sm text-gray-700">
@@ -5747,19 +5586,15 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         </div>`;
                         break;
 
-
                     case "date": {
 
                         const hasIcon = !!field.icon;
                         const isRtl = document?.documentElement?.dir === "rtl";
 
-                        
                         const iconSideClass = isRtl ? "sf-icon-right" : "sf-icon-left";
 
-                        
                         const iconInputClass = hasIcon ? `sf-has-icon ${iconSideClass}` : "";
 
-                        
                         const iconHtml = hasIcon
                             ? `<span class="sf-input-icon ${iconSideClass}">
                                     <i class="${this.escapeHtml(field.icon)}"></i>
@@ -5789,14 +5624,11 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 </div>
 
                                 ${field.helpText
-                                ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
-                                : ''}
+                ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
+                : ''}
                             </div>`;
                         break;
                     }
-
-
-
 
                     case "number":
                         const min0 = `min="0"`;
@@ -5812,7 +5644,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                             (ac !== undefined && ac !== null && String(ac).trim() !== "")
                                 ? `autocomplete="${this.escapeHtml(ac)}"`
                                 : `autocomplete="off"`;
-
 
                         const numberOnInput = allowDecimal
                             ? `oninput="this.value=this.value.replace(/[^0-9.]/g,''); if(this.value.startsWith('.')) this.value='0'+this.value; if(this.value.includes('.')){const p=this.value.split('.'); this.value=p[0]+'.'+p.slice(1).join('');}"`
@@ -5860,21 +5691,15 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 >
                             </div>
                             ${field.helpText
-                                ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
-                                : ''}
+                ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>`
+                : ''}
                         </div>`;
                         break;
-
-
-
-
-
 
                     case "nationalid":
                     case "nid":
                     case "identity": {
 
-                        // أرقام فقط + أقصى 10 أرقام
                         const nidOnInput =
                             `oninput="` +
                             `this.value=this.value.replace(/\\D/g,'');` +
@@ -5930,10 +5755,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         break;
                     }
 
-
-
-
-
                     case "phone":
                     case "tel": {
 
@@ -5941,24 +5762,20 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                         (function(el){
                                             let v = (el.value || '');
 
-                                            // digits to ascii
                                             v = v.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
                                             v = v.replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
 
-                                            // keep digits only
                                             v = v.replace(/\\s+/g,'');
-                                            v = v.replace(/^\\+/, '');      // +966... -> 966...
+                                            v = v.replace(/^\\+/, '');
                                             v = v.replace(/\\D/g,'');
 
-                                            // Saudi normalize to 05XXXXXXXX
-                                            if (v.startsWith('966'))  v = '0' + v.slice(3);      // 9665xxxxxxxx -> 05xxxxxxxx
-                                            if (v.startsWith('00966')) v = '0' + v.slice(5);     // 009665xxxxxxxx -> 05xxxxxxxx
-                                            if (v.startsWith('5') && v.length === 9) v = '0' + v; // 5xxxxxxxx -> 05xxxxxxxx
+                                            if (v.startsWith('966'))  v = '0' + v.slice(3);
+                                            if (v.startsWith('00966')) v = '0' + v.slice(5);
+                                            if (v.startsWith('5') && v.length === 9) v = '0' + v;
 
-                                            // force prefix 05 if user started typing mobile
                                             if (v.length >= 2 && !v.startsWith('05')) {
                                                 if (v.startsWith('0')) v = '05' + v.slice(2);
-                                                else v = '05' + v.replace(/^05/, '').slice(0); // fallback
+                                                else v = '05' + v.replace(/^05/, '').slice(0);
                                             }
 
                                             if (v.length > 10) v = v.slice(0,10);
@@ -5968,7 +5785,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                         const validateFn = `
                                         (function(el){
-                                            // normalize first
                                             ${normalizeFn.replace(/this/g, 'el')}
 
                                             const v = (el.value || '');
@@ -6059,10 +5875,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         break;
                     }
 
-
-
-
-
                     case "iban":
                         fieldHtml = `
                         <div class="form-group ${colCss}">
@@ -6070,8 +5882,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 ${this.escapeHtml(field.label)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
 
                             </label>
-                            <input type="text" name="${this.escapeHtml(field.name)}" 
-                                   value="${this.escapeHtml(value)}" 
+                            <input type="text" name="${this.escapeHtml(field.name)}"
+                                   value="${this.escapeHtml(value)}"
                                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
                                    ${placeholder} ${required} ${disabled} ${readonly} ${maxLength}>
                             ${field.helpText ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>` : ''}
@@ -6079,15 +5891,15 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         break;
 
                     default:
-                        // Fallback to text input
+
                         fieldHtml = `
                         <div class="form-group ${colCss}">
                             <label class="block text-sm font-medium text-gray-700 mb-1">
                                 ${this.escapeHtml(field.label)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
 
                             </label>
-                            <input type="text" name="${this.escapeHtml(field.name)}" 
-                                   value="${this.escapeHtml(value)}" 
+                            <input type="text" name="${this.escapeHtml(field.name)}"
+                                   value="${this.escapeHtml(value)}"
                                    class="sf-modal-input"
                                    ${placeholder} ${required} ${disabled} ${readonly} ${maxLength}>
                             ${field.helpText ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>` : ''}
@@ -6098,67 +5910,61 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 return fieldHtml;
             },
 
-            //resolveColCss(colCss) {
-            //    if (!colCss) return "col-span-12 md:col-span-6";
-
-            //    if (/^\d{1,2}$/.test(colCss)) {
-            //        const n = Math.max(1, Math.min(12, parseInt(colCss, 10)));
-            //        return `col-span-12 md:col-span-${n}`;
-            //    }
-
-            //    return colCss.includes('col-span') ? colCss : `col-span-12 ${colCss}`;
-            //},
-
+            // CSS helpers
             resolveColCss(colCss) {
                 if (!colCss) return "col-span-12";
 
                 const raw = colCss.toString().trim();
 
-                // إذا المستخدم كتب رقم فقط: 2/3/4/6/8/10/12
                 if (/^\d{1,2}$/.test(raw)) {
                     const n = Math.max(1, Math.min(12, parseInt(raw, 10)));
                     return `col-span-${n}`;
                 }
 
-                // إذا كتب كلاسات جاهزة مثل: "col-span-4 md:col-span-6"
                 if (raw.includes("col-span")) return raw;
 
-                // غير كذا: اعتبره كلاس إضافي مع default 12
                 return `col-span-12 ${raw}`;
             },
-
 
             initModalScripts() {
                 const form = this.$el.querySelector('.sf-modal form');
                 if (form) {
 
-                    // ===== تخصيص رسالة required =====
                     form.querySelectorAll("[required]").forEach(input => {
+                        if (!input.value) {
+                            input.setCustomValidity("الرجاء تعبئة هذا الحقل");
+                        }
 
-                        // منع رسالة المتصفح الافتراضية
-                        input.addEventListener("invalid", function (e) {
-                            e.preventDefault();
-                            this.setCustomValidity("حقل إجباري");
+                        input.addEventListener("invalid", function () {
+                            this.setCustomValidity("الرجاء تعبئة هذا الحقل");
                         });
 
-                        // عند تعديل المدخلات، أعد التحقق
                         input.addEventListener("input", function () {
                             this.setCustomValidity("");
+                            if (!this.checkValidity()) {
+                                this.setCustomValidity("الرجاء تعبئة هذا الحقل");
+                            }
+                        });
+
+                        input.addEventListener("change", function () {
+                            this.setCustomValidity("");
+                            if (!this.checkValidity()) {
+                                this.setCustomValidity("الرجاء تعبئة هذا الحقل");
+                            }
                         });
                     });
-                    // ===== نهاية تعديل required =====
 
                     form.addEventListener('submit', (e) => {
                         e.preventDefault();
                         this.saveModalChanges();
                     });
 
-                    /*this.setupDependentDropdowns(form);*/
                 }
             },
 
+            // Dependent dropdowns
             setupDependentDropdowns(form) {
-                // Find all selects with data-depends-on attribute
+
                 const dependentSelects = form.querySelectorAll('select[data-depends-on]');
 
                 dependentSelects.forEach(dependentSelect => {
@@ -6167,29 +5973,27 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
 
                     if (!parentFieldName || !dependsUrl) return;
 
-                    // Find the parent select
                     const parentSelect = form.querySelector(`select[name="${parentFieldName}"]`);
                     if (!parentSelect) {
-                        console.warn(`Parent select not found: ${parentFieldName}`);
                         return;
                     }
-                    // Attach change handler to parent
+
                     parentSelect.addEventListener('change', async (e) => {
                         const parentValue = e.target.value;
-                        // Show loading state
+
                         const originalHtml = dependentSelect.innerHTML;
                         dependentSelect.innerHTML = '<option value="-1">جاري التحميل...</option>';
                         dependentSelect.disabled = true;
                         try {
-                            // Build URL with parent value
+
                             const url = `${dependsUrl}?${parentFieldName}=${encodeURIComponent(parentValue)}`;
-                            // Fetch new options
+
                             const response = await fetch(url);
                             if (!response.ok) {
                                 throw new Error(`HTTP ${response.status}`);
                             }
                             const data = await response.json();
-                            // Rebuild options
+
                             dependentSelect.innerHTML = '';
 
                             if (Array.isArray(data) && data.length > 0) {
@@ -6203,7 +6007,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 dependentSelect.innerHTML = '<option value="-1">لا توجد خيارات متاحة</option>';
                             }
 
-                            //  تحديث select2 بعد تغيير الخيارات
                             if (window.jQuery && jQuery.fn.select2 && dependentSelect.classList.contains('js-select2')) {
                                 const parentModal = dependentSelect.closest('.sf-modal') || document.body;
 
@@ -6215,9 +6018,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 });
                             }
 
-
                         } catch (error) {
-                            console.error('Error loading dependent options:', error);
                             dependentSelect.innerHTML = originalHtml;
                             this.showToast('فشل تحميل الخيارات: ' + error.message, 'error');
                         } finally {
@@ -6225,7 +6026,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         }
                     });
 
-                    // Trigger initial load if parent has value
                     if (parentSelect.value && parentSelect.value !== '' && parentSelect.value !== '-1') {
                         parentSelect.dispatchEvent(new Event('change'));
                     }
@@ -6249,9 +6049,9 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     );
 
                     if (result) {
-                        //  تحديث سريع بدون refresh ثقيل
+
                         if (this.serverPaging) {
-                            await this.load(); // يرجّع نفس الصفحة فقط
+                            await this.load();
                         } else {
                             const saved = result.data || result.row || result.item || null;
                             const id = (saved && saved[this.rowIdField]) ?? formData[this.rowIdField];
@@ -6260,6 +6060,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                                 const idx = this.allRows.findIndex(r => r[this.rowIdField] == id);
                                 if (idx >= 0) this.allRows[idx] = { ...this.allRows[idx], ...saved };
                                 else this.allRows.unshift(saved);
+                                this.invalidateRowCaches();
                             }
 
                             this.applyFiltersAndSort();
@@ -6269,23 +6070,14 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                         this.clearSelection();
                     }
 
-
-                    //if (success) {
-                    //    this.closeModal();
-                    //    if (this.autoRefresh) {
-                    //        this.clearSelection();
-                    //        await this.refresh();
-                    //    }
-                    //}
-
                 } catch (e) {
-                    console.error("Save error:", e);
                     this.modal.error = e.message || "فشل في الحفظ";
                 } finally {
                     this.modal.loading = false;
                 }
             },
 
+            // Detail view rendering
             formatDetailView(row, columns) {
                 if (!row || !Array.isArray(columns)) {
                     return `<div class="sf-detail-empty">لا توجد بيانات</div>`;
@@ -6334,15 +6126,14 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 return html;
             },
 
-            // ===== Form Serialization =====
+            // Form serialization
             serializeForm(form) {
                 const formData = new FormData(form);
                 const data = {};
 
-                // Handle regular form fields
                 for (const [key, value] of formData.entries()) {
                     if (data[key]) {
-                        // Multiple values - convert to array
+
                         if (Array.isArray(data[key])) {
                             data[key].push(value);
                         } else {
@@ -6353,7 +6144,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     }
                 }
 
-                // Handle unchecked checkboxes
                 form.querySelectorAll('input[type="checkbox"][name]').forEach(checkbox => {
                     if (!formData.has(checkbox.name)) {
                         data[checkbox.name] = false;
@@ -6362,7 +6152,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     }
                 });
 
-                // Clean up data types
                 Object.keys(data).forEach(key => {
                     let value = data[key];
                     if (typeof value === 'string') {
@@ -6392,9 +6181,8 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     };
                     const result = await this.postJson(this.endpoint, body);
                     if (result?.message) this.showToast(result.message, 'success');
-                    return result; //بدل true
+                    return result;
                 } catch (e) {
-                    console.error("Execute SP error:", e);
                     this.showToast("⚠️ " + (e.message || "فشل العملية"), 'error');
 
                     if (e.server?.errors) this.applyServerErrors(e.server.errors);
@@ -6406,7 +6194,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             async postJson(url, body) {
                 const headers = { "Content-Type": "application/json" };
 
-                // Add CSRF token if available
                 const csrfToken = this.getCsrfToken();
                 if (csrfToken) {
                     headers["RequestVerificationToken"] = csrfToken;
@@ -6422,7 +6209,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 try {
                     json = await response.json();
                 } catch (e) {
-                    // Response is not JSON
+
                 }
 
                 if (!response.ok) {
@@ -6439,6 +6226,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 return json;
             },
 
+            // Server communication
             getCsrfToken() {
                 const meta = document.querySelector('meta[name="request-verification-token"]');
                 if (meta?.content) return meta.content;
@@ -6451,13 +6239,11 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 const form = this.$el.querySelector('.sf-modal form');
                 if (!form || !errors) return;
 
-                // Clear existing errors
                 form.querySelectorAll('[data-error-msg]').forEach(el => el.remove());
                 form.querySelectorAll('.ring-red-500, .border-red-500').forEach(el => {
                     el.classList.remove('ring-red-500', 'border-red-500', 'ring-1');
                 });
 
-                // Apply new errors
                 Object.entries(errors).forEach(([fieldName, message]) => {
                     const field = form.querySelector(`[name="${fieldName}"]`);
                     if (field) {
@@ -6473,7 +6259,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 });
             },
 
-            
+            // Cell formatting
             formatCell(row, col) {
                 let value = row[col.field];
                 if (value == null) value = "";
@@ -6570,10 +6356,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 }
             },
 
-
-
-
-            // ===== Grouping =====
+            // Grouping and pagination
             groupedRows() {
                 if (!this.groupBy) {
                     return [{ key: null, label: null, items: this.rows }];
@@ -6656,7 +6439,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 return `${start} - ${end} من ${this.total}`;
             },
 
-            // ===== Utility Functions =====
+            // URL and text helpers
             fillUrl(template, data) {
                 if (!template || !data) return template || "";
                 return template.replace(/\{(\w+)\}/g, (match, key) => data[key] || "");
@@ -6671,9 +6454,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     .replace(/'/g, "&#039;");
             },
 
-
-            
-
+            // Toast notifications
             showToast(message, type = 'info') {
                 const toast = document.createElement('div');
 
@@ -6746,25 +6527,20 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     clearTimeout(timer);
                 };
 
-                // hover behavior
                 toast.addEventListener('mouseenter', stopTimer);
                 toast.addEventListener('mouseleave', startTimer);
 
-                // زر الإغلاق
                 const closeBtn = toast.querySelector('.toast-close-btn');
                 closeBtn.addEventListener('click', closeToast);
 
-                // تشغيل أولي
                 startTimer();
             },
 
-            // ===== Advanced Features =====
+            // Display controls
             toggleFullscreen() {
                 const element = this.$el;
                 if (!document.fullscreenElement) {
-                    element.requestFullscreen?.().catch(err => 
-                        console.error('Fullscreen error:', err)
-                    );
+                    element.requestFullscreen?.().catch(() => {});
                 } else {
                     document.exitFullscreen?.();
                 }
@@ -6775,10 +6551,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 this.savePreferences();
             },
 
-            //========== بداية الطباعه =========
-
-
-            // ===== Busy Print (NEW) =====
+            // Print workflow
             showBusyPrint(message = "جاري تجهيز البيانات للطباعة...", opts = {}) {
                 const isHtml = (opts.isHtml === true);
 
@@ -6789,7 +6562,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 this.modal.title = opts.title || "طباعة";
                 this.modal.message = message;
 
-                // لو ما أرسلت class/icon استخدم الافتراضي
                 this.modal.messageClass = opts.messageClass || "border border-sky-200 bg-sky-50 text-sky-700";
                 this.modal.messageIcon = opts.messageIcon || "";
 
@@ -6800,7 +6572,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 this.modal.loading = true;
 
             },
-
 
             hideBusyPrint() {
                 this.modal.loading = false;
@@ -6833,13 +6604,7 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 });
             }
 
-
-
-            //========== نهاية الطباعه =========
-
-
         }));
-
 
         window.sfPrintWithBusy = window.sfPrintWithBusy || function (table, options) {
             options = options || {};
@@ -6891,7 +6656,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                 const u = new URL(window.location.href);
                 u.searchParams.set('pdf', String(pdfVal));
 
-                // بارامترات إضافية من extraParams
                 if (options.extraParams && typeof options.extraParams === "object") {
                     Object.keys(options.extraParams).forEach(k => {
                         const v = options.extraParams[k];
@@ -6900,7 +6664,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
                     });
                 }
 
-                // بارامترات إضافية مرسلة مباشرة داخل options
                 const reservedKeys = new Set([
                     "pdf",
                     "pdfVal",
@@ -6944,95 +6707,6 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
             return true;
         };
 
-
-        //// دالة عامة للطباعة مع Busy modal
-        //window.sfPrintWithBusy = window.sfPrintWithBusy || function (table, options) {
-        //    options = options || {};
-
-        //    if (!table) return false;
-
-        //    const defaultHtml = `
-        //            <div class="space-y-3 text-center">
-        //              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-400 text-white text-sm">
-        //                جاري تجهيز البيانات للطباعة الرجاء الانتظار
-        //                <i class="fa fa-spinner animate-spin"></i>
-        //              </div>
-
-        //              <div class="text-base">
-        //                <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-400 text-white text-sm">
-        //                  وقت الطباعة يعتمد على عدد السجلات المراد طباعتها وسرعة الاتصال
-        //                  <i class="fa fa-bolt"></i>
-        //                </span>
-        //              </div>
-
-        //              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-50 text-green-700 text-sm">
-        //                حفاظًا على البيئة وتماشياً مع مستهدفات رؤية 2030 نأمل تقليل الطباعة
-        //                <i class="fa fa-leaf"></i>
-        //              </div>
-        //            </div>
-        //          `;
-
-        //    const busy = options.busy || {};
-        //    const pdfVal = (options.pdf ?? options.pdfVal ?? 1);
-
-        //    // ✅ افتح مودال الـ Busy
-        //    if (options.messageText) {
-        //        table.showBusyPrint(options.messageText, {
-        //            isHtml: false,
-        //            title: busy.title || "الطباعة",
-        //            icon: (busy.icon === undefined) ? "fa fa-print" : busy.icon,
-        //            className: busy.className || "border border-sky-200 bg-sky-50 text-sky-700"
-        //        });
-        //    } else {
-        //        table.showBusyPrint(options.messageHtml || defaultHtml, {
-        //            isHtml: true,
-        //            title: busy.title || "الطباعة",
-        //            icon: (busy.icon === undefined) ? "fa fa-print" : busy.icon,
-        //            className: busy.className || "border border-sky-200 bg-sky-50 text-sky-700"
-        //        });
-        //    }
-
-        //    // ✅ كوّن رابط الطباعة من نفس الصفحة
-        //    let url;
-        //    try {
-        //        const u = new URL(window.location.href);
-        //        u.searchParams.set('pdf', String(pdfVal));
-
-        //        // أي بارامترات إضافية
-        //        if (options.extraParams && typeof options.extraParams === "object") {
-        //            Object.keys(options.extraParams).forEach(k => {
-        //                const v = options.extraParams[k];
-        //                if (v === null || v === undefined) return;
-        //                u.searchParams.set(k, String(v));
-        //            });
-        //        }
-
-        //        url = u.toString();
-        //    } catch (e) {
-        //        table.hideBusyPrint();
-        //        table.showToast("تعذر تجهيز رابط الطباعة", "error");
-        //        return false;
-        //    }
-
-        //    // ✅ ابدأ الطباعة عبر iframe
-        //    table.__printHandle = sfOpenPrint(url, {
-        //        onBeforePrint: () => table.hideBusyPrint(),
-        //        onAfterPrint: () => table.hideBusyPrint(), // احتياط
-        //        onError: (e) => {
-        //            table.hideBusyPrint();
-        //            table.showToast('تعذر فتح الطباعة: ' + (e?.message || e), 'error');
-        //        }
-        //    });
-
-        //    if (!table.__printHandle) {
-        //        table.hideBusyPrint();
-        //        table.showToast('تعذر بدء الطباعة', 'error');
-        //        return false;
-        //    }
-
-        //    return true;
-        //};
-
     };
 
     if (window.Alpine) {
@@ -7042,41 +6716,9 @@ window.__sfTableGlobalBound = window.__sfTableGlobalBound || false;
     }
 })();
 
-
-//document.addEventListener("DOMContentLoaded", () => {
-
-//    document.body.addEventListener("invalid", function (e) {
-//        e.target.setCustomValidity("يرجى ملء هذا الحقل");
-//    }, true);
-
-//    document.body.addEventListener("input", function (e) {
-//        e.target.setCustomValidity("");
-//    }, true);
-
-//});
-
-//document.body.addEventListener("change", function(e) {
-
-//    if (e.target.tagName === "SELECT") {
-
-//        if (e.target.value === "-99999") {
-//            e.target.setCustomValidity("يرجى ملء هذا الحقل");
-//        } else {
-//            e.target.setCustomValidity("");
-//        }
-
-//    }
-
-//}, true);
-
-
-
-
-// ===== SmartTable Dynamic Edit Routing =====
 window.sfRouteEditForm = function (table, act, row) {
     if (!table || !act) return;
 
-    // reset cancel flag
     act.__cancelOpen = false;
 
     const meta = act.Meta || act.meta;
@@ -7092,9 +6734,8 @@ window.sfRouteEditForm = function (table, act, row) {
     const key = String(r?.[routeBy] ?? "");
     const route = routes[key] || routes["*"];
 
-    //  لا يوجد إجراء لهذه الحالة
     if (!route) {
-        
+
         act.ModalTitle = act.modalTitle = "";
         act.ModalMessage = act.modalMessage = "";
 
@@ -7104,11 +6745,7 @@ window.sfRouteEditForm = function (table, act, row) {
             of0.Fields = of0.fields = [];
         }
 
-        // علّم أن الفتح ممنوع (لازم كود الفتح يشيك عليها)
         act.__cancelOpen = true;
-
-        // (اختياري) رسالة
-        // table.toast?.warn?.("لا يوجد إجراء لاحق لهذه الحالة");
 
         return;
     }
@@ -7136,21 +6773,10 @@ window.sfRouteEditForm = function (table, act, row) {
     }
 };
 
-
-
-
-
-
-
-
-// =======================================
-// 2) SmartFileUpload 
-// =======================================
 (function () {
     if (window.__sfFileUploadDelegated) return;
     window.__sfFileUploadDelegated = true;
 
-    // ---------- helpers ----------
     const MB = 1024 * 1024;
 
     function formatSize(bytes) {
@@ -7169,7 +6795,7 @@ window.sfRouteEditForm = function (table, act, row) {
     function hasDoubleExtension(name) {
         const n = (name || "").toLowerCase();
         const parts = n.split(".").filter(Boolean);
-        return parts.length >= 3; // e.g. a.b.c
+        return parts.length >= 3;
     }
 
     function parseCsv(s) {
@@ -7234,7 +6860,6 @@ window.sfRouteEditForm = function (table, act, row) {
         return cfg.previewTypes.includes(ext);
     }
 
-    // ---------- A4 sizing ----------
     function computePaperSize(paper, orientation) {
         const p = (paper || "").toLowerCase();
         const orient = (orientation || "portrait").toLowerCase();
@@ -7283,7 +6908,6 @@ window.sfRouteEditForm = function (table, act, row) {
         mo.observe(document.documentElement, { childList: true, subtree: true });
     })();
 
-    // ---------- preview modal ----------
     function ensurePreviewModal() {
         let m = document.getElementById("sf-preview-modal");
         if (m) return m;
@@ -7380,7 +7004,6 @@ window.sfRouteEditForm = function (table, act, row) {
         }
     }
 
-    // ---------- errors ----------
     function setErrors(root, msgs) {
         const box = root.querySelector(".sf-file-errors");
         if (!box) return;
@@ -7393,7 +7016,6 @@ window.sfRouteEditForm = function (table, act, row) {
         box.innerHTML = msgs.map(m => `<div class="sf-file-error">${m}</div>`).join("");
     }
 
-    // ---------- validation ----------
     function validateFiles(cfg, files) {
         const errs = [];
 
@@ -7418,7 +7040,6 @@ window.sfRouteEditForm = function (table, act, row) {
         return [...new Set(errs)];
     }
 
-    // ---------- rendering (local) ----------
     function renderLocal(root, input) {
         const cfg = getCfg(root);
 
@@ -7475,7 +7096,6 @@ window.sfRouteEditForm = function (table, act, row) {
         return { input, files, file: files[idx] || null };
     }
 
-    // ---------- AutoUpload ----------
     function getUploadedHidden(root) {
         return root.querySelector(".sf-file-uploaded");
     }
@@ -7492,7 +7112,6 @@ window.sfRouteEditForm = function (table, act, row) {
         h.value = JSON.stringify(ids || []);
     }
 
-    // XHR upload with abort support (prevents multiple parallel uploads)
     function xhrUpload(url, formData, onProgress) {
         const xhr = new XMLHttpRequest();
         const p = new Promise((resolve, reject) => {
@@ -7564,9 +7183,8 @@ window.sfRouteEditForm = function (table, act, row) {
     async function doAutoUpload(root, input) {
         const cfg = getCfg(root);
 
-        // prevent duplicate parallel uploads (and cancel previous if any)
         if (root.__sfUploadAbort && typeof root.__sfUploadAbort === "function") {
-            root.__sfUploadAbort(); // cancel previous in-flight
+            root.__sfUploadAbort();
             root.__sfUploadAbort = null;
         }
         if (root.__sfUploading) {
@@ -7642,7 +7260,6 @@ window.sfRouteEditForm = function (table, act, row) {
         }
     }
 
-    // ---------- change ----------
     document.addEventListener("change", (e) => {
         const input = e.target;
         if (!(input instanceof HTMLInputElement)) return;
@@ -7667,7 +7284,6 @@ window.sfRouteEditForm = function (table, act, row) {
         }
     });
 
-    // ---------- click (preview / download / remove) ----------
     document.addEventListener("click", (e) => {
         const root = e.target.closest(".sf-file-upload");
         if (!root) return;
@@ -7681,7 +7297,6 @@ window.sfRouteEditForm = function (table, act, row) {
 
         const kind = btn.dataset.kind || (btn.classList.contains("sf-file-preview") ? btn.dataset.kind : "local");
 
-        // ---- LOCAL ----
         if (!cfg.autoUpload || kind === "local") {
             if (btn.classList.contains("sf-file-preview") || btn.classList.contains("sf-file-namebtn")) {
                 const idx = Number(btn.dataset.i);
@@ -7729,7 +7344,6 @@ window.sfRouteEditForm = function (table, act, row) {
             return;
         }
 
-        // ---- UPLOADED (API) ----
         const id = btn.dataset.id;
         if (!id) return;
 
@@ -7773,18 +7387,12 @@ window.sfRouteEditForm = function (table, act, row) {
         }
     });
 
-    // expose safe hooks for modal submit to show errors in same component
     window.SFFileUpload = window.SFFileUpload || {};
     window.SFFileUpload.setErrors = setErrors;
     window.SFFileUpload.validateFiles = validateFiles;
     window.SFFileUpload.getCfg = getCfg;
 })();
 
-
-// =====================================================
-// FIX: Modal form submit MUST send files via FormData
-// Fixes ALL:
-// =====================================================
 (function () {
     if (window.__sfModalMultipartSubmitFix) return;
     window.__sfModalMultipartSubmitFix = true;
@@ -7812,7 +7420,6 @@ window.sfRouteEditForm = function (table, act, row) {
             if (old) t.options = old;
             return;
         }
-        console.log(type.toUpperCase() + ":", text);
     }
 
     function setFileInlineError(form, msg) {
@@ -7916,7 +7523,6 @@ window.sfRouteEditForm = function (table, act, row) {
         }
     }
 
-    //  RETURN true on success (keep locked), false on failure (unlock)
     async function postFormData(form) {
         const action = form.getAttribute("action") || window.location.href;
         const method = (form.getAttribute("method") || "POST").toUpperCase();
@@ -7940,10 +7546,9 @@ window.sfRouteEditForm = function (table, act, row) {
             signal: ac.signal
         });
 
-        //  keep redirect behavior
         if (res.redirected) {
             window.location.href = res.url;
-            return true; // success path (page navigates)
+            return true;
         }
 
         const payload = await readResponseSmart(res);
@@ -7961,30 +7566,28 @@ window.sfRouteEditForm = function (table, act, row) {
                 showToast("success", msg, SUCCESS_TOAST_MS);
 
                 setTimeout(() => window.location.reload(), SUCCESS_TOAST_MS + 250);
-                return true; //  SUCCESS => KEEP LOCKED UNTIL RELOAD
+                return true;
             } else {
                 const msg = j.message || j.error || "حدث خطأ.";
                 showToast("error", msg, 3500);
                 setFileInlineError(form, msg);
-                return false; //  FAIL => UNLOCK
+                return false;
             }
         }
 
-        // Non-JSON response
         if (res.ok) {
             const { closed, modal } = tryCloseModal(form);
             if (closed) await waitForModalGone(modal, MAX_WAIT_CLOSE_MS);
 
             showToast("success", "تم الحفظ بنجاح.", SUCCESS_TOAST_MS);
             setTimeout(() => window.location.reload(), SUCCESS_TOAST_MS + 250);
-            return true; //  SUCCESS => KEEP LOCKED
+            return true;
         }
 
         const errText = (payload.kind === "text" ? payload.text : "") || "";
-        console.error("Multipart submit failed:", res.status, errText);
         showToast("error", "تعذر الإرسال. تحقق من الملف وحاول مرة أخرى.", 4000);
         setFileInlineError(form, "تعذر الإرسال. تحقق من الملف وحاول مرة أخرى.");
-        return false; //  FAIL => UNLOCK
+        return false;
     }
 
     document.addEventListener("submit", function (e) {
@@ -7996,36 +7599,26 @@ window.sfRouteEditForm = function (table, act, row) {
         e.preventDefault();
         e.stopPropagation();
 
-        // hard lock prevents multi-submit even if user spams click
         if (!lockForm(form)) return;
 
-        // unlock ONLY on failure
         postFormData(form)
             .then((ok) => {
                 if (!ok) unlockForm(form);
-                // if ok => keep locked until reload/redirect
+
             })
             .catch(err => {
                 if (err && /aborted|abort/i.test(String(err))) return;
-                console.error(err);
                 showToast("error", "حدث خطأ غير متوقع أثناء الإرسال.", 4000);
                 unlockForm(form);
             });
     }, true);
 })();
 
-
-
-
-// money_sar
-
 window.sfMoneySarOnInput = function (el) {
     let v = (el.value || "");
 
-    // يسمح فقط بالأرقام والنقطة
     v = v.replace(/[^\d.]/g, "");
 
-    // إزالة أي نقطة إضافية
     const firstDot = v.indexOf(".");
     if (firstDot !== -1) {
         v = v.slice(0, firstDot + 1) + v.slice(firstDot + 1).replace(/\./g, "");
@@ -8033,126 +7626,91 @@ window.sfMoneySarOnInput = function (el) {
 
     let [intPart, decPart] = v.split(".");
 
-    // إزالة الأصفار الزائدة في البداية
     intPart = (intPart || "").replace(/^0+(?=\d)/, "");
 
-    // السماح بمنزلتين عشريتين فقط
     if (decPart != null) decPart = decPart.slice(0, 2);
 
-    // بدون فواصل آلاف
     el.value = decPart != null ? `${intPart}.${decPart}` : intPart;
 };
 
+window.sfToggle = function(el, forcedValue) {
+    const d = el?.dataset || {};
+    const value = (forcedValue != null)
+        ? String(forcedValue).trim()
+        : String(el?.value ?? "").trim();
 
-//window.sfMoneySarOnInput = function (el) {
-//    let v = (el.value || "");
-//    v = v.replace(/[^\d.,]/g, "");
-//    v = v.replace(/,/g, "");
-//    const firstDot = v.indexOf(".");
-//    if (firstDot !== -1) {
-//        v = v.slice(0, firstDot + 1) + v.slice(firstDot + 1).replace(/\./g, "");
-//    }
-//    let [intPart, decPart] = v.split(".");
-//    intPart = (intPart || "").replace(/^0+(?=\d)/, ""); 
-//    if (decPart != null) decPart = decPart.slice(0, 2);
-//    intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-//    el.value = decPart != null ? `${intPart}.${decPart}` : intPart;
-//};
+    const group = d.sfToggleGroup;
+    const mapStr = d.sfToggleMap || "";
+    if (!group || !mapStr) return;
 
+    const root = el.closest('form') || document;
 
+    root.querySelectorAll(`[data-sf-toggle-group="${group}"]`)
+        .forEach(x => x.closest('.form-group')?.style.setProperty('display', 'none'));
 
-    window.sfToggle = function(el, forcedValue) {
-        const d = el?.dataset || {};
-        const value = (forcedValue != null)
-            ? String(forcedValue).trim()
-            : String(el?.value ?? "").trim();
+    if (!value) return;
 
-        const group = d.sfToggleGroup;
-        const mapStr = d.sfToggleMap || "";
-        if (!group || !mapStr) return;
+    const rules = mapStr.split('|').map(s => s.trim()).filter(Boolean);
+    const rule = rules.find(r => r.startsWith(value + ':'));
+    if (!rule) return;
 
-        const root = el.closest('form') || document;
-
-        // اخفاء كل العناصر التابعة للمجموعة
-        root.querySelectorAll(`[data-sf-toggle-group="${group}"]`)
-            .forEach(x => x.closest('.form-group')?.style.setProperty('display', 'none'));
-
-        if (!value) return;
-
-        // استخراج القائمة المطلوبة من الخريطة: "1:A,B|2:C"
-        const rules = mapStr.split('|').map(s => s.trim()).filter(Boolean);
-        const rule = rules.find(r => r.startsWith(value + ':'));
-        if (!rule) return;
-
-        const names = rule.slice((value + ':').length).split(',').map(s => s.trim()).filter(Boolean);
-        names.forEach(n => {
-            const target = root.querySelector(`[name="${n}"]`);
-            if (target) target.closest('.form-group')?.style.setProperty('display', 'block');
-        });
+    const names = rule.slice((value + ':').length).split(',').map(s => s.trim()).filter(Boolean);
+    names.forEach(n => {
+        const target = root.querySelector(`[name="${n}"]`);
+        if (target) target.closest('.form-group')?.style.setProperty('display', 'block');
+    });
 };
 
+async function sfEnsureLazyExtraLoaded(action, row, ctx) {
+    const meta = action?.Meta || action?.meta || {};
+    if (!meta.useRowExtra || !meta.lazyExtra) return;
 
+    const extraKey = meta.extraKey || "__extra";
 
+    if (Array.isArray(row[extraKey]) && row[extraKey].length > 0) return;
 
-    // قبل فتح مودال useRowExtra
-    async function sfEnsureLazyExtraLoaded(action, row, ctx) {
-        const meta = action?.Meta || action?.meta || {};
-        if (!meta.useRowExtra || !meta.lazyExtra) return;
+    const endpoint = meta.extraEndpoint;
+    const req = meta.extraRequest || {};
+    const map = req.paramMap || {};
 
-        const extraKey = meta.extraKey || "__extra";
+    const payload = {
+        pageName_: req.pageName_,
+        ActionType: req.ActionType,
+        idaraID: ctx?.idaraID,
+        entrydata: ctx?.entrydata,
+        hostname: ctx?.hostname,
+        tableIndex: req.tableIndex ?? null,
+        parameters: {}
+    };
 
-        // لو موجود مسبقاً لا تعيد التحميل
-        if (Array.isArray(row[extraKey]) && row[extraKey].length > 0) return;
-
-        const endpoint = meta.extraEndpoint;
-        const req = meta.extraRequest || {};
-        const map = req.paramMap || {};
-
-        const payload = {
-            pageName_: req.pageName_,
-            ActionType: req.ActionType,
-            idaraID: ctx?.idaraID,
-            entrydata: ctx?.entrydata,
-            hostname: ctx?.hostname,
-            tableIndex: req.tableIndex ?? null,
-            parameters: {}
-        };
-
-        for (const [paramName, rowField] of Object.entries(map)) {
-            payload.parameters[paramName] = row[rowField];
-        }
-
-        // Busy (إذا عندك)
-        if (window.sfBusy?.show) sfBusy.show({ title: "جاري تحميل البيانات الإضافية..." });
-
-        const res = await fetch(endpoint, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-Requested-With": "XMLHttpRequest"
-            },
-            body: JSON.stringify(payload)
-        });
-
-        const json = await res.json();
-
-        if (window.sfBusy?.hide) sfBusy.hide();
-
-        if (!json?.success) {
-            if (window.sfToast?.error) sfToast.error(json?.message || "فشل تحميل البيانات الإضافية");
-            row[extraKey] = [];
-            return;
-        }
-
-        // إذا رجّع table واحد
-        if (json.table?.rows) row[extraKey] = json.table.rows;
-        else row[extraKey] = json.data || [];
+    for (const [paramName, rowField] of Object.entries(map)) {
+        payload.parameters[paramName] = row[rowField];
     }
 
+    if (window.sfBusy?.show) sfBusy.show({ title: "جاري تحميل البيانات الإضافية..." });
 
+    const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-Requested-With": "XMLHttpRequest"
+        },
+        body: JSON.stringify(payload)
+    });
 
+    const json = await res.json();
 
-//============ For tabs sections ============
+    if (window.sfBusy?.hide) sfBusy.hide();
+
+    if (!json?.success) {
+        if (window.sfToast?.error) sfToast.error(json?.message || "فشل تحميل البيانات الإضافية");
+        row[extraKey] = [];
+        return;
+    }
+
+    if (json.table?.rows) row[extraKey] = json.table.rows;
+    else row[extraKey] = json.data || [];
+}
 
 (function () {
     var TAB_STORE_PREFIX = 'sf:activeTab:';
@@ -8411,12 +7969,6 @@ window.sfMoneySarOnInput = function (el) {
     });
 })();
 
-//============ End tabs sections ============
-
-
-/* =========================================================
-   SmartTable Scroll 
-   ========================================================= */
 (function () {
     function scrollTableBoxesToRight() {
         document.querySelectorAll('.table-box').forEach(function (box) {
@@ -8437,6 +7989,3 @@ window.sfMoneySarOnInput = function (el) {
     setTimeout(scrollTableBoxesToRight, 120);
     setTimeout(scrollTableBoxesToRight, 300);
 })();
-/* =========================================================
-   SmartTable Scroll End
-   ========================================================= */

@@ -2,7 +2,6 @@
 @using System.Text.Json.Serialization
 @using SmartFoundation.UI.ViewModels.SmartTable
 @using SmartFoundation.UI.ViewModels.SmartForm
-
 @model SmartTableDsModel
 
 @{
@@ -94,17 +93,22 @@
     var toggleLabel = Model.ToggleLabel ?? "عرض";
     var toggleIcon = Model.ToggleIcon ?? "fa-solid fa-table";
     var toggleOpen = Model.ToggleDefaultOpen;
+    var toggleOpenJson = toggleOpen ? "true" : "false";
 
     var sectionLabel = Model.SectionLabel ?? Model.PanelTitle ?? "القسم";
     var sectionIcon = Model.SectionIcon ?? "fa-solid fa-table-list";
     var sectionDescription = Model.SectionDescription ?? "";
     var sectionOpen = Model.SectionDefaultOpen;
+    var sectionOpenJson = sectionOpen ? "true" : "false";
 
     var tabGroupKey = string.IsNullOrWhiteSpace(Model.TabGroupKey) ? "default" : Model.TabGroupKey;
     var tabKey = string.IsNullOrWhiteSpace(Model.TabKey) ? Guid.NewGuid().ToString("N") : Model.TabKey;
     var tabLabel = Model.TabLabel ?? Model.PanelTitle ?? "جدول";
     var tabIcon = Model.TabIcon ?? "fa-solid fa-table";
     var tabDescription = Model.TabDescription ?? "";
+    var headerCellStyle = string.IsNullOrWhiteSpace(Model.HeaderColor) ? "" : $"background-color:{Model.HeaderColor};";
+    var rowActionsHeaderStyle = string.IsNullOrWhiteSpace(Model.HeaderColor) ? "background:#0a7257;color:#fff;" : $"background-color:{Model.HeaderColor};color:#fff;";
+    var pageSizeItems = Model.PageSizes ?? new List<int>();
 }
 
 @{
@@ -145,7 +149,7 @@
                                name=""
                                x-model="q"
                                x-on:input.debounce.500="debouncedSearch()"
-                               :placeholder="searchPlaceholder"
+                               x-bind:placeholder="searchPlaceholder"
                                aria-label="بحث"
                                autocomplete="off"
                                autocorrect="off"
@@ -163,8 +167,8 @@
                                 <button type="button"
                                         class="sf-filter-btn sf-toolbar-tool"
                                         x-on:click="toggleFilters()"
-                                        :aria-pressed="String(!!showFilters)"
-                                        :class="{ 'is-active': !!showFilters }"
+                                        x-bind:aria-pressed="String(!!showFilters)"
+                                        x-bind:class="{ 'is-active': !!showFilters }"
                                         title="إظهار/إخفاء صف الفلاتر"
                                         aria-label="فلترة">
                                     <span class="sf-toolbar-tool__icon" aria-hidden="true">
@@ -195,8 +199,8 @@
                                             class="sf-filter-btn sf-colvis-btn sf-toolbar-tool"
                                             x-ref="colVisBtn"
                                             x-on:click="toggleColVis($event)"
-                                            :aria-expanded="String(!!colVisOpen)"
-                                            :class="{ 'is-active': !!colVisOpen }"
+                                            x-bind:aria-expanded="String(!!colVisOpen)"
+                                            x-bind:class="{ 'is-active': !!colVisOpen }"
                                             title="إظهار/إخفاء الأعمدة"
                                             aria-label="الأعمدة">
                                         <span class="sf-toolbar-tool__icon" aria-hidden="true">
@@ -220,7 +224,6 @@
                                              x-show="!!colVisOpen"
                                              x-transition.opacity
                                              x-on:click.stop
-                                             x-bind:style="colVisPanelStyle()"
                                              style="display:none;">
 
                                             <div class="sf-colvis__head">
@@ -232,7 +235,7 @@
                                                 <button type="button"
                                                         class="sf-colvis__close"
                                                         x-on:click="closeColVis()">
-                                                    ✕
+                                                    &times;
                                                 </button>
                                             </div>
 
@@ -258,12 +261,12 @@
                                             </div>
 
                                             <div class="sf-colvis__list">
-                                                <template x-for="c in colVisFilteredColumns()" :key="c.field">
-                                                    <label class="sf-colvis__item" :class="colVisIsLocked(c) ? 'is-locked' : ''">
+                                                <template x-for="c in colVisFilteredColumns()" x-bind:key="c.field">
+                                                    <label class="sf-colvis__item" x-bind:class="colVisIsLocked(c) ? 'is-locked' : ''">
                                                         <input type="checkbox"
                                                                class="sf-checkbox"
-                                                               :disabled="colVisIsLocked(c)"
-                                                               :checked="colVisIsShown(c)"
+                                                               x-bind:disabled="colVisIsLocked(c)"
+                                                               x-bind:checked="colVisIsShown(c)"
                                                                x-on:change="colVisToggle(c); $nextTick(() => updateColVisPosition())" />
                                                         <span class="sf-colvis__label" x-text="colVisLabel(c)"></span>
                                                     </label>
@@ -289,9 +292,10 @@
                                             class="sf-input select-sm"
                                             x-model.number="pageSize"
                                             x-on:change="page=1; load()">
-                                        <template x-for="s in pageSizes" :key="s">
-                                            <option x-text="s"></option>
-                                        </template>
+                                        @foreach (var size in pageSizeItems)
+                                        {
+                                            <option value="@size">@size</option>
+                                        }
                                     </select>
                                 </div>
                             </template>
@@ -300,84 +304,34 @@
 
                         <div class="actions-list">
 
-                            <template x-for="(act, actIdx) in [
-                                      { action: toolbar.add, show: toolbar.showAdd, enable: toolbar.enableAdd ?? true, type: 'add' },
-                                      { action: toolbar.add1, show: toolbar.showAdd1, enable: toolbar.enableAdd1 ?? true, type: 'add1' },
-                                      { action: toolbar.add2, show: toolbar.showAdd2, enable: toolbar.enableAdd2 ?? true, type: 'add2' },
-                                      { action: toolbar.edit, show: toolbar.showEdit, enable: toolbar.enableEdit ?? true, type: 'edit' },
-                                      { action: toolbar.edit1, show: toolbar.showEdit1, enable: toolbar.enableEdit1 ?? true, type: 'edit1' },
-                                      { action: toolbar.edit2, show: toolbar.showEdit2, enable: toolbar.enableEdit2 ?? true, type: 'edit2' },
-                                      { action: toolbar.delete, show: toolbar.showDelete, enable: toolbar.enableDelete ?? true, type: 'delete' },
-                                      { action: toolbar.delete1, show: toolbar.showDelete1, enable: toolbar.enableDelete1 ?? true, type: 'delete1' },
-                                      { action: toolbar.delete2, show: toolbar.showDelete2, enable: toolbar.enableDelete2 ?? true, type: 'delete2' },
-                                      { action: toolbar.print, show: toolbar.showPrint, enable: true, type: 'print' },
-                                      { action: toolbar.print1, show: toolbar.showPrint1, enable: true, type: 'print1' },
-                                      ...(toolbar.customActions || []).map(a=>
-                                ({ action: a, show: true, enable: true, type: 'custom' }))
-                                ].filter(x => x.action && x.show !== false && normalizePlacement(x.action.placement ?? x.action.Placement) === 'button')"
-                                :key="actIdx">
+                            <template x-for="(act, actIdx) in toolbarButtonActions()"
+                                      x-bind:key="actIdx">
 
                                 <button type="button"
                                         class="btn"
-                                        :class="[
+                                        x-bind:class="[
                                             'btn-' + (act.action.color ?? 'secondary'),
                                             !act.enable || (act.action.requireSelection && selectedKeys.size !== 1) ? 'cursor-not-allowed opacity-50' : ''
                                         ]"
                                         x-on:click="act.enable ? doAction(act.action, act.action.requireSelection ? getSingleSelection() : null) : toastr.warning('هذا الإجراء غير متاح حالياً')"
-                                        :disabled="!act.enable || (act.action.requireSelection && selectedKeys.size !== 1)">
+                                        x-bind:disabled="!act.enable || (act.action.requireSelection && selectedKeys.size !== 1)">
 
                                     <template x-if="act.action.icon && !(act.action.icon.startsWith('/') || act.action.icon.includes('.svg') || act.action.icon.includes('.png') || act.action.icon.includes('.jpg') || act.action.icon.includes('.jpeg') || act.action.icon.includes('.webp'))">
-                                        <i :class="act.action.icon"></i>
+                                        <i x-bind:class="act.action.icon"></i>
                                     </template>
 
                                     <template x-if="act.action.icon && (act.action.icon.startsWith('/') || act.action.icon.includes('.svg') || act.action.icon.includes('.png') || act.action.icon.includes('.jpg') || act.action.icon.includes('.jpeg') || act.action.icon.includes('.webp'))">
-                                        <img :src="act.action.icon" alt="" class="sf-action-icon-img" />
+                                        <img x-bind:src="act.action.icon" alt="" class="sf-action-icon-img" />
                                     </template>
 
                                     <span x-text="act.action.label"></span>
                                 </button>
                             </template>
 
-                            <template x-if="[
-                                      { action: toolbar.add, show: toolbar.showAdd, enable: toolbar.enableAdd ?? true },
-                                      { action: toolbar.add1, show: toolbar.showAdd1, enable: toolbar.enableAdd1 ?? true },
-                                      { action: toolbar.add2, show: toolbar.showAdd2, enable: toolbar.enableAdd2 ?? true },
-                                      { action: toolbar.edit, show: toolbar.showEdit, enable: toolbar.enableEdit ?? true },
-                                      { action: toolbar.edit1, show: toolbar.showEdit1, enable: toolbar.enableEdit1 ?? true },
-                                      { action: toolbar.edit2, show: toolbar.showEdit2, enable: toolbar.enableEdit2 ?? true },
-                                      { action: toolbar.delete, show: toolbar.showDelete, enable: toolbar.enableDelete ?? true },
-                                      { action: toolbar.delete1, show: toolbar.showDelete1, enable: toolbar.enableDelete1 ?? true },
-                                      { action: toolbar.delete2, show: toolbar.showDelete2, enable: toolbar.enableDelete2 ?? true },
-                                      { action: toolbar.print, show: toolbar.showPrint, enable: true },
-                                      { action: toolbar.print1, show: toolbar.showPrint1, enable: true },
-                                      ...(toolbar.customActions || []).map(a=>
-                                ({ action: a, show: true, enable: true }))
-                                ].some(x => x.action && x.show !== false && x.action.placement === 'ActionsMenu')">
+                            <template x-if="hasToolbarMenuActions()">
 
                                 <div class="relative sf-actions-menu"
-                                     x-data="{
-                                        menuId: 'tb-actions-' + Math.random().toString(36).slice(2),
-                                        panelStyle:'',
-                                        placePanel() {
-                                            if (!this.$refs?.btn) return;
-                                            const r = this.$refs.btn.getBoundingClientRect();
-                                            const panelW = 220;
-                                            const gap = 6;
-                                            let left = r.right - panelW;
-                                            if (left < 8) left = 8;
-                                            if (left + panelW > window.innerWidth - 8) {
-                                                left = window.innerWidth - panelW - 8;
-                                            }
-
-                                            const estimatedH = 220;
-                                            let top = r.bottom + gap;
-                                            if (top + estimatedH > window.innerHeight - 8) {
-                                                top = Math.max(8, r.top - estimatedH - gap);
-                                            }
-
-                                            this.panelStyle = `position:fixed; top:${top}px; left:${left}px; width:${panelW}px; z-index:99999;`;
-                                        }
-                                     }"
+                                     x-data="menuPanelState('tb-actions-', 220)"
                                      x-on:keydown.escape.window="closeAllMenus()">
                                     <button type="button"
                                             class="btn btn-outline-secondary"
@@ -389,44 +343,30 @@
 
                                     <div x-show="isMenuOpen(menuId)"
                                          x-transition
-                                         x-bind:style="panelStyle"
+                                         x-ref="panel"
                                          x-on:resize.window="isMenuOpen(menuId) && placePanel()"
                                          x-on:scroll.window="isMenuOpen(menuId) && placePanel()"
                                          x-on:click.outside="closeAllMenus()"
                                          class="sf-actions-menu__panel">
 
-                                        <template x-for="(act, actIdx) in [
-                                                  { action: toolbar.add, show: toolbar.showAdd, enable: toolbar.enableAdd ?? true },
-                                                  { action: toolbar.add1, show: toolbar.showAdd1, enable: toolbar.enableAdd1 ?? true },
-                                                  { action: toolbar.add2, show: toolbar.showAdd2, enable: toolbar.enableAdd2 ?? true },
-                                                  { action: toolbar.edit, show: toolbar.showEdit, enable: toolbar.enableEdit ?? true },
-                                                  { action: toolbar.edit1, show: toolbar.showEdit1, enable: toolbar.enableEdit1 ?? true },
-                                                  { action: toolbar.edit2, show: toolbar.showEdit2, enable: toolbar.enableEdit2 ?? true },
-                                                  { action: toolbar.delete, show: toolbar.showDelete, enable: toolbar.enableDelete ?? true },
-                                                  { action: toolbar.delete1, show: toolbar.showDelete1, enable: toolbar.enableDelete1 ?? true },
-                                                  { action: toolbar.delete2, show: toolbar.showDelete2, enable: toolbar.enableDelete2 ?? true },
-                                                  { action: toolbar.print, show: toolbar.showPrint, enable: true },
-                                                  { action: toolbar.print1, show: toolbar.showPrint1, enable: true },
-                                                  ...(toolbar.customActions || []).map(a=>
-                                            ({ action: a, show: true, enable: true }))
-                                            ].filter(x => x.action && x.show !== false && x.action.placement === 'ActionsMenu')"
-                                            :key="actIdx">
+                                        <template x-for="(act, actIdx) in toolbarMenuActions()"
+                                                  x-bind:key="actIdx">
 
                                             <span class="sf-tipwrap"
-                                                  :data-tip="!act.enable ? 'هذا الإجراء غير متاح حالياً' : (act.action.requireSelection && selectedKeys.size !== 1) ? 'يتطلب اختيار صف' : null">
+                                                  x-bind:data-tip="!act.enable ? 'هذا الإجراء غير متاح حالياً' : (act.action.requireSelection && selectedKeys.size !== 1) ? 'يتطلب اختيار صف' : null">
 
                                                 <button type="button"
                                                         class="sf-actions-menu__item"
-                                                        :class="!act.enable ? 'cursor-not-allowed opacity-50' : ''"
+                                                        x-bind:class="!act.enable ? 'cursor-not-allowed opacity-50' : ''"
                                                         x-on:click="act.enable ? (doAction(act.action, act.action.requireSelection ? getSingleSelection() : null), closeAllMenus()) : toastr.warning('هذا الإجراء غير متاح حالياً')"
-                                                        :disabled="!act.enable || (act.action.requireSelection && selectedKeys.size !== 1)">
+                                                        x-bind:disabled="!act.enable || (act.action.requireSelection && selectedKeys.size !== 1)">
 
                                                     <template x-if="act.action.icon && !(act.action.icon.startsWith('/') || act.action.icon.includes('.svg') || act.action.icon.includes('.png') || act.action.icon.includes('.jpg') || act.action.icon.includes('.jpeg') || act.action.icon.includes('.webp'))">
-                                                        <i :class="[act.action.icon, 'sf-actions-menu__icon']"></i>
+                                                        <i x-bind:class="[act.action.icon, 'sf-actions-menu__icon']"></i>
                                                     </template>
 
                                                     <template x-if="act.action.icon && (act.action.icon.startsWith('/') || act.action.icon.includes('.svg') || act.action.icon.includes('.png') || act.action.icon.includes('.jpg') || act.action.icon.includes('.jpeg') || act.action.icon.includes('.webp'))">
-                                                        <img :src="act.action.icon" alt="" class="sf-action-icon-img sf-actions-menu__icon" />
+                                                        <img x-bind:src="act.action.icon" alt="" class="sf-action-icon-img sf-actions-menu__icon" />
                                                     </template>
 
                                                     <span class="sf-actions-menu__text" x-text="act.action.label"></span>
@@ -450,12 +390,12 @@
                         <tr>
                             <th x-show="selectable"
                                 class="th-cell"
-                                x-bind:style="headerColor ? 'background-color:' + headerColor + ';' : ''">
+                                style="@headerCellStyle">
                             </th>
 
-                            <template x-for="col in visibleColumns()" :key="col.field">
+                            <template x-for="col in visibleColumns()" x-bind:key="col.field">
                                 <th class="th-cell"
-                                    x-bind:style="(col.width ? 'width:' + col.width + ';' : '') + (headerColor ? 'background-color:' + headerColor + ';' : '')"
+                                    x-effect="$el.setAttribute('style', columnHeaderStyle(col))"
                                     x-bind:class="(dragOverColField === col.field ? 'sf-col-drag-over' : '') + (draggingColField === col.field ? 'sf-col-dragging' : '')">
 
                                     <div class="th-inner flex items-center justify-center gap-1"
@@ -479,8 +419,9 @@
                             </template>
 
                             <th x-show="hasRowEndActions()"
+                                x-cloak
                                 class="th-cell col-row-actions"
-                                x-bind:style="headerColor ? 'background-color:' + headerColor + ';color:#fff;' : 'background:#0a7257;color:#fff;'">
+                                style="@rowActionsHeaderStyle">
                                 <span class="th-inner">الإجراءات</span>
                             </th>
                         </tr>
@@ -488,9 +429,9 @@
                         <tr x-show="filtersEnabled && filtersRow && showFilters" class="sf-filter-row">
                             <th x-show="selectable" class="th-cell sf-filter-cell"></th>
 
-                            <template x-for="col in visibleColumns()" :key="'f-' + col.field">
+                            <template x-for="col in visibleColumns()" x-bind:key="'f-' + col.field">
                                 <th class="th-cell sf-filter-cell"
-                                    x-bind:style="col.width ? 'width:' + col.width + ';' : ''">
+                                    x-effect="$el.setAttribute('style', columnWidthStyle(col))">
 
                                     <template x-if="isColFilterEnabled(col)">
                                         <div class="sf-filter-wrap sf-form">
@@ -560,14 +501,9 @@
               data-sf-select2-skip-global="1"
               x-bind:aria-label="'فلتر قائمة: ' + (col.title || col.header || col.field)"
               x-model="columnFilters[col.field]"
+              x-effect="renderColFilterOptions($el, col)"
               x-on:change="onColumnFilterInput()">
                                                     <option value="">الكل</option>
-                                                    <template x-for="opt in getColFilterOptions(col)"
-                                                              :key="String(opt.value ?? opt.Value ?? opt.text ?? opt.Text)">
-                                                        <option x-bind:value="String(opt.value ?? opt.Value ?? '')"
-                                                                x-text="String(opt.text ?? opt.Text ?? opt.value ?? opt.Value ?? '')">
-                                                        </option>
-                                                    </template>
                                                 </select>
                                             </template>
 
@@ -577,7 +513,7 @@
                                 </th>
                             </template>
 
-                            <th x-show="hasRowEndActions()" class="th-cell sf-filter-cell col-row-actions"></th>
+                            <th x-show="hasRowEndActions()" x-cloak class="th-cell sf-filter-cell col-row-actions"></th>
                         </tr>
                     </thead>
 
@@ -610,7 +546,7 @@
                             </tr>
                         </template>
 
-                        <template x-for="(row, idx) in rows" :key="row[rowIdField] ?? idx">
+                        <template x-for="(row, idx) in rows" x-bind:key="row[rowIdField] ?? idx">
                             <tr class="tr-row"
                                 x-bind:class="[isSelected(row) ? 'tr-row-selected' : '', applyStyleRules(row, null, 'row')]"
                                 x-on:click="toggleRow(row)"
@@ -622,258 +558,60 @@
                                            x-on:click.stop="toggleRow(row)" />
                                 </td>
 
-                                <template x-for="col in visibleColumns()" :key="col.field">
-                                   @*  <td class="td-cell"
-                                        x-bind:class="[col.align, col.truncate ? 'truncate-cell' : '', applyStyleRules(row, col, 'cell'), enableCellCopy ? 'sf-copy-cell' : '', enableCellCopy ? 'hover:bg-gray-50' : '']"
-                                        x-on:dblclick.stop="enableCellCopy && copyCell(row, col, $event)"
-                                        x-html="formatCell(row, col)"> *@
+                                <template x-for="col in visibleColumns()" x-bind:key="col.field">
                                     <td class="td-cell"
                                         x-bind:class="[col.align, col.truncate ? 'truncate-cell' : '', applyStyleRules(row, col, 'cell'), enableCellCopy ? 'sf-copy-cell' : '', enableCellCopy ? 'hover:bg-gray-50' : '']"
                                         x-on:dblclick.stop="enableCellCopy && copyCell(row, col, $event)">
 
-                                        <template x-if="(() =>
-                                            {
-                                            const matchingRule = styleRules?.find(r =>
-                                            r.target === 'cell' &&
-                                            r.field === col.field &&
-                                            r.pillEnabled &&
-                                            String(row[col.field] ?? '') === String(r.value ?? '')
-                                            );
-                                            return matchingRule;
-                                            })()">
+                                        <template x-if="hasCellPill(row, col)">
+                                            <span x-bind:class="cellPillClass(row, col)"
+                                                  x-bind:title="cellPillTitle(row, col)">
+                                                <template x-if="cellPillSvg(row, col)">
+                                                    <span class="pill-svg" x-html="cellPillSvg(row, col)"></span>
+                                                </template>
 
-                                            <template x-if="(() =>
-                                                {
-                                                const rule = styleRules.find(r =>
-                                                r.target === 'cell' &&
-                                                r.field === col.field &&
-                                                r.pillEnabled &&
-                                                String(row[col.field] ?? '') === String(r.value ?? '')
-                                                );
-                                                return !!rule?.iconOnly;
-                                                })()">
-                                                <span :class="(() =>
-                                                    {
-                                                    const rule = styleRules.find(r =>
-                                                    r.target === 'cell' &&
-                                                    r.field === col.field &&
-                                                    r.pillEnabled &&
-                                                    String(row[col.field] ?? '') === String(r.value ?? '')
-                                                    );
-                                                    return rule?.iconOnlyCssClass || 'sf-icon-only';
-                                                    })()"
-                                                      :title="(() => {
-                                                    const rule = styleRules.find(r =>
-                                                    r.target === 'cell' &&
-                                                    r.field === col.field &&
-                                                    r.pillEnabled &&
-                                                    String(row[col.field] ?? '') === String(r.value ?? '')
-                                                    );
-                                                    return rule?.pillTitle || rule?.pillText || '';
-                                                    })()">
+                                                <template x-if="!cellPillSvg(row, col) && cellPillIcon(row, col)">
+                                                    <i x-bind:class="cellPillIcon(row, col)"></i>
+                                                </template>
 
-                                                    <template x-if="(() =>
-                                                        {
-                                                        const rule = styleRules.find(r =>
-                                                        r.target === 'cell' &&
-                                                        r.field === col.field &&
-                                                        r.pillEnabled &&
-                                                        String(row[col.field] ?? '') === String(r.value ?? '')
-                                                        );
-                                                        return !!rule?.pillSvg;
-                                                        })()">
-                                                        <span x-html="(() =>
-                                                            {
-                                                            const rule = styleRules.find(r =>
-                                                            r.target === 'cell' &&
-                                                            r.field === col.field &&
-                                                            r.pillEnabled &&
-                                                            String(row[col.field] ?? '') === String(r.value ?? '')
-                                                            );
-                                                            return rule?.pillSvg || '';
-                                                            })()">
-                                                        </span>
-                                                    </template>
-
-                                                    <template x-if="(() =>
-                                                        {
-                                                        const rule = styleRules.find(r =>
-                                                        r.target === 'cell' &&
-                                                        r.field === col.field &&
-                                                        r.pillEnabled &&
-                                                        String(row[col.field] ?? '') === String(r.value ?? '')
-                                                        );
-                                                        return !rule?.pillSvg && !!rule?.pillIcon;
-                                                        })()">
-                                                        <i :class="(() =>
-                                                            {
-                                                            const rule = styleRules.find(r =>
-                                                            r.target === 'cell' &&
-                                                            r.field === col.field &&
-                                                            r.pillEnabled &&
-                                                            String(row[col.field] ?? '') === String(r.value ?? '')
-                                                            );
-                                                            return rule?.pillIcon || '';
-                                                            })()">
-                                                        </i>
-                                                    </template>
-                                                </span>
-                                            </template>
-
-                                            <template x-if="(() =>
-                                                {
-                                                const rule = styleRules.find(r =>
-                                                r.target === 'cell' &&
-                                                r.field === col.field &&
-                                                r.pillEnabled &&
-                                                String(row[col.field] ?? '') === String(r.value ?? '')
-                                                );
-                                                return !rule?.iconOnly;
-                                                })()">
-                                                <span :class="(() =>
-                                                    {
-                                                    const rule = styleRules.find(r =>
-                                                    r.target === 'cell' &&
-                                                    r.field === col.field &&
-                                                    r.pillEnabled &&
-                                                    String(row[col.field] ?? '') === String(r.value ?? '')
-                                                    );
-                                                    return rule?.pillCssClass || 'pill';
-                                                    })()"
-                                                      :title="(() => {
-                                                    const rule = styleRules.find(r =>
-                                                    r.target === 'cell' &&
-                                                    r.field === col.field &&
-                                                    r.pillEnabled &&
-                                                    String(row[col.field] ?? '') === String(r.value ?? '')
-                                                    );
-                                                    return rule?.pillTitle || rule?.pillText || '';
-                                                    })()">
-
-                                                    <template x-if="(() =>
-                                                        {
-                                                        const rule = styleRules.find(r =>
-                                                        r.target === 'cell' &&
-                                                        r.field === col.field &&
-                                                        r.pillEnabled &&
-                                                        String(row[col.field] ?? '') === String(r.value ?? '')
-                                                        );
-                                                        return !!rule?.pillSvg;
-                                                        })()">
-                                                        <span class="pill-svg" x-html="(() =>
-                                                            {
-                                                            const rule = styleRules.find(r =>
-                                                            r.target === 'cell' &&
-                                                            r.field === col.field &&
-                                                            r.pillEnabled &&
-                                                            String(row[col.field] ?? '') === String(r.value ?? '')
-                                                            );
-                                                            return rule?.pillSvg || '';
-                                                            })()">
-                                                        </span>
-                                                    </template>
-
-                                                    <template x-if="(() =>
-                                                        {
-                                                        const rule = styleRules.find(r =>
-                                                        r.target === 'cell' &&
-                                                        r.field === col.field &&
-                                                        r.pillEnabled &&
-                                                        String(row[col.field] ?? '') === String(r.value ?? '')
-                                                        );
-                                                        return !rule?.pillSvg && !!rule?.pillIcon;
-                                                        })()">
-                                                        <i :class="(() =>
-                                                            {
-                                                            const rule = styleRules.find(r =>
-                                                            r.target === 'cell' &&
-                                                            r.field === col.field &&
-                                                            r.pillEnabled &&
-                                                            String(row[col.field] ?? '') === String(r.value ?? '')
-                                                            );
-                                                            return rule?.pillIcon || '';
-                                                            })()">
-                                                        </i>
-                                                    </template>
-
-                                                    <span x-text="(() =>
-                                                        {
-                                                        const rule = styleRules.find(r =>
-                                                        r.target === 'cell' &&
-                                                        r.field === col.field &&
-                                                        r.pillEnabled &&
-                                                        String(row[col.field] ?? '') === String(r.value ?? '')
-                                                        );
-                                                        return rule?.pillText || row[col.field] || '';
-                                                        })()">
-                                                    </span>
-                                                </span>
-                                            </template>
+                                                <template x-if="!isCellPillIconOnly(row, col)">
+                                                    <span x-text="cellPillText(row, col)"></span>
+                                                </template>
+                                            </span>
                                         </template>
 
-                                        <template x-if="!(() =>
-                                            {
-                                            const matchingRule = styleRules?.find(r =>
-                                            r.target === 'cell' &&
-                                            r.field === col.field &&
-                                            r.pillEnabled &&
-                                            String(row[col.field] ?? '') === String(r.value ?? '')
-                                            );
-                                            return matchingRule;
-                                            })()">
+                                        <template x-if="!hasCellPill(row, col)">
                                             <span x-html="formatCell(row, col)"></span>
                                         </template>
                                     </td>
                                 </template>
 
-                                <td x-show="hasRowEndActions()" class="td-cell col-row-actions" x-on:click.stop>
+                                <td x-show="hasRowEndActions()" x-cloak class="td-cell col-row-actions" x-on:click.stop>
                                     <div class="sf-row-actions">
-                                        <template x-for="(act, actIdx) in rowEndActions()" :key="`${actIdx}-${row[rowIdField] ?? idx}`">
+                                        <template x-for="(act, actIdx) in rowEndActions()" x-bind:key="`${actIdx}-${row[rowIdField] ?? idx}`">
                                             <button type="button"
                                                     class="btn"
-                                                    :class="'btn-' + (act.action.color ?? 'secondary')"
+                                                    x-bind:class="'btn-' + (act.action.color ?? 'secondary')"
                                                     x-on:click.stop="runRowAction(act.action, row)">
                                                 <template x-if="act.action.icon && !(act.action.icon.startsWith('/') || act.action.icon.includes('.svg') || act.action.icon.includes('.png') || act.action.icon.includes('.jpg') || act.action.icon.includes('.jpeg') || act.action.icon.includes('.webp'))">
-                                                    <i :class="act.action.icon"></i>
+                                                    <i x-bind:class="act.action.icon"></i>
                                                 </template>
                                                 <template x-if="act.action.icon && (act.action.icon.startsWith('/') || act.action.icon.includes('.svg') || act.action.icon.includes('.png') || act.action.icon.includes('.jpg') || act.action.icon.includes('.jpeg') || act.action.icon.includes('.webp'))">
-                                                    <img :src="act.action.icon" alt="" class="sf-action-icon-img" />
+                                                    <img x-bind:src="act.action.icon" alt="" class="sf-action-icon-img" />
                                                 </template>
                                                 <span x-text="act.action.label"></span>
                                             </button>
                                         </template>
 
                                         <div class="sf-row-menu"
-                                             x-data="{
-                                                open:false,
-                                                menuId: 'row-actions-' + Math.random().toString(36).slice(2),
-                                                panelStyle:'',
-                                                placePanel() {
-                                                    if (!this.$refs?.btn) return;
-                                                    const r = this.$refs.btn.getBoundingClientRect();
-                                                    const panelW = 220;
-                                                    const gap = 6;
-                                                    let left = r.right - panelW;
-                                                    if (left < 8) left = 8;
-                                                    if (left + panelW > window.innerWidth - 8) {
-                                                        left = window.innerWidth - panelW - 8;
-                                                    }
-
-                                                    const estimatedH = 180;
-                                                    let top = r.bottom + gap;
-                                                    if (top + estimatedH > window.innerHeight - 8) {
-                                                        top = Math.max(8, r.top - estimatedH - gap);
-                                                    }
-
-                                                    this.panelStyle = `position:fixed; top:${top}px; left:${left}px; width:${panelW}px; z-index:99999;`;
-                                                }
-                                             }"
+                                             x-data="menuPanelState('row-actions-', 180)"
                                              x-on:click.outside="open=false"
                                              x-on:sf-row-menu-opened.window="if ($event.detail !== menuId) open=false"
                                              x-on:keydown.escape.window="open=false"
                                              x-on:resize.window="open && placePanel()"
                                              x-on:scroll.window="open && placePanel()"
-                                             x-show="rowEndMenuActions().length > 0">
+                                             x-show="rowEndMenuActions().length > 0"
+                                             x-cloak>
                                             <button type="button"
                                                     class="btn btn-secondary sf-row-menu__btn"
                                                     x-ref="btn"
@@ -884,17 +622,17 @@
 
                                             <div x-show="open"
                                                  x-transition
-                                                 x-bind:style="panelStyle"
+                                                 x-ref="panel"
                                                  class="sf-row-menu__panel">
-                                                <template x-for="(act, actIdx) in rowEndMenuActions()" :key="`menu-${actIdx}-${row[rowIdField] ?? idx}`">
+                                                <template x-for="(act, actIdx) in rowEndMenuActions()" x-bind:key="`menu-${actIdx}-${row[rowIdField] ?? idx}`">
                                                     <button type="button"
                                                             class="sf-row-menu__item"
                                                             x-on:click.stop="runRowAction(act.action, row); open=false">
                                                         <template x-if="act.action.icon && !(act.action.icon.startsWith('/') || act.action.icon.includes('.svg') || act.action.icon.includes('.png') || act.action.icon.includes('.jpg') || act.action.icon.includes('.jpeg') || act.action.icon.includes('.webp'))">
-                                                            <i :class="[act.action.icon, 'sf-row-menu__icon']"></i>
+                                                            <i x-bind:class="[act.action.icon, 'sf-row-menu__icon']"></i>
                                                         </template>
                                                         <template x-if="act.action.icon && (act.action.icon.startsWith('/') || act.action.icon.includes('.svg') || act.action.icon.includes('.png') || act.action.icon.includes('.jpg') || act.action.icon.includes('.jpeg') || act.action.icon.includes('.webp'))">
-                                                            <img :src="act.action.icon" alt="" class="sf-action-icon-img sf-row-menu__icon" />
+                                                            <img x-bind:src="act.action.icon" alt="" class="sf-action-icon-img sf-row-menu__icon" />
                                                         </template>
                                                         <span class="sf-row-menu__text" x-text="act.action.label"></span>
                                                     </button>
@@ -908,22 +646,6 @@
                     </tbody>
                 </table>
             </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -951,13 +673,13 @@
                 </template>
 
                 <template x-if="!loading && !error && rows.length>0">
-                    <template x-for="(row, idx) in rows" :key="row[rowIdField] ?? idx">
+                    <template x-for="(row, idx) in rows" x-bind:key="row[rowIdField] ?? idx">
 
                         <section class="sf-profile__panel">
 
                             <header class="sf-profile__header">
                                 <div class="sf-profile__title">
-                                    <i class="sf-profile__titleIcon" :class="profileIcon"></i>
+                                    <i class="sf-profile__titleIcon" x-bind:class="profileIcon"></i>
 
                                     <div class="sf-profile__titleText">
                                         <template x-if="profileTitleText">
@@ -970,7 +692,7 @@
 
                                         <template x-if="profileBadges && profileBadges.length">
                                             <div class="sf-profile__badges">
-                                                <template x-for="b in profileBadges" :key="b.field">
+                                                <template x-for="b in profileBadges" x-bind:key="b.field">
                                                     <span class="sf-profile__pill">
                                                         <span class="sf-profile__pillLabel" x-text="b.label"></span>
                                                         <span class="sf-profile__pillValue" x-text="row?.[b.field] ?? '-'"></span>
@@ -983,18 +705,18 @@
                             </header>
 
                             <div class="sf-profile__body">
-                                <dl class="sf-profile__grid" :class="'sf-profile__grid--cols-' + (profileColumns || 2)">
-                                    <template x-for="col in profileColumnsList()" :key="col.field">
+                                <div class="sf-profile__grid" x-bind:class="'sf-profile__grid--cols-' + (profileColumns || 2)">
+                                    <template x-for="col in profileColumnsList()" x-bind:key="col.field">
                                         <div class="sf-profile__item">
-                                            <dt class="sf-profile__label" x-text="col.label"></dt>
-                                            <dd class="sf-profile__value" x-html="formatCell(row, col)"></dd>
+                                            <div class="sf-profile__label" x-text="col.label"></div>
+                                            <div class="sf-profile__value" x-html="formatCell(row, col)"></div>
                                         </div>
                                     </template>
 
-                                    <template x-for="n in profilePlaceholderCount(profileColumnsList().length, (profileColumns || 2))" :key="'ph-' + n">
+                                    <template x-for="n in profilePlaceholderCount(profileColumnsList().length, (profileColumns || 2))" x-bind:key="'ph-' + n">
                                         <div class="sf-profile__item sf-profile__item--placeholder" aria-hidden="true"></div>
                                     </template>
-                                </dl>
+                                </div>
                             </div>
 
                         </section>
@@ -1012,7 +734,7 @@
                     <button type="button"
                             class="page-btn page-btn--edge"
                             x-on:click="firstPage()"
-                            :disabled="page <= 1"
+                            x-bind:disabled="page <= 1"
                             aria-label="الصفحة الأولى">
                         الأولى
                     </button>
@@ -1020,26 +742,26 @@
                     <button type="button"
                             class="page-btn page-btn--edge"
                             x-on:click="prevPage()"
-                            :disabled="page <= 1"
+                            x-bind:disabled="page <= 1"
                             aria-label="الصفحة السابقة">
                         السابق
                     </button>
 
-                    <template x-for="p in visiblePageNumbers()" :key="'p-' + p">
+                    <template x-for="p in visiblePageNumbers()" x-bind:key="'p-' + p">
                         <button type="button"
                                 class="page-btn page-btn--num"
-                                :class="{ 'active': p === page }"
+                                x-bind:class="{ 'active': p === page }"
                                 x-text="p"
                                 x-on:click="goToPage(p)"
-                                :aria-current="p === page ? 'page' : null"
-                                :aria-label="'الصفحة ' + p">
+                                x-bind:aria-current="p === page ? 'page' : null"
+                                x-bind:aria-label="'الصفحة ' + p">
                         </button>
                     </template>
 
                     <button type="button"
                             class="page-btn page-btn--edge"
                             x-on:click="nextPage()"
-                            :disabled="page >= pages"
+                            x-bind:disabled="page >= pages"
                             aria-label="الصفحة التالية">
                         التالي
                     </button>
@@ -1047,7 +769,7 @@
                     <button type="button"
                             class="page-btn page-btn--edge"
                             x-on:click="lastPage()"
-                            :disabled="page >= pages"
+                            x-bind:disabled="page >= pages"
                             aria-label="الصفحة الأخيرة">
                         الأخيرة
                     </button>
@@ -1060,16 +782,16 @@
                         <div class="sf-modal" role="dialog" aria-modal="true" x-transition>
                             <div class="sf-modal-header">
                                 <h3 x-html="modal.title"></h3>
-                                <button type="button" class="sf-modal-close" x-on:click="closeModal()">✕</button>
+                                <button type="button" class="sf-modal-close" x-on:click="closeModal()" aria-label="إغلاق">&times;</button>
                             </div>
 
                             <div class="sf-modal-body">
                                 <template x-if="modal.message">
                                     <div class="mb-7 flex items-center justify-center gap-2 rounded-sm px-4 py-2 text-center"
-                                         :class="modal.messageClass || 'border border-sky-200 bg-sky-50 text-sky-700'">
+                                         x-bind:class="modal.messageClass || 'border border-sky-200 bg-sky-50 text-sky-700'">
 
                                         <i x-show="modal.messageIcon"
-                                           :class="modal.messageIcon"
+                                           x-bind:class="modal.messageIcon"
                                            class="text-lg opacity-90"></i>
 
                                         <span x-show="!modal.messageIsHtml" x-text="modal.message"></span>
@@ -1131,7 +853,7 @@
 else if (useSection)
 {
     <section class="sf-section"
-             x-data="{ open: @(sectionOpen ? "true" : "false") }"
+             x-data="{ open: @sectionOpenJson }"
              x-cloak>
 
         <div class="sf-section__header">
@@ -1159,7 +881,7 @@ else if (useSection)
                     }
 
                     <i class="fa-solid fa-chevron-down sf-section__chev"
-                       :class="open ? 'is-open' : ''"></i>
+                       x-bind:class="open ? 'is-open' : ''"></i>
                 </span>
             </button>
         </div>
@@ -1178,7 +900,7 @@ else if (useSection)
 else if (useToggle)
 {
     <div class="sf-toggle"
-         x-data="{ open: @(toggleOpen ? "true" : "false") }"
+         x-data="{ open: @toggleOpenJson }"
          x-cloak>
 
         <button type="button"
@@ -1199,7 +921,7 @@ else if (useToggle)
             </span>
 
             <i class="fa-solid fa-chevron-down sf-toggle__chev"
-               :class="open ? 'is-open' : ''"></i>
+               x-bind:class="open ? 'is-open' : ''"></i>
         </button>
 
         <div class="sf-toggle__content" x-show="open" x-transition>
