@@ -1135,6 +1135,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             };
 
 
+            /*
             dsModel.StyleRules = new List<TableStyleRule>
                     {
                         new TableStyleRule
@@ -1225,6 +1226,82 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             PillTextField= "buildingActionTypeResidentAlias",
                             PillCssClass = "pill pill-red",
                             PillMode     = "replace"
+                        }
+                    };
+            */
+
+            dsModel.StyleRules = new List<TableStyleRule>
+                    {
+                        new TableStyleRule
+                        {
+                            Target = "cell",
+                            Field  = "buildingActionTypeResidentAlias",
+                            ConditionField = "LastActionTypeID",
+                            Op     = "eq",
+                            Value  = "38",
+                            Priority = 1,
+                            CssClass = "cell-green",
+                            StopOnMatch = true
+                        },
+
+                        new TableStyleRule
+                        {
+                            Target = "cell",
+                            Field  = "buildingActionTypeResidentAlias",
+                            ConditionField = "LastActionTypeID",
+                            Op     = "eq",
+                            Value  = "40",
+                            Priority = 1,
+                            CssClass = "cell-yellow",
+                            StopOnMatch = true
+                        },
+
+                        new TableStyleRule
+                        {
+                            Target = "cell",
+                            Field  = "buildingActionTypeResidentAlias",
+                            ConditionField = "LastActionTypeID",
+                            Op     = "eq",
+                            Value  = "45",
+                            Priority = 1,
+                            CssClass = "cell-yellow",
+                            StopOnMatch = true
+                        },
+
+                        new TableStyleRule
+                        {
+                            Target = "cell",
+                            Field  = "buildingActionTypeResidentAlias",
+                            ConditionField = "LastActionTypeID",
+                            Op     = "eq",
+                            Value  = "39",
+                            Priority = 1,
+                            CssClass = "cell-yellow",
+                            StopOnMatch = true
+                        },
+
+                        new TableStyleRule
+                        {
+                            Target = "cell",
+                            Field  = "buildingActionTypeResidentAlias",
+                            ConditionField = "LastActionTypeID",
+                            Op     = "eq",
+                            Value  = "41",
+                            Priority = 1,
+                            CssClass = "cell-yellow",
+                            StopOnMatch = true
+                        },
+
+                        new TableStyleRule
+                        {
+                            Target = "cell",
+                            Field  = "buildingActionTypeResidentAlias",
+                            ConditionField = "LastActionTypeID",
+                            Op     = "eq",
+                            Value  = "42",
+                            Priority = 1,
+                            CssClass = "cell-red",
+                            StopOnMatch = true
                         }
                     };
 

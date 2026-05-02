@@ -1486,11 +1486,13 @@
                 const val = this.ruleValue(rule, "value");
                 const target = this.ruleTarget(rule);
                 const field = this.ruleField(rule);
+                const conditionField = this.ruleValue(rule, "conditionField");
+                const matchField = conditionField || (target === "row" ? field : col?.field);
                 const left = target === "row"
-                    ? (field ? row?.[field] : "")
-                    : row?.[col?.field];
+                    ? (matchField ? row?.[matchField] : "")
+                    : row?.[matchField];
 
-                if (target === "row" && !field) return true;
+                if (target === "row" && !matchField) return true;
 
                 const l = left ?? "";
                 const v = val ?? "";

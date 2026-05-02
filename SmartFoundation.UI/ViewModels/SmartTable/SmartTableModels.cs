@@ -84,6 +84,9 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         // اسم الحقل (مطلوب للـ cell/column، وممكن للـ row)
         public string? Field { get; set; }
 
+        // حقل الشرط عند اختلافه عن الخلية المستهدفة
+        public string? ConditionField { get; set; }
+
         // نوع المقارنة: eq, neq, gt, gte, lt, lte, contains, startswith, endswith, in
         public string Op { get; set; } = "eq";
 
