@@ -1453,7 +1453,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                         RightHeaderLine3 = "القوات البرية الملكية السعودية",
                         RightHeaderLine4 = "الإدارة الهندسية للتشغيل والصيانة",
                         RightHeaderLine5 = "مدينة الملك فيصل العسكرية",
-                        PdfLogoUrl = "/img/ppng.png",
+                        PdfLogoUrl = "/img/Royal_Saudi_Land_Forces.png",
 
 
                     },
@@ -1642,7 +1642,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                         RightHeaderLine3 = "القوات البرية الملكية السعودية",
                         RightHeaderLine4 = "الإدارة الهندسية للتشغيل والصيانة",
                         RightHeaderLine5 = "مدينة الملك فيصل العسكرية",
-                        PdfLogoUrl = "/img/ppng.png",
+                        PdfLogoUrl = "/img/Royal_Saudi_Land_Forces.png",
 
 
                     },
@@ -1833,7 +1833,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                         RightHeaderLine3 = "القوات البرية الملكية السعودية",
                         RightHeaderLine4 = "الإدارة الهندسية للتشغيل والصيانة",
                         RightHeaderLine5 = "مدينة الملك فيصل العسكرية",
-                        PdfLogoUrl = "/img/ppng.png",
+                        PdfLogoUrl = "/img/Royal_Saudi_Land_Forces.png",
 
 
                     },
@@ -2456,7 +2456,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                         new("residentcontactDetails", "رقم الجوال", Align:"center", Weight:2, FontSize:9),
                     };
 
-                var logo = Path.Combine(_env.WebRootPath, "img", "ppng.png");
+                var logo = Path.Combine(_env.WebRootPath, "img", "Royal_Saudi_Land_Forces.png");
                 var header = new Dictionary<string, string>
                 {
                     ["no"] = usersId,//"١٢٣/٤٥",
@@ -2467,8 +2467,8 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     ["right1"] = "المملكة العربية السعودية",
                     ["right2"] = "وزارة الدفاع",
                     ["right3"] = "القوات البرية الملكية السعودية",
-                    ["right4"] = "الادارة الهندسية للتشغيل والصيانة",
-                    ["right5"] = "إدارة مدينة الملك فيصل العسكرية",
+                    ["right4"] = OrganizationName,
+                    ["right5"] = IdaraName,
 
                     //["bismillah"] = "بسم الله الرحمن الرحيم",
                     ["midCaption"] = ""

@@ -47,6 +47,8 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
         protected string? UserActive;
         protected string? HostName;
         protected string? LastActivityUtc;
+        protected string? OrganaiztionLogo;
+        protected string? IdaraLogo;
 
         // ===== DataSet Split =====
         protected DataTable? permissionTable;
@@ -123,6 +125,8 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             UserActive = HttpContext.Session.GetString("useractive");
             HostName = HttpContext.Session.GetString("HostName");
             LastActivityUtc = HttpContext.Session.GetString("LastActivityUtc");
+            OrganaiztionLogo = HttpContext.Session.GetString("OrganaiztionLogo");
+            IdaraLogo = HttpContext.Session.GetString("IdaraLogo");
 
             // (اختياري) fallback لاسم الجهاز لو ما موجود بالسيشن
             if (string.IsNullOrWhiteSpace(HostName))

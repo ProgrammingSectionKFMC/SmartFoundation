@@ -1950,7 +1950,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         new("residentcontactDetails", "رقم الجوال", Align:"center", Weight:2, FontSize:9),
                     };
 
-                var logo = Path.Combine(_env.WebRootPath, "img", "ppng.png");
+                var logo = Path.Combine(_env.WebRootPath, "img", "Royal_Saudi_Land_Forces.png");
                 var header = new Dictionary<string, string>
                 {
                     ["no"] = usersId,//"١٢٣/٤٥",
@@ -1961,8 +1961,8 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                     ["right1"] = "المملكة العربية السعودية",
                     ["right2"] = "وزارة الدفاع",
                     ["right3"] = "القوات البرية الملكية السعودية",
-                    ["right4"] = "الادارة الهندسية للتشغيل والصيانة",
-                    ["right5"] = "إدارة مدينة الملك فيصل العسكرية",
+                    ["right4"] = OrganizationName,
+                    ["right5"] = IdaraName,
 
                     //["bismillah"] = "بسم الله الرحمن الرحيم",
                     ["midCaption"] = ""

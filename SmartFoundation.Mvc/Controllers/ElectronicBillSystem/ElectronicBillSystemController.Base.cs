@@ -45,6 +45,8 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
         protected string? UserActive;
         protected string? HostName;
         protected string? LastActivityUtc;
+        protected string? OrganaiztionLogo;
+        protected string? IdaraLogo;
 
         protected DataTable? permissionTable;
         protected DataTable? dt1;
@@ -119,6 +121,8 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
             UserActive = HttpContext.Session.GetString("useractive");
             HostName = HttpContext.Session.GetString("HostName");
             LastActivityUtc = HttpContext.Session.GetString("LastActivityUtc");
+            OrganaiztionLogo = HttpContext.Session.GetString("OrganaiztionLogo");
+            IdaraLogo = HttpContext.Session.GetString("IdaraLogo");
 
             return true;
         }
