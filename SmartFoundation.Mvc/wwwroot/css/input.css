@@ -3170,8 +3170,16 @@ button,
     border: 1px solid rgba(255,255,255,0.22);
     background: rgba(255,255,255,0.04);
     color: #fff;
+    font-size: 0;
     transition: background-color 150ms ease, border-color 150ms ease, transform 120ms ease;
 }
+
+    .sf-modal-close::before {
+        content: "\00d7";
+        font-size: 1.25rem;
+        line-height: 1;
+        font-family: Arial, sans-serif;
+    }
 
     .sf-modal-close:hover {
         background: rgba(255,255,255,0.08);

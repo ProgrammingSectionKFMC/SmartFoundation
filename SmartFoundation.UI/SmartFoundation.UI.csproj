@@ -22,5 +22,6 @@
 	<ItemGroup>
 		<Folder Include="Views\Shared\Components\SmartPrint\Docs\" />
 		<Folder Include="Views\Shared\Components\SmartTableDS\" />
+		<Folder Include="wwwroot\" />
 	</ItemGroup>
 </Project>

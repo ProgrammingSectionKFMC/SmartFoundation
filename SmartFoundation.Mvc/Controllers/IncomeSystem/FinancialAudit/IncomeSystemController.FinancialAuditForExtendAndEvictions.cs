@@ -1296,13 +1296,15 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 //TabelLabelIcon = "fa-solid fa-list",
                 ShowToolbar = true,
                 EnableCellCopy = false,
+                ShowColumnVisibility = true,
+                EnableColumnReorder = true,
                 RenderAsToggle = true,
                 ToggleLabel = "التسوية المالية",
                 ToggleIcon = "fa-solid fa-file-signature",
                 ToggleDefaultOpen = true,
                 ShowToggleCount = false,
                 Selectable = true,
-                HeaderColor = "#1e3a8a", // تختار لون الهيدر بكيفك
+                /*HeaderColor = "#1e3a8a",*/ // تختار لون الهيدر بكيفك
 
                 Toolbar = new TableToolbarConfig
                 {
@@ -1620,7 +1622,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 ToggleDefaultOpen = true,
                 ShowToggleCount = false,
                 Selectable = false,
-                HeaderColor = "#92400e", // تختار لون الهيدر بكيفك
+                /*HeaderColor = "#92400e",*/ // تختار لون الهيدر بكيفك
 
                 Toolbar = new TableToolbarConfig
                 {
@@ -1666,6 +1668,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             };
 
 
+            /*
             dsModel3.StyleRules = new List<TableStyleRule>
                     {
 
@@ -1760,6 +1763,82 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                             PillMode = "replace"
                         },
 
+                    };
+            */
+
+            dsModel3.StyleRules = new List<TableStyleRule>
+                    {
+                        new TableStyleRule
+                        {
+                            Target = "cell",
+                            Field = "BillsStatus",
+                            ConditionField = "BillsStatusID",
+                            Op = "eq",
+                            Value = "0",
+                            Priority = 1,
+                            CssClass = "cell-red",
+                            StopOnMatch = true
+                        },
+
+                        new TableStyleRule
+                        {
+                            Target = "cell",
+                            Field = "BillsStatus",
+                            ConditionField = "BillsStatusID",
+                            Op = "eq",
+                            Value = "1",
+                            Priority = 1,
+                            CssClass = "cell-yellow",
+                            StopOnMatch = true
+                        },
+
+                        new TableStyleRule
+                        {
+                            Target = "cell",
+                            Field = "BillsStatus",
+                            ConditionField = "BillsStatusID",
+                            Op = "eq",
+                            Value = "2",
+                            Priority = 1,
+                            CssClass = "cell-blue",
+                            StopOnMatch = true
+                        },
+
+                        new TableStyleRule
+                        {
+                            Target = "cell",
+                            Field = "Remaining",
+                            ConditionField = "BillsStatusID",
+                            Op = "eq",
+                            Value = "0",
+                            Priority = 1,
+                            CssClass = "cell-red",
+                            StopOnMatch = true
+                        },
+
+                        new TableStyleRule
+                        {
+                            Target = "cell",
+                            Field = "Remaining",
+                            ConditionField = "BillsStatusID",
+                            Op = "eq",
+                            Value = "1",
+                            Priority = 1,
+                            CssClass = "cell-yellow",
+                            StopOnMatch = true
+                        },
+
+                        new TableStyleRule
+                        {
+                            Target = "cell",
+                            Field = "Remaining",
+                            ConditionField = "BillsStatusID",
+                            Op = "eq",
+                            Value = "2",
+                            Priority = 1,
+                            CssClass = "cell-blue",
+                            StopOnMatch = true
+                        },
                     };
           
             dsModel10.StyleRules = new List<TableStyleRule>
