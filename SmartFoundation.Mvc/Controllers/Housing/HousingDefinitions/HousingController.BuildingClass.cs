@@ -7,6 +7,7 @@ using System.Linq;
 
 namespace SmartFoundation.Mvc.Controllers.Housing
 {
+   
     public partial class HousingController : Controller
     {
         public async Task<IActionResult> BuildingClass()
