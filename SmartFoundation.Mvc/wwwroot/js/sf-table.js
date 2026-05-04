@@ -1575,10 +1575,7 @@
                 for (const r of rules) {
                     if (!this.pillRuleMatches(r, row)) continue;
 
-                    const text =
-                        (this.ruleValue(r, "pillText") != null ? String(this.ruleValue(r, "pillText")) :
-                            (this.ruleValue(r, "pillTextField") ? String(row?.[this.ruleValue(r, "pillTextField")] ?? "") : "")
-                        ).trim();
+                    const text = this.resolveCellPillText(r, row, col);
 
                     if (!text) continue;
 
@@ -1589,6 +1586,17 @@
                     };
                 }
                 return null;
+            },
+            resolveCellPillText(rule, row, col) {
+                if (!rule) return "";
+
+                const staticText = this.ruleValue(rule, "pillText");
+                if (staticText != null) return String(staticText).trim();
+
+                const textField = this.ruleValue(rule, "pillTextField");
+                if (textField) return String(row?.[textField] ?? "").trim();
+
+                return String(row?.[col?.field] ?? "").trim();
             },
             cellPillRule(row, col) {
                 const field = String(col?.field || "");
@@ -1605,13 +1613,27 @@
                     if (rowCache.has(field)) return rowCache.get(field);
 
                     const match = (this.getStyleRuleIndex().pillRulesByField.get(field) || [])
-                        .find(r => this.pillRuleMatches(r, row)) || null;
+                        .find(r => {
+                            if (!this.pillRuleMatches(r, row)) return false;
+
+                            const isIconOnly = !!this.ruleValue(r, "iconOnly");
+                            if (isIconOnly) return true;
+
+                            return !!this.resolveCellPillText(r, row, col);
+                        }) || null;
                     rowCache.set(field, match);
                     return match;
                 }
 
                 return (this.getStyleRuleIndex().pillRulesByField.get(field) || [])
-                    .find(r => this.pillRuleMatches(r, row)) || null;
+                    .find(r => {
+                        if (!this.pillRuleMatches(r, row)) return false;
+
+                        const isIconOnly = !!this.ruleValue(r, "iconOnly");
+                        if (isIconOnly) return true;
+
+                        return !!this.resolveCellPillText(r, row, col);
+                    }) || null;
             },
             hasCellPill(row, col) {
                 return !!this.cellPillRule(row, col);
@@ -1637,7 +1659,7 @@
             },
             cellPillText(row, col) {
                 const rule = this.cellPillRule(row, col);
-                return this.ruleValue(rule, "pillText") || row?.[col?.field] || "";
+                return this.resolveCellPillText(rule, row, col);
             },
 
             escapeHtml(s) {
@@ -6504,12 +6526,14 @@
                     backdropFilter: 'blur(6px)',
                     border: '1px solid rgba(255,255,255,0.15)',
                     direction: 'rtl',
-                    width: 'fit-content',
+                    width: 'auto',
                     maxWidth: '420px'
                 });
 
                 toast.style.display = 'inline-block';
-                toast.style.whiteSpace = 'nowrap';
+                toast.style.whiteSpace = 'normal';
+                toast.style.wordBreak = 'break-word';
+                toast.style.overflowWrap = 'anywhere';
 
                 document.body.appendChild(toast);
 

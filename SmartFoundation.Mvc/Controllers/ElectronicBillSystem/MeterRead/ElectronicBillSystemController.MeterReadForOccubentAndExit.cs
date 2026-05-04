@@ -102,15 +102,6 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
             string LastActionDecisionNo_ = datarow?["LastActionDecisionNo"]?.ToString() ?? "";
 
 
-            if (dt2 != null && dt2.Rows.Count > 0)
-            {
-                TempData["JobsAvaliable"] = $"يوجد عدد  {dt2.Rows.Count} ساكنين مطلوب انهاء القراءات الخاصة بهم";
-            }
-            else
-            {
-                TempData["NoJobs"] = "لا توجد قراءات مطلوبة";
-            }
-
             //  التحقق من الصلاحيات
             if (permissionTable is null || permissionTable.Rows.Count == 0)
             {
@@ -1308,6 +1299,28 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                PageTitle = dsModel.PageTitle,
                PanelTitle = dsModel.PanelTitle,
                PanelIcon = "fa-bolt",
+               Alerts = new List<SmartPageAlert>
+               {
+                   dt2 != null && dt2.Rows.Count > 0
+                       ? new SmartPageAlert
+                       {
+                           Tone = "danger",
+                           Title = "تنبيه القراءات",
+                           Message = $"يوجد عدد {dt2.Rows.Count} ساكنين مطلوب إنهاء القراءات الخاصة بهم.",
+                           Icon = "fa-solid fa-circle-exclamation",
+                           Dismissible = true,
+                           //AutoDismissMs = 10000 // يختفي بعد
+                       }
+                       : new SmartPageAlert
+                       {
+                           Tone = "success",
+                           Title = "حالة القراءات",
+                           Message = "لا توجد قراءات مطلوبة حالياً.",
+                           Icon = "fa-solid fa-circle-check",
+                           Dismissible = true,
+                           //AutoDismissMs = 5000
+                       }
+               },
                Form = form,
                TableDS = ready ? dsModel : null
             };

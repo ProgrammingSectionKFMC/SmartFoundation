@@ -1,4 +1,5 @@
-﻿@model SmartFoundation.UI.ViewModels.SmartPage.SmartPageViewModel
+@using SmartFoundation.UI.ViewModels.SmartPage
+@model SmartFoundation.UI.ViewModels.SmartPage.SmartPageViewModel
 
 @{
     var hasPanelContent =
@@ -13,6 +14,17 @@
     || Model.TableDS5 is not null
     || Model.Table is not null;
 
+    var panel = Model.Panel ?? new SmartPagePanelConfig();
+    var panelTitle = panel.Title ?? Model.PanelTitle ?? Model.PageTitle ?? "";
+    var panelIcon = panel.Icon ?? Model.PanelIcon ?? "fa-layer-group";
+    var panelSubtitle = panel.Subtitle ?? "";
+    var panelDescription = panel.Description ?? "";
+    var panelBadges = panel.Badges?.Where(x => x.Visible).ToList() ?? new List<SmartPagePanelBadge>();
+    var pageAlerts = Model.Alerts?.Where(x => x.Visible && !string.IsNullOrWhiteSpace(x.Message)).ToList() ?? new List<SmartPageAlert>();
+    var showPanelHeader = panel.Show && (!string.IsNullOrWhiteSpace(panelTitle)
+        || (!string.IsNullOrWhiteSpace(panelSubtitle) && panel.ShowSubtitle)
+        || (!string.IsNullOrWhiteSpace(panelDescription) && panel.ShowDescription)
+        || (panel.ShowBadges && panelBadges.Count > 0));
 }
 
 @if (Model.Charts is not null)
@@ -27,16 +39,164 @@
 @if (hasPanelContent)
 {
     <div x-data="{ open:true }" class="sf-panel mt-6">
-        <div class="sf-panel-header">
-            <h3 class="sf-panel-title">
-                <span class="sf-panel-title__icon">
-                    <i class="fa-solid @(Model.PanelIcon ?? "fa-layer-group")"></i>
-                </span>
-                <span class="sf-panel-title__text">
-                    @(Model.PanelTitle ?? Model.PageTitle)
-                </span>
-            </h3>
-        </div>
+        @if (pageAlerts.Count > 0)
+        {
+            <div class="sf-page-alerts" aria-live="polite" aria-atomic="true">
+                @foreach (var alert in pageAlerts)
+                {
+                    var alertTone = string.IsNullOrWhiteSpace(alert.Tone) ? "info" : alert.Tone.Trim().ToLowerInvariant();
+                    var alertIcon = !string.IsNullOrWhiteSpace(alert.Icon)
+                        ? alert.Icon
+                        : alertTone switch
+                        {
+                            "success" => "fa-solid fa-circle-check",
+                            "warning" => "fa-solid fa-triangle-exclamation",
+                            "danger" => "fa-solid fa-circle-exclamation",
+                            _ => "fa-solid fa-circle-info"
+                        };
+                    var alertAutoDismissMs = alert.AutoDismissMs > 0 ? alert.AutoDismissMs : 0;
+                    var alertStateKey = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(
+                        $"{Model.PageTitle}|{alertTone}|{alert.Title}|{alert.Message}"));
+
+                    <div class="sf-page-alert is-@alertTone"
+                         x-data="{
+                             storageKey: 'sf-alert:@alertStateKey',
+                             open: false,
+                             init() {
+                                 try {
+                                     this.open = sessionStorage.getItem(this.storageKey) !== '1';
+                                 } catch {
+                                     this.open = true;
+                                 }
+
+                                 document.addEventListener('click', (event) => {
+                                     const anchor = event.target.closest('a[href]');
+                                     if (!anchor) return;
+
+                                     const href = anchor.getAttribute('href');
+                                     if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
+
+                                     try {
+                                         const current = new URL(window.location.href);
+                                         const target = new URL(href, window.location.origin);
+
+                                         const samePageFlow =
+                                             target.origin === current.origin
+                                             && target.pathname.toLowerCase() === current.pathname.toLowerCase();
+
+                                         if (!samePageFlow) {
+                                             sessionStorage.removeItem(this.storageKey);
+                                         }
+                                     } catch {}
+                                 }, true);
+
+                                 if (this.open && @alertAutoDismissMs > 0) {
+                                     setTimeout(() => this.close(), @alertAutoDismissMs);
+                                 }
+                             },
+                             close() {
+                                 this.open = false;
+                                 try { sessionStorage.setItem(this.storageKey, '1'); } catch {}
+                             }
+                         }"
+                         x-cloak
+                         x-show="open"
+                         style="@(alertAutoDismissMs > 0 ? $"--sf-alert-duration:{alertAutoDismissMs}ms;" : "")"
+                         role="status"
+                         aria-live="polite"
+                         x-transition:enter="sf-alert-enter"
+                         x-transition:enter-start="sf-alert-enter-start"
+                         x-transition:enter-end="sf-alert-enter-end"
+                         x-transition:leave="sf-alert-leave"
+                         x-transition:leave-start="sf-alert-leave-start"
+                         x-transition:leave-end="sf-alert-leave-end">
+                        <div class="sf-page-alert__rail" aria-hidden="true"></div>
+
+                        <div class="sf-page-alert__icon">
+                            <i class="@alertIcon"></i>
+                        </div>
+
+                        <div class="sf-page-alert__content">
+                            @if (!string.IsNullOrWhiteSpace(alert.Title))
+                            {
+                                <div class="sf-page-alert__title">@alert.Title</div>
+                            }
+
+                            <div class="sf-page-alert__message">@alert.Message</div>
+                        </div>
+
+                        @if (alert.Dismissible)
+                        {
+                            <button type="button"
+                                    class="sf-page-alert__close"
+                                    x-on:click="close()"
+                                    aria-label="اغلاق التنبيه">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        }
+
+                        @if (alertAutoDismissMs > 0)
+                        {
+                            <div class="sf-page-alert__timer" aria-hidden="true"></div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+        @if (showPanelHeader)
+        {
+            <div class="sf-panel-header">
+                <div class="sf-panel-head @(string.Equals(panel.Layout, "compact", StringComparison.OrdinalIgnoreCase) ? "is-compact" : "is-hero")">
+                    <div class="sf-panel-head__identity">
+                        @if (panel.ShowIcon)
+                        {
+                            <span class="sf-panel-head__icon">
+                                <i class="fa-solid @panelIcon"></i>
+                            </span>
+                        }
+
+                        <div class="sf-panel-head__content">
+                            <div class="sf-panel-head__titleRow">
+                                <h3 class="sf-panel-head__title">@panelTitle</h3>
+                            </div>
+
+                            @if (panel.ShowSubtitle && !string.IsNullOrWhiteSpace(panelSubtitle))
+                            {
+                                <div class="sf-panel-head__subtitle">@panelSubtitle</div>
+                            }
+
+                            @if (panel.ShowDescription && !string.IsNullOrWhiteSpace(panelDescription))
+                            {
+                                <div class="sf-panel-head__desc">@panelDescription</div>
+                            }
+                        </div>
+                    </div>
+
+                    @if (panel.ShowBadges && panelBadges.Count > 0)
+                    {
+                        <div class="sf-panel-head__badges">
+                            @foreach (var badge in panelBadges)
+                            {
+                                <div class="sf-panel-badge is-@badge.Tone">
+                                    @if (!string.IsNullOrWhiteSpace(badge.Icon))
+                                    {
+                                        <i class="@badge.Icon sf-panel-badge__icon"></i>
+                                    }
+
+                                    <span class="sf-panel-badge__label">@badge.Label</span>
+
+                                    @if (!string.IsNullOrWhiteSpace(badge.Value))
+                                    {
+                                        <span class="sf-panel-badge__value">@badge.Value</span>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        }
 
         <div class="sf-panel-body" x-show="open">
             @if (Model.Form is not null)
@@ -78,7 +238,6 @@
                 @await Component.InvokeAsync("SmartTableDS", new { model = Model.TableDS5, embedded = true })
             }
 
-            
             @if (Model.Table is not null)
             {
                 @await Component.InvokeAsync("SmartTable", new { model = Model.Table, embedded = true })

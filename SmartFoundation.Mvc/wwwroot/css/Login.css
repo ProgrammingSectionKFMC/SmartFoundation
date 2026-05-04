@@ -519,13 +519,18 @@ a.text-primary {
 
     #toast-container > div .toast-message {
         display: flex !important;
-        align-items: center;
+        align-items: flex-start;
         justify-content: flex-start; 
+        flex-wrap: wrap;
         gap: 10px;
         width: 100%;
+        min-width: 0;
         font-weight: 700;
         color: #0f172a !important;
         text-align: right;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: break-word;
     }
 
         #toast-container > div .toast-message::before {

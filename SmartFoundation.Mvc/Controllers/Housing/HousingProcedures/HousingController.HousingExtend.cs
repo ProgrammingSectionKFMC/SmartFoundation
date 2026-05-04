@@ -780,7 +780,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         Show = true,  // ✅ أضف
                         IsEdit = true,
                         OpenModal = true,
-
+                       // Placement =  TableActionPlacement.ActionsMenu,
                         ModalTitle = "امهال مستفيد",
                         ModalMessage = "",
                         ModalMessageClass = "bg-red-50 text-red-700",
@@ -1272,11 +1272,47 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
 
+            var insuranceRequiredCount = rowsList.Count(row =>
+            {
+                if (!row.TryGetValue("LastActionExtendReasonTypeID", out var value) || value is null)
+                    return false;
+
+                var reasonType = value.ToString()?.Trim();
+                return reasonType == "1" || reasonType == "2";
+            });
+
+            var createdRequestCount = rowsList.Count(row =>
+            {
+                if (!row.TryGetValue("LastActionTypeID", out var value) || value is null)
+                    return false;
+
+                return value.ToString()?.Trim() == "48";
+            });
+
             var page = new SmartPageViewModel
             {
                 PageTitle = dsModel.PageTitle,
                 PanelTitle = dsModel.PanelTitle,
                 PanelIcon = "fa-solid fa-user-group",
+                Panel = new SmartPagePanelConfig
+                {
+                    Show = true,
+                    ShowIcon = true,
+                    ShowSubtitle = true,
+                    ShowDescription = true,
+                    ShowBadges = true,
+                    Layout = "compact",
+                    Title = "إمهال المستفيدين",
+                    Subtitle = "إدارة طلبات الإمهال حسب حالة كل سجل.",
+                    Description = "تُستخدم هذه الصفحة لإنشاء طلبات الإمهال ومتابعة إجراءاتها حسب حالة كل مستفيد، بدءاً من تسجيل الطلب وحتى التدقيق المالي والاعتماد النهائي.",
+                    Icon = "fa-user-group",
+                    Badges = new List<SmartPagePanelBadge>
+                    {
+                        new() { Label = "بدء الإجراء", Value = "إنشاء الطلب بعد تحديد السجل", Icon = "fa-solid fa-play", Tone = "success" },
+                        new() { Label = "التعديل والإلغاء", Value = "للطلبات المنشأة فقط", Icon = "fa-solid fa-pen-to-square", Tone = "info" },
+                        new() { Label = "قبل الاعتماد", Value = "التدقيق المالي ثم التأمين عند الحاجة", Icon = "fa-solid fa-shield-halved", Tone = "default" },
+                    }
+                },
                 TableDS = dsModel
             };
 
