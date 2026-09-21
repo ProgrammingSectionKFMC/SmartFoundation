@@ -1,0 +1,84 @@
+﻿@model SmartFoundation.UI.ViewModels.SmartPage.SmartPageViewModel
+@{
+    ViewData["Title"] = Model.PageTitle;
+}
+@await Component.InvokeAsync("SmartRenderer", new { model = Model })
+
+<script>
+    window.UtilityTypeID_ = '@(ViewBag.UtilityTypeID ?? "")';
+
+    (function () {
+        function getDimensionFields(form) {
+            const action = form?.querySelector('[name="ActionType"]')?.value || '';
+
+            if (action === 'INSERTBUILDINGSPACES') {
+                return {
+                    length: form.querySelector('[name="p04"]'),
+                    width: form.querySelector('[name="p05"]'),
+                    area: form.querySelector('[name="p06"]')
+                };
+            }
+
+            if (action === 'UPDATEBUILDINGSPACES') {
+                return {
+                    length: form.querySelector('[name="p03"]'),
+                    width: form.querySelector('[name="p04"]'),
+                    area: form.querySelector('[name="p05"]')
+                };
+            }
+
+            return null;
+        }
+
+        function validateAndCalculate(form, calculateArea) {
+            const fields = getDimensionFields(form);
+            if (!fields?.length || !fields?.width || !fields?.area) return true;
+
+            const hasLength = fields.length.value.trim() !== '';
+            const hasWidth = fields.width.value.trim() !== '';
+            const dimensionsComplete = hasLength && hasWidth;
+            const dimensionsIncomplete = hasLength !== hasWidth;
+            const message = dimensionsIncomplete ? 'يجب إدخال طول وعرض الفراغ معاً' : '';
+
+            fields.length.setCustomValidity(message);
+            fields.width.setCustomValidity(message);
+
+            if (calculateArea && dimensionsComplete) {
+                const length = Number(fields.length.value);
+                const width = Number(fields.width.value);
+
+                if (Number.isFinite(length) && Number.isFinite(width) && length > 0 && width > 0) {
+                    fields.area.value = (Math.round((length * width) * 100) / 100).toFixed(2);
+                }
+            }
+
+            return !dimensionsIncomplete;
+        }
+
+        document.addEventListener('input', function (event) {
+            const input = event.target;
+            if (!(input instanceof HTMLInputElement)) return;
+
+            const form = input.closest('form');
+            const fields = getDimensionFields(form);
+            if (!fields) return;
+
+            if (input === fields.length || input === fields.width) {
+                validateAndCalculate(form, true);
+            }
+        });
+
+        document.addEventListener('submit', function (event) {
+            const form = event.target;
+            if (!(form instanceof HTMLFormElement)) return;
+
+            if (!validateAndCalculate(form, false)) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+
+                const fields = getDimensionFields(form);
+                (fields?.length.value.trim() === '' ? fields?.length : fields?.width)?.reportValidity();
+            }
+        }, true);
+    })();
+</script>

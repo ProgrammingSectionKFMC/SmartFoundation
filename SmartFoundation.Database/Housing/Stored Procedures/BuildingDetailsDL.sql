@@ -48,36 +48,12 @@ BEGIN
                 ,br.buildingRentEndDate
                 ,bd.IdaraId_FK
                 ,isnull(bat.buildingActionTypeBuildingAlias,N'لايوجد اجراء مسجل بالنظام') buildingActionTypeBuildingAlias
-                ,(select Top(1) count(*) 
-                from Housing.BuildingDetailsMeterServices m 
-                where m.BuildingDetailsID_FK = bd.buildingDetailsID 
-                and m.BuildingDetailsMeterServicesActive = 1 
-                and m.MeterServicesTypeID_FK = 1) ElectrcityServices
-                ,(select Top(1) count(*) 
-                from Housing.BuildingDetailsMeterServices m 
-                where m.BuildingDetailsID_FK = bd.buildingDetailsID 
-                and m.BuildingDetailsMeterServicesActive = 1 
-                and m.MeterServicesTypeID_FK = 2) WaterServices
-                ,(select Top(1) count(*) 
-                from Housing.BuildingDetailsMeterServices m 
-                where m.BuildingDetailsID_FK = bd.buildingDetailsID 
-                and m.BuildingDetailsMeterServicesActive = 1 
-                and m.MeterServicesTypeID_FK = 3) GasServices
-                ,(select Top(1) count(*) 
-                from Housing.BuildingDetailsMeterServices m 
-                where m.BuildingDetailsID_FK = bd.buildingDetailsID 
-                and m.BuildingDetailsMeterServicesActive = 1 
-                and m.MeterServicesTypeID_FK = 1) ElectrcityServicesView
-                ,(select Top(1) count(*) 
-                from Housing.BuildingDetailsMeterServices m 
-                where m.BuildingDetailsID_FK = bd.buildingDetailsID 
-                and m.BuildingDetailsMeterServicesActive = 1 
-                and m.MeterServicesTypeID_FK = 2) WaterServicesView
-                ,(select Top(1) count(*) 
-                from Housing.BuildingDetailsMeterServices m 
-                where m.BuildingDetailsID_FK = bd.buildingDetailsID 
-                and m.BuildingDetailsMeterServicesActive = 1 
-                and m.MeterServicesTypeID_FK = 3) GasServicesView
+                ,ISNULL(serviceSummary.ElectrcityServices, 0) ElectrcityServices
+                ,ISNULL(serviceSummary.WaterServices, 0) WaterServices
+                ,ISNULL(serviceSummary.GasServices, 0) GasServices
+                ,ISNULL(serviceSummary.ElectrcityServices, 0) ElectrcityServicesView
+                ,ISNULL(serviceSummary.WaterServices, 0) WaterServicesView
+                ,ISNULL(serviceSummary.GasServices, 0) GasServicesView
                 
                
                
@@ -93,6 +69,17 @@ BEGIN
             LEFT join [DATACORE].[Housing].[V_LastActionForBuilding] lb on bd.buildingDetailsID = lb.buildingDetailsID
             left join DATACORE.Housing.BuildingAction ba on lb.buildingActionID = ba.buildingActionID and ba.buildingActionActive = 1
             LEFT join DATACORE.Housing.BuildingActionType bat on ba.buildingActionTypeID_FK = bat.buildingActionTypeID and bat.buildingActionTypeActive = 1
+            LEFT JOIN
+            (
+                SELECT
+                      buildingService.BuildingDetailsID_FK
+                    , SUM(CASE WHEN buildingService.MeterServicesTypeID_FK = 1 THEN 1 ELSE 0 END) ElectrcityServices
+                    , SUM(CASE WHEN buildingService.MeterServicesTypeID_FK = 2 THEN 1 ELSE 0 END) WaterServices
+                    , SUM(CASE WHEN buildingService.MeterServicesTypeID_FK = 3 THEN 1 ELSE 0 END) GasServices
+                FROM Housing.BuildingDetailsMeterServices buildingService
+                WHERE buildingService.BuildingDetailsMeterServicesActive = 1
+                GROUP BY buildingService.BuildingDetailsID_FK
+            ) serviceSummary ON serviceSummary.BuildingDetailsID_FK = bd.buildingDetailsID
             WHERE bd.buildingDetailsActive = 1 and m.militaryLocationActive = 1 and bt.buildingTypeActive = 1 
             and but.buildingUtilityTypeActive = 1 and m.militaryLocationActive = 1 
             and bc.buildingClassActive = 1 

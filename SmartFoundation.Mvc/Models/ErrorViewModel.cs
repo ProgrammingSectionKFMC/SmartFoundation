@@ -2,8 +2,8 @@ namespace SmartFoundation.Mvc.Models
 {
     public class ErrorViewModel
     {
-        public string? RequestId { get; set; }
+        public int? ErrorLogID { get; set; }
 
-        public bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
+        public bool DataSourceUnavailable { get; set; }
     }
 }

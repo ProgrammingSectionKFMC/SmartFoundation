@@ -299,6 +299,7 @@
     <Build Include="Housing\Tables\Meter.sql" />
     <Build Include="support\Tables\TicketReply.sql" />
     <Build Include="dbo\Tables\ErrorLog.sql" />
+    <Build Include="dbo\Stored Procedures\ErrorLog_Insert.sql" />
     <Build Include="WH\Tables\WarehousePartPropertyType.sql" />
     <Build Include="Housing\Tables\UploadExcel.sql" />
     <Build Include="Tickets\Tables\ServiceCategory.sql" />
@@ -306,6 +307,12 @@
     <Build Include="Housing\Tables\ResidentRentExemptionPayment.sql" />
     <Build Include="Housing\Tables\MonthlyBillingRun.sql" />
     <Build Include="Housing\Tables\MonthlyBillingRunDetails.sql" />
+    <Build Include="Housing\Tables\BuildingSpaceType.sql" />
+    <Build Include="Housing\Tables\BuildingSpace.sql" />
+    <Build Include="Housing\Tables\EstimatedBillingPolicy.sql" />
+    <Build Include="Housing\Tables\EstimatedBillingPolicyDetails.sql" />
+    <Build Include="Housing\Tables\BillCalculation.sql" />
+    <Build Include="Housing\Tables\BillCalculationDetails.sql" />
     <Build Include="Housing\Tables\DeductListReport.sql" />
     <Build Include="Housing\Sequences\DeductListReportNoSequence.sql" />
     <Build Include="Housing\Tables\DeductListReportDetails.sql" />
@@ -538,6 +545,9 @@
       <QuotedIdentifier>Off</QuotedIdentifier>
     </Build>
     <Build Include="Housing\Stored Procedures\BuildingClassSP.sql" />
+    <Build Include="Housing\Stored Procedures\BuildingSpacesSP.sql" />
+    <Build Include="Housing\Stored Procedures\BuildingSpacesDL.sql" />
+    <Build Include="Housing\Stored Procedures\GenerateEstimatedServiceBillForResidentPeriod.sql" />
     <Build Include="VIC\Stored Procedures\MaintenancePlan_Get_DL.sql" />
     <Build Include="support\Stored Procedures\SupportInboxSP.sql" />
     <Build Include="VIC\Stored Procedures\MaintenancePlan_List_DL.sql" />
@@ -744,6 +754,7 @@
     <Build Include="Housing\Stored Procedures\GenerateMissingResidentFixedServiceBills.sql" />
     <Build Include="Housing\Stored Procedures\GenerateFixedServiceBillsForResidentPeriod.sql" />
     <Build Include="Housing\Stored Procedures\GenerateMonthlyFixedServiceBills.sql" />
+    <Build Include="Housing\Stored Procedures\GetOrCreateMonthlyBillPeriod.sql" />
     <Build Include="Housing\Stored Procedures\GenerateAllAdministrationsMonthlyBills.sql" />
     <Build Include="Housing\Stored Procedures\MonthlyBillingMonitorDL.sql" />
     <Build Include="Housing\Stored Procedures\MonthlyBillingMonitorSP.sql" />

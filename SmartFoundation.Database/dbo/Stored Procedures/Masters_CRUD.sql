@@ -767,6 +767,82 @@ BEGIN
         END
 
         ----------------------------------------------------------------
+        -- BuildingSpaces
+        ----------------------------------------------------------------
+        ELSE IF @pageName_ = 'BuildingSpaces'
+        BEGIN
+            IF (
+                SELECT COUNT(*)
+                FROM dbo.V_GetListUserPermission v
+                WHERE v.userID = @entrydata
+                  AND v.menuName_E = @pageName_
+                  AND v.permissionTypeName_E = @ActionType
+            ) <= 0
+            BEGIN
+                SET @ok = 0;
+                SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+                GOTO Finish;
+            END
+
+            DELETE FROM @Result;
+
+            IF @ActionType = 'INSERTBUILDINGSPACES'
+            BEGIN
+                INSERT INTO @Result(IsSuccessful, Message_)
+                EXEC [Housing].[BuildingSpacesSP]
+                      @Action                 = @ActionType
+                    , @BuildingDetailsID_FK   = @parameter_01
+                    , @BuildingSpaceTypeID_FK = @parameter_02
+                    , @BuildingSpaceName      = @parameter_03
+                    , @BuildingSpaceLength    = @parameter_04
+                    , @BuildingSpaceWidth     = @parameter_05
+                    , @BuildingSpaceArea      = @parameter_06
+                    , @BuildingSpaceStartDate = @parameter_07
+                    , @BuildingSpaceEndDate   = @parameter_08
+                    , @BuildingSpaceRemark    = @parameter_09
+                    , @idaraID_FK             = @idaraID
+                    , @entryData              = @entrydata
+                    , @hostName               = @hostName;
+            END
+            ELSE IF @ActionType = 'UPDATEBUILDINGSPACES'
+            BEGIN
+                INSERT INTO @Result(IsSuccessful, Message_)
+                EXEC [Housing].[BuildingSpacesSP]
+                      @Action                 = @ActionType
+                    , @BuildingSpaceID        = @parameter_01
+                    , @BuildingSpaceName      = @parameter_02
+                    , @BuildingSpaceLength    = @parameter_03
+                    , @BuildingSpaceWidth     = @parameter_04
+                    , @BuildingSpaceArea      = @parameter_05
+                    , @BuildingSpaceStartDate = @parameter_06
+                    , @BuildingSpaceEndDate   = @parameter_07
+                    , @BuildingSpaceRemark    = @parameter_08
+                    , @idaraID_FK             = @idaraID
+                    , @entryData              = @entrydata
+                    , @hostName               = @hostName;
+            END
+            ELSE IF @ActionType = 'DELETEBUILDINGSPACES'
+            BEGIN
+                INSERT INTO @Result(IsSuccessful, Message_)
+                EXEC [Housing].[BuildingSpacesSP]
+                      @Action          = @ActionType
+                    , @BuildingSpaceID = @parameter_01
+                    , @idaraID_FK      = @idaraID
+                    , @entryData       = @entrydata
+                    , @hostName        = @hostName;
+            END
+            ELSE
+            BEGIN
+                SET @ok = 0;
+                SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+                GOTO Finish;
+            END
+
+            SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+            GOTO Finish;
+        END
+
+        ----------------------------------------------------------------
         -- BuildingUtilityType
         ----------------------------------------------------------------
       
@@ -3354,6 +3430,7 @@ END;
                     ,@buildingDetailsID_FK                 = @parameter_03
                     ,@Notes                                = @parameter_45
                     ,@meterReadValue                       = @parameter_24
+                    ,@meterStartDate                       = @parameter_49
                     ,@IdaraId_FK                           = @idaraID
                     ,@entryData                            = @entrydata
                     ,@hostName                             = @hostName;
@@ -3373,6 +3450,8 @@ END;
                     ,@buildingDetailsID_FK                 = @parameter_03
                     ,@meterReadValue                       = @parameter_24
                     ,@buildingDetailsNo1                   = @parameter_10
+                    ,@meterEndDate                         = @parameter_49
+                    ,@AbnormalReadConfirmed                = @parameter_50
                     ,@IdaraId_FK                           = @idaraID
                     ,@entryData                            = @entrydata
                     ,@hostName                             = @hostName;

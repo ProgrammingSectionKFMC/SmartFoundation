@@ -7,7 +7,6 @@ using SmartFoundation.UI.ViewModels.SmartCharts;
 using SmartFoundation.UI.ViewModels.SmartPage;
 using SmartFoundation.UI.ViewModels.SmartTable;
 using System.Data;
-using System.Diagnostics;
 
 namespace SmartFoundation.Mvc.Controllers.Home
 {
@@ -112,10 +111,15 @@ namespace SmartFoundation.Mvc.Controllers.Home
             return View();
         }
 
+        [Microsoft.AspNetCore.Authorization.AllowAnonymous]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
+        public IActionResult Error(int? errorId, bool dataSourceUnavailable = false)
         {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+            return View(new ErrorViewModel
+            {
+                ErrorLogID = errorId,
+                DataSourceUnavailable = dataSourceUnavailable
+            });
         }
 
 

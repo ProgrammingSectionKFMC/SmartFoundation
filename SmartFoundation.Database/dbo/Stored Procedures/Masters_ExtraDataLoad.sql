@@ -98,6 +98,73 @@ BEGIN
 
 
     -------------------------------------------------------------------
+    --                   Meters - unlink bill preview
+    -------------------------------------------------------------------
+         ELSE IF @pageName_ = 'Meters'
+        BEGIN
+            IF @ActionType = 'MeterLastBill'
+            BEGIN
+                IF EXISTS
+                (
+                    SELECT 1 FROM Housing.MeterRead mr
+                    WHERE mr.meterID_FK = @parameter_02 AND mr.meterReadActive = 1
+                )
+                BEGIN
+                    SELECT TOP (1)
+                           mr.meterID_FK AS meterID,
+                           meter.meterNo,
+                           mr.meterReadValue AS CurrentRead,
+                           ISNULL(period.billPeriodName_A + N' - ' + CONVERT(NVARCHAR(4), YEAR(period.billPeriodStartDate)), N' - ') AS periods_,
+                           ISNULL(bill.TotalPrice, 0) AS TotalPrice
+                    FROM Housing.MeterRead mr
+                    LEFT JOIN Housing.Meter meter ON meter.meterID = mr.meterID_FK
+                    OUTER APPLY
+                    (
+                        SELECT TOP (1) b.TotalPrice, b.CurrentPeriodID
+                        FROM Housing.Bills b
+                        WHERE b.meterID = mr.meterID_FK
+                          AND b.meterReadID = mr.meterReadID
+                          AND b.BillActive = 1
+                        ORDER BY b.BillsID DESC
+                    ) bill
+                    LEFT JOIN Housing.BillPeriod period ON period.billPeriodID = bill.CurrentPeriodID
+                    WHERE mr.meterID_FK = @parameter_02
+                      AND mr.meterReadActive = 1
+                    ORDER BY ISNULL(mr.dateOfRead, mr.entryDate) DESC, mr.meterReadID DESC;
+                END
+                ELSE
+                BEGIN
+                    SELECT TOP (1)
+                           meter.meterID,
+                           meter.meterNo,
+                           CAST(N'لا يوجد قراءة سابقة' AS NVARCHAR(200)) AS CurrentRead,
+                           N' - ' AS periods_,
+                           CAST(N'لا يوجد فاتورة سابقة' AS NVARCHAR(200)) AS TotalPrice
+                    FROM Housing.Meter meter
+                    WHERE meter.meterID = @parameter_02;
+                END
+            END
+            ELSE IF @ActionType = 'MeterNewBill'
+            BEGIN
+                SELECT
+                    CASE WHEN s.LastRead >= s.CurrentRead THEN 0 ELSE 1 END AS checks,
+                    s.CurrentRead,
+                    s.LastRead,
+                    s.ReadDiff,
+                    s.PRICE,
+                    s.PRICETAX,
+                    s.meterServicePrice,
+                    s.meterServicePriceTAX,
+                    (s.meterServicePrice + s.meterServicePriceTAX) AS ServicePriceWithTAX,
+                    s.TotalPrice,
+                    s.meterID,
+                    s.meterNo,
+                    s.CurrentPeriodID
+                FROM Housing.CalculteElectrictyBills_ByNewReadValue(@parameter_02, @parameter_04) s;
+            END
+        END
+
+    -------------------------------------------------------------------
     --                   AllMeterRead
     -------------------------------------------------------------------
 
@@ -547,11 +614,33 @@ BEGIN
             , detailRow.BuildingDetailsNo
             , detailRow.BillsFromDate
             , detailRow.BillsToDate
+            , CASE
+                WHEN reportRow.BillingType = N'RENT'
+                    THEN N'إيجار'
+                WHEN calculation.CalculationMethod = N'SPACE_ESTIMATED'
+                    THEN N'احتساب بالفراغات'
+                WHEN calculation.CalculationMethod = N'METER_READING'
+                     OR
+                     (
+                         calculation.BillCalculationID IS NULL
+                         AND bill.meterID IS NOT NULL
+                     )
+                    THEN N'قراءة عداد'
+                WHEN calculation.CalculationMethod = N'METER_FIXED'
+                    THEN N'عداد ثابت'
+                WHEN calculation.CalculationMethod = N'SERVICE_FIXED_FALLBACK'
+                    THEN N'مبلغ ثابت احتياطي'
+                ELSE N'غير محدد'
+              END AS CalculationMethodName_A
             , detailRow.TotalAmount
         FROM Housing.DeductListReportDetails detailRow
         INNER JOIN Housing.DeductListReport reportRow
             ON reportRow.DeductListReportID =
                detailRow.DeductListReportID_FK
+        LEFT JOIN Housing.Bills bill
+            ON bill.BillsID = detailRow.BillsID_FK
+        LEFT JOIN Housing.BillCalculation calculation
+            ON calculation.BillsID_FK = bill.BillsID
         WHERE reportRow.DeductListReportID =
               TRY_CONVERT(BIGINT, @parameter_01)
           AND reportRow.IdaraID_FK = @idaraID

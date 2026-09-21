@@ -112,76 +112,80 @@ namespace SmartFoundation.DataEngine.Core.Services
                 }
 
                 // Multiple Result Sets
-                try
+                // Multiple Result Sets
+                // تنفيذ البروسيجر مرة واحدة فقط وقراءة جميع النتائج
+                using var grid = await conn.QueryMultipleAsync(
+                    new CommandDefinition(
+                        request.SpName,
+                        dp,
+                        commandType: CommandType.StoredProcedure,
+                        cancellationToken: ct));
+
+                var datasets = new List<List<Dictionary<string, object?>>>();
+
+                while (!grid.IsConsumed)
                 {
-                    using var grid = await conn.QueryMultipleAsync(
-                        new CommandDefinition(request.SpName, dp, commandType: CommandType.StoredProcedure, cancellationToken: ct));
-
-                    var datasets = new List<List<Dictionary<string, object?>>>();
-
-                    while (!grid.IsConsumed)
-                    {
-                        var rows = await grid.ReadAsync();
-                        var list = new List<Dictionary<string, object?>>();
-                        foreach (var row in rows)
-                        {
-                            var dict = (IDictionary<string, object?>)row;
-                            list.Add(dict.ToDictionary(kv => kv.Key, kv => kv.Value));
-                        }
-                        datasets.Add(list);
-                    }
-
-                    resp.Datasets = datasets;
-
-                    resp.Data = datasets.FirstOrDefault() ?? new();
-                    resp.Total = resp.Data.Count;
-
-                    // رسالة من أول مجموعة إن وجدت
-                    var firstSet = datasets.FirstOrDefault();
-                    if (firstSet?.Count > 0)
-                    {
-                        var msgKey = firstSet[0].Keys.FirstOrDefault(k => k.Equals("Message", StringComparison.OrdinalIgnoreCase));
-                        if (msgKey != null && firstSet[0][msgKey] != null)
-                            resp.Message = firstSet[0][msgKey]?.ToString();
-                    }
-
-                    // استخراج Total/Message من آخر مجموعة إن كانت ملخصاً
-                    var lastSet = datasets.LastOrDefault();
-                    if (lastSet?.Count == 1)
-                    {
-                        var tDict = lastSet[0];
-                        if (tDict.TryGetValue("Total", out var t) || tDict.TryGetValue("total", out t))
-                            resp.Total = Convert.ToInt32(t ?? 0);
-
-                        var msgKey = tDict.Keys.FirstOrDefault(k => k.Equals("Message", StringComparison.OrdinalIgnoreCase));
-                        if (msgKey != null && tDict[msgKey] != null)
-                            resp.Message = tDict[msgKey]?.ToString();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "فشل في قراءة Multiple Result Sets لـ {SpName}", request.SpName);
-
-                    // Fallback: نتيجة واحدة
-                    var rowsDyn = await conn.QueryAsync(
-                        new CommandDefinition(request.SpName, dp, commandType: CommandType.StoredProcedure, cancellationToken: ct));
-
+                    var rows = await grid.ReadAsync();
                     var list = new List<Dictionary<string, object?>>();
-                    foreach (var row in rowsDyn)
+
+                    foreach (var row in rows)
                     {
                         var dict = (IDictionary<string, object?>)row;
-                        list.Add(dict.ToDictionary(kv => kv.Key, kv => kv.Value));
+
+                        list.Add(
+                            dict.ToDictionary(
+                                kv => kv.Key,
+                                kv => kv.Value));
                     }
 
-                    resp.Data = list;
-                    resp.Datasets = new List<List<Dictionary<string, object?>>> { list };
-                    resp.Total = list.Count;
+                    // نضيف الجدول حتى لو كان فارغًا للمحافظة على ترتيب DataSet
+                    datasets.Add(list);
+                }
 
-                    if (list.Count > 0)
+                resp.Datasets = datasets;
+
+                resp.Data = datasets.FirstOrDefault()
+                    ?? new List<Dictionary<string, object?>>();
+
+                resp.Total = resp.Data.Count;
+
+                // قراءة الرسالة من أول مجموعة إن وجدت
+                var firstSet = datasets.FirstOrDefault();
+
+                if (firstSet?.Count > 0)
+                {
+                    var msgKey = firstSet[0].Keys.FirstOrDefault(
+                        key => key.Equals(
+                            "Message",
+                            StringComparison.OrdinalIgnoreCase));
+
+                    if (msgKey != null && firstSet[0][msgKey] != null)
                     {
-                        var msgKey = list[0].Keys.FirstOrDefault(k => k.Equals("Message", StringComparison.OrdinalIgnoreCase));
-                        if (msgKey != null && list[0][msgKey] != null)
-                            resp.Message = list[0][msgKey]?.ToString();
+                        resp.Message = firstSet[0][msgKey]?.ToString();
+                    }
+                }
+
+                // استخراج Total وMessage من آخر مجموعة إذا كانت ملخصًا
+                var lastSet = datasets.LastOrDefault();
+
+                if (lastSet?.Count == 1)
+                {
+                    var lastRow = lastSet[0];
+
+                    if (lastRow.TryGetValue("Total", out var totalValue) ||
+                        lastRow.TryGetValue("total", out totalValue))
+                    {
+                        resp.Total = Convert.ToInt32(totalValue ?? 0);
+                    }
+
+                    var msgKey = lastRow.Keys.FirstOrDefault(
+                        key => key.Equals(
+                            "Message",
+                            StringComparison.OrdinalIgnoreCase));
+
+                    if (msgKey != null && lastRow[msgKey] != null)
+                    {
+                        resp.Message = lastRow[msgKey]?.ToString();
                     }
                 }
 
@@ -197,15 +201,16 @@ namespace SmartFoundation.DataEngine.Core.Services
             }
             catch (Exception ex)
             {
-                resp.Success = false;
-               // resp.Error = "حدث خطأ أثناء تنفيذ العملية. يرجى المحاولة لاحقًا.";
-                resp.Error = "لايوجد بيانات.";
-
                 _logger.LogError(
                     ex,
-                    "خطأ أثناء تنفيذ SP: {SpName}",
-                    request.SpName
+                    "فشل تنفيذ الإجراء المخزن {SpName}. DurationMs={DurationMs}",
+                    request.SpName,
+                    sw.ElapsedMilliseconds
                 );
+
+                // لا نخفي الاستثناء الأصلي؛ تحتاجه طبقة الأخطاء المركزية
+                // لتسجيل سبب SQL الحقيقي في dbo.ErrorLog.
+                throw;
             }
             finally
             {

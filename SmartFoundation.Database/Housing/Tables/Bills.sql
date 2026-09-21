@@ -75,6 +75,7 @@
     [PenaltyReason]         NVARCHAR (4000)  NULL,
     [BillActive]            BIT              NULL,
     [CanceledBy]            NVARCHAR (1000)  NULL,
+    [CanceledDate]          DATETIME         NULL,
     [idaraID_FK]            BIGINT           NULL,
     [entryDate]             DATETIME         CONSTRAINT [DF_Bills_entryDate] DEFAULT (getdate()) NULL,
     [entryData]             NVARCHAR (20)    NULL,

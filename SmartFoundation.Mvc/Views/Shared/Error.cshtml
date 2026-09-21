@@ -1,25 +1,132 @@
 ﻿@model ErrorViewModel
+
 @{
-    ViewData["Title"] = "Error";
+    ViewData["Title"] = "حدث خطأ";
 }
 
-<h1 class="text-danger">Error.</h1>
-<h2 class="text-danger">An error occurred while processing your request.</h2>
+<style>
+    .error-page-wrap {
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        width: 100%;
+        padding: 2.25rem 1rem 1rem;
+    }
 
-@if (Model.ShowRequestId)
-{
-    <p>
-        <strong>Request ID:</strong> <code>@Model.RequestId</code>
-    </p>
-}
+    .error-card {
+        width: 100%;
+        max-width: 720px;
+        overflow: hidden;
+        background: #fff7f7;
+        border: 1px solid #efb5b5;
+        border-top: 4px solid #cf3f3f;
+        border-radius: 14px;
+        box-shadow: 0 10px 28px rgba(139, 30, 30, 0.10);
+    }
 
-<h3>Development Mode</h3>
-<p>
-    Swapping to <strong>Development</strong> environment will display more detailed information about the error that occurred.
-</p>
-<p>
-    <strong>The Development environment shouldn't be enabled for deployed applications.</strong>
-    It can result in displaying sensitive information from exceptions to end users.
-    For local debugging, enable the <strong>Development</strong> environment by setting the <strong>ASPNETCORE_ENVIRONMENT</strong> environment variable to <strong>Development</strong>
-    and restarting the app.
-</p>
+    .error-card-body {
+        padding: 1.75rem 2rem;
+    }
+
+    .error-card-title {
+        display: flex;
+        align-items: center;
+        gap: .65rem;
+        margin-bottom: 1rem;
+        color: #922b2b;
+        font-weight: 700;
+    }
+
+    .error-card-title i {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 38px;
+        height: 38px;
+        flex: 0 0 38px;
+        color: #fff;
+        background: #cf3f3f;
+        border-radius: 50%;
+    }
+
+    .error-card-message {
+        color: #573c3c;
+        line-height: 1.9;
+    }
+
+    .error-reference {
+        display: inline-block;
+        margin-top: 1rem;
+        padding: .55rem .8rem;
+        color: #742626;
+        background: rgba(207, 63, 63, .08);
+        border: 1px solid rgba(207, 63, 63, .18);
+        border-radius: 8px;
+    }
+
+    .error-card-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: .65rem;
+        flex-wrap: wrap;
+        padding: 1rem 2rem;
+        background: rgba(207, 63, 63, .045);
+        border-top: 1px solid rgba(207, 63, 63, .12);
+    }
+
+    @@media (max-width: 576px) {
+        .error-page-wrap {
+            padding-top: 1.25rem;
+        }
+
+        .error-card-body,
+        .error-card-actions {
+            padding-right: 1.25rem;
+            padding-left: 1.25rem;
+        }
+    }
+</style>
+
+<div dir="rtl" class="error-page-wrap">
+    <section class="error-card" role="alert" aria-labelledby="error-card-title">
+        <div class="error-card-body">
+            <h1 id="error-card-title" class="error-card-title h4">
+                <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                <span>تعذر إكمال العملية</span>
+            </h1>
+
+            <div class="error-card-message">
+                @if (Model.DataSourceUnavailable)
+                {
+                    <p class="mb-2">
+                        تعذر الوصول إلى مصدر البيانات. يرجى المحاولة مرة أخرى لاحقًا.
+                    </p>
+                }
+                else
+                {
+                    <p class="mb-2">
+                        حدث خطأ أثناء معالجة الطلب. يرجى المحاولة مرة أخرى.
+                    </p>
+                }
+
+                <p class="mb-0">
+                    إذا استمرت المشكلة، يرجى التواصل مع مسؤول النظام.
+                </p>
+            </div>
+
+            @if (!Model.DataSourceUnavailable && Model.ErrorLogID.HasValue)
+            {
+                <div class="error-reference">
+                    <strong>رقم الخطأ:</strong>
+                    <code>@Model.ErrorLogID</code>
+                </div>
+            }
+        </div>
+
+        <div class="error-card-actions">
+            <a href="/Home/Index" class="btn btn-danger">
+                الذهاب للصفحة الرئيسية
+            </a>
+        </div>
+    </section>
+</div>

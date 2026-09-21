@@ -594,6 +594,8 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
                             ["BillsToDate"] = "إلى",
 
+                            ["CalculationMethodName_A"] = "طريقة احتساب الفاتورة",
+
                             ["TotalAmount"] = "الإجمالي"
                         };
 
@@ -1028,7 +1030,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                     new FieldConfig
                     {
                         Name = "p05",
-                        Label = "الخدمة المفوترة",
+                        Label = "الخدمة",
                         Type = "select",
                         ColCss = "6",
                         Required = true,
@@ -1042,7 +1044,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         Name = "p06",
                         Label = "CalculationMethod",
                         Type = "hidden",
-                        Value = "METERED"
+                        Value = "ALL_METHODS"
                     },
                 
                 
@@ -1592,6 +1594,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
         "MeterNo",
         "BillsFromDate",
         "BillsToDate",
+        "CalculationMethodName_A",
         "TotalAmount"
     },
 
@@ -1604,6 +1607,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                     ["MeterNo"] = "العداد",
                     ["BillsFromDate"] = "من",
                     ["BillsToDate"] = "إلى",
+                    ["CalculationMethodName_A"] = "طريقة احتساب الفاتورة",
                     ["TotalAmount"] = "الإجمالي"
                 }
             };

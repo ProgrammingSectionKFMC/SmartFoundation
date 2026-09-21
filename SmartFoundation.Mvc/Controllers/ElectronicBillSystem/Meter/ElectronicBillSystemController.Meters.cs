@@ -1472,22 +1472,36 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     Options = buildingDetailsNoWithMetersOptions,
                     HelpText="ستظهر اسماء المباني وعدد العدادات المرتبطة بها حاليا",
                     Select2 = true,
-                    ColCss = "6",
+                    ColCss = "4",
                     Required = true,
                     Icon = "fa-solid fa-hashtag",
                     MaxLength = 50
                 },
 
-                 new FieldConfig
+                new FieldConfig
+                {
+                    Name = "p49",
+                    Label = "تاريخ بداية الربط",
+                    Type = "date",
+                    Required = true,
+                    ColCss = "4",
+                    Value = DateTime.Now.ToString("yyyy-MM-dd"),
+                    Icon = "fa fa-calendar",
+                    HelpText = "يُتحقق منه حسب آخر فترة لنوع خدمة العداد"
+                },
+
+                new FieldConfig
                 {
                     Name = "p24",
                     Label = "قراءة العداد",
                     Type = "number",
-                    ColCss = "6",
+                    ColCss = "4",
                     Required = true,
                     Icon = "fa-solid fa-gauge-high",
                     HelpText = "قراءة العداد وقت الربط"
                 },
+
+
 
                   new FieldConfig
                 {
@@ -1517,7 +1531,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     Label = "رقم العداد",
                     Type = "text",
                     Options = new List<OptionItem> {}, //       Initial empty state
-                    ColCss = "6",
+                    ColCss = "4",
                     Readonly = true
                 },
 
@@ -1526,15 +1540,26 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                     Name = "p10",
                     Label = "رقم المبنى",
                     Type = "text",
-                    ColCss = "6",
+                    ColCss = "4",
                     Readonly = true,
                     Icon = "fa-solid fa-hashtag"
                 },
                 new FieldConfig
                 {
+                    Name = "p49",
+                    Label = "تاريخ إلغاء الربط",
+                    Type = "date",
+                    Required = true,
+                    ColCss = "4",
+                    Value = DateTime.Now.ToString("yyyy-MM-dd"),
+                    Icon = "fa fa-calendar",
+                    HelpText = "يجب أن يكون بعد نهاية فترة آخر فاتورة مرصودة للعداد"
+                },
+                new FieldConfig
+                {
                     Name = "p03",
                     Label = "buildingDetailsID_FK",
-                    Type = "text",
+                    Type = "hidden",
                     ColCss = "4",
                     Readonly = true,
                     Icon = "fa-solid fa-hashtag"
@@ -1543,32 +1568,44 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 {
                     Name = "p02",
                     Label = "meterID_FK",
-                    Type = "text",
+                    Type = "hidden",
                     ColCss = "4",
                     Readonly = true,
                     Icon = "fa-solid fa-hashtag"
                 },
-
-                 new FieldConfig
-                {
-                    Name = "p24",
-                    Label = "قراءة العداد",
-                    Type = "number",
-                    ColCss = "6",
-                    Required = true,
-                    Icon = "fa-solid fa-gauge-high",
-                    HelpText = "قراءة العداد وقت الغاء الربط"
-                },
-
-                  new FieldConfig
+                new FieldConfig
                 {
                     Name = "p45",
-                    Label = "ملاحظات",
+                    Label = "سبب الغاء الربط",
                     Type = "textarea",
                     Required = true,
                     ColCss = "6",
                     MaxLength = 1000
                 },
+
+
+
+                 new FieldConfig
+                {
+                    Name = "p24",
+                    Label = "قراءة العداد وقت إلغاء الربط",
+                    Type = "search",
+                    TextMode = "numeric",
+                    ColCss = "6",
+                    Required = true,
+                    Icon = "fa-solid fa-gauge-high",
+                    HelpText = "أدخل القراءة الختامية ثم اضغط تحقق",
+                    ExtraButton = new Dictionary<string, object?>
+                    {
+                        ["Text"] = "تحقق",
+                        ["ClassName"] = "btn btn-warning",
+                        ["SlotKey"] = "m3"
+                    }
+                },
+
+                new FieldConfig { Name = "p50", Label = "النظام لاحظ وجود قراءة غير طبيعية، هل أنت متأكد من صحة القراءة؟", Type = "checkbox", Required = true, ColCss = "12" },
+                new FieldConfig { Name = "p99", Type = "hidden", Value = "0" },
+
 
                     new FieldConfig
                 {
@@ -1585,6 +1622,113 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                new FieldConfig { Name = "pageName_", Type = "hidden", Value = PageName },
                new FieldConfig { Name = "redirectAction", Type = "hidden", Value = PageName },
                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
+            };
+
+            var unlinkMeterLastReadMeta = new Dictionary<string, object?>
+            {
+                ["EnableSearch"] = false,
+                ["ShowMeta"] = false,
+                ["PageSize"] = 5,
+                ["Sortable"] = false,
+                ["showRowNumbers"] = false,
+                ["emptyText"] = "لا يوجد قراءة سابقة",
+                ["extraSlotKey"] = "m2",
+                ["extraTitle"] = "بيانات القراءة السابقة",
+                ["useRowExtra"] = true,
+                ["lazyExtra"] = true,
+                ["extraEndpoint"] = "/crud/extradataload",
+                ["allowNoSelection"] = true,
+                ["extraDependsOn"] = "p02",
+                ["extraLoadOnOpen"] = true,
+                ["extraEmptyTextBeforeSelect"] = "",
+                ["ctx"] = new Dictionary<string, object?>
+                {
+                    ["idaraID"] = IdaraId,
+                    ["entrydata"] = usersId,
+                    ["hostname"] = HostName
+                },
+                ["extraRequest"] = new Dictionary<string, object?>
+                {
+                    ["pageName_"] = PageName,
+                    ["ActionType"] = "MeterLastBill",
+                    ["tableIndex"] = 0
+                },
+                ["extraParamMap"] = new Dictionary<string, string>
+                {
+                    ["parameter_02"] = "p02"
+                },
+                ["visibleFields"] = new List<string> { "meterNo", "CurrentRead", "periods_", "TotalPrice" },
+                ["headerMap"] = new Dictionary<string, string>
+                {
+                    ["meterNo"] = "رقم العداد",
+                    ["CurrentRead"] = "القراءة السابقة",
+                    ["periods_"] = "فترة الفاتورة السابقة",
+                    ["TotalPrice"] = "مبلغ الفاتورة السابقة"
+                }
+            };
+
+            var unlinkMeterBillPreviewMeta = new Dictionary<string, object?>
+            {
+                ["EnableSearch"] = false,
+                ["ShowMeta"] = false,
+                ["PageSize"] = 5,
+                ["Sortable"] = false,
+                ["showRowNumbers"] = false,
+                ["extraSlotKey"] = "m3",
+                ["extraTitle"] = "الفاتورة الختامية المتوقعة",
+                ["useRowExtra"] = true,
+                ["lazyExtra"] = true,
+                ["extraEndpoint"] = "/crud/extradataload",
+                ["allowNoSelection"] = true,
+                ["extraTriggerMode"] = "button",
+                ["extraTriggerField"] = "p24",
+                ["extraButtonText"] = "تحقق",
+                ["ctx"] = new Dictionary<string, object?>
+                {
+                    ["idaraID"] = IdaraId,
+                    ["entrydata"] = usersId,
+                    ["hostname"] = HostName
+                },
+                ["extraRequest"] = new Dictionary<string, object?>
+                {
+                    ["pageName_"] = PageName,
+                    ["ActionType"] = "MeterNewBill",
+                    ["tableIndex"] = 0
+                },
+                ["extraParamMap"] = new Dictionary<string, string>
+                {
+                    ["parameter_02"] = "p02",
+                    ["parameter_04"] = "p24"
+                },
+                ["verifyField"] = "p99",
+                ["verifyResetFields"] = new List<string> { "p02", "p24" },
+                ["verifyRequiredMessage"] = "يجب الضغط على زر التحقق قبل إلغاء ربط العداد",
+                ["rowColorColumn"] = "checks",
+                ["rowColorOperator"] = "=",
+                ["rowColorValue"] = "0",
+                ["rowColorTrueStyle"] = "background:#f74f53;color:#ffffff;",
+                ["rowColorFalseStyle"] = "",
+                ["toggleField"] = "p50",
+                ["toggleColumn"] = "checks",
+                ["toggleOperator"] = "=",
+                ["toggleValue"] = 0,
+                ["toggleDefaultHidden"] = true,
+                ["toggleRequiredWhenShown"] = true,
+                ["visibleFields"] = new List<string>
+                {
+                    "meterNo", "LastRead", "CurrentRead", "ReadDiff", "PRICE", "PRICETAX", "ServicePriceWithTAX", "TotalPrice"
+                },
+                ["headerMap"] = new Dictionary<string, string>
+                {
+                    ["meterNo"] = "رقم العداد",
+                    ["LastRead"] = "القراءة السابقة",
+                    ["CurrentRead"] = "القراءة الحالية",
+                    ["ReadDiff"] = "فرق القراءة",
+                    ["PRICE"] = "قيمة الاستهلاك",
+                    ["PRICETAX"] = "الضريبة",
+                    ["ServicePriceWithTAX"] = "رسوم الخدمة",
+                    ["TotalPrice"] = "الإجمالي"
+                }
             };
 
 
@@ -1712,7 +1856,9 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                         },
                         RequireSelection = true,
                         MinSelection = 1,
-                        MaxSelection = 1
+                        MaxSelection = 1,
+                        Meta = unlinkMeterLastReadMeta,
+                        Meta1 = unlinkMeterBillPreviewMeta
                     },
 
 

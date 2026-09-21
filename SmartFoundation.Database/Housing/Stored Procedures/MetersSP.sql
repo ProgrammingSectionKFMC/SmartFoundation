@@ -28,6 +28,7 @@ CREATE PROCEDURE [Housing].[MetersSP]
      ,@buildingDetailsNo1                         NVARCHAR(100)   = NULL
      ,@MeterCalculateTypeID                       NVARCHAR(100)   = NULL
      ,@MeterTypeFixedAmount                       NVARCHAR(100)   = NULL
+     ,@AbnormalReadConfirmed                      NVARCHAR(10)    = NULL
      ,@IdaraId_FK                                 NVARCHAR(100)   = NULL
      ,@entryData                                  NVARCHAR(100)   = NULL
      ,@hostName                                   NVARCHAR(100)   = NULL
@@ -48,7 +49,22 @@ BEGIN
         , @Identity_Insert2 BIGINT = NULL
         , @Identity_Update BIGINT = NULL
         , @Identity_Update1 BIGINT = NULL
-        , @Identity_Update2 BIGINT = NULL;
+        , @Identity_Update2 BIGINT = NULL
+        , @LinkedServiceTypeID INT = NULL
+        , @LinkedServiceStartDate DATETIME = NULL
+        , @UnlinkBillPeriodID INT = NULL
+        , @UnlinkBillFromDate DATE = NULL
+        , @UnlinkBillToDate DATE = NULL
+        , @UnlinkBillYear INT = NULL
+        , @UnlinkBillMonth INT = NULL
+        , @LastBilledPeriodEndDate DATE = NULL
+        , @MinimumUnlinkDate DATE = NULL
+        , @UnlinkValidationMessage NVARCHAR(2048) = NULL
+        , @LinkEffectiveDate DATE = NULL
+        , @ActiveServicePeriodID INT = NULL
+        , @ActiveServicePeriodStartDate DATE = NULL
+        , @LastClosedServicePeriodEndDate DATE = NULL
+        , @LinkValidationMessage NVARCHAR(2048) = NULL;
 
     -- تحويلات رقمية آمنة
    DECLARE @IdaraID_INT INT = TRY_CONVERT(INT, NULLIF(LTRIM(RTRIM(@idaraID_FK)), ''));
@@ -1042,6 +1058,68 @@ BEGIN
         ;THROW 50001, N'العداد غير موجود', 1;
     END
 
+    SELECT @LinkedServiceTypeID = meterType.meterServiceTypeID_FK
+    FROM Housing.Meter meter
+    INNER JOIN Housing.MeterType meterType
+        ON meterType.meterTypeID = meter.meterTypeID_FK
+    WHERE meter.meterID = @meterID;
+
+    IF @LinkedServiceTypeID IS NULL
+        THROW 50001, N'تعذر تحديد نوع خدمة العداد', 1;
+
+    SET @LinkEffectiveDate = TRY_CONVERT(date, NULLIF(LTRIM(RTRIM(@meterStartDate)), N''));
+
+    IF @LinkEffectiveDate IS NULL
+        THROW 50001, N'تاريخ بداية ربط العداد مطلوب أو غير صحيح', 1;
+
+    IF @LinkEffectiveDate > CONVERT(date, GETDATE())
+        THROW 50001, N'لا يمكن أن يكون تاريخ بداية الربط في المستقبل', 1;
+
+    /* أحدث فترة نشطة لنفس الإدارة ولنفس نوع خدمة العداد. */
+    SELECT TOP (1)
+          @ActiveServicePeriodID = period.billPeriodID
+        , @ActiveServicePeriodStartDate = CONVERT(date, period.billPeriodStartDate)
+    FROM Housing.BillPeriod period
+    INNER JOIN Housing.BillPeriodType periodType
+        ON periodType.billPeriodTypeID = period.billPeriodTypeID_FK
+    WHERE period.IdaraId_FK = @IdaraID_INT
+      AND period.billPeriodActive = 1
+      AND periodType.meterServiceTypeID_FK = @LinkedServiceTypeID
+    ORDER BY period.billPeriodStartDate DESC, period.billPeriodID DESC;
+
+    IF @ActiveServicePeriodID IS NOT NULL
+       AND @LinkEffectiveDate < @ActiveServicePeriodStartDate
+    BEGIN
+        SET @LinkValidationMessage = N'لا يمكن أن يكون تاريخ بداية الربط قبل بداية آخر فترة نشطة لنفس الخدمة '
+            + CONVERT(nvarchar(10), @ActiveServicePeriodStartDate, 105);
+        THROW 50001, @LinkValidationMessage, 1;
+    END;
+
+    /* عند عدم وجود فترة نشطة يجب أن يبدأ الربط بعد نهاية آخر فترة مغلقة لنفس الخدمة. */
+    IF @ActiveServicePeriodID IS NULL
+    BEGIN
+        SELECT TOP (1)
+            @LastClosedServicePeriodEndDate = CONVERT(date, period.billPeriodEndDate)
+        FROM Housing.BillPeriod period
+        INNER JOIN Housing.BillPeriodType periodType
+            ON periodType.billPeriodTypeID = period.billPeriodTypeID_FK
+        WHERE period.IdaraId_FK = @IdaraID_INT
+          AND period.billPeriodActive = 0
+          AND periodType.meterServiceTypeID_FK = @LinkedServiceTypeID
+          AND period.billPeriodEndDate IS NOT NULL
+        ORDER BY period.billPeriodEndDate DESC, period.billPeriodID DESC;
+
+        IF @LastClosedServicePeriodEndDate IS NOT NULL
+           AND @LinkEffectiveDate <= @LastClosedServicePeriodEndDate
+        BEGIN
+            SET @LinkValidationMessage = N'لا يمكن أن يكون تاريخ بداية الربط قبل '
+                + CONVERT(nvarchar(10), DATEADD(DAY, 1, @LastClosedServicePeriodEndDate), 105)
+                + N'؛ لأن آخر فترة مغلقة لنفس الخدمة تنتهي في '
+                + CONVERT(nvarchar(10), @LastClosedServicePeriodEndDate, 105);
+            THROW 50001, @LinkValidationMessage, 1;
+        END;
+    END;
+
       -- تأكد موجود
    
      INSERT INTO  Housing.MeterForBuilding
@@ -1060,7 +1138,7 @@ BEGIN
             (
                   @meterID
                 , @buildingDetailsID_FK
-                , GETDATE()
+                , @LinkEffectiveDate
                 , @Notes
                 , 1
                 , @IdaraID_INT
@@ -1076,6 +1154,32 @@ BEGIN
             BEGIN
                 ;THROW 50002, N'حصل خطأ في اضافة  العداد - MeterForBuilding', 1; -- برمجي
             END
+
+            /* ربط العداد يعني أن الخدمة متوفرة في المبنى، وتستمر بعد فك الربط. */
+            IF @LinkedServiceTypeID IS NOT NULL
+               AND NOT EXISTS
+               (
+                   SELECT 1
+                   FROM Housing.BuildingDetailsMeterServices buildingService
+                   WHERE buildingService.BuildingDetailsID_FK = @buildingDetailsID_FK
+                     AND buildingService.MeterServicesTypeID_FK = @LinkedServiceTypeID
+                     AND buildingService.IdaraId_FK = @IdaraID_INT
+                     AND buildingService.BuildingDetailsMeterServicesActive = 1
+               )
+            BEGIN
+                INSERT Housing.BuildingDetailsMeterServices
+                (
+                      BuildingDetailsID_FK, MeterServicesTypeID_FK
+                    , BuildingDetailsMeterServicesStartDate, BuildingDetailsMeterServicesActive
+                    , IdaraId_FK, entryDate, entryData, hostName
+                )
+                VALUES
+                (
+                      @buildingDetailsID_FK, @LinkedServiceTypeID
+                    , @LinkEffectiveDate, 1
+                    , @IdaraID_INT, GETDATE(), @entryData, @hostName
+                );
+            END;
 
 
              INSERT INTO  Housing.MeterRead
@@ -1098,10 +1202,10 @@ BEGIN
                 (
                       5
                     , @meterID
-                    , 1
+                    , COALESCE(@ActiveServicePeriodID, 1)
                     , @buildingDetailsID_FK
                     , @buildingDetailsNo 
-                    , GETDATE()
+                    , @LinkEffectiveDate
                     , @meterReadValue
                     , 1
                     , @IdaraId_FK
@@ -1122,7 +1226,7 @@ BEGIN
                 + N'"meterForBuildingID": "' + ISNULL(CONVERT(NVARCHAR(MAX), @Identity_Insert), '') + N'"'
                 + N',"meterID_FK": "' + ISNULL(CONVERT(NVARCHAR(MAX), @meterID), '') + N'"'
                 + N',"buildingDetailsID_FK": "' + ISNULL(CONVERT(NVARCHAR(MAX), @buildingDetailsID_FK), '') + N'"'
-                + N',"meterForBuildingStartDate": "' + ISNULL(CONVERT(NVARCHAR(MAX), GETDATE()), '') + N'"'
+                + N',"meterForBuildingStartDate": "' + ISNULL(CONVERT(NVARCHAR(MAX), @LinkEffectiveDate), '') + N'"'
                 + N',"meterForBuildingDescription": "' + ISNULL(CONVERT(NVARCHAR(MAX), @Notes), '') + N'"'
                 + N',"meterForBuildingActive": 1"' + N'"'
                 + N',"IdaraId_FK": "' + ISNULL(CONVERT(NVARCHAR(MAX), @IdaraID_INT), '') + N'"'
@@ -1131,8 +1235,8 @@ BEGIN
                 + N',"hostName": "' + ISNULL(CONVERT(NVARCHAR(MAX), @hostName), '') + N'"'
                 + N',"meterReadID": "' + ISNULL(CONVERT(NVARCHAR(MAX), @Identity_Insert1), '') + N'"'
                 + N',"meterReadTypeID_FK": "' + ISNULL(CONVERT(NVARCHAR(MAX), '5'), '') + N'"'
-                + N',"billPeriodID_FK": "' + ISNULL(CONVERT(NVARCHAR(MAX), '1'), '') + N'"'
-                + N',"dateOfRead": "' + ISNULL(CONVERT(NVARCHAR(MAX), GETDATE()), '') + N'"'
+                + N',"billPeriodID_FK": "' + ISNULL(CONVERT(NVARCHAR(MAX), COALESCE(@ActiveServicePeriodID, 1)), '') + N'"'
+                + N',"dateOfRead": "' + ISNULL(CONVERT(NVARCHAR(MAX), @LinkEffectiveDate), '') + N'"'
                 + N',"meterReadValue": "' + ISNULL(CONVERT(NVARCHAR(MAX), @meterReadValue), '') + N'"'
                 + N',"meterReadActive": 1"' + N'"'
                 + N',"IdaraId_FK": "' + ISNULL(CONVERT(NVARCHAR(MAX), @IdaraID_INT), '') + N'"'
@@ -1196,8 +1300,12 @@ BEGIN
         @meterID              = m.meterID_FK,
         @buildingDetailsID_FK  = m.buildingDetailsID_FK,
         @buildingDetailsNo1    = B.buildingDetailsNo,
-        @IdaraId_FK            = COALESCE(m.IdaraId_FK, @IdaraId_FK)
+        @IdaraId_FK            = COALESCE(m.IdaraId_FK, @IdaraId_FK),
+        @LinkedServiceStartDate = m.meterForBuildingStartDate,
+        @LinkedServiceTypeID    = meterType.meterServiceTypeID_FK
     FROM Housing.MeterForBuilding m
+    INNER JOIN Housing.Meter meter ON meter.meterID = m.meterID_FK
+    INNER JOIN Housing.MeterType meterType ON meterType.meterTypeID = meter.meterTypeID_FK
     INNER JOIN Housing.V_GetGeneralListForBuilding B ON B.buildingDetailsID = m.buildingDetailsID_FK
     WHERE m.meterForBuildingID = @meterForBuildingID;
 
@@ -1210,6 +1318,71 @@ BEGIN
     BEGIN
         ;THROW 50001, N'لم يتم العثور على رقم المبنى من ربط العداد', 1;
         END
+
+    SET @UnlinkBillToDate = TRY_CONVERT(date, NULLIF(LTRIM(RTRIM(@meterEndDate)), N''));
+
+    IF @UnlinkBillToDate IS NULL
+        THROW 50001, N'تاريخ إلغاء الربط مطلوب أو غير صحيح', 1;
+
+    IF @UnlinkBillToDate > CONVERT(date, GETDATE())
+        THROW 50001, N'لا يمكن أن يكون تاريخ إلغاء الربط في المستقبل', 1;
+
+    IF @LinkedServiceStartDate IS NOT NULL
+       AND @UnlinkBillToDate < CONVERT(date, @LinkedServiceStartDate)
+    BEGIN
+        SET @UnlinkValidationMessage = N'لا يمكن أن يكون تاريخ إلغاء الربط قبل تاريخ بداية الربط '
+            + CONVERT(nvarchar(10), CONVERT(date, @LinkedServiceStartDate), 105);
+        THROW 50001, @UnlinkValidationMessage, 1;
+    END;
+
+    /*
+       نعتمد نهاية الفترة المحاسبية لآخر فاتورة نشطة، وليس BillsToDate فقط؛
+       فقد تكون الفاتورة جزئية بينما الفترة المحاسبية تغطي الشهر كاملاً.
+    */
+    SELECT TOP (1)
+        @LastBilledPeriodEndDate = COALESCE
+        (
+            CONVERT(date, period.billPeriodEndDate),
+            CONVERT(date, bill.BillsToDate)
+        )
+    FROM Housing.Bills bill
+    INNER JOIN Housing.BillPeriod period
+        ON period.billPeriodID = bill.CurrentPeriodID
+    INNER JOIN Housing.BillPeriodType periodType
+        ON periodType.billPeriodTypeID = period.billPeriodTypeID_FK
+    WHERE bill.meterID = @meterID
+      AND bill.BillActive = 1
+      AND bill.meterServiceTypeID = @LinkedServiceTypeID
+      AND periodType.meterServiceTypeID_FK = @LinkedServiceTypeID
+      AND period.billPeriodEndDate IS NOT NULL
+    ORDER BY
+        CONVERT(date, period.billPeriodEndDate) DESC,
+        bill.BillsID DESC;
+
+    IF @LastBilledPeriodEndDate IS NOT NULL
+    BEGIN
+        SET @MinimumUnlinkDate = DATEADD(DAY, 1, @LastBilledPeriodEndDate);
+
+        IF @UnlinkBillToDate < @MinimumUnlinkDate
+        BEGIN
+            SET @UnlinkValidationMessage = N'لا يمكن أن يكون تاريخ إلغاء الربط قبل '
+                + CONVERT(nvarchar(10), @MinimumUnlinkDate, 105)
+                + N'؛ لأن آخر فترة فاتورة مرصودة تنتهي في '
+                + CONVERT(nvarchar(10), @LastBilledPeriodEndDate, 105);
+            THROW 50001, @UnlinkValidationMessage, 1;
+        END;
+    END;
+
+    IF EXISTS
+    (
+        SELECT 1
+        FROM Housing.MeterRead meterRead
+        WHERE meterRead.meterID_FK = @meterID
+          AND meterRead.meterReadActive = 1
+          AND CONVERT(date, ISNULL(meterRead.dateOfRead, meterRead.entryDate)) > @UnlinkBillToDate
+    )
+        THROW 50001, N'لا يمكن إلغاء الربط بهذا التاريخ لوجود قراءة عداد نشطة بتاريخ لاحق', 1;
+
     ------------------------------------------------------------
     -- Load occupant info (resident + general)
     ------------------------------------------------------------
@@ -1226,6 +1399,97 @@ BEGIN
     BEGIN
         ;THROW 50001, N'قراءة العداد مطلوبة', 1;
         END
+
+    /* دعم الروابط القديمة التي لم تكن تسجل خدمة المبنى عند ربط العداد. */
+    IF @LinkedServiceTypeID IS NOT NULL
+       AND NOT EXISTS
+       (
+           SELECT 1
+           FROM Housing.BuildingDetailsMeterServices buildingService
+           WHERE buildingService.BuildingDetailsID_FK = @buildingDetailsID_FK
+             AND buildingService.MeterServicesTypeID_FK = @LinkedServiceTypeID
+             AND buildingService.IdaraId_FK = TRY_CONVERT(INT, @IdaraId_FK)
+             AND buildingService.BuildingDetailsMeterServicesActive = 1
+       )
+    BEGIN
+        INSERT Housing.BuildingDetailsMeterServices
+        (
+              BuildingDetailsID_FK, MeterServicesTypeID_FK
+            , BuildingDetailsMeterServicesStartDate, BuildingDetailsMeterServicesActive
+            , IdaraId_FK, entryDate, entryData, hostName
+        )
+        VALUES
+        (
+              @buildingDetailsID_FK, @LinkedServiceTypeID
+            , COALESCE(@LinkedServiceStartDate, GETDATE()), 1
+            , TRY_CONVERT(INT, @IdaraId_FK), GETDATE(), @entryData, @hostName
+        );
+    END;
+
+    SET @UnlinkBillYear = YEAR(@UnlinkBillToDate);
+    SET @UnlinkBillMonth = MONTH(@UnlinkBillToDate);
+
+    EXEC Housing.GetOrCreateMonthlyBillPeriod
+          @IdaraID = @IdaraId_FK
+        , @MeterServiceTypeID = @LinkedServiceTypeID
+        , @Year = @UnlinkBillYear
+        , @Month = @UnlinkBillMonth
+        , @EntryData = @entryData
+        , @HostName = @hostName
+        , @BillPeriodID = @UnlinkBillPeriodID OUTPUT;
+
+    SELECT @UnlinkBillFromDate = DATEADD(DAY, 1, MAX(CONVERT(date, bill.BillsToDate)))
+    FROM Housing.Bills bill
+    WHERE bill.meterID = @meterID
+      AND bill.BillActive = 1
+      AND bill.BillsToDate IS NOT NULL
+      AND CONVERT(date, bill.BillsToDate) < @UnlinkBillToDate;
+
+    SET @UnlinkBillFromDate = COALESCE
+    (
+        @UnlinkBillFromDate,
+        CONVERT(date, @LinkedServiceStartDate),
+        @UnlinkBillToDate
+    );
+
+    IF @UnlinkBillFromDate > @UnlinkBillToDate
+        THROW 50001, N'لا توجد مدة جديدة مستحقة لإصدار الفاتورة الختامية', 1;
+
+    DECLARE @NewReadValue DECIMAL(18,2) = TRY_CONVERT(DECIMAL(18,2), NULLIF(LTRIM(RTRIM(@meterReadValue)), N''));
+    DECLARE @LastReadValue DECIMAL(18,2) = NULL;
+    DECLARE @AbnormalReadConfirmedBit BIT = CASE
+        WHEN LOWER(LTRIM(RTRIM(ISNULL(@AbnormalReadConfirmed, N'')))) IN (N'1', N'true', N'on', N'yes') THEN 1
+        ELSE 0 END;
+
+    IF @NewReadValue IS NULL OR @NewReadValue < 0
+    BEGIN
+        ;THROW 50001, N'قراءة العداد غير صحيحة', 1;
+    END
+
+    SELECT TOP (1) @LastReadValue = TRY_CONVERT(DECIMAL(18,2), mr.meterReadValue)
+    FROM Housing.MeterRead mr
+    WHERE mr.meterID_FK = @meterID
+      AND mr.meterReadActive = 1
+      AND CONVERT(date, ISNULL(mr.dateOfRead, mr.entryDate)) <= @UnlinkBillToDate
+    ORDER BY ISNULL(mr.dateOfRead, mr.entryDate) DESC, mr.meterReadID DESC;
+
+    IF @LastReadValue IS NOT NULL
+       AND @NewReadValue <= @LastReadValue
+       AND @AbnormalReadConfirmedBit = 0
+    BEGIN
+        ;THROW 50001, N'القراءة الجديدة أقل من أو مساوية للقراءة السابقة. يجب التحقق من الفاتورة المتوقعة وتأكيد صحة القراءة قبل إلغاء الربط.', 1;
+    END
+
+    IF NOT EXISTS
+    (
+        SELECT 1
+        FROM Housing.CalculteElectrictyBills_ByNewReadValue(@meterID, @meterReadValue) preview
+        WHERE preview.TotalPrice IS NOT NULL
+    )
+    BEGIN
+        ;THROW 50001, N'تعذر حساب الفاتورة الختامية للعداد. يرجى التحقق من القراءة.', 1;
+    END
+
     INSERT INTO  Housing.MeterRead
     (
         meterReadTypeID_FK,
@@ -1247,12 +1511,12 @@ BEGIN
     (
         6,
         @meterID,
-        1,
+        @UnlinkBillPeriodID,
         @buildingDetailsID_FK,
         @buildingDetailsNo1,
         @residentInfoID_FK,
         @generalNo_FK,
-        GETDATE(),
+        @UnlinkBillToDate,
         @meterReadValue,
         1,
         @IdaraId_FK,
@@ -1288,12 +1552,13 @@ BEGIN
         meterSlideMinValue9, meterSlideMaxValue9, SlidePriceFactor9, PriceForSlide9,
         meterSlideMinValue10, meterSlideMaxValue10, SlidePriceFactor10, PriceForSlide10,
         PRICE, PRICETAX, meterServicePrice, meterServicePriceTAX, TotalPrice,
+        BillsFromDate, BillsToDate,
         BillActive, entryData, hostName, idaraID_FK
     )
     SELECT
         f.BillChargeTypeID_FK,
         4,
-        f.PerviosPeriodID, f.CurrentPeriodID, f.PeriodMonth, f.PeriodYear, f.CurrentPeriodTax,
+        f.PerviosPeriodID, @UnlinkBillPeriodID, MONTH(@UnlinkBillToDate), YEAR(@UnlinkBillToDate), f.CurrentPeriodTax,
         f.meterNo, f.meterID, f.meterName_A, f.meterName_E, f.meterDescription,
         f.buildingDetailsNo, f.buildingUtilityTypeID, f.buildingDetailsID,
         f.meterTypeID, f.meterServiceTypeID, f.meterReadID, f.generalNo_FK,f.residentInfoID_FK,
@@ -1309,6 +1574,7 @@ BEGIN
         f.meterSlideMinValue9, f.meterSlideMaxValue9, f.SlidePriceFactor9, f.PriceForSlide9,
         f.meterSlideMinValue10, f.meterSlideMaxValue10, f.SlidePriceFactor10, f.PriceForSlide10,
         f.PRICE, f.PRICETAX, f.meterServicePrice, f.meterServicePriceTAX, f.TotalPrice,
+        @UnlinkBillFromDate, @UnlinkBillToDate,
         1,
         @entryData,
         @hostName,
@@ -1327,12 +1593,17 @@ BEGIN
             AND b.BillActive = 1
       );
 
+    IF @@ROWCOUNT <= 0
+    BEGIN
+        ;THROW 50002, N'حصل خطأ في إصدار الفاتورة الختامية - Bills', 1;
+    END
+
     ------------------------------------------------------------
     -- Unlink AFTER read & bill
     ------------------------------------------------------------
     UPDATE Housing.MeterForBuilding
     SET
-        meterForBuildingEndDate = GETDATE(),
+        meterForBuildingEndDate = @UnlinkBillToDate,
         meterForBuildingActive  = 0,
         CanceledBy              = @entryData,
         CanceledDate            = GETDATE(),
@@ -1348,15 +1619,15 @@ BEGIN
     ------------------------------------------------------------
     SET @Note = N'{'
         + N'"meterForBuildingID":"'        + ISNULL(CONVERT(NVARCHAR(MAX), @meterForBuildingID), '') + N'"'
-        + N',"meterForBuildingEndDate":"'  + ISNULL(CONVERT(NVARCHAR(MAX), GETDATE()), '') + N'"'
+        + N',"meterForBuildingEndDate":"'  + ISNULL(CONVERT(NVARCHAR(MAX), @UnlinkBillToDate), '') + N'"'
         + N',"CanceledBy":"'               + ISNULL(CONVERT(NVARCHAR(MAX), @entryData), '') + N'"'
         + N',"CanceledDate":"'             + ISNULL(CONVERT(NVARCHAR(MAX), GETDATE()), '') + N'"'
         + N',"CanceledNote":"'             + ISNULL(CONVERT(NVARCHAR(MAX), @Notes), '') + N'"'
         + N',"meterForBuildingActive":0'
         + N',"meterReadID":"'              + ISNULL(CONVERT(NVARCHAR(MAX), @Identity_Insert1), '') + N'"'
         + N',"meterReadTypeID_FK":"6"'
-        + N',"billPeriodID_FK":"1"'
-        + N',"dateOfRead":"'               + ISNULL(CONVERT(NVARCHAR(MAX), GETDATE()), '') + N'"'
+        + N',"billPeriodID_FK":"'          + ISNULL(CONVERT(NVARCHAR(MAX), @UnlinkBillPeriodID), '') + N'"'
+        + N',"dateOfRead":"'               + ISNULL(CONVERT(NVARCHAR(MAX), @UnlinkBillToDate), '') + N'"'
         + N',"meterReadValue":"'           + ISNULL(CONVERT(NVARCHAR(MAX), @meterReadValue), '') + N'"'
         + N',"IdaraId_FK":"'               + ISNULL(CONVERT(NVARCHAR(MAX), @IdaraId_FK), '') + N'"'
         + N',"entryData":"'                + ISNULL(CONVERT(NVARCHAR(MAX), @entryData), '') + N'"'

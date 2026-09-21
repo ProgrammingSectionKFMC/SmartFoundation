@@ -47,6 +47,7 @@ public sealed class ForcePasswordChangeMiddleware
     {
         return path.Equals(ChangePasswordPage, StringComparison.OrdinalIgnoreCase) ||
                path.Equals("/Login/ChangePassword", StringComparison.OrdinalIgnoreCase) ||
-               path.Equals("/Login/Logout", StringComparison.OrdinalIgnoreCase);
+               path.Equals("/Login/Logout", StringComparison.OrdinalIgnoreCase) ||
+               path.Equals("/Home/Error", StringComparison.OrdinalIgnoreCase);
     }
 }

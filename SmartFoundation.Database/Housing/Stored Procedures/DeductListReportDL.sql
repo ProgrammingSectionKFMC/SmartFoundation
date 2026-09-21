@@ -111,18 +111,19 @@ BEGIN
    AND EXISTS
    (
        SELECT 1
-       FROM Housing.MeterForBuilding meterLink
-       JOIN Housing.Meter meter ON meter.meterID=meterLink.meterID_FK AND meter.meterActive=1
-       JOIN Housing.MeterType meterType ON meterType.meterTypeID=meter.meterTypeID_FK
-           AND meterType.meterTypeActive=1
-           AND meterType.MeterCalculateTypeID_FK=1
-           AND meterType.meterServiceTypeID_FK=serviceType.meterServiceTypeID
-           AND meterType.IdaraId_FK=@IdaraID
-       JOIN Housing.BuildingDetailsMeterServices buildingService ON buildingService.BuildingDetailsID_FK=meterLink.buildingDetailsID_FK
-           AND buildingService.MeterServicesTypeID_FK=serviceType.meterServiceTypeID
-           AND buildingService.IdaraId_FK=@IdaraID
-           AND buildingService.BuildingDetailsMeterServicesActive=1
-       WHERE meterLink.IdaraID_FK=@IdaraID AND meterLink.meterForBuildingActive=1
+       FROM Housing.Bills bill
+       WHERE bill.BillActive=1
+         AND bill.IdaraID_FK=@IdaraID
+         AND bill.meterServiceTypeID=serviceType.meterServiceTypeID
+         AND bill.PeriodYear=@Year
+         AND bill.PeriodMonth=@Month
+         AND EXISTS
+         (
+             SELECT 1
+             FROM Housing.V_Occupant occupant
+             WHERE occupant.residentInfoID=bill.residentInfoID_FK
+               AND occupant.IdaraId=@IdaraID
+         )
    )
  ORDER BY serviceType.meterServiceTypeName_A;
 

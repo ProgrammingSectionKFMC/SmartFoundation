@@ -90,6 +90,18 @@ BEGIN
             ON #ExistingFixedBills
                (BillChargeTypeID_FK, meterServiceTypeID, meterID, BillFromDate, BillToDate);
 
+        DECLARE @InsertedBills TABLE
+        (
+              BillsID BIGINT NOT NULL
+            , meterID INT NULL
+            , BillsFromDate DATE NOT NULL
+            , BillsToDate DATE NOT NULL
+            , TaxRatePercent DECIMAL(18,6) NOT NULL
+            , AmountBeforeTax DECIMAL(18,2) NOT NULL
+            , TaxAmount DECIMAL(18,2) NOT NULL
+            , TotalAmount DECIMAL(18,2) NOT NULL
+        );
+
         ;WITH CalendarDays AS
         (
             SELECT @FromDate AS BillDay
@@ -142,12 +154,15 @@ BEGIN
                 SELECT TOP (1) amountRow.FixedAmount
                 FROM Housing.MeterServiceTypeFixedAmount amountRow
                 WHERE amountRow.MeterServiceTypeID_FK = serviceDay.meterServiceTypeID
-                  AND amountRow.idaraID_FK = @IdaraID
+                  AND (amountRow.idaraID_FK = @IdaraID OR amountRow.idaraID_FK IS NULL)
                   AND (amountRow.MeterServiceTypeFixedAmountActive = 1 OR amountRow.MeterServiceTypeFixedAmountEndDate IS NOT NULL)
                   AND ISNULL(amountRow.FixedAmount, 0) > 0
                   AND (amountRow.MeterServiceTypeFixedAmountStartDate IS NULL OR CAST(amountRow.MeterServiceTypeFixedAmountStartDate AS date) <= serviceDay.BillDay)
                   AND (amountRow.MeterServiceTypeFixedAmountEndDate IS NULL OR CAST(amountRow.MeterServiceTypeFixedAmountEndDate AS date) >= serviceDay.BillDay)
-                ORDER BY amountRow.MeterServiceTypeFixedAmountStartDate DESC, amountRow.MeterServiceTypeFixedAmountID DESC
+                ORDER BY
+                      CASE WHEN amountRow.idaraID_FK = @IdaraID THEN 0 ELSE 1 END
+                    , amountRow.MeterServiceTypeFixedAmountStartDate DESC
+                    , amountRow.MeterServiceTypeFixedAmountID DESC
             ) fixedAmount
             WHERE NOT EXISTS
             (
@@ -268,6 +283,21 @@ BEGIN
                   AND existingBill.BillFromDate <= sourceDay.BillDay
                   AND existingBill.BillToDate >= sourceDay.BillDay
             )
+              AND NOT EXISTS
+              (
+                  SELECT 1
+                  FROM Housing.Bills estimatedBill
+                  JOIN Housing.BillCalculation calculation
+                    ON calculation.BillsID_FK = estimatedBill.BillsID
+                   AND calculation.CalculationMethod = N'SPACE_ESTIMATED'
+                  WHERE estimatedBill.residentInfoID_FK = @ResidentInfoID
+                    AND estimatedBill.buildingDetailsID = @BuildingDetailsID
+                    AND estimatedBill.idaraID_FK = @IdaraID
+                    AND estimatedBill.meterServiceTypeID = sourceDay.meterServiceTypeID
+                    AND estimatedBill.BillActive = 1
+                    AND CONVERT(date, estimatedBill.BillsFromDate) <= sourceDay.BillDay
+                    AND CONVERT(date, estimatedBill.BillsToDate) >= sourceDay.BillDay
+              )
         ),
         NumberedDays AS
         (
@@ -303,6 +333,9 @@ BEGIN
             , CurrentRead, LastRead, ReadDiff, PRICE, PRICETAX, meterServicePrice, meterServicePriceTAX, TotalPrice
             , BillsFromDate, BillsToDate, BillActive, idaraID_FK, entryDate, entryData, hostName
         )
+        OUTPUT inserted.BillsID, inserted.meterID, inserted.BillsFromDate, inserted.BillsToDate,
+               inserted.CurrentPeriodTax, inserted.PRICE, inserted.PRICETAX, inserted.TotalPrice
+        INTO @InsertedBills
         SELECT
               NEWID(), segment.BillChargeTypeID, 2, periodRow.billPeriodID
             , MONTH(segment.BillFromDate), YEAR(segment.BillFromDate), segment.TaxRate
@@ -336,6 +369,48 @@ BEGIN
             ORDER BY period.billPeriodID DESC
         ) periodRow
         OPTION (MAXRECURSION 32767);
+
+        INSERT Housing.BillCalculation
+        (
+              BillsID_FK, CalculationMethod, EstimatedBillingPolicyID_FK, BillingDays
+            , TaxApplicable, TaxInclusive, TaxID_FK, TaxRate
+            , AmountBeforeTax, TaxAmount, TotalAmount, CalculationReason
+            , entryData, hostName
+        )
+        SELECT
+              insertedBill.BillsID
+            , CASE WHEN insertedBill.meterID IS NULL THEN N'SERVICE_FIXED_FALLBACK' ELSE N'METER_FIXED' END
+            , NULL
+            , ((YEAR(insertedBill.BillsToDate) - YEAR(insertedBill.BillsFromDate)) * 360
+               + (MONTH(insertedBill.BillsToDate) - MONTH(insertedBill.BillsFromDate)) * 30
+               + (CASE
+                      WHEN insertedBill.BillsToDate = EOMONTH(insertedBill.BillsToDate) AND DAY(insertedBill.BillsToDate) < 30 THEN 30
+                      WHEN DAY(insertedBill.BillsToDate) > 30 THEN 30
+                      ELSE DAY(insertedBill.BillsToDate)
+                  END)
+               - (CASE
+                      WHEN insertedBill.BillsFromDate = EOMONTH(insertedBill.BillsFromDate) AND DAY(insertedBill.BillsFromDate) < 30 THEN 30
+                      WHEN DAY(insertedBill.BillsFromDate) > 30 THEN 30
+                      ELSE DAY(insertedBill.BillsFromDate)
+                  END)
+               + 1)
+            , 1, 0, taxRow.taxID, insertedBill.TaxRatePercent / 100.0
+            , insertedBill.AmountBeforeTax, insertedBill.TaxAmount, insertedBill.TotalAmount
+            , CASE WHEN insertedBill.meterID IS NULL
+                   THEN N'تم الرجوع إلى المبلغ الثابت للخدمة لعدم وجود فراغات مطابقة لسياسة الحسبة'
+                   ELSE N'تم الاحتساب بالمبلغ الثابت للعداد'
+              END
+            , @EntryData, @HostName
+        FROM @InsertedBills insertedBill
+        OUTER APPLY
+        (
+            SELECT TOP (1) tax.taxID
+            FROM dbo.Tax tax
+            WHERE tax.taxActive = 1
+              AND CONVERT(date, tax.taxStartDate) <= insertedBill.BillsToDate
+              AND (tax.taxEndDate IS NULL OR CONVERT(date, tax.taxEndDate) >= insertedBill.BillsFromDate)
+            ORDER BY tax.taxStartDate DESC, tax.taxID DESC
+        ) taxRow;
 
         IF @TransactionCount = 0 COMMIT TRANSACTION;
     END TRY

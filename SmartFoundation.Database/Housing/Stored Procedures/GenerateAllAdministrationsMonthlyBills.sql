@@ -33,8 +33,16 @@ BEGIN
     ) source;
 
     INSERT @Scopes (IdaraID,BillingType,ServiceID,CalculationMethod)
-    SELECT DISTINCT link.Idara_FK,N'SERVICE',link.MeterServiceTypeID_FK,method.MethodName
-    FROM Housing.MeterServiceTypeLinkedWithIdara link
+    SELECT DISTINCT administration.IdaraID,N'SERVICE',link.MeterServiceTypeID_FK,method.MethodName
+    FROM
+    (
+        SELECT DISTINCT CONVERT(bigint, occupant.IdaraId) AS IdaraID
+        FROM Housing.V_Occupant occupant
+        WHERE occupant.IdaraId IS NOT NULL
+    ) administration
+    JOIN Housing.MeterServiceTypeLinkedWithIdara link
+      ON link.Idara_FK = administration.IdaraID
+      OR link.Idara_FK IS NULL
     JOIN Housing.MeterServiceType serviceType ON serviceType.meterServiceTypeID=link.MeterServiceTypeID_FK
     CROSS JOIN (VALUES(N'SERVICE_FIXED'),(N'METER_FIXED')) method(MethodName)
     WHERE serviceType.meterServiceTypeActive=1

@@ -7,6 +7,10 @@
     [entryDate]       DATETIME        CONSTRAINT [DF_ErrorLog_entryDate] DEFAULT (getdate()) NULL,
     [entryData]       NVARCHAR (20)   NULL,
     [hostName]        NVARCHAR (200)  NULL,
+    [StackTrace]      NVARCHAR (MAX)  NULL,
+    [InnerException]  NVARCHAR (MAX)  NULL,
+    [RequestPath]     NVARCHAR (1000) NULL,
+    [HttpMethod]      NVARCHAR (20)   NULL,
     CONSTRAINT [PK_ErrorLog] PRIMARY KEY CLUSTERED ([ErrorLogID] ASC)
 );
 

@@ -21,7 +21,10 @@ BEGIN
     );
 
     INSERT @Before(TableOrder,TableName,RowCount_)
-    SELECT -10,N'Housing.DeductListReportImport',COUNT_BIG(*) FROM [Housing].[DeductListReportImport]
+    SELECT -13,N'Housing.BillCalculationDetails',COUNT_BIG(*) FROM [Housing].[BillCalculationDetails]
+    UNION ALL SELECT -12,N'Housing.BillCalculation',COUNT_BIG(*) FROM [Housing].[BillCalculation]
+    UNION ALL SELECT -11,N'Housing.BuildingSpace',COUNT_BIG(*) FROM [Housing].[BuildingSpace]
+    UNION ALL SELECT -10,N'Housing.DeductListReportImport',COUNT_BIG(*) FROM [Housing].[DeductListReportImport]
     UNION ALL SELECT -9,N'Housing.DeductListReportDetails',COUNT_BIG(*) FROM [Housing].[DeductListReportDetails]
     UNION ALL SELECT -8,N'Housing.DeductListReport',COUNT_BIG(*) FROM [Housing].[DeductListReport]
     UNION ALL SELECT -7,N'Housing.MonthlyBillingRunDetails',COUNT_BIG(*) FROM [Housing].[MonthlyBillingRunDetails]
@@ -60,6 +63,11 @@ BEGIN
 
     BEGIN TRY
         BEGIN TRANSACTION;
+
+        /* Transactional estimated billing data; preserve policy and space-type configuration. */
+        DELETE FROM [Housing].[BillCalculationDetails];
+        DELETE FROM [Housing].[BillCalculation];
+        DELETE FROM [Housing].[BuildingSpace];
 
         /* مسيرات الحسم: الأبناء أولاً قبل قوائم الحسم والفواتير. */
         DELETE FROM [Housing].[DeductListReportImport];
@@ -108,6 +116,10 @@ BEGIN
         DELETE FROM [dbo].[MilitaryUnit];
 
         /* DELETE does not reset identities; reseed empty tables so next value is 1. */
+        DBCC CHECKIDENT (N'Housing.BillCalculationDetails', RESEED, 0) WITH NO_INFOMSGS;
+        DBCC CHECKIDENT (N'Housing.BillCalculation', RESEED, 0) WITH NO_INFOMSGS;
+        DBCC CHECKIDENT (N'Housing.BuildingSpace', RESEED, 0) WITH NO_INFOMSGS;
+
         DBCC CHECKIDENT (N'Housing.DeductListReportImport', RESEED, 0) WITH NO_INFOMSGS;
         DBCC CHECKIDENT (N'Housing.DeductListReportDetails', RESEED, 0) WITH NO_INFOMSGS;
         DBCC CHECKIDENT (N'Housing.DeductListReport', RESEED, 0) WITH NO_INFOMSGS;
