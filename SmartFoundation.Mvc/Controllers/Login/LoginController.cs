@@ -225,7 +225,7 @@ namespace SmartFoundation.Mvc.Controllers.Login
                 {
                     IsPersistent = false,
                     AllowRefresh = true,
-                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(10)
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(5)
                 });
 
 
