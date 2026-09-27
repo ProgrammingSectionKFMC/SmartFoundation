@@ -242,6 +242,35 @@ BEGIN
 
 END
 
+ELSE IF @ActionType = 'MeterEditedBill'
+BEGIN
+
+    SELECT
+        CASE
+            WHEN s.LastRead >= s.CurrentRead THEN 0
+            ELSE 1
+        END AS checks,
+        s.CurrentRead,
+        s.LastRead,
+        s.ReadDiff,
+        s.PRICE,
+        s.PRICETAX,
+        s.meterServicePrice,
+        s.meterServicePriceTAX,
+        (s.meterServicePrice + s.meterServicePriceTAX) AS ServicePriceWithTAX,
+        s.TotalPrice,
+        s.meterID,
+        s.meterNo,
+        s.CurrentPeriodID
+    FROM Housing.CalculteElectrictyBills_ByNewReadValue_ForInsert
+    (
+          TRY_CONVERT(BIGINT, @parameter_01)
+        , TRY_CONVERT(INT, @parameter_03)
+        , TRY_CONVERT(BIGINT, @parameter_02)
+    ) s;
+
+END
+
 
             ELSE  IF @ActionType = 'EDITBILL'
             BEGIN
@@ -330,6 +359,35 @@ BEGIN
         s.meterNo,
         s.CurrentPeriodID
     FROM Housing.CalculteElectrictyBills_ByNewReadValue(@parameter_02, @parameter_04) s;
+
+END
+
+ELSE IF @ActionType = 'MeterEditedBill'
+BEGIN
+
+    SELECT
+        CASE
+            WHEN s.LastRead >= s.CurrentRead THEN 0
+            ELSE 1
+        END AS checks,
+        s.CurrentRead,
+        s.LastRead,
+        s.ReadDiff,
+        s.PRICE,
+        s.PRICETAX,
+        s.meterServicePrice,
+        s.meterServicePriceTAX,
+        (s.meterServicePrice + s.meterServicePriceTAX) AS ServicePriceWithTAX,
+        s.TotalPrice,
+        s.meterID,
+        s.meterNo,
+        s.CurrentPeriodID
+    FROM Housing.CalculteElectrictyBills_ByNewReadValue_ForInsert
+    (
+          TRY_CONVERT(BIGINT, @parameter_01)
+        , TRY_CONVERT(INT, @parameter_03)
+        , TRY_CONVERT(BIGINT, @parameter_02)
+    ) s;
 
 END
 

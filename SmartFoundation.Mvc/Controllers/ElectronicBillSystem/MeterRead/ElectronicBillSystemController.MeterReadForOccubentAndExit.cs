@@ -495,7 +495,25 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 new FieldConfig { Name = "p28", Label = "meterReadID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p29", Label = "LastActionDate", Type = "hidden", ColCss = "3", Readonly = true },
 
-                 new FieldConfig { Name = "p27", Label = "تسجيل القراءة", Type = "number", ColCss = "6",Required = true,HelpText="يجب ان تكون القراءة ارقام فقط*",MaxLength=3900 },
+                 new FieldConfig
+                 {
+                     Name = "p27",
+                     Label = "القراءة المعدلة",
+                     Type = "search",
+                     TextMode = "numeric",
+                     ColCss = "6",
+                     Required = true,
+                     HelpText = "يجب ان تكون القراءة ارقام فقط*",
+                     MaxLength = 3900,
+                     ExtraButton = new Dictionary<string, object?>
+                     {
+                         ["Text"] = "تحقق",
+                         ["ClassName"] = "btn btn-warning",
+                         ["SlotKey"] = "m4"
+                     }
+                 },
+                new FieldConfig { Name = "p50", Label = "النظام لاحظ وجود قراءة غير طبيعيه هل انت متأكد من تعديل القراءة وانها صحيحة؟", Type = "checkbox", Required = true, ColCss = "12" },
+                new FieldConfig { Name = "p99", Type = "hidden", Value = "0" },
 
                 new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
@@ -827,6 +845,75 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                 }
             };
 
+            var visibleFieldsEditVerify = ExitOrOccubent_ == "1"
+                ? new List<string> { "meterNo", "LastRead", "CurrentRead", "ReadDiff" }
+                : new List<string> { "meterNo", "LastRead", "CurrentRead", "ReadDiff", "PRICE", "PRICETAX", "ServicePriceWithTAX", "TotalPrice" };
+
+            var extraEditVerifyMeta = new Dictionary<string, object?>
+            {
+                ["EnableSearch"] = false,
+                ["ShowMeta"] = false,
+                ["PageSize"] = 5,
+                ["Sortable"] = false,
+                ["showRowNumbers"] = false,
+
+                ["extraSlotKey"] = "m4",
+                ["extraTitle"] = ExitOrOccubent_ == "1"
+                    ? "قراءة التسكين المعدلة المتوقعة"
+                    : "فاتورة الإخلاء المعدلة المتوقعة",
+                ["useRowExtra"] = true,
+                ["lazyExtra"] = true,
+                ["extraEndpoint"] = "/crud/extradataload",
+                ["allowNoSelection"] = true,
+                ["extraTriggerMode"] = "button",
+                ["extraTriggerField"] = "p27",
+                ["extraButtonText"] = "تحقق",
+
+                ["ctx"] = extraEditCtx,
+                ["extraRequest"] = new Dictionary<string, object?>
+                {
+                    ["pageName_"] = PageName,
+                    ["ActionType"] = "MeterEditedBill",
+                    ["tableIndex"] = 0
+                },
+                ["extraParamMap"] = new Dictionary<string, string>
+                {
+                    ["parameter_01"] = "p23",
+                    ["parameter_02"] = "p28",
+                    ["parameter_03"] = "p27"
+                },
+
+                ["verifyField"] = "p99",
+                ["verifyResetFields"] = new List<string> { "p23", "p28", "p27" },
+                ["verifyRequiredMessage"] = "يجب الضغط على زر التحقق أولاً قبل حفظ التعديل",
+
+                ["rowColorColumn"] = "checks",
+                ["rowColorOperator"] = "=",
+                ["rowColorValue"] = "0",
+                ["rowColorTrueStyle"] = "background:#f74f53;color:#ffffff;",
+                ["rowColorFalseStyle"] = "",
+
+                ["toggleField"] = "p50",
+                ["toggleColumn"] = "checks",
+                ["toggleOperator"] = "=",
+                ["toggleValue"] = 0,
+                ["toggleDefaultHidden"] = true,
+                ["toggleRequiredWhenShown"] = true,
+
+                ["visibleFields"] = visibleFieldsEditVerify,
+                ["headerMap"] = new Dictionary<string, string>
+                {
+                    ["meterNo"] = "رقم العداد",
+                    ["LastRead"] = "القراءة السابقة",
+                    ["CurrentRead"] = "القراءة المعدلة",
+                    ["ReadDiff"] = "فرق القراءة",
+                    ["PRICE"] = "المبلغ",
+                    ["PRICETAX"] = "الضريبة",
+                    ["ServicePriceWithTAX"] = "رسوم الخدمة",
+                    ["TotalPrice"] = "الإجمالي"
+                }
+            };
+
 
             //  UPDATE fields (Form Default / Form 46+)  تجريبي نرجع نمسحه او نعدل عليه
             var extraTitlemetaB = ExitOrOccubent_ == "1"
@@ -967,6 +1054,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
                         MaxSelection = 1,
 
                         Meta = extraMetaAutoOpen,
+                        Meta1 = extraEditVerifyMeta,
 
 
                         Guards = new TableActionGuards
