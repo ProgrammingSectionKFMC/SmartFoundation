@@ -796,7 +796,7 @@
 
     function calculatePasswordChecks(password) {
         return {
-            length: password.length >= 8,
+            length: password.length >= 12,
             uppercase: /[A-Z]/.test(password),
             lowercase: /[a-z]/.test(password),
             number: /[0-9]/.test(password)
@@ -889,8 +889,8 @@
             return "mismatch";
         }
 
-        if (newPassword.length < 8) {
-            return "كلمة المرور يجب أن لا تقل عن 8 خانات";
+        if (newPassword.length < 12) {
+            return "كلمة المرور يجب أن لا تقل عن 12 خانة";
         }
 
         if (!/[A-Z]/.test(newPassword)) {
@@ -1080,8 +1080,8 @@
                 return;
             }
 
-            if (newPassword.length < 8) {
-                showError("❌ كلمة المرور يجب أن لا تقل عن 8 خانات");
+            if (newPassword.length < 12) {
+                showError("❌ كلمة المرور يجب أن لا تقل عن 12 خانة");
                 return;
             }
 

@@ -21,40 +21,11 @@ namespace SmartFoundation.Application.Services
         }
 
 
-        /// <summary>
-        /// Gets the user menu tree using ProcedureMapper: menu:tree -> dbo.GetUserMenuTree.
-        /// Required parameter: UserID (string/int).
-        /// Logs raw JSON response for debugging.
-        /// </summary>
-        public async Task<string> GetUserMenuTree(Dictionary<string, object?> parameters)
+        
+        public async Task<string> GetUserMenuTree(
+     Dictionary<string, object?> parameters)
         {
             var json = await ExecuteOperation("menu", "tree", parameters);
-
-            // Print in console and log for verification
-            Console.WriteLine($"[GetUserMenuTree] Raw JSON: {json}");
-            _logger.LogInformation("GetUserMenuTree raw JSON: {Json}", json);
-
-            // Optionally, also log a preview of the first item if JSON data array exists
-            try
-            {
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-                if (root.TryGetProperty("success", out var successProp) && successProp.GetBoolean() &&
-                    root.TryGetProperty("data", out var dataProp) && dataProp.ValueKind == JsonValueKind.Array)
-                {
-                    var first = dataProp.EnumerateArray().FirstOrDefault();
-                    if (first.ValueKind == JsonValueKind.Object)
-                    {
-                        _logger.LogInformation("First menu row sample: {Row}", first.ToString());
-                        Console.WriteLine($"[GetUserMenuTree] First row: {first}");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to parse JSON for preview in GetUserMenuTree");
-            }
-
             return json;
         }
 
@@ -108,7 +79,6 @@ namespace SmartFoundation.Application.Services
                 dict[$"parameter_{(i + 1):00}"] = v;
             }
 
-            _logger.LogInformation("CRUD PARAMS (pre-SP): {Params}", JsonSerializer.Serialize(dict));
 
             var ds = await ExecuteMappedAsync(dict);
 
@@ -168,8 +138,7 @@ namespace SmartFoundation.Application.Services
         /// </summary>
         private async Task<DataSet> ExecuteMappedAsync(Dictionary<string, object?> parameters)
         {
-            _logger.LogInformation("MastersCrudServies executing with params: {Params}",
-                JsonSerializer.Serialize(parameters));
+            
 
             var spName = ProcedureMapper.GetProcedureName("MastersCrud", "crud");
 
@@ -303,7 +272,6 @@ namespace SmartFoundation.Application.Services
 
         public async Task<DataSet> GetDataLoadDataSetAsync(Dictionary<string, object?> parameters)
         {
-            _logger.LogInformation("GetDataLoadDataSetAsync called with parameters: {Params}", JsonSerializer.Serialize(parameters));
 
             // Resolve SP name via ProcedureMapper (no hard-coded SP name)
             var spName = ProcedureMapper.GetProcedureName("MastersDataLoad", "getData");
@@ -407,7 +375,6 @@ namespace SmartFoundation.Application.Services
 
         public async Task<DataSet> GetExtraDataLoadDataSetAsync(Dictionary<string, object?> parameters)
         {
-            _logger.LogInformation("GetDataLoadDataSetAsync called with parameters: {Params}", JsonSerializer.Serialize(parameters));
 
             // Resolve SP name via ProcedureMapper (no hard-coded SP name)
             var spName = ProcedureMapper.GetProcedureName("MastersExtraDataLoad", "getData");
@@ -516,17 +483,9 @@ namespace SmartFoundation.Application.Services
         /// </summary>
         public async Task<DataSet> GetLoginDataSetAsync(Dictionary<string, object?> parameters, CancellationToken ct = default)
         {
-            _logger.LogInformation("=== GetLoginDataSetAsync DEBUG START ===");
-            _logger.LogInformation("GetLoginDataSetAsync called with parameters: {Params}", JsonSerializer.Serialize(parameters));
-            _logger.LogInformation("Parameter count: {Count}", parameters.Count);
+           
             
-            foreach (var param in parameters)
-            {
-                _logger.LogInformation("  Parameter: [{Key}] = [{Value}] (Type: {Type})", 
-                    param.Key, 
-                    param.Value ?? "NULL", 
-                    param.Value?.GetType().Name ?? "null");
-            }
+           
 
             var spName = ProcedureMapper.GetProcedureName("auth", "sessions_");
             _logger.LogInformation("Resolved SP name: {SpName}", spName);
@@ -550,9 +509,7 @@ namespace SmartFoundation.Application.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error executing stored procedure {SpName} with params: {Params}", 
-                    spName, JsonSerializer.Serialize(parameters));
-                _logger.LogInformation("=== GetLoginDataSetAsync DEBUG END (ERROR) ===");
+                
                 throw new InvalidOperationException("حدث خطأ داخلي أثناء تنفيذ العملية.", ex);
             }
 
@@ -565,7 +522,6 @@ namespace SmartFoundation.Application.Services
                 // Don't throw - just log and continue processing the DataSet
             }
 
-            _logger.LogInformation("=== GetLoginDataSetAsync DEBUG END (SUCCESS) ===");
             return ConvertResponseToDataSet(response);
         }
 
@@ -989,7 +945,8 @@ public async Task<DataSet> GetChangePasswordDataSetAsync(params object?[] args)
         ["Action"] = "CHANGEUSERPASSWORD",
         ["usersID"] = userId,
         ["OldPassword"] = oldPassword,
-        ["PlainPassword"] = newPassword
+        ["PlainPassword"] = newPassword,
+        ["entryData"] = userId
     };
 
     _logger.LogInformation("GetChangePasswordDataSetAsync called for user: {UserId}", userId);

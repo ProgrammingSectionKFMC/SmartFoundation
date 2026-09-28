@@ -60,14 +60,15 @@ RETURN;
         ----------------------------------------------------
         -- 1) التحقق من تعقيد كلمة المرور الجديدة
         ----------------------------------------------------
-        --IF LEN(@PlainPassword) < 8
-        --   OR @PlainPassword NOT LIKE '%[0-9]%'      -- لا تحتوي رقم
-        --   OR @PlainPassword NOT LIKE '%[A-Za-z]%'   -- لا تحتوي حرف إنجليزي
-        --BEGIN
-        --    SELECT 0 AS IsSuccessful,
-        --           N'كلمة المرور غير مقبولة. يجب أن لا تقل عن 8 خانات وتحتوي على حروف إنجليزية وأرقام.' AS Message_;
-        --    RETURN;
-        --END
+        IF @PlainPassword IS NULL
+           OR LEN(@PlainPassword) < 8
+           OR @PlainPassword COLLATE Latin1_General_100_BIN2 NOT LIKE '%[A-Z]%'
+           OR @PlainPassword COLLATE Latin1_General_100_BIN2 NOT LIKE '%[a-z]%'
+        BEGIN
+            SET @IsSuccessful = 0;
+            SET @Message_ = N'كلمة المرور المؤقتة يجب أن لا تقل عن 8 خانات، وأن تتضمن حرفًا إنجليزيًا كبيرًا وحرفًا إنجليزيًا صغيرًا.';
+            RETURN;
+        END
 
 
         ----------------------------------------------------
@@ -133,6 +134,7 @@ RETURN;
             PasswordSalt,
             HashAlgorithm,
             userPasswordStartDate,
+            userPasswordEndDate,
             userPasswordActive,
             ChangedPassword,
             entryDate,
@@ -145,7 +147,8 @@ RETURN;
             @Hash,
             @Salt,
             'SHA2_256',
-            CAST(GETDATE() AS DATE),
+            GETDATE(),
+            DATEADD(HOUR, 24, GETDATE()),
             1,
             0,
             GETDATE(),

@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using SmartFoundation.Application.Services;
+using SmartFoundation.Application.Services.Models;
 using System.Security.Claims;
 
 namespace SmartFoundation.Mvc.Middleware
@@ -27,7 +29,9 @@ namespace SmartFoundation.Mvc.Middleware
 
         public SessionGuardMiddleware(RequestDelegate next) => _next = next;
 
-        public async Task InvokeAsync(HttpContext context)
+        public async Task InvokeAsync(
+            HttpContext context,
+            AuthenticationAuditService authenticationAuditService)
         {
             var path = context.Request.Path;
 
@@ -73,6 +77,28 @@ namespace SmartFoundation.Mvc.Middleware
 
             if (missing || identityMismatch)
             {
+                var nationalId = context.Session.GetString("nationalID");
+                var hostName = context.Session.GetString("HostName");
+                long? parsedUsersId = long.TryParse(claimUserId ?? sessionUserId, out var id) ? id : null;
+
+                await authenticationAuditService.TryWriteAsync(
+                    new AuthenticationAuditEntry
+                    {
+                        EventType = AuthenticationAuditEventTypes.SessionExpired,
+                        UsersId = parsedUsersId,
+                        LoginIdentifier = nationalId,
+                        IsSuccessful = true,
+                        FailureReasonCode = identityMismatch
+                            ? "IDENTITY_MISMATCH"
+                            : "MISSING_SESSION_CONTEXT",
+                        IpAddress = context.Connection.RemoteIpAddress?.ToString(),
+                        HostName = hostName,
+                        UserAgent = context.Request.Headers.UserAgent.ToString(),
+                        SessionId = context.Session.Id,
+                        TraceId = context.TraceIdentifier,
+                        RequestPath = context.Request.Path.Value
+                    });
+
                 await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
                 context.Session.Clear();
 

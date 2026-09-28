@@ -3,7 +3,6 @@
     ViewData["Title"] = Model.PageTitle;
 }
 
-
 @await Component.InvokeAsync("SmartRenderer", new { model = Model })
 
 <script>
@@ -78,7 +77,7 @@
 
         // ✅ عند فتح أي مودال (Bootstrap): لو نموذج المعالجة موجود حدث الشهور
         $(document).on('shown.bs.modal', function() {
-            const { $year, $month } = getControls();
+            const { $year, $month } = getControls();const url = '@Url.Action("GetMonthsByYear", "IncomeSystem")';
             if ($year.length && $month.length) {
                 refreshMonths();
             }

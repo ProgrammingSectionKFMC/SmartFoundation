@@ -44,7 +44,9 @@ public static class ProcedureMapper
 
         // Authentication operations
         { "auth:sessions_", "dbo.GetSessionInfoForMVC" },
-        { "auth:changePassword", "dbo.ReSetUserPassword" }
+        { "auth:changePassword", "dbo.ReSetUserPassword" },
+        { "auth:audit", "dbo.AuthenticationAuditLogSP" },
+        { "auth:loginGuard", "dbo.AuthenticationLoginGuardSP" }
     };
 
     /// <summary>

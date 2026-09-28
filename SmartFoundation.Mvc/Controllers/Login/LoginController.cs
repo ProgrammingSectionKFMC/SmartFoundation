@@ -16,12 +16,17 @@ namespace SmartFoundation.Mvc.Controllers.Login
     public class LoginController : Controller
     {
         private readonly MastersServies _mastersServies;
+        private readonly AuthenticationAuditService _authenticationAuditService;
         private readonly ILogger<LoginController> _logger;
 
 
-        public LoginController(MastersServies mastersServies, ILogger<LoginController> logger)
+        public LoginController(
+            MastersServies mastersServies,
+            AuthenticationAuditService authenticationAuditService,
+            ILogger<LoginController> logger)
         {
             _mastersServies = mastersServies;
+            _authenticationAuditService = authenticationAuditService;
             _logger = logger;
         }
 
@@ -29,12 +34,13 @@ namespace SmartFoundation.Mvc.Controllers.Login
 
         private RedirectToActionResult RedirectToLogin(string messageType, string message, string? nationalId = null)
         {
-            return RedirectToAction(nameof(Index), new
-            {
-                mt = messageType,
-                msg = message,
-                u = nationalId
-            });
+            TempData["LoginMessageType"] = messageType;
+            TempData["LoginMessage"] = message;
+
+            if (!string.IsNullOrWhiteSpace(nationalId))
+                TempData["LoginLastUser"] = nationalId;
+
+            return RedirectToAction(nameof(Index));
         }
 
         private static string ResolveClientHostName(HttpContext ctx)
@@ -67,16 +73,67 @@ namespace SmartFoundation.Mvc.Controllers.Login
             return hostValue;
         }
 
+        private Task WriteAuthenticationAuditAsync(
+            string eventType,
+            bool isSuccessful,
+            string? loginIdentifier = null,
+            string? usersId = null,
+            string? failureReasonCode = null,
+            string? failureMessage = null)
+        {
+            long? parsedUsersId = long.TryParse(usersId, out var id) ? id : null;
+            var remoteIp = HttpContext.Connection.RemoteIpAddress;
+            if (remoteIp?.IsIPv4MappedToIPv6 == true)
+                remoteIp = remoteIp.MapToIPv4();
+
+            var hostName = HttpContext.Session.GetString("HostName");
+            if (string.IsNullOrWhiteSpace(hostName))
+                hostName = ResolveClientHostName(HttpContext);
+
+            return _authenticationAuditService.TryWriteAsync(
+                new AuthenticationAuditEntry
+                {
+                    EventType = eventType,
+                    UsersId = parsedUsersId,
+                    LoginIdentifier = loginIdentifier,
+                    IsSuccessful = isSuccessful,
+                    FailureReasonCode = failureReasonCode,
+                    FailureMessage = failureMessage,
+                    IpAddress = remoteIp?.ToString(),
+                    HostName = hostName,
+                    UserAgent = Request.Headers.UserAgent.ToString(),
+                    SessionId = HttpContext.Session.Id,
+                    TraceId = HttpContext.TraceIdentifier,
+                    RequestPath = Request.Path.Value
+                });
+        }
+
+        private static string ResolveLoginFailureReason(string? message)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+                return "AUTHENTICATION_REJECTED";
+
+            if (message.Contains("غير صحيحة", StringComparison.OrdinalIgnoreCase))
+                return "INVALID_CREDENTIALS";
+            if (message.Contains("منتهية", StringComparison.OrdinalIgnoreCase))
+                return "PASSWORD_EXPIRED";
+            if (message.Contains("اعادة ضبط", StringComparison.OrdinalIgnoreCase) ||
+                message.Contains("إعادة ضبط", StringComparison.OrdinalIgnoreCase))
+                return "PASSWORD_RESET_REQUIRED";
+
+            return "NO_ACTIVE_PROFILE";
+        }
+
         [HttpGet]
         [AllowAnonymous]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Index()
         {
-            var lastUser = Request.Query["u"].ToString();
+            var lastUser = TempData["LoginLastUser"]?.ToString() ?? string.Empty;
             ViewBag.LastUser = lastUser;
 
-            var messageType = Request.Query["mt"].ToString();
-            var message = Request.Query["msg"].ToString();
+            var messageType = TempData["LoginMessageType"]?.ToString() ?? string.Empty;
+            var message = TempData["LoginMessage"]?.ToString() ?? string.Empty;
 
             HttpContext.Session.Clear();
             if (Request.Query.ContainsKey("logout"))
@@ -126,32 +183,75 @@ namespace SmartFoundation.Mvc.Controllers.Login
 
             if (string.IsNullOrWhiteSpace(NationalID) || string.IsNullOrWhiteSpace(password))
             {
+                await WriteAuthenticationAuditAsync(
+                    AuthenticationAuditEventTypes.LoginFailed,
+                    false,
+                    NationalID,
+                    failureReasonCode: "MISSING_FIELDS",
+                    failureMessage: "لم تكتمل حقول تسجيل الدخول المطلوبة.");
                 return RedirectToLogin("error", "الرجاء اكمال الحقول المطلوبة", NationalID);
+            }
+
+            NationalID = NationalID.Trim();
+
+            var loginGuard = await _authenticationAuditService.CheckLoginGuardAsync(NationalID, ct);
+            if (!loginGuard.IsAvailable)
+            {
+                return RedirectToLogin(
+                    "error",
+                    "تعذر التحقق من سياسة محاولات الدخول. يرجى المحاولة مرة أخرى.",
+                    NationalID);
+            }
+
+            if (!loginGuard.IsAllowed)
+            {
+                await WriteAuthenticationAuditAsync(
+                    AuthenticationAuditEventTypes.LoginFailed,
+                    false,
+                    NationalID,
+                    loginGuard.UsersId?.ToString(),
+                    loginGuard.BlockReasonCode ?? "LOGIN_BLOCKED",
+                    loginGuard.Message);
+
+                return RedirectToLogin(
+                    "error",
+                    loginGuard.Message ?? "تعذر تسجيل الدخول مؤقتًا.",
+                    NationalID);
             }
 
             DataSet ds;
 
-            var spParameters = new object?[] { NationalID.Trim(), password, Request.Host.Value };
+            var spParameters = new object?[] { NationalID, password, Request.Host.Value };
             try
             {
                 ds = await _mastersServies.GetLoginsDataSetAsync(spParameters);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Login data source call failed");
+                await WriteAuthenticationAuditAsync(
+                    AuthenticationAuditEventTypes.LoginFailed,
+                    false,
+                    NationalID,
+                    failureReasonCode: "DATA_SOURCE_ERROR",
+                    failureMessage: "تعذر استدعاء مصدر بيانات تسجيل الدخول.");
                 return RedirectToLogin("error", "حدث خطأ أثناء الاتصال بالخادم. يرجى المحاولة مرة أخرى.", NationalID);
             }
 
-            var auth = _mastersServies.ExtractAuth(ds);
-
-
+            AuthInfo auth;
             try
             {
                 auth = _mastersServies.ExtractAuth(ds);
-               
-
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to process login result");
+                await WriteAuthenticationAuditAsync(
+                    AuthenticationAuditEventTypes.LoginFailed,
+                    false,
+                    NationalID,
+                    failureReasonCode: "RESULT_PROCESSING_ERROR",
+                    failureMessage: "تعذرت معالجة نتيجة تسجيل الدخول.");
                 return RedirectToLogin("error", "حدث خطأ أثناء معالجة بيانات الدخول. يرجى المحاولة مرة أخرى.", NationalID);
             }
 
@@ -160,10 +260,17 @@ namespace SmartFoundation.Mvc.Controllers.Login
             // ✅ Check 1: usersId validation
             if (string.IsNullOrWhiteSpace(auth.usersId))
             {
+                var message = !string.IsNullOrWhiteSpace(auth.Message_) ? auth.Message_ : "لايوجد ملف نشط لهذا المستخدم";
+                await WriteAuthenticationAuditAsync(
+                    AuthenticationAuditEventTypes.LoginFailed,
+                    false,
+                    NationalID,
+                    failureReasonCode: ResolveLoginFailureReason(message),
+                    failureMessage: message);
                 // Use SQL message if available, otherwise fallback
                 return RedirectToLogin(
                     "error",
-                    !string.IsNullOrWhiteSpace(auth.Message_) ? auth.Message_ : "لايوجد ملف نشط لهذا المستخدم",
+                    message,
                     NationalID);
             }
 
@@ -171,10 +278,18 @@ namespace SmartFoundation.Mvc.Controllers.Login
             // ✅ Check 2: usersActive validation
             if (auth.usersActive == 0)
             {
+                var message = !string.IsNullOrWhiteSpace(auth.Message_) ? auth.Message_ : "لايوجد حساب نشط لهذا المستخدم";
+                await WriteAuthenticationAuditAsync(
+                    AuthenticationAuditEventTypes.LoginFailed,
+                    false,
+                    NationalID,
+                    auth.usersId,
+                    "ACCOUNT_INACTIVE",
+                    message);
                 // ✅ FIXED: Use message from SQL instead of hard-coded
                 return RedirectToLogin(
                     "error",
-                    !string.IsNullOrWhiteSpace(auth.Message_) ? auth.Message_ : "لايوجد حساب نشط لهذا المستخدم",
+                    message,
                     NationalID);
             }
 
@@ -228,6 +343,12 @@ namespace SmartFoundation.Mvc.Controllers.Login
                     ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(5)
                 });
 
+            await WriteAuthenticationAuditAsync(
+                AuthenticationAuditEventTypes.LoginSuccess,
+                true,
+                auth.nationalID ?? NationalID,
+                auth.usersId);
+
 
 
             //}
@@ -260,7 +381,18 @@ namespace SmartFoundation.Mvc.Controllers.Login
         [HttpPost]
         public async Task<IActionResult> Logout()
         {
+            var userId = HttpContext.Session.GetString("usersID") ??
+                         User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var nationalId = HttpContext.Session.GetString("nationalID");
+
+            await WriteAuthenticationAuditAsync(
+                AuthenticationAuditEventTypes.Logout,
+                true,
+                nationalId,
+                userId);
+
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            HttpContext.Session.Clear();
 
             return RedirectToAction("Index", "Login", new { logout = 2 });
         }
@@ -287,17 +419,39 @@ namespace SmartFoundation.Mvc.Controllers.Login
                 
                 if (string.IsNullOrWhiteSpace(userId))
                 {
+                    await WriteAuthenticationAuditAsync(
+                        AuthenticationAuditEventTypes.PasswordChangeFailed,
+                        false,
+                        failureReasonCode: "SESSION_EXPIRED",
+                        failureMessage: "جلسة العمل منتهية.");
                     return Json(new { success = false, message = "جلسة العمل منتهية. الرجاء تسجيل الدخول مرة أخرى" });
                 }
                 
                 if (string.IsNullOrWhiteSpace(request.OldPassword) || string.IsNullOrWhiteSpace(request.NewPassword))
                 {
+                    await WriteAuthenticationAuditAsync(
+                        AuthenticationAuditEventTypes.PasswordChangeFailed,
+                        false,
+                        HttpContext.Session.GetString("nationalID"),
+                        userId,
+                        "MISSING_FIELDS",
+                        "لم تكتمل حقول تغيير كلمة المرور المطلوبة.");
                     return Json(new { success = false, message = "الرجاء إدخال كلمة المرور الحالية والجديدة" });
                 }
                 
-                if (request.NewPassword.Length < 8)
+                if (request.NewPassword.Length < 12 ||
+                    !request.NewPassword.Any(character => character is >= 'A' and <= 'Z') ||
+                    !request.NewPassword.Any(character => character is >= 'a' and <= 'z') ||
+                    !request.NewPassword.Any(char.IsDigit))
                 {
-                    return Json(new { success = false, message = "كلمة المرور يجب أن لا تقل عن 8 خانات" });
+                    await WriteAuthenticationAuditAsync(
+                        AuthenticationAuditEventTypes.PasswordChangeFailed,
+                        false,
+                        HttpContext.Session.GetString("nationalID"),
+                        userId,
+                        "PASSWORD_POLICY_FAILED",
+                        "كلمة المرور الجديدة لا تحقق سياسة كلمات المرور.");
+                    return Json(new { success = false, message = "كلمة المرور يجب أن لا تقل عن 12 خانة، وأن تتضمن حرفًا إنجليزيًا كبيرًا وحرفًا إنجليزيًا صغيرًا ورقمًا." });
                 }
                 
                 var spParameters = new object?[] 
@@ -315,6 +469,13 @@ namespace SmartFoundation.Mvc.Controllers.Login
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error calling GetChangePasswordDataSetAsync");
+                    await WriteAuthenticationAuditAsync(
+                        AuthenticationAuditEventTypes.PasswordChangeFailed,
+                        false,
+                        HttpContext.Session.GetString("nationalID"),
+                        userId,
+                        "DATA_SOURCE_ERROR",
+                        "تعذر استدعاء مصدر بيانات تغيير كلمة المرور.");
                     return Json(new { success = false, message = "خطأ في الاتصال بالخادم" });
                 }
                 
@@ -337,9 +498,24 @@ namespace SmartFoundation.Mvc.Controllers.Login
                     
                     if (success)
                     {
+                        await WriteAuthenticationAuditAsync(
+                            AuthenticationAuditEventTypes.PasswordChanged,
+                            true,
+                            HttpContext.Session.GetString("nationalID"),
+                            userId);
                         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
                         HttpContext.Session.Clear();
                         _logger.LogInformation("Password changed successfully for user {UserId}; session cleared", userId);
+                    }
+                    else
+                    {
+                        await WriteAuthenticationAuditAsync(
+                            AuthenticationAuditEventTypes.PasswordChangeFailed,
+                            false,
+                            HttpContext.Session.GetString("nationalID"),
+                            userId,
+                            "CHANGE_REJECTED",
+                            message);
                     }
                     
                     return Json(new
@@ -350,11 +526,25 @@ namespace SmartFoundation.Mvc.Controllers.Login
                     });
                 }
                 
+                await WriteAuthenticationAuditAsync(
+                    AuthenticationAuditEventTypes.PasswordChangeFailed,
+                    false,
+                    HttpContext.Session.GetString("nationalID"),
+                    userId,
+                    "NO_RESULT",
+                    "لم يتم إرجاع نتيجة من قاعدة البيانات.");
                 return Json(new { success = false, message = "لم يتم إرجاع نتيجة من قاعدة البيانات" });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Unexpected error in ChangePassword");
+                await WriteAuthenticationAuditAsync(
+                    AuthenticationAuditEventTypes.PasswordChangeFailed,
+                    false,
+                    HttpContext.Session.GetString("nationalID"),
+                    HttpContext.Session.GetString("usersID"),
+                    "UNEXPECTED_ERROR",
+                    "حدث خطأ غير متوقع أثناء تغيير كلمة المرور.");
                 return Json(new { success = false, message = "حدث خطأ غير متوقع" });
             }
         }

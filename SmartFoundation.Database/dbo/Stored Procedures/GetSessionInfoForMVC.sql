@@ -66,7 +66,7 @@ BEGIN
                 @PasswordStartDate IS NULL
                 OR @PasswordStartDate > GETDATE()
                 OR @PasswordEndDate IS NULL
-                OR GETDATE() > @PasswordEndDate
+                OR GETDATE() >= @PasswordEndDate
            )
         BEGIN
             SET @PasswordResult = 4;   -- كلمة المرور المؤقتة منتهية
@@ -230,7 +230,7 @@ BEGIN
                 BEGIN
                     SELECT
                         0 AS userActive,
-                        N'انتهت صلاحية كلمة المرور المؤقتة، يرجى طلب إعادة تعيين كلمة المرور.' AS Message_;
+                        N'انتهت صلاحية كلمة المرور المؤقتة. يرجى مراجعة مدير النظام لإعادة ضبط كلمة المرور.' AS Message_;
                 END
             END
             ELSE

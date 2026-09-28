@@ -47,8 +47,6 @@ BEGIN
               IF @Action IN(N'RESETUSERPASSWORD')
         BEGIN
 
-        DECLARE @DefualtPlainPassword       NVARCHAR(200)
-        SET @DefualtPlainPassword =N'Aa123456'
         DECLARE @ResetAt DATETIME = GETDATE();
 
 
@@ -83,14 +81,13 @@ BEGIN
         ----------------------------------------------------
         -- 1) التحقق من تعقيد كلمة المرور الجديدة
         ----------------------------------------------------
-        --IF LEN(@PlainPassword) < 8
-        --   OR @PlainPassword NOT LIKE '%[0-9]%'      -- لا تحتوي رقم
-        --   OR @PlainPassword NOT LIKE '%[A-Za-z]%'   -- لا تحتوي حرف إنجليزي
-        --BEGIN
-        --    SELECT 0 AS IsSuccessful,
-        --           N'كلمة المرور غير مقبولة. يجب أن لا تقل عن 8 خانات وتحتوي على حروف إنجليزية وأرقام.' AS Message_;
-        --    RETURN;
-        --END
+        IF @PlainPassword IS NULL
+           OR LEN(@PlainPassword) < 8
+           OR @PlainPassword COLLATE Latin1_General_100_BIN2 NOT LIKE '%[A-Z]%'
+           OR @PlainPassword COLLATE Latin1_General_100_BIN2 NOT LIKE '%[a-z]%'
+        BEGIN
+            ;THROW 50001, N'كلمة المرور المؤقتة يجب أن لا تقل عن 8 خانات، وأن تتضمن حرفًا إنجليزيًا كبيرًا وحرفًا إنجليزيًا صغيرًا.', 1;
+        END
 
 
         ----------------------------------------------------
@@ -140,7 +137,7 @@ BEGIN
 
         SET @Hash = HASHBYTES(
                         'SHA2_256',
-                        @Salt + CAST(@DefualtPlainPassword AS VARBINARY(200))
+                        @Salt + CAST(@PlainPassword AS VARBINARY(200))
                     );
 
 
@@ -236,12 +233,14 @@ BEGIN
             ----------------------------------------------------
             -- 2) Validate new password complexity
             ----------------------------------------------------
-             IF LEN(@PlainPassword) < 8
-           OR @PlainPassword NOT LIKE '%[0-9]%'      -- لا تحتوي رقم
-           OR @PlainPassword NOT LIKE '%[A-Za-z]%'   -- لا تحتوي حرف إنجليزي
+             IF @PlainPassword IS NULL
+           OR LEN(@PlainPassword) < 12
+           OR @PlainPassword COLLATE Latin1_General_100_BIN2 NOT LIKE '%[A-Z]%'
+           OR @PlainPassword COLLATE Latin1_General_100_BIN2 NOT LIKE '%[a-z]%'
+           OR @PlainPassword COLLATE Latin1_General_100_BIN2 NOT LIKE '%[0-9]%'
         BEGIN
             SELECT 0 AS IsSuccessful,
-                   N'كلمة المرور غير مقبولة. يجب أن لا تقل عن 8 خانات وتحتوي على حروف إنجليزية وأرقام.' AS Message_;
+                   N'كلمة المرور يجب أن لا تقل عن 12 خانة، وأن تتضمن حرفًا إنجليزيًا كبيرًا وحرفًا إنجليزيًا صغيرًا ورقمًا.' AS Message_;
             RETURN;
         END
 

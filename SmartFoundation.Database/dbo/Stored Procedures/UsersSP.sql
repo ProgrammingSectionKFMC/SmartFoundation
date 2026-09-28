@@ -28,6 +28,7 @@ CREATE PROCEDURE [dbo].[UsersSP]
     , @educationID_FK                        NVARCHAR(100)   = NULL
     , @userNote                              NVARCHAR(1000)  = NULL
     , @distributorID                         NVARCHAR(1000)  = NULL
+    , @TemporaryPassword                     NVARCHAR(200)   = NULL
     , @idaraID_FK                            NVARCHAR(10)    = NULL
     , @entryData                             NVARCHAR(20)    = NULL
     , @hostName                              NVARCHAR(200)   = NULL
@@ -468,7 +469,7 @@ END
 
 EXEC dbo.SetUserPassword
       @NationalID    = @NationalID
-    , @PlainPassword = N'Aa123456'
+    , @PlainPassword = @TemporaryPassword
     , @entryData     = @entryData
     , @hostName      = @hostName
     , @IsSuccessful  = @PwdOK OUTPUT
@@ -874,11 +875,220 @@ END
             RETURN;
         END
 
+          ----------------------------------------------------------------
+        -- REACTIVATEUSER
+        ----------------------------------------------------------------
+        IF @Action = N'REACTIVATEUSER'
+        BEGIN
+            DECLARE @ReactivateUsersID BIGINT =
+                TRY_CONVERT(BIGINT, NULLIF(LTRIM(RTRIM(@usersID)), N''));
+            DECLARE @ReactivateNationalID NVARCHAR(20);
+            DECLARE @ReactivateUsersActive BIT;
+
+            IF @ReactivateUsersID IS NULL
+            BEGIN
+                ;THROW 50001, N'معرف المستخدم غير صحيح', 1;
+            END;
+
+            SELECT
+                  @ReactivateNationalID = u.nationalID
+                , @ReactivateUsersActive = CONVERT(BIT, CASE WHEN EXISTS
+                  (
+                      SELECT 1
+                      FROM dbo.UsersDetails activeDetails
+                      WHERE activeDetails.usersID_FK = u.usersID
+                        AND activeDetails.userActive = 1
+                  ) THEN 1 ELSE 0 END)
+            FROM dbo.Users u WITH (UPDLOCK, HOLDLOCK)
+            WHERE u.usersID = @ReactivateUsersID;
+
+            IF @ReactivateNationalID IS NULL
+            BEGIN
+                ;THROW 50001, N'المستخدم غير موجود بالنظام', 1;
+            END;
+
+            IF ISNULL(@ReactivateUsersActive, 0) = 1
+            BEGIN
+                ;THROW 50001, N'حساب المستخدم نشط بالفعل', 1;
+            END;
+
+            DECLARE @SourceUsersDetailsID BIGINT;
+
+            SELECT TOP (1) @SourceUsersDetailsID = details.usersDetailsID
+            FROM dbo.UsersDetails details WITH (UPDLOCK, HOLDLOCK)
+            WHERE details.usersID_FK = @ReactivateUsersID
+            ORDER BY details.usersDetailsID DESC;
+
+            IF @SourceUsersDetailsID IS NULL
+            BEGIN
+                ;THROW 50001, N'لا توجد بيانات تفاصيل سابقة للمستخدم لإعادة تنشيطه', 1;
+            END;
+
+            -- معالجة السجلات القديمة التي عُطّل فيها جدول Users بالطريقة السابقة.
+            UPDATE dbo.Users
+            SET
+                  usersActive = 1
+                , updatedby = CONCAT(ISNULL(updatedby, N''), N'|REACTIVATED_BY:', ISNULL(@entryData, N''))
+                , updatedDate = CONCAT(ISNULL(updatedDate, N''), N'|', CONVERT(NVARCHAR(23), GETDATE(), 121))
+            WHERE usersID = @ReactivateUsersID
+              AND usersActive = 0;
+
+            INSERT INTO dbo.UsersDetails
+            (
+                  usersID_FK, GeneralNo, userTypeID_FK
+                , firstName_A, secondName_A, thirdName_A, forthName_A, lastName_A
+                , firstName_E, secondName_E, thirdName_E, forthName_E, lastName_E
+                , nationalIDIssueDate, nationalIDExpiryDate, nationalIDIssuePlaceCityID_FK
+                , dateOfBirth, birthPlaceCityID_FK, genderID_FK, nationalityID_FK
+                , religionID_FK, bloodID_FK, maritalStatusID_FK, educationID_FK
+                , userActive, userNote, usersAuthTypeID_FK, UDendDate
+                , canceldBy, canceldWhy, IdaraID, entryDate, entryData, hostName
+            )
+            SELECT
+                  sourceDetails.usersID_FK, sourceDetails.GeneralNo, sourceDetails.userTypeID_FK
+                , sourceDetails.firstName_A, sourceDetails.secondName_A, sourceDetails.thirdName_A, sourceDetails.forthName_A, sourceDetails.lastName_A
+                , sourceDetails.firstName_E, sourceDetails.secondName_E, sourceDetails.thirdName_E, sourceDetails.forthName_E, sourceDetails.lastName_E
+                , sourceDetails.nationalIDIssueDate, sourceDetails.nationalIDExpiryDate, sourceDetails.nationalIDIssuePlaceCityID_FK
+                , sourceDetails.dateOfBirth, sourceDetails.birthPlaceCityID_FK, sourceDetails.genderID_FK, sourceDetails.nationalityID_FK
+                , sourceDetails.religionID_FK, sourceDetails.bloodID_FK, sourceDetails.maritalStatusID_FK, sourceDetails.educationID_FK
+                , 1, sourceDetails.userNote, sourceDetails.usersAuthTypeID_FK, NULL
+                , NULL, NULL, sourceDetails.IdaraID, GETDATE(), @entryData, @hostName
+            FROM dbo.UsersDetails sourceDetails
+            WHERE sourceDetails.usersDetailsID = @SourceUsersDetailsID;
+
+            IF @@ROWCOUNT = 0
+            BEGIN
+                ;THROW 50002, N'حصل خطأ في إعادة تنشيط المستخدم', 1;
+            END;
+
+            DECLARE @ReactivateNote NVARCHAR(MAX) = N'{'
+                + N'"usersID": "' + CONVERT(NVARCHAR(30), @ReactivateUsersID) + N'"'
+                + N',"nationalID": "' + ISNULL(@ReactivateNationalID, N'') + N'"'
+                + N',"userActive": "1"'
+                + N',"entryData": "' + ISNULL(@entryData, N'') + N'"'
+                + N',"hostName": "' + ISNULL(@hostName, N'') + N'"'
+                + N'}';
+
+            INSERT INTO dbo.AuditLog
+            (
+                  TableName
+                , ActionType
+                , RecordID
+                , PerformedBy
+                , Notes
+            )
+            VALUES
+            (
+                  N'[dbo].[UsersSP]'
+                , N'REACTIVATEUSER'
+                , @ReactivateUsersID
+                , @entryData
+                , @ReactivateNote
+            );
+
+            INSERT INTO dbo.AuthenticationAuditLog
+            (
+                  EventType
+                , UsersID_FK
+                , LoginIdentifier
+                , IsSuccessful
+                , HostName
+                , RequestPath
+            )
+            VALUES
+            (
+                  N'ACCOUNT_REACTIVATED'
+                , @ReactivateUsersID
+                , @ReactivateNationalID
+                , 1
+                , NULLIF(LTRIM(RTRIM(@hostName)), N'')
+                , N'/ControlPanel/Users'
+            );
+
+            SELECT 1 AS IsSuccessful, N'تمت إعادة تنشيط حساب المستخدم بنجاح' AS Message_;
+            RETURN;
+        END
+
 
           ----------------------------------------------------------------
         -- DELETEUSERS
         ----------------------------------------------------------------
-                    IF @Action = N'DELETEUSERS'
+        IF @Action = N'DELETEUSERS'
+        BEGIN
+            DECLARE @DeactivateUsersID BIGINT =
+                TRY_CONVERT(BIGINT, NULLIF(LTRIM(RTRIM(@usersID)), N''));
+            DECLARE @DeactivateReason NVARCHAR(4000) =
+                NULLIF(LTRIM(RTRIM(@userNote)), N'');
+            DECLARE @DeactivatedUsersDetailsID BIGINT;
+
+            IF @DeactivateUsersID IS NULL
+            BEGIN
+                ;THROW 50001, N'معرف المستخدم غير صحيح', 1;
+            END;
+
+            IF @DeactivateReason IS NULL
+            BEGIN
+                ;THROW 50001, N'سبب تعطيل المستخدم مطلوب', 1;
+            END;
+
+            SELECT TOP (1) @DeactivatedUsersDetailsID = details.usersDetailsID
+            FROM dbo.UsersDetails details WITH (UPDLOCK, HOLDLOCK)
+            WHERE details.usersID_FK = @DeactivateUsersID
+              AND details.userActive = 1
+            ORDER BY details.usersDetailsID DESC;
+
+            IF @DeactivatedUsersDetailsID IS NULL
+            BEGIN
+                ;THROW 50001, N'حساب المستخدم معطل بالفعل أو لا يوجد له سجل نشط', 1;
+            END;
+
+            UPDATE dbo.UsersDetails
+            SET
+                  userActive = 0
+                , UDendDate = GETDATE()
+                , canceldWhy = @DeactivateReason
+                , canceldBy = NULLIF(LTRIM(RTRIM(@entryData)), N'')
+            WHERE usersDetailsID = @DeactivatedUsersDetailsID
+              AND userActive = 1;
+
+            IF @@ROWCOUNT = 0
+            BEGIN
+                ;THROW 50002, N'حصل خطأ في تعطيل المستخدم', 1;
+            END;
+
+            DECLARE @DeactivateNote NVARCHAR(MAX) = N'{'
+                + N'"usersID": "' + CONVERT(NVARCHAR(30), @DeactivateUsersID) + N'"'
+                + N',"usersDetailsID": "' + CONVERT(NVARCHAR(30), @DeactivatedUsersDetailsID) + N'"'
+                + N',"canceldWhy": "' + REPLACE(@DeactivateReason, N'"', N'\"') + N'"'
+                + N',"canceldBy": "' + ISNULL(@entryData, N'') + N'"'
+                + N',"hostName": "' + ISNULL(@hostName, N'') + N'"'
+                + N'}';
+
+            INSERT INTO dbo.AuditLog
+            (
+                  TableName
+                , ActionType
+                , RecordID
+                , PerformedBy
+                , Notes
+            )
+            VALUES
+            (
+                  N'[dbo].[UsersDetails]'
+                , N'DELETEUSERS'
+                , @DeactivatedUsersDetailsID
+                , @entryData
+                , @DeactivateNote
+            );
+
+            SELECT 1 AS IsSuccessful, N'تم تعطيل المستخدم بنجاح' AS Message_;
+            RETURN;
+        END
+
+          ----------------------------------------------------------------
+        -- DELETEUSERS
+        ----------------------------------------------------------------
+                    IF @Action = N'DELETEUSERS_LEGACY'
                 BEGIN
             
                     IF @nationalIDIssueDate_DT IS NULL

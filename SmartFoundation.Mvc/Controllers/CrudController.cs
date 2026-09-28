@@ -41,91 +41,91 @@ namespace SmartFoundation.Mvc.Controllers
         }
 
 
-        private async Task ApplyDynamicFileUploadsAsync(Dictionary<string, object?> parameters)
-        {
-            if (_env == null) return;
+        //private async Task ApplyDynamicFileUploadsAsync(Dictionary<string, object?> parameters)
+        //{
+        //    if (_env == null) return;
 
 
-            if (Request?.Form?.Files == null || Request.Form.Files.Count == 0) return;
+        //    if (Request?.Form?.Files == null || Request.Form.Files.Count == 0) return;
 
 
-            var groups = Request.Form.Files
-                .GroupBy(f => f.Name, StringComparer.OrdinalIgnoreCase);
+        //    var groups = Request.Form.Files
+        //        .GroupBy(f => f.Name, StringComparer.OrdinalIgnoreCase);
 
-            foreach (var g in groups)
-            {
-                var fieldName = g.Key?.Trim();
-                if (string.IsNullOrWhiteSpace(fieldName)) continue;
-
-
-                if (fieldName.Length != 3 || (fieldName[0] != 'p' && fieldName[0] != 'P')) continue;
-                if (!int.TryParse(fieldName.Substring(1, 2), out var idx) || idx < 1 || idx > 50) continue;
-
-                //  مسار  يجي من الفورم  hidden)
-                var folder = (Request.Form[$"{fieldName}__folder"].ToString() ?? "").Trim();
-                var sub = (Request.Form[$"{fieldName}__subfolder"].ToString() ?? "").Trim();
-
-                // fallback لو ما أرسلت مسارات
-                if (string.IsNullOrWhiteSpace(folder)) folder = "uploads";
-                if (string.IsNullOrWhiteSpace(sub)) sub = $"{parameters.GetValueOrDefault("pageName_") ?? "general"}/{fieldName}";
-
-                //  القيود  من الفورم )
-                int maxFiles = int.TryParse(Request.Form[$"{fieldName}__maxFiles"], out var mf) ? mf : 10;
-                long maxFileSizeBytes = long.TryParse(Request.Form[$"{fieldName}__maxFileSizeMb"], out var mfs)
-                    ? (mfs * 1024L * 1024L)
-                    : (25L * 1024L * 1024L);
-                long maxTotalBytes = long.TryParse(Request.Form[$"{fieldName}__maxTotalMb"], out var mt)
-                    ? (mt * 1024L * 1024L)
-                    : (100L * 1024L * 1024L);
-
-                var files = g.ToList();
-                if (files.Count > maxFiles)
-                    throw new InvalidOperationException($"عدد الملفات تجاوز الحد المسموح ({fieldName})");
-
-                long total = 0;
-                foreach (var file in files)
-                {
-                    total += file?.Length ?? 0;
-
-                    if (file == null || file.Length == 0)
-                        throw new InvalidOperationException($"ملف فارغ غير مسموح ({fieldName})");
-
-                    if (file.Length > maxFileSizeBytes)
-                        throw new InvalidOperationException($"حجم الملف أكبر من المسموح ({fieldName})");
+        //    foreach (var g in groups)
+        //    {
+        //        var fieldName = g.Key?.Trim();
+        //        if (string.IsNullOrWhiteSpace(fieldName)) continue;
 
 
-                    var parts = (file.FileName ?? "").Split('.', StringSplitOptions.RemoveEmptyEntries);
-                    if (parts.Length >= 3)
-                        throw new InvalidOperationException($"امتداد مزدوج غير مسموح ({fieldName})");
-                }
+        //        if (fieldName.Length != 3 || (fieldName[0] != 'p' && fieldName[0] != 'P')) continue;
+        //        if (!int.TryParse(fieldName.Substring(1, 2), out var idx) || idx < 1 || idx > 50) continue;
 
-                if (total > maxTotalBytes)
-                    throw new InvalidOperationException($"إجمالي الملفات أكبر من المسموح ({fieldName})");
+        //        //  مسار  يجي من الفورم  hidden)
+        //        var folder = (Request.Form[$"{fieldName}__folder"].ToString() ?? "").Trim();
+        //        var sub = (Request.Form[$"{fieldName}__subfolder"].ToString() ?? "").Trim();
 
-                //  حفظ  داخل wwwroot/{folder}/{sub}/
-                var saveDir = Path.Combine(_env.WebRootPath, folder, sub);
-                Directory.CreateDirectory(saveDir);
+        //        // fallback لو ما أرسلت مسارات
+        //        if (string.IsNullOrWhiteSpace(folder)) folder = "uploads";
+        //        if (string.IsNullOrWhiteSpace(sub)) sub = $"{parameters.GetValueOrDefault("pageName_") ?? "general"}/{fieldName}";
 
-                var savedPaths = new List<string>();
+        //        //  القيود  من الفورم )
+        //        int maxFiles = int.TryParse(Request.Form[$"{fieldName}__maxFiles"], out var mf) ? mf : 10;
+        //        long maxFileSizeBytes = long.TryParse(Request.Form[$"{fieldName}__maxFileSizeMb"], out var mfs)
+        //            ? (mfs * 1024L * 1024L)
+        //            : (25L * 1024L * 1024L);
+        //        long maxTotalBytes = long.TryParse(Request.Form[$"{fieldName}__maxTotalMb"], out var mt)
+        //            ? (mt * 1024L * 1024L)
+        //            : (100L * 1024L * 1024L);
 
-                foreach (var file in files)
-                {
-                    var ext = Path.GetExtension(file.FileName ?? "").ToLowerInvariant();
-                    var storedName = Guid.NewGuid().ToString("N") + ext;
+        //        var files = g.ToList();
+        //        if (files.Count > maxFiles)
+        //            throw new InvalidOperationException($"عدد الملفات تجاوز الحد المسموح ({fieldName})");
 
-                    var fullPath = Path.Combine(saveDir, storedName);
-                    await using var fs = System.IO.File.Create(fullPath);
-                    await file.CopyToAsync(fs);
+        //        long total = 0;
+        //        foreach (var file in files)
+        //        {
+        //            total += file?.Length ?? 0;
 
-                    savedPaths.Add($"/{folder}/{sub}/{storedName}".Replace("\\", "/"));
-                }
+        //            if (file == null || file.Length == 0)
+        //                throw new InvalidOperationException($"ملف فارغ غير مسموح ({fieldName})");
+
+        //            if (file.Length > maxFileSizeBytes)
+        //                throw new InvalidOperationException($"حجم الملف أكبر من المسموح ({fieldName})");
 
 
-                parameters[$"parameter_{idx:00}"] = savedPaths.Count > 0
-                    ? JsonSerializer.Serialize(savedPaths)
-                    : DBNull.Value;
-            }
-        }
+        //            var parts = (file.FileName ?? "").Split('.', StringSplitOptions.RemoveEmptyEntries);
+        //            if (parts.Length >= 3)
+        //                throw new InvalidOperationException($"امتداد مزدوج غير مسموح ({fieldName})");
+        //        }
+
+        //        if (total > maxTotalBytes)
+        //            throw new InvalidOperationException($"إجمالي الملفات أكبر من المسموح ({fieldName})");
+
+        //        //  حفظ  داخل wwwroot/{folder}/{sub}/
+        //        var saveDir = Path.Combine(_env.WebRootPath, folder, sub);
+        //        Directory.CreateDirectory(saveDir);
+
+        //        var savedPaths = new List<string>();
+
+        //        foreach (var file in files)
+        //        {
+        //            var ext = Path.GetExtension(file.FileName ?? "").ToLowerInvariant();
+        //            var storedName = Guid.NewGuid().ToString("N") + ext;
+
+        //            var fullPath = Path.Combine(saveDir, storedName);
+        //            await using var fs = System.IO.File.Create(fullPath);
+        //            await file.CopyToAsync(fs);
+
+        //            savedPaths.Add($"/{folder}/{sub}/{storedName}".Replace("\\", "/"));
+        //        }
+
+
+        //        parameters[$"parameter_{idx:00}"] = savedPaths.Count > 0
+        //            ? JsonSerializer.Serialize(savedPaths)
+        //            : DBNull.Value;
+        //    }
+        //}
 
         // REMOVE any TempData like: CrudMessageType, CrudMessage, InsertMessage, UpdateMessage, DeleteMessage, CrudError.
         // KEEP ONLY Toastr buckets: Success, Warning, Error (optional: Info).
@@ -263,7 +263,7 @@ namespace SmartFoundation.Mvc.Controllers
                 }
 
                 //  NEW 
-                await ApplyDynamicFileUploadsAsync(parameters);
+                //await ApplyDynamicFileUploadsAsync(parameters);
 
                 var ds = await _mastersServies.GetCrudDataSetAsync(parameters);
                 var (code, message) = ExtractResult(ds);
@@ -361,7 +361,7 @@ namespace SmartFoundation.Mvc.Controllers
                 }
 
 
-                await ApplyDynamicFileUploadsAsync(parameters);
+                //await ApplyDynamicFileUploadsAsync(parameters);
 
                 var ds = await _mastersServies.GetCrudDataSetAsync(parameters);
                 var (code, message) = ExtractResult(ds);

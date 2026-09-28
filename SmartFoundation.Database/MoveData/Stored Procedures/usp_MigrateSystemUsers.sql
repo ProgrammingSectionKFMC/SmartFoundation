@@ -1,7 +1,7 @@
 ﻿CREATE PROCEDURE [MoveData].[usp_MigrateSystemUsers]
     @IdaraId int = 1,
     @DepartmentId int = NULL,
-    @DefaultPassword nvarchar(200) = N'Aa123456',
+    @DefaultPassword nvarchar(200),
     @RollbackAfterTest bit = 1,
     @RequireUsersSPFields bit = 0
 AS
@@ -19,6 +19,11 @@ BEGIN
 
     IF NULLIF(@DefaultPassword, N'') IS NULL
         THROW 51701, N'DefaultPassword is required.', 1;
+
+    IF LEN(@DefaultPassword) < 8
+       OR @DefaultPassword COLLATE Latin1_General_100_BIN2 NOT LIKE '%[A-Z]%'
+       OR @DefaultPassword COLLATE Latin1_General_100_BIN2 NOT LIKE '%[a-z]%'
+        THROW 51702, N'DefaultPassword must contain at least 8 characters, one uppercase English letter, and one lowercase English letter.', 1;
 
     IF @DepartmentId IS NOT NULL
        AND NOT EXISTS
@@ -554,6 +559,7 @@ BEGIN
             PasswordSalt,
             HashAlgorithm,
             userPasswordStartDate,
+            userPasswordEndDate,
             userPasswordActive,
             ChangedPassword,
             entryDate,
@@ -565,7 +571,8 @@ BEGIN
             HASHBYTES('SHA2_256', generatedSalt.PasswordSalt + CAST(@DefaultPassword AS varbinary(200))),
             generatedSalt.PasswordSalt,
             N'SHA2_256',
-            CAST(GETDATE() AS date),
+            GETDATE(),
+            DATEADD(HOUR, 24, GETDATE()),
             1,
             0,
             GETDATE(),

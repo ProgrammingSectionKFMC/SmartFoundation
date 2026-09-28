@@ -70,6 +70,13 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
         // ===============================
         private bool IsAjaxRequest()
         {
+            if (Request.Path.Equals(
+        "/IncomeSystem/ImportExcelForBuildingPaymentUpload",
+        StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
             var xrw = Request.Headers["X-Requested-With"].ToString();
             if (!string.IsNullOrWhiteSpace(xrw) && xrw.Equals("XMLHttpRequest", StringComparison.OrdinalIgnoreCase))
                 return true;
@@ -102,31 +109,28 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
         // ===============================
         private IActionResult RespondSuccess(string msg, object? data = null)
         {
-            TempData["Success"] = msg;
-
             if (IsAjaxRequest())
                 return Ok(new { ok = true, message = msg, data });
 
+            TempData["Success"] = msg;
             return RedirectToAction(nameof(ImportExcelForBuildingPayment));
         }
 
         private IActionResult RespondWarning(string msg, object? data = null)
         {
-            TempData["Warning"] = msg;
-
             if (IsAjaxRequest())
                 return Ok(new { ok = false, message = msg, data });
 
+            TempData["Warning"] = msg;
             return RedirectToAction(nameof(ImportExcelForBuildingPayment));
         }
 
         private IActionResult RespondError(string msg, object? data = null)
         {
-            TempData["Error"] = msg;
-
             if (IsAjaxRequest())
                 return Ok(new { ok = false, message = msg, data });
 
+            TempData["Error"] = msg;
             return RedirectToAction(nameof(ImportExcelForBuildingPayment));
         }
 
@@ -152,6 +156,8 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             if (string.IsNullOrWhiteSpace(usersId))
                 return RedirectToAction("Index", "Login", new { logout = 4 });
 
+
+           
 
             var referer = Request.Headers["Referer"].FirstOrDefault();
             bool isDirectOpen = string.IsNullOrWhiteSpace(referer);
@@ -592,10 +598,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         new() { Value = "-1", Text = "الرجاء اختيار نوع المسير والسنة والشهر" }
                     }
                 },
-                new FieldConfig { Name="p11", Label="IdaraId_FK", Type="hidden", ColCss="4", Required = true   , Value = IdaraId },
-                new FieldConfig { Name="p12", Label="entryData", Type="hidden", ColCss="4", Required = true    , Value = usersId },
-                new FieldConfig { Name="p13", Label="hostName", Type="hidden", ColCss="4", Required = true , Value = HostName},
-
+               
 
                 new FieldConfig { Name="p01", Label="العمود المخصص للهوية الوطنية", Type="select", ColCss="3",Select2=true, Options=options, Required = true },
                 new FieldConfig { Name="p03", Label="العمود المخصص للرقم العام",   Type="select", ColCss="3",Select2=true, Options=options, Required = true },
@@ -901,6 +904,46 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             return View("FinancialAudit/ImportExcelForBuildingPayment", page);
         }
 
+
+
+
+        private async Task<bool> HasImportExcelForBuildingPaymentPermissionAsync()
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(usersId))
+                    return false;
+
+                var ds = await _mastersServies.GetDataLoadDataSetAsync(
+                    new object?[]
+                    {
+                nameof(ImportExcelForBuildingPayment),
+                IdaraId,
+                usersId,
+                HostName
+                    });
+
+                if (ds == null || ds.Tables.Count == 0)
+                    return false;
+
+                var permissions = ds.Tables[0];
+
+                if (!permissions.Columns.Contains("permissionTypeName_E"))
+                    return false;
+
+                return permissions.AsEnumerable().Any(row =>
+                    string.Equals(
+                        row["permissionTypeName_E"]?.ToString()?.Trim(),
+                        "IMPORTEXCELFORBUILDINGPAYMENT",
+                        StringComparison.OrdinalIgnoreCase));
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+
         // ===============================
         // POST: Upload Excel + Preview (✅ الاسم الجديد)
         // ===============================
@@ -910,6 +953,16 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
         [RequestFormLimits(MultipartBodyLengthLimit = 20 * 1024 * 1024)]
         public async Task<IActionResult> ImportExcelForBuildingPaymentUpload()
         {
+
+            if (!InitPageContext(out var redirect))
+                return redirect!;
+
+            if (!await HasImportExcelForBuildingPaymentPermissionAsync())
+            {
+                return RespondError(
+                    "تم رصد دخول غير مصرح به انت لاتملك صلاحية لتنفيذ هذه العملية");
+            }
+
             try
             {
                 var file =
@@ -920,81 +973,177 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 if (file == null || file.Length == 0)
                     return RespondError("لم يتم اختيار ملف.");
 
-                var ext = (Path.GetExtension(file.FileName ?? "") ?? "").ToLowerInvariant();
-                var allowedExt = new HashSet<string> { ".xls", ".xlsx" };
+                // ============================================================
+                // اسم الملف الأصلي - Server Side
+                // ============================================================
+                var originalFileName = Path.GetFileName(file.FileName ?? "");
+
+                if (string.IsNullOrWhiteSpace(originalFileName))
+                    return RespondError("اسم الملف غير صالح.");
+
+                // ============================================================
+                // منع Double Extension
+                // أمثلة مرفوضة:
+                // report.exe.xlsx
+                // report.pdf.xls
+                // ============================================================
+                var nameWithoutFinalExtension =
+                    Path.GetFileNameWithoutExtension(originalFileName);
+
+                if (Path.HasExtension(nameWithoutFinalExtension))
+                {
+                    return RespondError(
+                        "اسم الملف يحتوي على امتداد مزدوج. الرجاء رفع ملف Excel بامتداد واحد فقط.");
+                }
+
+                // ============================================================
+                // Extension Allowlist
+                // ============================================================
+                var ext = (Path.GetExtension(originalFileName) ?? "")
+                    .ToLowerInvariant();
+
+                var allowedExt = new HashSet<string>(
+                    StringComparer.OrdinalIgnoreCase)
+        {
+            ".xls",
+            ".xlsx"
+        };
+
                 if (!allowedExt.Contains(ext))
                     return RespondError("يجب رفع ملف Excel فقط (.xls أو .xlsx).");
 
-                var allowedMime = new HashSet<string>
-                {
-                    "application/vnd.ms-excel",
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                };
+                // ============================================================
+                // MIME Allowlist
+                // ============================================================
+                var allowedMime = new HashSet<string>(
+                    StringComparer.OrdinalIgnoreCase)
+        {
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        };
+
                 if (!allowedMime.Contains(file.ContentType ?? ""))
                     return RespondError("نوع الملف غير صحيح.");
 
+                // ============================================================
+                // Maximum File Size
+                // ============================================================
                 const long maxBytes = 10L * 1024L * 1024L;
+
                 if (file.Length > maxBytes)
                     return RespondError("حجم الملف أكبر من 10MB.");
 
-                var saveDir = Path.Combine(_env.WebRootPath, "uploads", "excel");
+                // ============================================================
+                // Save
+                // ============================================================
+                var saveDir = Path.Combine(
+                    _env.WebRootPath,
+                    "uploads",
+                    "excel");
+
                 Directory.CreateDirectory(saveDir);
 
-                var storedName = Guid.NewGuid().ToString("N") + ext;
-                var fullPath = Path.Combine(saveDir, storedName);
+                var storedName =
+                    Guid.NewGuid().ToString("N") + ext;
+
+                var fullPath =
+                    Path.Combine(saveDir, storedName);
 
                 await using (var fs = System.IO.File.Create(fullPath))
+                {
                     await file.CopyToAsync(fs);
+                }
 
-                var relative = $"/uploads/excel/{storedName}";
-                SaveExcelFileInfo(fullPath, relative, file.FileName ?? storedName);
+                var relative =
+                    $"/uploads/excel/{storedName}";
 
-                // ✅ تحقق التوقيع قبل القراءة
-                var sigErr = ValidateExcelSignature(fullPath, ext);
+                SaveExcelFileInfo(
+                    fullPath,
+                    relative,
+                    originalFileName);
+
+                // ============================================================
+                // التحقق من التوقيع الحقيقي للملف
+                // ============================================================
+                var sigErr =
+                    ValidateExcelSignature(
+                        fullPath,
+                        ext);
+
                 if (sigErr != null)
                 {
                     ClearExcelSession(deletePhysicalFile: true);
-                    return RespondError(sigErr + " إذا كان الملف محمي بكلمة مرور قم بفتحه في Excel ثم Save As بدون حماية.");
+
+                    return RespondError(
+                        sigErr +
+                        " إذا كان الملف محمي بكلمة مرور قم بفتحه في Excel ثم Save As بدون حماية.");
                 }
 
+                // ============================================================
+                // قراءة Excel
+                // ============================================================
                 DataTable dt;
+
                 try
                 {
-                    dt = ReadExcelToDataTable(fullPath, useHeaderRow: true, sheetIndex: 0);
+                    dt = ReadExcelToDataTable(
+                        fullPath,
+                        useHeaderRow: true,
+                        sheetIndex: 0);
                 }
                 catch (Exception)
                 {
                     ClearExcelSession(deletePhysicalFile: true);
-                    return RespondError("فشل قراءة ملف الإكسل. تأكد أن الملف صحيح وغير مشفر بكلمة مرور.");
+
+                    return RespondError(
+                        "فشل قراءة ملف الإكسل. تأكد أن الملف صحيح وغير مشفر بكلمة مرور.");
                 }
 
-                var cols = dt.Columns.Cast<DataColumn>()
-                    .Select(c => string.IsNullOrWhiteSpace(c.ColumnName) ? $"Column{c.Ordinal + 1}" : c.ColumnName.Trim())
+                // ============================================================
+                // Columns
+                // ============================================================
+                var cols = dt.Columns
+                    .Cast<DataColumn>()
+                    .Select(c =>
+                        string.IsNullOrWhiteSpace(c.ColumnName)
+                            ? $"Column{c.Ordinal + 1}"
+                            : c.ColumnName.Trim())
                     .ToList();
 
                 for (int i = 0; i < dt.Columns.Count; i++)
                 {
                     if (string.IsNullOrWhiteSpace(dt.Columns[i].ColumnName))
+                    {
                         dt.Columns[i].ColumnName = cols[i];
+                    }
                 }
 
-                var preview = DataTableToPreview(dt, maxRows: 20000);
+                // ============================================================
+                // Preview
+                // ============================================================
+                var preview =
+                    DataTableToPreview(
+                        dt,
+                        maxRows: 20000);
 
                 SavePreviewColumns(cols);
                 SavePreviewRows(preview);
 
-                return RespondSuccess($"تم رفع ملف الإكسل وقراءة البيانات بنجاح. عدد الصفوف: {dt.Rows.Count}", new
-                {
-                    relative,
-                    rowsCount = dt.Rows.Count,
-                    colsCount = dt.Columns.Count,
-                    previewCount = preview.Count,
-                    refresh = true
-                });
+                return RespondSuccess(
+                    $"جاري رفع ملف الإكسل وقراءة البيانات بنجاح. عدد الصفوف: {dt.Rows.Count}",
+                    new
+                    {
+                        relative,
+                        rowsCount = dt.Rows.Count,
+                        colsCount = dt.Columns.Count,
+                        previewCount = preview.Count,
+                        refresh = true
+                    });
             }
             catch (Exception)
             {
-                return RespondError("حدث خطأ أثناء رفع أو قراءة ملف الإكسل. يرجى المحاولة مرة أخرى.");
+                return RespondError(
+                    "حدث خطأ أثناء رفع أو قراءة ملف الإكسل. يرجى المحاولة مرة أخرى.");
             }
         }
 
@@ -1004,20 +1153,71 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ImportExcelForBuildingPaymentProcess(
-            string? p01, string? p02, string? p03, string? p04, string? p05, 
-            string? p06, string? p07, string? p08, string? p09, string? p10, string? p11, string? p12, string? p13, string? p14)
+     string? p01,
+     string? p02,
+     string? p03,
+     string? p04,
+     string? p05,
+     string? p06,
+     string? p07,
+     string? p08,
+     string? p09,
+     string? p10,
+     string? p14)
         {
+
+            if (!InitPageContext(out var redirect))
+                return redirect!;
+
+            if (!await HasImportExcelForBuildingPaymentPermissionAsync())
+            {
+                return RespondError(
+                    "تم رصد دخول غير مصرح به انت لاتملك صلاحية لتنفيذ هذه العملية");
+            }
+
             try
             {
-                var path = GetExcelFilePath();
-                if (string.IsNullOrWhiteSpace(path) || !System.IO.File.Exists(path))
+                // ============================================================
+                // Security Context
+                // هذه القيم لا تؤخذ من Request أو Hidden Fields نهائيًا
+                // وإنما من Session الموثوقة على الخادم
+                // ============================================================
+                var sessionUserId = HttpContext.Session.GetString("usersID");
+                var sessionIdaraId = HttpContext.Session.GetString("IdaraID");
+                var sessionHostName = HttpContext.Session.GetString("HostName") ?? string.Empty;
+
+                if (string.IsNullOrWhiteSpace(sessionUserId) ||
+                    string.IsNullOrWhiteSpace(sessionIdaraId) ||
+                    !int.TryParse(sessionUserId, out var secureEntryData) ||
+                    !int.TryParse(sessionIdaraId, out var secureIdaraId) ||
+                    secureEntryData <= 0 ||
+                    secureIdaraId <= 0)
                 {
-                    var at = GetExcelUploadedAt();
-                    var extra = string.IsNullOrWhiteSpace(at) ? "" : $" (آخر رفع: {at})";
-                    return RespondError("لا يوجد ملف Excel محفوظ للمعالجة. ارفع الملف أولاً." + extra);
+                    return RespondError(
+                        "انتهت الجلسة أو بيانات الجلسة غير صالحة. الرجاء تسجيل الدخول مرة أخرى.");
                 }
 
-                // Trim all parameters
+                // ============================================================
+                // Excel File
+                // ============================================================
+                var path = GetExcelFilePath();
+
+                if (string.IsNullOrWhiteSpace(path) ||
+                    !System.IO.File.Exists(path))
+                {
+                    var at = GetExcelUploadedAt();
+
+                    var extra = string.IsNullOrWhiteSpace(at)
+                        ? ""
+                        : $" (آخر رفع: {at})";
+
+                    return RespondError(
+                        "لا يوجد ملف Excel محفوظ للمعالجة. ارفع الملف أولاً." + extra);
+                }
+
+                // ============================================================
+                // Normalize / Trim User Inputs
+                // ============================================================
                 p01 = (p01 ?? "").Trim();
                 p02 = (p02 ?? "").Trim();
                 p03 = (p03 ?? "").Trim();
@@ -1028,89 +1228,159 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 p08 = (p08 ?? "").Trim();
                 p09 = (p09 ?? "").Trim();
                 p10 = (p10 ?? "").Trim();
-                p11 = (p11 ?? "").Trim();
-                p12 = (p12 ?? "").Trim();
-                p13 = (p13 ?? "").Trim();
                 p14 = (p14 ?? "").Trim();
 
-                // Validate p05 (BillChargeTypeID)
+                // ============================================================
+                // Validate p05 - BillChargeTypeID
+                // ============================================================
                 if (string.IsNullOrWhiteSpace(p05))
                     return RespondError("الرجاء اختيار نوع المسير.");
 
-                if (!int.TryParse(p05, out var billChargeTypeId) || billChargeTypeId <= 0)
+                if (!int.TryParse(p05, out var billChargeTypeId) ||
+                    billChargeTypeId <= 0)
+                {
                     return RespondError("قيمة نوع المسير غير صحيحة.");
+                }
 
-                // Validate p06 (Month)
+                // ============================================================
+                // Validate p06 - Month
+                // ============================================================
                 if (string.IsNullOrWhiteSpace(p06))
                     return RespondError("الرجاء اختيار شهر الحسم.");
 
-                // Validate p07 (Year)
-                if (string.IsNullOrWhiteSpace(p07))
-                    return RespondError("الرجاء اختيار سنة الحسم.");
-
-                if (!int.TryParse(p06, out var issueMonth) || issueMonth < 1 || issueMonth > 12)
+                if (!int.TryParse(p06, out var issueMonth) ||
+                    issueMonth < 1 ||
+                    issueMonth > 12)
                 {
                     return RespondError("الرجاء اختيار شهر حسم صحيح.");
                 }
 
-                if (!int.TryParse(p07, out var issueYear) || issueYear < 2017 || issueYear > DateTime.Now.Year)
+                // ============================================================
+                // Validate p07 - Year
+                // ============================================================
+                if (string.IsNullOrWhiteSpace(p07))
+                    return RespondError("الرجاء اختيار سنة الحسم.");
+
+                if (!int.TryParse(p07, out var issueYear) ||
+                    issueYear < 2017 ||
+                    issueYear > DateTime.Now.Year)
                 {
                     return RespondError("الرجاء اختيار سنة حسم صحيحة.");
                 }
 
-                // Validate p08 (DeductListNo)
+                // ============================================================
+                // Validate p08 - DeductListNo
+                // ============================================================
                 if (string.IsNullOrWhiteSpace(p08))
                     return RespondError("الرجاء إدخال رقم المسير.");
 
-                // Validate p09 (DeductListDate) - optional date validation
+                // ============================================================
+                // Validate p09 - DeductListDate
+                // ============================================================
                 if (!string.IsNullOrWhiteSpace(p09))
                 {
                     if (!DateTime.TryParse(p09, out _))
                         return RespondError("تاريخ المسير غير صحيح.");
                 }
 
+                // ============================================================
+                // Validate p10 - Description
+                // ============================================================
                 if (string.IsNullOrWhiteSpace(p10))
                     return RespondError("الرجاء كتابة الوصف.");
-                // p10 (Notes) is optional
 
-                // Validate column selections
-                if (string.IsNullOrWhiteSpace(p01) || string.IsNullOrWhiteSpace(p02) || 
-                    string.IsNullOrWhiteSpace(p03) || string.IsNullOrWhiteSpace(p04))
+                // ============================================================
+                // Validate Selected Excel Columns
+                // ============================================================
+                if (string.IsNullOrWhiteSpace(p01) ||
+                    string.IsNullOrWhiteSpace(p02) ||
+                    string.IsNullOrWhiteSpace(p03) ||
+                    string.IsNullOrWhiteSpace(p04))
+                {
                     return RespondError("الرجاء اختيار جميع الأعمدة المطلوبة.");
+                }
 
-                var selected = new[] { p01, p02, p03, p04 }
-                    .Where(x => !string.IsNullOrWhiteSpace(x))
-                    .Select(x => x!.Trim())
-                    .ToList();
+                var selected = new[]
+                {
+            p01,
+            p02,
+            p03,
+            p04
+        }
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => x!.Trim())
+                .ToList();
 
                 var duplicates = selected
-                    .GroupBy(x => x, StringComparer.OrdinalIgnoreCase)
+                    .GroupBy(
+                        x => x,
+                        StringComparer.OrdinalIgnoreCase)
                     .Where(g => g.Count() > 1)
                     .Select(g => g.Key)
                     .ToList();
 
                 if (duplicates.Any())
-                    return RespondError($"تم تكرار العمود: {string.Join("، ", duplicates)}. الرجاء اختيار أعمدة مختلفة.");
+                {
+                    return RespondError(
+                        $"تم تكرار العمود: {string.Join("، ", duplicates)}. الرجاء اختيار أعمدة مختلفة.");
+                }
 
-                DataTable dt = ReadExcelToDataTable(path, useHeaderRow: true, sheetIndex: 0);
+                // ============================================================
+                // Read Excel
+                // ============================================================
+                DataTable dt = ReadExcelToDataTable(
+                    path,
+                    useHeaderRow: true,
+                    sheetIndex: 0);
 
                 var colSet = new HashSet<string>(
-                    dt.Columns.Cast<DataColumn>().Select(c => c.ColumnName),
+                    dt.Columns
+                        .Cast<DataColumn>()
+                        .Select(c => c.ColumnName),
                     StringComparer.OrdinalIgnoreCase);
 
-                if (!colSet.Contains(p01) || !colSet.Contains(p02) || !colSet.Contains(p03) || !colSet.Contains(p04))
-                    return RespondError("أحد الأعمدة المختارة غير موجود في ملف الإكسل.");
+                if (!colSet.Contains(p01) ||
+                    !colSet.Contains(p02) ||
+                    !colSet.Contains(p03) ||
+                    !colSet.Contains(p04))
+                {
+                    return RespondError(
+                        "أحد الأعمدة المختارة غير موجود في ملف الإكسل.");
+                }
 
-                var emptyReport = FindEmptyCells(dt, new[] { p01, p02, p03, p04 }, maxShowRows: 15);
+                // ============================================================
+                // Check Empty Required Cells
+                // ============================================================
+                var emptyReport = FindEmptyCells(
+                    dt,
+                    new[]
+                    {
+                p01,
+                p02,
+                p03,
+                p04
+                    },
+                    maxShowRows: 15);
+
                 if (emptyReport.Count > 0)
                 {
                     var sb = new StringBuilder();
+
                     foreach (var kv in emptyReport)
-                        sb.Append($"العمود ({kv.Key}) يحتوي على قيم فارغة في الصفوف: {string.Join(", ", kv.Value)}. ");
+                    {
+                        sb.Append(
+                            $"العمود ({kv.Key}) يحتوي على قيم فارغة في الصفوف: " +
+                            $"{string.Join(", ", kv.Value)}. ");
+                    }
+
                     return RespondError(sb.ToString().Trim());
                 }
 
+                // ============================================================
+                // Build TVP
+                // ============================================================
                 var tvp = new DataTable();
+
                 tvp.Columns.Add("RowNo", typeof(int));
                 tvp.Columns.Add("IDNumber", typeof(string));
                 tvp.Columns.Add("unitID", typeof(string));
@@ -1129,108 +1399,308 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                     var v3 = r[p03]?.ToString();
                     var v4 = r[p04]?.ToString();
 
-                    if (string.IsNullOrWhiteSpace(v1) && string.IsNullOrWhiteSpace(v2) && 
-                        string.IsNullOrWhiteSpace(v3) && string.IsNullOrWhiteSpace(v4))
+                    if (string.IsNullOrWhiteSpace(v1) &&
+                        string.IsNullOrWhiteSpace(v2) &&
+                        string.IsNullOrWhiteSpace(v3) &&
+                        string.IsNullOrWhiteSpace(v4))
+                    {
                         continue;
+                    }
 
-                    tvp.Rows.Add(rowNo, v1, v2, v3, v4);
+                    tvp.Rows.Add(
+                        rowNo,
+                        v1,
+                        v2,
+                        v3,
+                        v4);
+
                     sentRows++;
                 }
 
                 if (tvp.Rows.Count == 0)
                     return RespondError("لا توجد بيانات صالحة للإدخال.");
 
+                // ============================================================
+                // Connection String
+                // ============================================================
                 var cs = _cfg.GetConnectionString("Default");
+
                 if (string.IsNullOrWhiteSpace(cs))
-                    return RespondError("ConnectionString (Default) غير موجود. تأكد من appsettings.json.");
+                {
+                    return RespondError(
+                        "ConnectionString (Default) غير موجود. تأكد من appsettings.json.");
+                }
 
+                // ============================================================
+                // File Information
+                // ============================================================
                 string fileHash = ComputeSha256Hex(path);
-                var originalName = GetExcelOriginalFileName() ?? Path.GetFileName(path);
 
+                var originalName =
+                    GetExcelOriginalFileName()
+                    ?? Path.GetFileName(path);
+
+                // ============================================================
+                // Execute Stored Procedure
+                // ============================================================
                 await using var con = new SqlConnection(cs);
+
                 await con.OpenAsync();
 
-                await using var cmd = new SqlCommand("[Housing].[ImportExcelForBuildingPaymentSP]", con);
+                await using var cmd =
+                    new SqlCommand(
+                        "[Housing].[ImportExcelForBuildingPaymentSP]",
+                        con);
+
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.CommandTimeout = 120;
 
-                // Original parameters
-                cmd.Parameters.AddWithValue("@NationalIDs", p01);
-                cmd.Parameters.AddWithValue("@UnitNumbers", p02);
-                cmd.Parameters.AddWithValue("@GeneralNumbers", p03);
-                cmd.Parameters.AddWithValue("@Amounts", p04);
+                // ============================================================
+                // Excel Column Parameters
+                // ============================================================
+                cmd.Parameters
+                    .AddWithValue(
+                        "@NationalIDs",
+                        p01);
 
-                // ✅ Send p05-p10 as per stored procedure signature
-                cmd.Parameters.Add("@BillChargeTypeID", SqlDbType.Int).Value = billChargeTypeId; // p05
-                cmd.Parameters.AddWithValue("@IssueMonth", string.IsNullOrWhiteSpace(p06) ? (object)DBNull.Value : p06); // p06
-                cmd.Parameters.AddWithValue("@IssueYear", string.IsNullOrWhiteSpace(p07) ? (object)DBNull.Value : p07); // p07
-                cmd.Parameters.AddWithValue("@DeductListNo", string.IsNullOrWhiteSpace(p08) ? (object)DBNull.Value : p08); // p08
-                cmd.Parameters.AddWithValue("@DeductListDate", string.IsNullOrWhiteSpace(p09) ? (object)DBNull.Value : p09); // p09
-                cmd.Parameters.AddWithValue("@Notes", string.IsNullOrWhiteSpace(p10) ? (object)DBNull.Value : p10); // p10
+                cmd.Parameters
+                    .AddWithValue(
+                        "@UnitNumbers",
+                        p02);
 
-                cmd.Parameters.AddWithValue("@IdaraId_FK", string.IsNullOrWhiteSpace(p11) ? (object)DBNull.Value : p11); // p11
-                cmd.Parameters.AddWithValue("@entryData", string.IsNullOrWhiteSpace(p12) ? (object)DBNull.Value : p12); // p12
-                cmd.Parameters.AddWithValue("@hostName", string.IsNullOrWhiteSpace(p13) ? (object)DBNull.Value : p13); // p13
-                //cmd.Parameters.Add("@DeductListReportID", SqlDbType.BigInt).Value = long.TryParse(p14, out var deductListReportId) ? deductListReportId : (object)DBNull.Value;
-                cmd.Parameters.Add("@DeductListReportID", SqlDbType.BigInt).Value =
-    long.TryParse(p14, out var deductListReportId) && deductListReportId > 0
-        ? deductListReportId
-        : (object)DBNull.Value;
+                cmd.Parameters
+                    .AddWithValue(
+                        "@GeneralNumbers",
+                        p03);
 
+                cmd.Parameters
+                    .AddWithValue(
+                        "@Amounts",
+                        p04);
 
-                cmd.Parameters.AddWithValue("@FileHash", fileHash);
-                cmd.Parameters.AddWithValue("@OriginalFileName", originalName);
+                // ============================================================
+                // Business Parameters
+                // ============================================================
+                cmd.Parameters
+                    .Add(
+                        "@BillChargeTypeID",
+                        SqlDbType.Int)
+                    .Value = billChargeTypeId;
 
-                var pRows = cmd.Parameters.AddWithValue("@Rows", tvp);
+                cmd.Parameters
+                    .AddWithValue(
+                        "@IssueMonth",
+                        string.IsNullOrWhiteSpace(p06)
+                            ? (object)DBNull.Value
+                            : p06);
+
+                cmd.Parameters
+                    .AddWithValue(
+                        "@IssueYear",
+                        string.IsNullOrWhiteSpace(p07)
+                            ? (object)DBNull.Value
+                            : p07);
+
+                cmd.Parameters
+                    .AddWithValue(
+                        "@DeductListNo",
+                        string.IsNullOrWhiteSpace(p08)
+                            ? (object)DBNull.Value
+                            : p08);
+
+                cmd.Parameters
+                    .AddWithValue(
+                        "@DeductListDate",
+                        string.IsNullOrWhiteSpace(p09)
+                            ? (object)DBNull.Value
+                            : p09);
+
+                cmd.Parameters
+                    .AddWithValue(
+                        "@Notes",
+                        string.IsNullOrWhiteSpace(p10)
+                            ? (object)DBNull.Value
+                            : p10);
+
+                // ============================================================
+                // SECURITY:
+                // هذه القيم من Session فقط
+                // ولا يتم قبولها من Request / Hidden Fields
+                // ============================================================
+
+                cmd.Parameters
+                    .Add(
+                        "@IdaraId_FK",
+                        SqlDbType.NVarChar,
+                        255)
+                    .Value = secureIdaraId.ToString();
+
+                cmd.Parameters
+                    .Add(
+                        "@entryData",
+                        SqlDbType.NVarChar,
+                        255)
+                    .Value = secureEntryData.ToString();
+
+                cmd.Parameters
+                    .Add(
+                        "@hostName",
+                        SqlDbType.NVarChar,
+                        255)
+                    .Value =
+                        string.IsNullOrWhiteSpace(sessionHostName)
+                            ? (object)DBNull.Value
+                            : sessionHostName;
+
+                // ============================================================
+                // DeductListReport
+                // ============================================================
+                cmd.Parameters
+                    .Add(
+                        "@DeductListReportID",
+                        SqlDbType.BigInt)
+                    .Value =
+                        long.TryParse(
+                            p14,
+                            out var deductListReportId)
+                        &&
+                        deductListReportId > 0
+                            ? deductListReportId
+                            : (object)DBNull.Value;
+
+                // ============================================================
+                // File Metadata
+                // ============================================================
+                cmd.Parameters
+                    .Add(
+                        "@FileHash",
+                        SqlDbType.Char,
+                        64)
+                    .Value = fileHash;
+
+                cmd.Parameters
+                    .Add(
+                        "@OriginalFileName",
+                        SqlDbType.NVarChar,
+                        260)
+                    .Value =
+                        string.IsNullOrWhiteSpace(originalName)
+                            ? (object)DBNull.Value
+                            : originalName;
+
+                // ============================================================
+                // Rows TVP
+                // ============================================================
+                var pRows = cmd.Parameters.AddWithValue(
+                    "@Rows",
+                    tvp);
+
                 pRows.SqlDbType = SqlDbType.Structured;
-                pRows.TypeName = "Housing.ImportExcelForBuildingPaymentRowType";
+                pRows.TypeName =
+                    "Housing.ImportExcelForBuildingPaymentRowType";
 
+                // ============================================================
+                // Execute
+                // ============================================================
                 bool ok;
                 string msg;
                 int insertedRows = 0;
 
-                await using var rd = await cmd.ExecuteReaderAsync();
-                if (!await rd.ReadAsync())
-                    return RespondError("لم يتم استلام نتيجة من إجراء الإدخال.");
+                await using var rd =
+                    await cmd.ExecuteReaderAsync();
 
-                ok = rd["IsSuccessful"] != DBNull.Value && Convert.ToBoolean(rd["IsSuccessful"]);
-                msg = rd["Message_"]?.ToString() ?? "";
+                if (!await rd.ReadAsync())
+                {
+                    return RespondError(
+                        "لم يتم استلام نتيجة من إجراء الإدخال.");
+                }
+
+                ok =
+                    rd["IsSuccessful"] != DBNull.Value
+                    &&
+                    Convert.ToBoolean(
+                        rd["IsSuccessful"]);
+
+                msg =
+                    rd["Message_"]?.ToString()
+                    ?? "";
+
                 if (rd["InsertedRows"] != DBNull.Value)
-                    insertedRows = Convert.ToInt32(rd["InsertedRows"]);
+                {
+                    insertedRows =
+                        Convert.ToInt32(
+                            rd["InsertedRows"]);
+                }
 
                 if (!ok)
-                    return RespondWarning(string.IsNullOrWhiteSpace(msg) ? "تعذر إدخال البيانات." : msg, new { fileHash });
+                {
+                    return RespondWarning(
+                        string.IsNullOrWhiteSpace(msg)
+                            ? "تعذر إدخال البيانات."
+                            : msg,
+                        new
+                        {
+                            fileHash
+                        });
+                }
 
-                ClearExcelSession(deletePhysicalFile: true);
+                // ============================================================
+                // Success -> remove session preview + physical Excel file
+                // ============================================================
+                ClearExcelSession(
+                    deletePhysicalFile: true);
 
                 return RespondSuccess(
                     $"{msg} | صفوف الإكسل: {dt.Rows.Count} | المُرسلة: {sentRows} | المُدخلة: {insertedRows}",
                     new
                     {
                         totalExcelRows = dt.Rows.Count,
+
                         sentRows,
+
                         insertedRows,
-                        selectedColumns = new[] { p01, p02, p03, p04 },
+
+                        selectedColumns = new[]
+                        {
+                    p01,
+                    p02,
+                    p03,
+                    p04
+                        },
+
                         billChargeTypeId,
+
                         issueMonth = p06,
+
                         issueYear = p07,
+
                         deductListNo = p08,
+
                         deductListDate = p09,
+
                         notes = p10,
-                        idaraId = p11,
-                        entryData = p12,
-                        hostName = p13,
+
+                        // القيم الفعلية المأخوذة من Session
+                        idaraId = secureIdaraId,
+
+                        entryData = secureEntryData,
+
+                        hostName = sessionHostName,
+
                         fileHash,
+
                         refresh = true
                     });
             }
             catch (SqlException)
             {
-                return RespondError("حدث خطأ أثناء إدخال البيانات. يرجى المحاولة مرة أخرى.");
+                return RespondError(
+                    "حدث خطأ أثناء إدخال البيانات. يرجى المحاولة مرة أخرى.");
             }
             catch (Exception)
             {
-                return RespondError("حدث خطأ أثناء إدخال البيانات. يرجى المحاولة مرة أخرى.");
+                return RespondError(
+                    "حدث خطأ أثناء إدخال البيانات. يرجى المحاولة مرة أخرى.");
             }
         }
 

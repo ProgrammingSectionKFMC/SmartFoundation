@@ -139,6 +139,7 @@
     <Build Include="dbo\Tables\Education.sql" />
     <Build Include="Housing\Tables\ExtendInsurance.sql" />
     <Build Include="dbo\Tables\AuditLog.sql" />
+    <Build Include="dbo\Tables\AuthenticationAuditLog.sql" />
     <Build Include="Housing\Tables\Bills.sql" />
     <Build Include="dbo\Tables\Transactions.sql" />
     <Build Include="Tickets\Tables\TicketClarification.sql" />
@@ -515,6 +516,8 @@
     <Build Include="Housing\Stored Procedures\AssignSP.sql" />
     <Build Include="VIC\Stored Procedures\Handover_Print_Get_DL.sql" />
     <Build Include="dbo\Stored Procedures\SetUserPassword.sql" />
+    <Build Include="dbo\Stored Procedures\AuthenticationAuditLogSP.sql" />
+    <Build Include="dbo\Stored Procedures\AuthenticationLoginGuardSP.sql" />
     <Build Include="VIC\Stored Procedures\HandoverType_List_DL.sql" />
     <Build Include="Housing\Stored Procedures\MetersDL.sql" />
     <Build Include="VIC\Stored Procedures\HandoverType_Upsert_SP.sql" />

@@ -40,10 +40,13 @@ public abstract class BaseService
       string operation,
       Dictionary<string, object?> parameters)
   {
-    _logger.LogInformation("{Module}:{Operation} called with parameters: {Parameters}",
-        module, operation, JsonSerializer.Serialize(parameters));
+        _logger.LogInformation(
+        "{Module}:{Operation} called. ParamCount={ParamCount}",
+        module,
+        operation,
+        parameters?.Count ?? 0);
 
-    try
+        try
     {
       // Get SP name from mapper (no hard-coded SP names!)
       var spName = ProcedureMapper.GetProcedureName(module, operation);

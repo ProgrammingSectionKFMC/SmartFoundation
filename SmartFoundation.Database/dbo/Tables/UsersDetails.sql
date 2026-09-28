@@ -29,6 +29,7 @@
     [usersAuthTypeID_FK]            INT            CONSTRAINT [DF_UsersDetails_IsAdmin] DEFAULT ((0)) NULL,
     [UDendDate]                     DATETIME       NULL,
     [canceldBy]                     NVARCHAR (500) NULL,
+    [canceldWhy]                    NVARCHAR (4000) NULL,
     [IdaraID]                       INT            NULL,
     [entryDate]                     DATETIME       CONSTRAINT [DF_UsersDetails_entryDate] DEFAULT (getdate()) NULL,
     [entryData]                     NVARCHAR (20)  NULL,

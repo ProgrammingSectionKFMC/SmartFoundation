@@ -2797,88 +2797,271 @@
             },
 
             async load() {
-                this.loading = true;
-                this.error = null;
-                try {
+    this.loading = true;
+    this.error = null;
 
-                    if (this.serverPaging) {
-                        const body = {
-                            Component: "Table",
-                            SpName: this.spName,
-                            Operation: this.operation,
-                            Paging: { Page: this.page, Size: this.pageSize },
-                            Params: {
-                                q: this.q || null,
-                                sortField: this.sort.field || null,
-                                sortDir: this.sort.dir || "asc",
-                                columnFilters: this.columnFilters || {},
-                                advancedFilters: this.advancedFilters || []
-                            }
-                        };
-                        const json = await this.postJson(this.endpoint, body);
+    try {
 
-                        this.rows = Array.isArray(json?.data) ? json.data : [];
-                        this.invalidateRowCaches();
+        // لا يتم استدعاء /smart/execute بدون Stored Procedure صالح
+        const hasSpName =
+            typeof this.spName === "string" &&
+            this.spName.trim().length > 0;
 
-                        const total = json?.total ?? json?.count ?? json?.Total ?? json?.Count ?? null;
+        if (this.serverPaging) {
 
-                        if (total == null) {
-                            this.total = this.rows.length;
-                            this.pages = 1;
-                            this.page = 1;
-                        } else {
-                            this.total = Number(total) || 0;
-                            this.pages = Math.max(1, Math.ceil(this.total / this.pageSize));
-                            this.page = Math.min(this.page, this.pages);
-                        }
+            // لا يوجد SP: استخدم البيانات المحملة من الـController فقط
+            if (!hasSpName) {
 
-                        this.allRows = [];
-                        this.filteredRows = [];
-                        this.invalidateRowCaches();
+                this.rows = Array.isArray(this.initialRows)
+                    ? [...this.initialRows]
+                    : [];
 
-                        this.savePreferences();
-                        this.updateSelectAllState();
-                        return;
-                    }
+                this.allRows = [];
+                this.filteredRows = [];
 
-                    if (this.allRows.length === 0) {
-                        if (this.clientSideMode && Array.isArray(this.initialRows) && this.initialRows.length > 0) {
-                            this.allRows = this.initialRows;
-                        } else {
-                            const body = {
-                                Component: "Table",
-                                SpName: this.spName,
-                                Operation: this.operation,
-                                Paging: { Page: 1, Size: 1000000 }
-                            };
+                this.invalidateRowCaches();
 
-                            const json = await this.postJson(this.endpoint, body);
-                            this.allRows = Array.isArray(json?.data) ? json.data : [];
-                        }
-                        this.invalidateRowCaches();
-                    }
+                this.total = this.rows.length;
+                this.pages = Math.max(
+                    1,
+                    Math.ceil(this.total / this.pageSize)
+                );
 
-                    this.applyFiltersAndSort();
+                this.page = Math.min(
+                    Math.max(1, this.page),
+                    this.pages
+                );
 
-                } catch (e) {
-                    const msg = String(e?.message || "");
-                    if (msg.includes("لايوجد بيانات")) {
-                        this.rows = [];
-                        this.allRows = [];
-                        this.filteredRows = [];
-                        this.invalidateRowCaches();
-                        this.total = 0;
-                        this.pages = 1;
-                        this.page = 1;
-                        this.error = null;
-                        return;
-                    }
-                    this.error = msg || "خطأ في تحميل البيانات";
-                } finally {
-                    this.loading = false;
+                this.savePreferences();
+                this.updateSelectAllState();
+
+                return;
+            }
+
+            const body = {
+                Component: "Table",
+                SpName: this.spName,
+                Operation: this.operation,
+                Paging: {
+                    Page: this.page,
+                    Size: this.pageSize
+                },
+                Params: {
+                    q: this.q || null,
+                    sortField: this.sort.field || null,
+                    sortDir: this.sort.dir || "asc",
+                    columnFilters: this.columnFilters || {},
+                    advancedFilters: this.advancedFilters || []
                 }
+            };
 
-            },
+            const json = await this.postJson(
+                this.endpoint,
+                body
+            );
+
+            this.rows = Array.isArray(json?.data)
+                ? json.data
+                : [];
+
+            this.invalidateRowCaches();
+
+            const total =
+                json?.total ??
+                json?.count ??
+                json?.Total ??
+                json?.Count ??
+                null;
+
+            if (total == null) {
+                this.total = this.rows.length;
+                this.pages = 1;
+                this.page = 1;
+            } else {
+                this.total = Number(total) || 0;
+
+                this.pages = Math.max(
+                    1,
+                    Math.ceil(this.total / this.pageSize)
+                );
+
+                this.page = Math.min(
+                    this.page,
+                    this.pages
+                );
+            }
+
+            this.allRows = [];
+            this.filteredRows = [];
+
+            this.invalidateRowCaches();
+
+            this.savePreferences();
+            this.updateSelectAllState();
+
+            return;
+        }
+
+        if (this.allRows.length === 0) {
+
+            if (
+                this.clientSideMode &&
+                Array.isArray(this.initialRows) &&
+                this.initialRows.length > 0
+            ) {
+                this.allRows = [...this.initialRows];
+            }
+
+            // لا يوجد SP:
+            // حتى initialRows الفارغة تعتبر نتيجة صحيحة
+            else if (!hasSpName) {
+                this.allRows = Array.isArray(this.initialRows)
+                    ? [...this.initialRows]
+                    : [];
+            }
+
+            // يوجد SP فعلي فقط عندها يسمح باستدعاء Endpoint
+            else {
+                const body = {
+                    Component: "Table",
+                    SpName: this.spName,
+                    Operation: this.operation,
+                    Paging: {
+                        Page: 1,
+                        Size: 1000000
+                    }
+                };
+
+                const json = await this.postJson(
+                    this.endpoint,
+                    body
+                );
+
+                this.allRows = Array.isArray(json?.data)
+                    ? json.data
+                    : [];
+            }
+
+            this.invalidateRowCaches();
+        }
+
+        this.applyFiltersAndSort();
+
+    } catch (e) {
+
+        const msg = String(e?.message || "");
+
+        if (msg.includes("لايوجد بيانات")) {
+
+            this.rows = [];
+            this.allRows = [];
+            this.filteredRows = [];
+
+            this.invalidateRowCaches();
+
+            this.total = 0;
+            this.pages = 1;
+            this.page = 1;
+            this.error = null;
+
+            return;
+        }
+
+        this.error = msg || "خطأ في تحميل البيانات";
+
+    } finally {
+
+        this.loading = false;
+    }
+},
+
+
+
+
+
+            // async load() {
+            //     this.loading = true;
+            //     this.error = null;
+            //     try {
+
+            //         if (this.serverPaging) {
+            //             const body = {
+            //                 Component: "Table",
+            //                 SpName: this.spName,
+            //                 Operation: this.operation,
+            //                 Paging: { Page: this.page, Size: this.pageSize },
+            //                 Params: {
+            //                     q: this.q || null,
+            //                     sortField: this.sort.field || null,
+            //                     sortDir: this.sort.dir || "asc",
+            //                     columnFilters: this.columnFilters || {},
+            //                     advancedFilters: this.advancedFilters || []
+            //                 }
+            //             };
+            //             const json = await this.postJson(this.endpoint, body);
+
+            //             this.rows = Array.isArray(json?.data) ? json.data : [];
+            //             this.invalidateRowCaches();
+
+            //             const total = json?.total ?? json?.count ?? json?.Total ?? json?.Count ?? null;
+
+            //             if (total == null) {
+            //                 this.total = this.rows.length;
+            //                 this.pages = 1;
+            //                 this.page = 1;
+            //             } else {
+            //                 this.total = Number(total) || 0;
+            //                 this.pages = Math.max(1, Math.ceil(this.total / this.pageSize));
+            //                 this.page = Math.min(this.page, this.pages);
+            //             }
+
+            //             this.allRows = [];
+            //             this.filteredRows = [];
+            //             this.invalidateRowCaches();
+
+            //             this.savePreferences();
+            //             this.updateSelectAllState();
+            //             return;
+            //         }
+
+            //         if (this.allRows.length === 0) {
+            //             if (this.clientSideMode && Array.isArray(this.initialRows) && this.initialRows.length > 0) {
+            //                 this.allRows = this.initialRows;
+            //             } else {
+            //                 const body = {
+            //                     Component: "Table",
+            //                     SpName: this.spName,
+            //                     Operation: this.operation,
+            //                     Paging: { Page: 1, Size: 1000000 }
+            //                 };
+
+            //                 const json = await this.postJson(this.endpoint, body);
+            //                 this.allRows = Array.isArray(json?.data) ? json.data : [];
+            //             }
+            //             this.invalidateRowCaches();
+            //         }
+
+            //         this.applyFiltersAndSort();
+
+            //     } catch (e) {
+            //         const msg = String(e?.message || "");
+            //         if (msg.includes("لايوجد بيانات")) {
+            //             this.rows = [];
+            //             this.allRows = [];
+            //             this.filteredRows = [];
+            //             this.invalidateRowCaches();
+            //             this.total = 0;
+            //             this.pages = 1;
+            //             this.page = 1;
+            //             this.error = null;
+            //             return;
+            //         }
+            //         this.error = msg || "خطأ في تحميل البيانات";
+            //     } finally {
+            //         this.loading = false;
+            //     }
+
+            // },
 
             // Data loading and filtering
             applyFiltersAndSort() {

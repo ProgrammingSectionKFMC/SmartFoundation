@@ -471,7 +471,10 @@ BEGIN
                 FROM  dbo.V_GetListUserPermission v
                 WHERE v.userID = @entrydata
                   AND v.menuName_E = @pageName_
-                  AND v.permissionTypeName_E = @ActionType
+                  AND v.permissionTypeName_E = CASE
+                      WHEN @ActionType = N'REACTIVATEUSER' THEN N'UPDATEUSERS'
+                      ELSE @ActionType
+                  END
             ) <= 0
             BEGIN
                 SET @ok = 0;
@@ -511,6 +514,7 @@ BEGIN
                   , @educationID_FK                  = @parameter_28
                   , @userNote                        = @parameter_20
                   , @distributorID                   = @parameter_36
+                  , @TemporaryPassword               = @parameter_37
                   , @idaraID_FK                      = @idaraID
                   , @entryData                       = @entrydata
                   , @hostName                        = @hostName;
@@ -600,8 +604,20 @@ BEGIN
                     @Action                          = @ActionType
                   , @usersID                         = @parameter_01
                   , @NationalID                      = NULL
-                  , @PlainPassword                   = NULL
+                  , @PlainPassword                   = @parameter_37
                   , @OldPassword                     = NULL
+                  , @idaraID_FK                      = @idaraID
+                  , @entryData                       = @entrydata
+                  , @hostName                        = @hostName;
+
+            END
+
+              ELSE IF @ActionType = 'REACTIVATEUSER'
+            BEGIN
+                INSERT INTO @Result(IsSuccessful, Message_)
+                EXEC [DBO].[UsersSP]
+                    @Action                          = @ActionType
+                  , @usersID                         = @parameter_01
                   , @idaraID_FK                      = @idaraID
                   , @entryData                       = @entrydata
                   , @hostName                        = @hostName;
