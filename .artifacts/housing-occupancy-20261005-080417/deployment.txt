@@ -1,0 +1,6 @@
+Database: DATACORE
+Applied UTC: 2026-10-05T05:04:18.5713486Z
+Objects: Housing.fn_BuildingOccupancyPeriods, Housing.HousingResidentSP, Housing.HousingExitSP
+Regression tests: 31 passed
+Business records: unchanged
+Rollback: restore both saved procedures with ALTER PROCEDURE, then drop the new helper function in one transaction.

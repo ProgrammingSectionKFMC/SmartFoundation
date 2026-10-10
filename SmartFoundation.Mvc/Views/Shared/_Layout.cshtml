@@ -1,6 +1,8 @@
 ﻿@using System.Text.Json
 @using SmartFoundation.Mvc.Models
 @using SmartFoundation.Mvc.Helpers
+@using SmartFoundation.UI.ViewModels.SmartPage
+@using SmartFoundation.UI.ViewModels.SmartDrawer
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
     var antiforgeryToken = Antiforgery.GetAndStoreTokens(Context).RequestToken ?? string.Empty;
@@ -25,6 +27,7 @@
     <link rel="stylesheet" href="~/lib/select2/css/select2.min.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/SidebarNavbar.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/layout-inline.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/sf-drawer.css" asp-append-version="true" />
 
 
 
@@ -103,6 +106,19 @@
 
     </div>
 
+
+    
+    
+    
+    
+
+
+
+
+
+
+
+
     <!-- =========================
          Scripts (Global)
          - ترتيب الاعتماد: jQuery -> Plugins -> App scripts
@@ -126,6 +142,7 @@
     <script src="~/js/sf-date.js" asp-append-version="true" defer></script>
     <script src="~/js/alpinejs.min.js" asp-append-version="true" defer></script>
     <script src="~/js/sf-form.js" asp-append-version="true"></script>
+    <script src="~/js/sf-drawer.js" asp-append-version="true"></script>
 
     <!-- 5) sf-table آخر شيء لأنه يعتمد على jQuery/select2 -->
     <script src="~/js/sf-table.js" asp-append-version="true"></script>

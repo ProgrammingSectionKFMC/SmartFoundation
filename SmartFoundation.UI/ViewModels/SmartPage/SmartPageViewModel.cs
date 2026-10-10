@@ -3,6 +3,7 @@ using SmartFoundation.UI.ViewModels.SmartDatePicker;
 using SmartFoundation.UI.ViewModels.SmartForm;
 using SmartFoundation.UI.ViewModels.SmartTable;
 using SmartFoundation.UI.ViewModels.SmartPrint;
+using SmartFoundation.UI.ViewModels.SmartDrawer;
 
 namespace SmartFoundation.UI.ViewModels.SmartPage
 {
@@ -65,6 +66,8 @@ namespace SmartFoundation.UI.ViewModels.SmartPage
         public DatepickerViewModel? DatePicker { get; set; }
         public SmartChartsConfig? Charts { get; set; }
         public SmartPrintConfig? Print { get; set; }
+        public List<SmartDrawerConfig> Drawers { get; set; } = new();
+
 
 
 

@@ -239,6 +239,18 @@ BEGIN
         ----------------------------------------------------------------
         ELSE IF @Action = N'HOUSINGESRESIDENTS'
         BEGIN
+            -- Serialize occupancy changes with exit creation/edit/cancellation.
+            -- Masters_CRUD owns the outer transaction and releases this lock.
+            DECLARE @OccupancyLockResult INT;
+            DECLARE @OccupancyLockResource NVARCHAR(255) = CONCAT(
+                N'Housing.Occupancy:', @IdaraID_INT, N':', TRY_CONVERT(BIGINT, @buildingDetailsID));
+            EXEC @OccupancyLockResult = sys.sp_getapplock
+                  @Resource = @OccupancyLockResource
+                , @LockMode = 'Exclusive'
+                , @LockOwner = 'Transaction'
+                , @LockTimeout = 10000;
+            IF @OccupancyLockResult < 0
+                THROW 50001, N'تجري معالجة أخرى للمنزل؛ يرجى إعادة المحاولة.', 1;
        
             IF (SELECT COUNT(*) FROM Housing.V_Occupant e WHERE e.residentInfoID = @residentInfoID) > 0
             
@@ -339,35 +351,17 @@ END;
 ;WITH PreviousOccupancies AS
 (
     SELECT
-          occupancy.buildingActionID
+          occupancy.OccupancyActionID AS buildingActionID
         , occupancy.residentInfoID_FK
-        , CAST(COALESCE(
-              occupancy.OccupentDate,
-              occupancy.buildingActionDate,
-              occupancy.entryDate) AS DATE) AS OccupentDate
-        , exitAction.ExitDate
-    FROM Housing.BuildingAction occupancy
-    OUTER APPLY
-    (
-        SELECT TOP (1)
-            CAST(COALESCE(exitRow.ExitDate, exitRow.buildingActionDate) AS DATE) AS ExitDate
-        FROM Housing.BuildingAction exitRow
-        WHERE exitRow.buildingActionParentID = occupancy.buildingActionID
-          AND exitRow.buildingActionTypeID_FK = 3
-          AND exitRow.buildingActionActive = 1
-        ORDER BY exitRow.buildingActionID DESC
-    ) exitAction
-    WHERE occupancy.buildingDetailsID_FK = TRY_CONVERT(BIGINT, @buildingDetailsID)
-      AND occupancy.buildingActionTypeID_FK = 2
-      AND occupancy.buildingActionActive = 1
-      AND occupancy.residentInfoID_FK <> TRY_CONVERT(BIGINT, @residentInfoID)
-      AND CAST(COALESCE(
-              occupancy.OccupentDate,
-              occupancy.buildingActionDate,
-              occupancy.entryDate) AS DATE) <= CAST(GETDATE() AS DATE)
+        , occupancy.OccupentDate
+        , occupancy.ExitDate
+    FROM Housing.fn_BuildingOccupancyPeriods(TRY_CONVERT(BIGINT, @buildingDetailsID), @IdaraID_INT) occupancy
+    WHERE occupancy.residentInfoID_FK <> TRY_CONVERT(BIGINT, @residentInfoID)
+      AND occupancy.OccupentDate <= CASE WHEN @OccupentDateValue > CAST(GETDATE() AS DATE)
+                                         THEN @OccupentDateValue ELSE CAST(GETDATE() AS DATE) END
       AND (
-            exitAction.ExitDate IS NULL
-            OR exitAction.ExitDate >= @OccupentDateValue
+            occupancy.ExitDate IS NULL
+            OR occupancy.ExitDate >= @OccupentDateValue
           )
 )
 SELECT TOP (1)
@@ -398,7 +392,8 @@ ORDER BY
       CASE WHEN previousOccupancy.ExitDate IS NULL THEN 0 ELSE 1 END
     , previousOccupancy.ExitDate DESC
     , previousOccupancy.OccupentDate DESC
-    , previousOccupancy.buildingActionID DESC;
+    , previousOccupancy.buildingActionID DESC
+OPTION (MAXRECURSION 32767);
 
 IF @PreviousOccupantID IS NOT NULL
 BEGIN
@@ -420,7 +415,7 @@ BEGIN
         SET @PreviousOccupancyMessage = CONCAT(
               N'لا يمكن اعتماد التسكين؛ المنزل مسكون بالمستفيد '
             , @PreviousOccupantName
-            , N' ولم يتم تسجيل إخلاء نهائي له.');
+            , N' ولم يتم تسجيل إخلاء سارٍ له.');
 
         ;THROW 50001, @PreviousOccupancyMessage, 1;
     END;

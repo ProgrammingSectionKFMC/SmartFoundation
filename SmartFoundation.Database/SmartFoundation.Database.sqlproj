@@ -495,6 +495,7 @@
     <Build Include="Housing\Functions\fn_BuildingRent_ForMonth.sql" />
     <Build Include="Housing\Functions\fn_CalcBuildingRent_ForOneMonth.sql" />
     <Build Include="Housing\Functions\fn_BuildingAction_ChainToRoot.sql" />
+    <Build Include="Housing\Functions\fn_BuildingOccupancyPeriods.sql" />
     <Build Include="dbo\Functions\ft_UserPagePermissions.sql" />
     <Build Include="Housing\Functions\FN_EligibleMeters.sql" />
     <Build Include="Housing\Functions\CalculteElectrictyBills_ByNewReadValue.sql" />

@@ -36,29 +36,36 @@
         },
 
         metrics = (Model.HousingCommandCenterMetrics ?? new List<HousingCommandCenterMetric>())
-            .OrderBy(x => x.SortOrder)
-            .Select(x => new
-            {
-                key = x.Key,
-                title = x.Title,
-                shortTitle = x.ShortTitle,
-                subtitle = x.Subtitle,
+    .OrderBy(x => x.SortOrder)
+    .Select(x => new
+    {
+        key = x.Key,
+        title = x.Title,
+        shortTitle = x.ShortTitle,
+        subtitle = x.Subtitle,
+        formulaText = x.FormulaText,
 
-                target = x.Target,
-                actual = x.Actual,
-                completionPercent = x.CompletionPercent,
+        target = x.Target,
+        actual = x.Actual,
+        completionPercent = x.CompletionPercent,
 
-                unit = x.Unit,
-                icon = x.Icon,
-                emoji = x.Emoji,
+        unit = x.Unit,
 
-                tone = x.Tone,
-                color = x.Color,
+        actualLabel = x.ActualLabel,
+        targetLabel = x.TargetLabel,
+        remainingLabel = x.RemainingLabel,
+        showValueUnit = x.ShowValueUnit,
 
-                hint = x.Hint,
-                href = x.Href,
-                sortOrder = x.SortOrder
-            }),
+        icon = x.Icon,
+        emoji = x.Emoji,
+
+        tone = x.Tone,
+        color = x.Color,
+
+        hint = x.Hint,
+        href = x.Href,
+        sortOrder = x.SortOrder
+    }),
 
         departments = (Model.HousingCommandCenterDepartments ?? new List<HousingCommandCenterDepartment>())
             .OrderBy(x => x.SortOrder)
@@ -166,7 +173,7 @@
                     </div>
                     <div class="sf-hccm-matrix-note">
                         @* قراءة موحدة للإدارات حسب المعايير مع النسب والرسوم المختصرة والمستهدف والمنجز والمتبقي *@
-                        ملاحظة : جميع الارقام والاحصائيات غير حقيقية ولغرض الايجاز فقط
+                        ملاحظة : جميع الارقام والاحصائيات حسب مدخلات كل ادارة وعملها على المنصة الموحدة
                     </div>
                 </div>
             </div>

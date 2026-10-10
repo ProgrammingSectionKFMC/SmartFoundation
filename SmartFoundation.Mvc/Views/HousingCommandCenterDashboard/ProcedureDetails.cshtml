@@ -1,0 +1,1611 @@
+@model SmartFoundation.UI.ViewModels.SmartCharts.DepProcedureDetailsViewModel
+@using System.Globalization
+@using SmartFoundation.UI.ViewModels.SmartCharts
+
+@{
+    Layout = null;
+
+    var rows =
+        Model.Rows
+        ?? new List<DepProcedureDetailRow>();
+
+
+    var accent =
+        Model.Workflow == "ALLOCATION"
+            ? "#2b6cb0"
+            : Model.Workflow == "EXTEND"
+                ? "#805ad5"
+                : Model.Workflow == "EXIT"
+                    ? "#c05621"
+                    : "#1e3a5f";
+
+
+    var icon =
+        Model.Workflow == "ALLOCATION"
+            ? "fa-solid fa-house-circle-check"
+            : Model.Workflow == "EXTEND"
+                ? "fa-solid fa-clock-rotate-left"
+                : Model.Workflow == "EXIT"
+                    ? "fa-solid fa-door-open"
+                    : "fa-solid fa-list-check";
+
+
+    string FmtDateTime(DateTime? value)
+    {
+        return value.HasValue
+            ? value.Value.ToString(
+                "yyyy/MM/dd HH:mm",
+                CultureInfo.InvariantCulture)
+            : "—";
+    }
+
+
+    string FmtDate(DateTime? value)
+    {
+        return value.HasValue
+            ? value.Value.ToString(
+                "yyyy/MM/dd",
+                CultureInfo.InvariantCulture)
+            : "—";
+    }
+
+
+    string FmtNumber(int value)
+    {
+        return value.ToString(
+            "N0",
+            CultureInfo.InvariantCulture);
+    }
+
+
+    string FmtUnit(
+        long value,
+        string singular,
+        string dual,
+        string plural)
+    {
+        if (value == 1)
+            return singular;
+
+        if (value == 2)
+            return dual;
+
+        if (value >= 3 &&
+            value <= 10)
+        {
+            return $"{value} {plural}";
+        }
+
+        return $"{value} {singular.Split(' ')[0]}";
+    }
+
+
+    string FmtDuration(long? totalSeconds)
+    {
+        if (!totalSeconds.HasValue ||
+            totalSeconds.Value < 0)
+        {
+            return "—";
+        }
+
+        var totalMinutes =
+            (long)Math.Round(
+                totalSeconds.Value / 60m,
+                MidpointRounding.AwayFromZero);
+
+        if (totalMinutes <= 0)
+            return "أقل من دقيقة";
+
+
+        var days =
+            totalMinutes / 1440;
+
+        var hours =
+            (totalMinutes % 1440) / 60;
+
+        var minutes =
+            totalMinutes % 60;
+
+
+        var parts =
+            new List<string>();
+
+
+        if (days > 0)
+        {
+            if (days == 1)
+                parts.Add("يوم واحد");
+
+            else if (days == 2)
+                parts.Add("يومان");
+
+            else if (days >= 3 &&
+                     days <= 10)
+                parts.Add($"{days} أيام");
+
+            else
+                parts.Add($"{days} يوم");
+        }
+
+
+        if (hours > 0)
+        {
+            if (hours == 1)
+                parts.Add("ساعة واحدة");
+
+            else if (hours == 2)
+                parts.Add("ساعتان");
+
+            else if (hours >= 3 &&
+                     hours <= 10)
+                parts.Add($"{hours} ساعات");
+
+            else
+                parts.Add($"{hours} ساعة");
+        }
+
+
+        if (minutes > 0)
+        {
+            if (minutes == 1)
+                parts.Add("دقيقة واحدة");
+
+            else if (minutes == 2)
+                parts.Add("دقيقتان");
+
+            else if (minutes >= 3 &&
+                     minutes <= 10)
+                parts.Add($"{minutes} دقائق");
+
+            else
+                parts.Add($"{minutes} دقيقة");
+        }
+
+
+        return parts.Count > 0
+            ? string.Join(" ", parts)
+            : "أقل من دقيقة";
+    }
+
+
+    string ProcedureLabel(string key)
+    {
+        return key switch
+        {
+            "ALLOCATION" => "تخصيص",
+            "EXTEND" => "إمهال",
+            "EXIT" => "إخلاء",
+            _ => "إجراء"
+        };
+    }
+
+
+    
+
+
+    
+
+
+    var allocationCount =
+        rows.Count(x =>
+            x.ProcedureGroupKey ==
+            "ALLOCATION");
+
+
+    var extendCount =
+        rows.Count(x =>
+            x.ProcedureGroupKey ==
+            "EXTEND");
+
+
+    var exitCount =
+        rows.Count(x =>
+            x.ProcedureGroupKey ==
+            "EXIT");
+}
+
+<!doctype html>
+
+<html lang="ar" dir="rtl">
+
+<head>
+
+    <meta charset="utf-8" />
+
+    <meta name="viewport"
+          content="width=device-width,initial-scale=1" />
+
+    <title>@Model.Title</title>
+
+
+    <link rel="icon"
+          type="image/svg+xml"
+          href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='2' y='18' width='7' height='12' rx='3.5' fill='%230f766e'/><rect x='12' y='10' width='7' height='20' rx='3.5' fill='%232563eb'/><rect x='22' y='4' width='7' height='26' rx='3.5' fill='%23d97706'/></svg>" />
+
+    <link rel="stylesheet"
+          href="~/css/Fontawesome6-5-0.min.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/lib/fontawesome/css/all.min.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/css/site.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/css/statistics.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/css/smartcharts/smartcharts.housingcommandcenter.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/css/smartcharts/smartcharts.housingdepartment.css"
+          asp-append-version="true" />
+
+
+    <style>
+
+        :root {
+            --prd-accent: @accent;
+            --prd-border: #e2e8f0;
+            --prd-muted: #718096;
+            --prd-text: #1e293b;
+            --prd-bg: #f6f8fb;
+        }
+
+
+        * {
+            box-sizing: border-box;
+        }
+
+
+        body {
+            margin: 0;
+            background: var(--prd-bg);
+            color: var(--prd-text);
+        }
+
+
+        .prd-wrap {
+            width: min(1800px, calc(100% - 28px));
+            margin: 18px auto;
+        }
+
+
+        .prd-stats {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+
+        .prd-stat {
+            background: #fff;
+            border: 1px solid var(--prd-border);
+            border-radius: 13px;
+            min-height: 84px;
+            padding: 13px 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+
+        .prd-stat > i {
+            width: 38px;
+            height: 38px;
+            border-radius: 11px;
+            display: grid;
+            place-items: center;
+            background: color-mix(
+                in srgb,
+                var(--prd-accent) 10%,
+                white);
+            color: var(--prd-accent);
+            font-size: 17px;
+        }
+
+
+        .prd-stat strong {
+            display: block;
+            color: #0f172a;
+            font-size: 21px;
+            line-height: 1.1;
+            font-weight: 900;
+        }
+
+
+        .prd-stat span {
+            display: block;
+            margin-top: 5px;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+
+        .prd-panel {
+            background: #fff;
+            border: 1px solid var(--prd-border);
+            border-radius: 14px;
+            overflow: hidden;
+        }
+
+
+        .prd-toolbar {
+    display: grid;
+    grid-template-columns:
+        minmax(300px, 2fr)
+        minmax(190px, .8fr)
+        minmax(180px, .7fr);
+    gap: 10px;
+    padding: 12px;
+    border-bottom: 1px solid var(--prd-border);
+    background: #fff;
+}
+
+.prd-toolbar-single {
+    grid-template-columns:
+        minmax(300px, 2fr)
+        minmax(190px, .8fr);
+}
+
+
+        .prd-field {
+            position: relative;
+        }
+
+
+        .prd-field i {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            pointer-events: none;
+        }
+
+
+        .prd-input,
+        .prd-select {
+            width: 100%;
+            height: 38px;
+            border: 1px solid #dbe3ed;
+            border-radius: 9px;
+            background: #fff;
+            color: #334155;
+            padding: 0 36px 0 10px;
+            outline: none;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+
+        .prd-select {
+            padding-right: 10px;
+        }
+
+
+        .prd-input:focus,
+        .prd-select:focus {
+            border-color: var(--prd-accent);
+            box-shadow:
+                0 0 0 3px
+                color-mix(
+                    in srgb,
+                    var(--prd-accent) 10%,
+                    transparent);
+        }
+
+
+        .prd-table-scroll {
+            width: 100%;
+            overflow: auto;
+            max-height: calc(100vh - 340px);
+            min-height: 360px;
+        }
+
+
+        .prd-table {
+            width: 100%;
+            min-width: 1650px;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 11px;
+        }
+
+
+        .prd-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 3;
+            background: #f8fafc;
+            color: #475569;
+            white-space: nowrap;
+            text-align: right;
+            padding: 10px 8px;
+            border-bottom: 1px solid #dbe3ed;
+            font-weight: 900;
+        }
+
+
+        .prd-table tbody td {
+            padding: 9px 8px;
+            border-bottom: 1px solid #edf2f7;
+            vertical-align: middle;
+            color: #334155;
+            white-space: nowrap;
+        }
+
+
+        .prd-table tbody tr:hover {
+            background: #f8fbff;
+        }
+
+
+        .prd-table tbody tr.is-hidden {
+            display: none;
+        }
+
+
+        .prd-index {
+            color: #94a3b8;
+            font-weight: 800;
+            text-align: center;
+        }
+
+
+        .prd-name {
+            max-width: 220px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+
+        .prd-unit {
+            max-width: 260px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+
+        .prd-note {
+            max-width: 240px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+
+        .prd-chip {
+            display: inline-flex;
+            align-items: center;
+            min-height: 25px;
+            padding: 4px 9px;
+            border-radius: 999px;
+            border: 1px solid
+                color-mix(
+                    in srgb,
+                    var(--prd-accent) 22%,
+                    white);
+            background:
+                color-mix(
+                    in srgb,
+                    var(--prd-accent) 7%,
+                    white);
+            color: var(--prd-accent);
+            font-size: 10px;
+            font-weight: 900;
+        }
+
+
+        .prd-chip.warning {
+            border-color: #fed7aa;
+            background: #fff7ed;
+            color: #c05621;
+        }
+
+
+        .prd-chip.muted {
+            border-color: #e2e8f0;
+            background: #f8fafc;
+            color: #64748b;
+        }
+
+
+        .prd-duration {
+            font-weight: 900;
+            color: #334155;
+        }
+
+
+        .prd-duration.missing {
+            color: #94a3b8;
+            font-weight: 700;
+        }
+
+
+        .prd-date {
+            direction: ltr;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+
+        .prd-pager {
+            min-height: 52px;
+            padding: 10px 12px;
+            border-top: 1px solid var(--prd-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            background: #fff;
+        }
+
+
+        .prd-pager-info {
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+
+        .prd-page-controls {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+
+        .prd-page-btn {
+            border: 1px solid #dbe3ed;
+            background: #fff;
+            color: #475569;
+            height: 32px;
+            min-width: 34px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 800;
+        }
+
+
+        .prd-page-btn:hover:not(:disabled) {
+            color: var(--prd-accent);
+            border-color: var(--prd-accent);
+        }
+
+
+        .prd-page-btn:disabled {
+            opacity: .45;
+            cursor: default;
+        }
+
+
+        .prd-page-current {
+            min-width: 72px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 900;
+            color: #334155;
+        }
+
+
+        .prd-empty {
+            display: none;
+            min-height: 330px;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 8px;
+            color: #94a3b8;
+        }
+
+
+        .prd-empty.is-visible {
+            display: flex;
+        }
+
+
+        .prd-empty i {
+            font-size: 32px;
+        }
+
+
+        .prd-legacy-note {
+            margin: 12px;
+            padding: 10px 12px;
+            border-radius: 9px;
+            border: 1px solid #fed7aa;
+            background: #fff7ed;
+            color: #9a3412;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+
+        @@media (max-width: 1000px) {
+
+            .prd-stats {
+                grid-template-columns:
+                    repeat(2, minmax(0,1fr));
+            }
+
+            .prd-toolbar {
+                grid-template-columns: 1fr;
+            }
+
+            .prd-table-scroll {
+                max-height: none;
+            }
+        }
+
+
+        @@media (max-width: 600px) {
+
+            .prd-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+
+
+        @@media print {
+
+            .prd-toolbar,
+            .prd-pager,
+            .dep-hdr-back {
+                display: none !important;
+            }
+
+            .prd-wrap {
+                width: 100%;
+                margin: 0;
+            }
+
+            .prd-table-scroll {
+                overflow: visible;
+                max-height: none;
+            }
+
+            .prd-table {
+                min-width: 0;
+                font-size: 8px;
+            }
+
+            .prd-table th,
+            .prd-table td {
+                padding: 4px;
+            }
+
+
+        }
+
+      
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<header class="dep-hdr">
+
+    <div class="dep-hdr-bg"></div>
+
+    <div class="dep-hdr-grid"></div>
+
+
+    <a href="/HousingCommandCenterDashboard/Department?id=@Model.DepartmentId#t3"
+       class="dep-hdr-back">
+
+        <i class="fa-solid fa-arrow-right"></i>
+
+        العودة
+
+    </a>
+
+
+    <div class="dep-hdr-body">
+
+        <div class="dep-hdr-main">
+
+            <div class="dep-hdr-icon">
+
+                <i class="@icon"></i>
+
+            </div>
+
+
+            <div class="dep-hdr-copy">
+
+                <div class="dep-hdr-label">
+
+                    <span class="dep-hdr-dot"></span>
+
+                    إجراءات الإسكان — التفاصيل التشغيلية
+
+                </div>
+
+
+                <div class="dep-hdr-name">
+
+                    @Model.Title
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="dep-hdr-stats">
+
+            <div class="dep-hdr-stat">
+
+                <span class="dep-hdr-stat-val">
+
+                    @FmtNumber(Model.TotalCount)
+
+                </span>
+
+                <span class="dep-hdr-stat-lbl">
+
+                    إجراء جاري
+
+                </span>
+
+            </div>
+
+
+            <div class="dep-hdr-stat">
+
+                <span class="dep-hdr-stat-val">
+
+                    @DateTime.Now.ToString(
+                        "yyyy-MM-dd",
+                        CultureInfo.InvariantCulture)
+
+                </span>
+
+                <span class="dep-hdr-stat-lbl">
+
+                    @DateTime.Now.ToString(
+                        "dddd",
+                        new CultureInfo("ar-SA"))
+
+                </span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="dep-hdr-bar">
+
+        <div class="dep-hdr-bar-fill"
+             style="width:100%;background:@accent">
+        </div>
+
+    </div>
+
+</header>
+
+
+<main class="prd-wrap">
+
+
+    <section class="prd-stats">
+
+    <div class="prd-stat">
+
+        <i class="fa-solid fa-list-check"></i>
+
+        <div>
+            <strong>
+                @FmtNumber(Model.TotalCount)
+            </strong>
+
+            <span>
+                إجمالي الإجراءات الجارية
+            </span>
+        </div>
+
+    </div>
+
+
+    <div class="prd-stat">
+
+        <i class="fa-solid fa-house-circle-check"></i>
+
+        <div>
+            <strong>
+                @FmtNumber(allocationCount)
+            </strong>
+
+            <span>
+                إجراءات التخصيص
+            </span>
+        </div>
+
+    </div>
+
+
+    <div class="prd-stat">
+
+        <i class="fa-solid fa-clock-rotate-left"></i>
+
+        <div>
+            <strong>
+                @FmtNumber(extendCount)
+            </strong>
+
+            <span>
+                إجراءات الإمهال
+            </span>
+        </div>
+
+    </div>
+
+
+    <div class="prd-stat">
+
+        <i class="fa-solid fa-door-open"></i>
+
+        <div>
+            <strong>
+                @FmtNumber(exitCount)
+            </strong>
+
+            <span>
+                إجراءات الإخلاء
+            </span>
+        </div>
+
+    </div>
+
+</section>
+
+
+   
+
+
+    <section class="prd-panel">
+
+
+      <div class="prd-toolbar @(Model.Workflow == "ALL" ? "" : "prd-toolbar-single")">
+
+
+            <div class="prd-field">
+
+                <i class="fa-solid fa-magnifying-glass"></i>
+
+                <input id="prd-search"
+                       class="prd-input"
+                       type="search"
+                       autocomplete="off"
+                       placeholder="بحث بالرقم العام، الاسم، الرتبة، الوحدة، المبنى أو الإجراء..." />
+
+
+            </div>
+
+
+
+
+            @if (Model.Workflow == "ALL")
+{
+    <div class="prd-field">
+
+        <select id="prd-group"
+                class="prd-select">
+
+            <option value="">
+                كل أنواع الإجراءات
+            </option>
+
+            <option value="ALLOCATION">
+                التخصيص
+            </option>
+
+            <option value="EXTEND">
+                الإمهال
+            </option>
+
+            <option value="EXIT">
+                الإخلاء
+            </option>
+
+        </select>
+
+    </div>
+}
+
+
+           <div class="prd-field">
+
+    <select id="prd-sort"
+            class="prd-select">
+
+        <option value="duration-desc" selected>
+            مدة الإجراء — الأعلى أولًا
+        </option>
+
+        <option value="duration-asc">
+            مدة الإجراء — الأقل أولًا
+        </option>
+
+       
+
+    </select>
+
+</div>
+
+
+        </div>
+
+
+        <div class="prd-table-scroll">
+
+            <table class="prd-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>#</th>
+
+                        <th>نوع الإجراء</th>
+
+                        <th>الرقم العام</th>
+
+                        <th>الرتبة</th>
+
+                        <th>المستفيد</th>
+
+                        <th>الوحدة</th>
+
+                        <th>المبنى</th>
+
+                        <th>بداية الإجراء</th>
+
+                        <th>إجراء البداية</th>
+
+                        <th>مدة الإجراء</th>
+
+                        <th>الحالة الحالية</th>
+
+                        <th>بداية الحالة</th>
+
+                        <th>مدة الحالة</th>
+
+
+                        <th>الملاحظات</th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody id="prd-body">
+
+                    @for (var i = 0;
+                          i < rows.Count;
+                          i++)
+                    {
+                        var row =
+                            rows[i];
+
+
+                        var searchText =
+                            string.Join(
+                                " ",
+                                new[]
+                                {
+                                    row.ProcedureGroupName,
+                                    row.GeneralNo,
+                                    row.ResidentRankName,
+                                    row.ResidentFullName,
+                                    row.ResidentMilitaryUnit,
+                                    row.BuildingDetailsNo,
+                                    row.StartActionTypeName,
+                                    row.CurrentActionTypeName,
+                                    row.Note
+                                }
+                                .Where(x =>
+                                    !string.IsNullOrWhiteSpace(x)));
+
+
+                        
+
+
+                        <tr
+    data-search="@searchText"
+    data-group="@row.ProcedureGroupKey"
+    data-duration="@(row.ProcedureElapsedSeconds?.ToString(CultureInfo.InvariantCulture) ?? "")"
+    >
+
+    <td class="prd-index">
+        @(i + 1)
+    </td>
+
+
+                            <td>
+
+                                <span class="prd-chip">
+
+                                    @ProcedureLabel(
+                                        row.ProcedureGroupKey)
+
+                                </span>
+
+                            </td>
+
+
+                            <td>
+
+                                @(string.IsNullOrWhiteSpace(
+                                    row.GeneralNo)
+                                    ? "—"
+                                    : row.GeneralNo)
+
+                            </td>
+
+
+                            <td>
+
+                                @(string.IsNullOrWhiteSpace(
+                                    row.ResidentRankName)
+                                    ? "—"
+                                    : row.ResidentRankName)
+
+                            </td>
+
+
+                            <td class="prd-name"
+                                title="@row.ResidentFullName">
+
+                                @(string.IsNullOrWhiteSpace(
+                                    row.ResidentFullName)
+                                    ? "—"
+                                    : row.ResidentFullName)
+
+                            </td>
+
+
+                            <td class="prd-unit"
+                                title="@row.ResidentMilitaryUnit">
+
+                                @(string.IsNullOrWhiteSpace(
+                                    row.ResidentMilitaryUnit)
+                                    ? "—"
+                                    : row.ResidentMilitaryUnit)
+
+                            </td>
+
+
+                            <td>
+
+                                @(string.IsNullOrWhiteSpace(
+                                    row.BuildingDetailsNo)
+                                    ? "—"
+                                    : row.BuildingDetailsNo)
+
+                            </td>
+
+
+                            <td class="prd-date">
+
+                                @FmtDateTime(
+                                    row.ProcedureStartDate)
+
+                            </td>
+
+
+                            <td>
+
+                                @if (row.StartActionID.HasValue)
+                                {
+                                    <span class="prd-chip"
+                                          title="Action @row.StartActionID">
+
+                                        @(string.IsNullOrWhiteSpace(
+                                            row.StartActionTypeName)
+                                            ? $"Action {row.StartActionTypeID}"
+                                            : row.StartActionTypeName)
+
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="prd-chip muted">
+
+                                        غير متاحة
+
+                                    </span>
+                                }
+
+                            </td>
+
+
+                            <td>
+
+                                @if (row.ProcedureElapsedSeconds.HasValue)
+                                {
+                                    <span class="prd-duration">
+
+                                        @FmtDuration(
+                                            row.ProcedureElapsedSeconds)
+
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="prd-duration missing">
+
+                                        غير متاحة
+
+                                    </span>
+                                }
+
+                            </td>
+
+
+                            <td>
+
+                                <span class="prd-chip"
+                                      title="Action @row.CurrentActionID">
+
+                                    @row.CurrentActionTypeName
+
+                                </span>
+
+                            </td>
+
+
+                            <td class="prd-date">
+
+                                @FmtDateTime(
+                                    row.CurrentStatusSince)
+
+                            </td>
+
+
+                            <td>
+
+                                <span class="prd-duration">
+
+                                    @FmtDuration(
+                                        row.CurrentStatusElapsedSeconds)
+
+                                </span>
+
+                            </td>
+
+
+                            
+
+                            <td class="prd-note"
+                                title="@row.Note">
+
+                                @(string.IsNullOrWhiteSpace(
+                                    row.Note)
+                                    ? "—"
+                                    : row.Note)
+
+                            </td>
+
+
+                        </tr>
+                    }
+
+                </tbody>
+
+            </table>
+
+
+            <div id="prd-empty"
+                 class="prd-empty">
+
+                <i class="fa-solid fa-magnifying-glass"></i>
+
+                <strong>
+                    لا توجد نتائج مطابقة
+                </strong>
+
+            </div>
+
+        </div>
+
+
+        <div class="prd-pager">
+
+            <div id="prd-pager-info"
+                 class="prd-pager-info">
+            </div>
+
+
+            <div class="prd-page-controls">
+
+                <button id="prd-prev"
+                        type="button"
+                        class="prd-page-btn">
+
+                    <i class="fa-solid fa-chevron-right"></i>
+
+                </button>
+
+
+                <span id="prd-page-current"
+                      class="prd-page-current">
+                </span>
+
+
+                <button id="prd-next"
+                        type="button"
+                        class="prd-page-btn">
+
+                    <i class="fa-solid fa-chevron-left"></i>
+
+                </button>
+
+            </div>
+
+        </div>
+
+
+    </section>
+
+
+</main>
+
+
+<script>
+
+    (function () {
+
+        'use strict';
+
+
+        var search =
+            document.getElementById(
+                'prd-search');
+
+        var group =
+            document.getElementById(
+                'prd-group');
+
+        var sort =
+    document.getElementById(
+        'prd-sort');
+
+        var rows =
+            Array.from(
+                document.querySelectorAll(
+                    '#prd-body tr'));
+
+        var empty =
+            document.getElementById(
+                'prd-empty');
+
+        var prev =
+            document.getElementById(
+                'prd-prev');
+
+        var next =
+            document.getElementById(
+                'prd-next');
+
+        var pageCurrent =
+            document.getElementById(
+                'prd-page-current');
+
+        var pagerInfo =
+            document.getElementById(
+                'prd-pager-info');
+
+
+        var pageSize = 20;
+
+        var page = 1;
+
+        var filtered = [];
+
+
+        function normalize(value) {
+
+            return (value || '')
+                .toString()
+                .trim()
+                .toLowerCase();
+        }
+
+       function compareRows(a, b) {
+
+    var sortMode =
+        sort
+            ? sort.value
+            : 'duration-desc';
+
+
+    var aRaw =
+        a.dataset.duration;
+
+    var bRaw =
+        b.dataset.duration;
+
+
+    var aMissing =
+        !aRaw;
+
+    var bMissing =
+        !bRaw;
+
+
+    // الحالات التي لا تتوفر لها مدة إجراء
+    // تبقى دائمًا في نهاية النتائج
+    if (aMissing && bMissing)
+        return 0;
+
+    if (aMissing)
+        return 1;
+
+    if (bMissing)
+        return -1;
+
+
+    var aDuration =
+        Number(aRaw);
+
+    var bDuration =
+        Number(bRaw);
+
+
+    if (sortMode === 'duration-asc') {
+        return aDuration - bDuration;
+    }
+
+
+    // Default:
+    // مدة الإجراء — الأعلى أولًا
+    return bDuration - aDuration;
+}
+
+
+function apply() {
+
+    var q =
+        normalize(
+            search.value);
+
+
+    var selectedGroup =
+        group
+            ? normalize(group.value)
+            : '';
+
+
+    //----------------------------------------------------------
+    // Filter
+    //----------------------------------------------------------
+    filtered =
+        rows.filter(
+            function (row) {
+
+                var matchesSearch =
+                    !q ||
+                    normalize(
+                        row.dataset.search
+                    ).includes(q);
+
+
+                var matchesGroup =
+                    !selectedGroup ||
+                    normalize(
+                        row.dataset.group
+                    ) === selectedGroup;
+
+
+                return matchesSearch &&
+                       matchesGroup;
+            });
+
+
+    //----------------------------------------------------------
+    // Sort
+    //----------------------------------------------------------
+    filtered.sort(compareRows);
+
+
+    //----------------------------------------------------------
+    // مهم:
+    // إعادة ترتيب الصفوف فعليًا داخل tbody
+    //----------------------------------------------------------
+    var tbody =
+        document.getElementById(
+            'prd-body');
+
+
+    filtered.forEach(
+        function (row) {
+
+            tbody.appendChild(row);
+        });
+
+
+    //----------------------------------------------------------
+    // Paging
+    //----------------------------------------------------------
+    var totalPages =
+        Math.max(
+            1,
+            Math.ceil(
+                filtered.length /
+                pageSize));
+
+
+    if (page > totalPages)
+        page = totalPages;
+
+
+    if (page < 1)
+        page = 1;
+
+
+    //----------------------------------------------------------
+    // Hide all rows
+    //----------------------------------------------------------
+    rows.forEach(
+        function (row) {
+
+            row.classList.add(
+                'is-hidden');
+        });
+
+
+    var start =
+        (page - 1) *
+        pageSize;
+
+
+    var end =
+        Math.min(
+            start + pageSize,
+            filtered.length);
+
+
+    //----------------------------------------------------------
+    // Show current page
+    //----------------------------------------------------------
+    filtered
+        .slice(start, end)
+        .forEach(
+            function (row) {
+
+                row.classList.remove(
+                    'is-hidden');
+            });
+
+
+    empty.classList.toggle(
+        'is-visible',
+        filtered.length === 0);
+
+
+    prev.disabled =
+        page <= 1;
+
+
+    next.disabled =
+        page >= totalPages;
+
+
+    pageCurrent.textContent =
+        page +
+        ' / ' +
+        totalPages;
+
+
+    if (filtered.length === 0) {
+
+        pagerInfo.textContent =
+            'لا توجد نتائج';
+
+    }
+    else {
+
+        pagerInfo.textContent =
+            'عرض ' +
+            (start + 1) +
+            ' - ' +
+            end +
+            ' من ' +
+            filtered.length;
+    }
+}
+
+
+search.addEventListener(
+    'input',
+    function () {
+
+        page = 1;
+        apply();
+    });
+
+
+if (group) {
+
+    group.addEventListener(
+        'change',
+        function () {
+
+            page = 1;
+            apply();
+        });
+}
+
+
+if (sort) {
+
+    sort.addEventListener(
+        'change',
+        function () {
+
+            page = 1;
+            apply();
+        });
+}
+
+        
+
+
+        prev.addEventListener(
+            'click',
+            function () {
+
+                if (page > 1) {
+
+                    page--;
+
+                    apply();
+                }
+            });
+
+
+        next.addEventListener(
+            'click',
+            function () {
+
+                var totalPages =
+                    Math.max(
+                        1,
+                        Math.ceil(
+                            filtered.length /
+                            pageSize));
+
+                if (page < totalPages) {
+
+                    page++;
+
+                    apply();
+                }
+            });
+
+
+        apply();
+
+    })();
+
+</script>
+
+
+</body>
+
+</html>

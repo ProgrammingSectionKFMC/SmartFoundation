@@ -1,6 +1,8 @@
+using SmartFoundation.UI.ViewModels.SmartDrawer;
+using SmartFoundation.UI.ViewModels.SmartForm;
 using System.Collections.Generic;
 using System.Linq;
-using SmartFoundation.UI.ViewModels.SmartForm;
+using System.Text.Json.Serialization;
 
 namespace SmartFoundation.UI.ViewModels.SmartTable
 {
@@ -310,9 +312,31 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         public Dictionary<string, object?>? Meta2 { get; set; }
         public Dictionary<string, object?>? Meta3 { get; set; }
         public Dictionary<string, object?>? Meta4 { get; set; }
+
+
         public bool Show { get; set; } = true;
+
+        // Existing Modal - unchanged
         public bool OpenModal { get; set; } = false;
+
+        // SmartDrawer - optional
+        public bool OpenDrawer { get; set; } = false;
+        public string? DrawerId { get; set; }
+
+        public Dictionary<string, string> DrawerParamMap { get; set; } = new();
+
+        // SmartDrawer - Dynamic header
+        public string? DrawerTitleTemplate { get; set; }
+        public string? DrawerSubtitleTemplate { get; set; }
+
+
+
+        
+
+
+        // Existing Modal settings
         public string? ModalSp { get; set; }
+
         public string? ModalOp { get; set; } = "detail";
         public string? ModalTitle { get; set; }
         public string? ModalMessage { get; set; }
@@ -387,6 +411,11 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         public TableAction? Print1 { get; set; }
         public TableAction? Print2 { get; set; }
         public TableAction? Print3 { get; set; }
+
+
+        [JsonIgnore]
+        public List<SmartDrawerConfig> Drawers { get; set; } = new();
+
     }
 
     public class TableActionRule

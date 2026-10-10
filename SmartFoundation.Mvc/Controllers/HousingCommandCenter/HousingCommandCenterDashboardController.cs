@@ -1,82 +1,1298 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using SmartFoundation.UI.ViewModels.SmartCharts;
 using SmartFoundation.UI.ViewModels.SmartPage;
+using System.Data;
 using System.Globalization;
 
 namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
 {
-    public class HousingCommandCenterDashboardController : Controller
+    public partial class HousingCommandCenterDashboardController : Controller
     {
         // ═══════════════════════════════════════════════════════
         //  لوحة الألوان
         // ═══════════════════════════════════════════════════════
         private static class Color
         {
-            
-            public const string RoyalBlue = "#1a56db";   
-            public const string Teal = "#0694a2";   
-            public const string Amber = "#d97706";   
-            public const string Emerald = "#057a55";  
-            public const string Violet = "#6d28d9";   
+
+            public const string RoyalBlue = "#1a56db";
+            public const string Teal = "#0694a2";
+            public const string Amber = "#d97706";
+            public const string Emerald = "#057a55";
+            public const string Violet = "#6d28d9";
 
             // ── ألوان الإدارات
-            public const string Navy = "#1e3a8a";   
-            public const string SteelBlue = "#1d4ed8";   
-            public const string Green = "#065f46";   
-            public const string Cyan = "#155e75";   
-            public const string Purple = "#5b21b6";   
-            public const string Orange = "#92400e";   
-            public const string Slate = "#1e3a5f";  
+            public const string Navy = "#1e3a8a";
+            public const string SteelBlue = "#1d4ed8";
+            public const string Green = "#065f46";
+            public const string Cyan = "#155e75";
+            public const string Purple = "#5b21b6";
+            public const string Orange = "#92400e";
+            public const string Slate = "#1e3a5f";
 
             // ── للبيانات والتفاصيل ──
-            public const string Red = "#991b1b";   
-            public const string Gold = "#b45309";   
+            public const string Red = "#991b1b";
+            public const string Gold = "#b45309";
             public const string Indigo = "#3730a3";
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            var card = BuildCommandCenterCard();
+            // تهيئة بيانات المستخدم والسيشن
+            if (!InitPageContext(out var redirect))
+                return redirect!;
+
+            ControllerName = "HousingCommandCenterDashboard";
+            PageName = "HousingCommandCenterDashboard";
+
+            var spParameters = new object?[]
+            {
+        PageName,
+        IdaraId,
+        usersId,
+        HostName
+            };
+
+            DataSet ds;
+
+            try
+            {
+                ds = await _mastersServies
+                    .GetDataLoadDataSetAsync(spParameters);
+
+                SplitDataSet(ds);
+            }
+            catch (Exception)
+            {
+                TempData["Error"] =
+                    "حدث خطأ أثناء تحميل بيانات لوحة القيادة. يرجى المحاولة مرة أخرى.";
+
+                return RedirectToAction("Index", "Home");
+            }
+
+            // dt1 = الإدارات القادمة من HousingCommandCenterDashboardDL
+
+            var metrics = BuildMetrics();
+
+            ViewBag.CommandCenterMetricCount = metrics.Count;
+
+            ApplyHousingOccupancySummary(metrics, dt2);
+
+            ApplyAllocationEfficiencySummary(metrics, dt2, dt3);
+
+            ApplyFinancialSummary(metrics, dt4);
+
+            var departments =
+                BuildDepartmentsFromDatabase(dt1, dt2, dt3, dt4,dt10, metrics);
+            ViewBag.CommandCenterDepartmentCount = departments.Count;
+
+            var card =
+                BuildCommandCenterCard(metrics, departments);
+
             var vm = new SmartPageViewModel
             {
                 PageTitle = "لوحة قيادة الإدارات التشغيلية والصيانة",
+
                 Charts = new SmartChartsConfig
                 {
                     ChartsId = "housingCommandCenterDashboard",
                     Dir = "rtl",
-                    Cards = new List<ChartCardConfig> { card }
+                    Cards = new List<ChartCardConfig>
+            {
+                card
+            }
                 }
             };
+
             return View(vm);
         }
 
-        public IActionResult Department(string id)
+        public async Task<IActionResult> Department(string id)
         {
+            //----------------------------------------------------------
+            // Context
+            //----------------------------------------------------------
+            if (!InitPageContext(out var redirect))
+                return redirect!;
+
+            ControllerName = "HousingCommandCenterDashboard";
+            PageName = "HousingCommandCenterDashboard";
+
+            //----------------------------------------------------------
+            // DataLoad
+            //----------------------------------------------------------
+            var spParameters = new object?[]
+            {
+        PageName,
+        IdaraId,
+        usersId,
+        HostName
+            };
+
+            DataSet ds;
+
+            try
+            {
+                ds = await _mastersServies
+                    .GetDataLoadDataSetAsync(spParameters);
+
+                SplitDataSet(ds);
+            }
+            catch (Exception)
+            {
+                TempData["Error"] =
+                    "حدث خطأ أثناء تحميل بيانات الإدارة. يرجى المحاولة مرة أخرى.";
+
+                return RedirectToAction("Index");
+            }
+
+            //----------------------------------------------------------
+            // Metrics
+            //----------------------------------------------------------
             var metrics = BuildMetrics();
-            var departments = BuildDepartments();
-            var department = departments.FirstOrDefault(d => d.Key == id);
+
+            //----------------------------------------------------------
+            // Build departments from live DB data
+            //----------------------------------------------------------
+            var departments =
+                BuildDepartmentsFromDatabase(
+                    dt1,
+                    dt2,
+                    dt3,
+                    dt4,
+                    dt10,
+                    metrics);
+
+            //----------------------------------------------------------
+            // Requested department
+            //----------------------------------------------------------
+            var department =
+                departments.FirstOrDefault(
+                    d => d.Key == id);
 
             if (department == null)
                 return RedirectToAction("Index");
 
+            //----------------------------------------------------------
+            // ViewModel
+            //----------------------------------------------------------
             var vm = new DepartmentDetailViewModel
             {
                 Department = department,
                 Metrics = metrics,
-                HousingDetail = BuildHousingDetail(id),
-                AllocationDetail = BuildAllocationDetail(id),
-                RequestsDetail = BuildRequestsDetail(id),
-                FinanceDetail = BuildFinanceDetail(id),
-                MaintenanceDetail = BuildMaintenanceDetail(id)
+
+                HousingDetail =
+        BuildHousingDetailFromDatabase(
+            dt2,
+            id),
+
+                OccupancyLocations =
+        BuildOccupancyLocationsFromDatabase(
+            dt5,
+            id),
+
+                HousingReadiness =
+    BuildHousingReadinessFromDatabase(
+        dt6,
+        id),
+
+                HousingProcedures =
+    BuildHousingProceduresFromDatabase(
+        dt7,
+        dt8,
+        dt9,
+        dt10,
+        id),
+
+                FinanceDetail =
+    BuildFinanceDetailFromDatabase(
+        dt4,
+        dt11,
+        id)
+
             };
+
+
             return View(vm);
         }
 
-        // ───────────────────────────────────────────────────────
-        private static ChartCardConfig BuildCommandCenterCard()
+
+
+
+
+
+
+        public async Task<IActionResult> BuildingDetails(
+            string id,
+            string section,
+            string status)
         {
-            var metrics = BuildMetrics();
-            var departments = BuildDepartments();
+            //----------------------------------------------------------
+            // Context
+            //----------------------------------------------------------
+            if (!InitPageContext(out var redirect))
+                return redirect!;
+
+            ControllerName = "HousingCommandCenterDashboard";
+            PageName = "HousingCommandCenterDashboard";
+
+            //----------------------------------------------------------
+            // Target department
+            //----------------------------------------------------------
+            if (!long.TryParse(
+                    id,
+                    NumberStyles.None,
+                    CultureInfo.InvariantCulture,
+                    out var targetIdaraID)
+                || targetIdaraID <= 0)
+            {
+                return RedirectToAction("Index");
+            }
+
+            //----------------------------------------------------------
+            // Normalize drill-down arguments
+            //----------------------------------------------------------
+            section =
+                (section ?? string.Empty)
+                .Trim()
+                .ToLowerInvariant();
+
+            status =
+                (status ?? string.Empty)
+                .Trim()
+                .ToUpperInvariant();
+
+            //----------------------------------------------------------
+            // Server-side allowlist
+            //----------------------------------------------------------
+            var occupancyStatuses =
+                new HashSet<string>(
+                    StringComparer.OrdinalIgnoreCase)
+                {
+                    "OCCUPIED",
+                    "VACANT"
+                };
+
+            var readinessStatuses =
+                new HashSet<string>(
+                    StringComparer.OrdinalIgnoreCase)
+                {
+                    "OCCUPIED",
+                    "READY",
+                    "ALLOCATION",
+                    "MAINTENANCE",
+                    "QUALITY",
+                    "GENERAL_SERVICES",
+                    "HOUSING_DEPARTMENT",
+                    "EXECUTION",
+                    "VACANT_PENDING",
+                    "NO_ACTIVE_ACTION",
+                    "OTHER"
+                };
+
+            bool validRequest =
+                section switch
+                {
+                    "occupancy" =>
+                        occupancyStatuses.Contains(status),
+
+                    "readiness" =>
+                        readinessStatuses.Contains(status),
+
+                    _ => false
+                };
+
+            if (!validRequest)
+            {
+                return RedirectToAction(
+                    "Department",
+                    new { id });
+            }
+
+            //----------------------------------------------------------
+            // DataLoad
+            //
+            // parameter_01 = targetIdaraID
+            // parameter_02 = section
+            // parameter_03 = status
+            //----------------------------------------------------------
+            var spParameters = new object?[]
+            {
+                PageName,
+                IdaraId,
+                usersId,
+                HostName,
+                targetIdaraID,
+                section,
+                status
+            };
+
+            DataSet ds;
+
+            try
+            {
+                ds = await _mastersServies
+                    .GetDataLoadDataSetAsync(spParameters);
+            }
+            catch (Exception)
+            {
+                TempData["Error"] =
+                    "حدث خطأ أثناء تحميل تفاصيل الوحدات السكنية. يرجى المحاولة مرة أخرى.";
+
+                return RedirectToAction(
+                    "Department",
+                    new { id });
+            }
+
+            //----------------------------------------------------------
+            // Detail mode result sets:
+            //
+            // Table[0] = Permissions
+            // Table[1] = Building Details
+            //
+            // Do NOT call SplitDataSet here.
+            //----------------------------------------------------------
+            DataTable? detailsTable =
+                ds.Tables.Count > 1
+                    ? ds.Tables[1]
+                    : null;
+
+            //----------------------------------------------------------
+            // Build ViewModel
+            //----------------------------------------------------------
+            var vm = new DepBuildingDetailsViewModel
+            {
+                DepartmentId = id,
+                Section = section,
+                Status = status,
+                Title =
+                    GetBuildingDetailsTitle(
+                        section,
+                        status),
+                Rows =
+                    BuildBuildingDetailsRows(
+                        detailsTable)
+            };
+
+            return View(vm);
+        }
+
+
+
+        public async Task<IActionResult> ProcedureDetails(
+    string id,
+    string workflow = "ALL")
+        {
+            //----------------------------------------------------------
+            // Context
+            //----------------------------------------------------------
+            if (!InitPageContext(out var redirect))
+                return redirect!;
+
+            ControllerName =
+                "HousingCommandCenterDashboard";
+
+            PageName =
+                "HousingCommandCenterDashboard";
+
+
+            //----------------------------------------------------------
+            // Target department
+            //----------------------------------------------------------
+            if (!long.TryParse(
+                    id,
+                    NumberStyles.None,
+                    CultureInfo.InvariantCulture,
+                    out var targetIdaraID)
+                || targetIdaraID <= 0)
+            {
+                return RedirectToAction("Index");
+            }
+
+
+            //----------------------------------------------------------
+            // Normalize workflow
+            //----------------------------------------------------------
+            workflow =
+                (workflow ?? string.Empty)
+                .Trim()
+                .ToUpperInvariant();
+
+
+            //----------------------------------------------------------
+            // Server-side allowlist
+            //----------------------------------------------------------
+            var allowedWorkflows =
+                new HashSet<string>(
+                    StringComparer.OrdinalIgnoreCase)
+                {
+            "ALL",
+            "ALLOCATION",
+            "EXTEND",
+            "EXIT"
+                };
+
+            if (!allowedWorkflows.Contains(workflow))
+            {
+                return RedirectToAction(
+                    "Department",
+                    new { id });
+            }
+
+
+            //----------------------------------------------------------
+            // DataLoad
+            //
+            // parameter_01 = targetIdaraID
+            // parameter_02 = procedure
+            // parameter_03 = workflow
+            //----------------------------------------------------------
+            var spParameters = new object?[]
+            {
+        PageName,
+        IdaraId,
+        usersId,
+        HostName,
+        targetIdaraID,
+        "procedure",
+        workflow
+            };
+
+            DataSet ds;
+
+            try
+            {
+                ds = await _mastersServies
+                    .GetDataLoadDataSetAsync(
+                        spParameters);
+            }
+            catch (Exception)
+            {
+                TempData["Error"] =
+                    "حدث خطأ أثناء تحميل تفاصيل إجراءات الإسكان. يرجى المحاولة مرة أخرى.";
+
+                return RedirectToAction(
+                    "Department",
+                    new { id });
+            }
+
+
+            //----------------------------------------------------------
+            // Detail Mode Result Sets:
+            //
+            // Table[0] = Permissions
+            // Table[1] = Procedure Details
+            //
+            // Do NOT call SplitDataSet.
+            //----------------------------------------------------------
+            DataTable? detailsTable =
+                ds.Tables.Count > 1
+                    ? ds.Tables[1]
+                    : null;
+
+
+            //----------------------------------------------------------
+            // ViewModel
+            //----------------------------------------------------------
+            var vm =
+                new DepProcedureDetailsViewModel
+                {
+                    DepartmentId = id,
+
+                    Workflow = workflow,
+
+                    Title =
+                        GetProcedureDetailsTitle(
+                            workflow),
+
+                    Rows =
+                        BuildProcedureDetailsRows(
+                            detailsTable)
+                };
+
+            return View(vm);
+        }
+
+
+
+
+
+
+        public async Task<IActionResult> FinancialDetails(
+    string id,
+    string mode = "CLAIMS",
+    string? searchText = null,
+    int? billChargeTypeID = null,
+    string? sortKey = null,
+    int pageNumber = 1,
+    int pageSize = 25)
+        {
+            //----------------------------------------------------------
+            // Context
+            //----------------------------------------------------------
+            if (!InitPageContext(out var redirect))
+                return redirect!;
+
+            ControllerName =
+                "HousingCommandCenterDashboard";
+
+            PageName =
+                "HousingCommandCenterDashboard";
+
+
+            //----------------------------------------------------------
+            // Target department
+            //----------------------------------------------------------
+            if (!long.TryParse(
+                    id,
+                    NumberStyles.None,
+                    CultureInfo.InvariantCulture,
+                    out var targetIdaraID)
+                || targetIdaraID <= 0)
+            {
+                return RedirectToAction("Index");
+            }
+
+
+            //----------------------------------------------------------
+            // Normalize mode
+            //----------------------------------------------------------
+            mode =
+                (mode ?? string.Empty)
+                .Trim()
+                .ToUpperInvariant();
+
+
+            var allowedModes =
+                new HashSet<string>(
+                    StringComparer.OrdinalIgnoreCase)
+                {
+            "CLAIMS",
+            "PAYMENTS",
+            "DEFICIT",
+            "SURPLUS",
+            "BALANCED"
+                };
+
+
+            if (!allowedModes.Contains(mode))
+            {
+                return RedirectToAction(
+                    "Department",
+                    new { id });
+            }
+
+
+            //----------------------------------------------------------
+            // Normalize search
+            //----------------------------------------------------------
+            searchText =
+                string.IsNullOrWhiteSpace(searchText)
+                    ? null
+                    : searchText.Trim();
+
+
+            //----------------------------------------------------------
+            // Page size
+            //----------------------------------------------------------
+            if (pageSize != 25 &&
+                pageSize != 50)
+            {
+                pageSize = 25;
+            }
+
+
+            if (pageNumber <= 0)
+            {
+                pageNumber = 1;
+            }
+
+
+            //----------------------------------------------------------
+            // Charge type
+            //
+            // Charge type filtering applies only to:
+            // CLAIMS / PAYMENTS
+            //----------------------------------------------------------
+            if (mode != "CLAIMS" &&
+                mode != "PAYMENTS")
+            {
+                billChargeTypeID = null;
+            }
+            else if (billChargeTypeID <= 0)
+            {
+                billChargeTypeID = null;
+            }
+
+
+            //----------------------------------------------------------
+            // Sort
+            //----------------------------------------------------------
+            sortKey =
+                (sortKey ?? string.Empty)
+                .Trim()
+                .ToUpperInvariant();
+
+
+            string defaultSortKey;
+
+            HashSet<string> allowedSortKeys;
+
+
+            switch (mode)
+            {
+                case "CLAIMS":
+                case "PAYMENTS":
+
+                    defaultSortKey =
+                        "TOTAL_DESC";
+
+                    allowedSortKeys =
+                        new HashSet<string>(
+                            StringComparer.OrdinalIgnoreCase)
+                        {
+                    "TOTAL_DESC",
+                    "TOTAL_ASC",
+                    "LATEST",
+                    "OLDEST"
+                        };
+
+                    break;
+
+
+                case "DEFICIT":
+
+                    defaultSortKey =
+                        "BALANCE_DESC";
+
+                    allowedSortKeys =
+                        new HashSet<string>(
+                            StringComparer.OrdinalIgnoreCase)
+                        {
+                    "BALANCE_DESC",
+                    "BALANCE_ASC",
+                    "CLAIM_NEWEST",
+                    "PAYMENT_NEWEST"
+                        };
+
+                    break;
+
+
+                case "SURPLUS":
+
+                    defaultSortKey =
+                        "BALANCE_DESC";
+
+                    allowedSortKeys =
+                        new HashSet<string>(
+                            StringComparer.OrdinalIgnoreCase)
+                        {
+                    "BALANCE_DESC",
+                    "BALANCE_ASC",
+                    "PAYMENT_NEWEST",
+                    "CLAIM_NEWEST"
+                        };
+
+                    break;
+
+
+                default: // BALANCED
+
+                    defaultSortKey =
+                        "ACTIVITY_NEWEST";
+
+                    allowedSortKeys =
+                        new HashSet<string>(
+                            StringComparer.OrdinalIgnoreCase)
+                        {
+                    "ACTIVITY_NEWEST",
+                    "TOTAL_DESC",
+                    "TOTAL_ASC"
+                        };
+
+                    break;
+            }
+
+
+            if (!allowedSortKeys.Contains(sortKey))
+            {
+                sortKey =
+                    defaultSortKey;
+            }
+
+
+            //----------------------------------------------------------
+            // DataLoad
+            //
+            // parameter_01 = targetIdaraID
+            // parameter_02 = finance
+            // parameter_03 = mode
+            // parameter_04 = searchText
+            // parameter_05 = billChargeTypeID
+            // parameter_06 = sortKey
+            // parameter_07 = pageNumber
+            // parameter_08 = pageSize
+            //----------------------------------------------------------
+            var spParameters = new object?[]
+            {
+        PageName,
+        IdaraId,
+        usersId,
+        HostName,
+
+        targetIdaraID,
+        "finance",
+        mode,
+        searchText,
+        billChargeTypeID,
+        sortKey,
+        pageNumber,
+        pageSize
+            };
+
+
+            DataSet ds;
+
+            try
+            {
+                ds = await _mastersServies
+                    .GetDataLoadDataSetAsync(
+                        spParameters);
+            }
+            catch (Exception)
+            {
+                TempData["Error"] =
+                    "حدث خطأ أثناء تحميل التفاصيل المالية. يرجى المحاولة مرة أخرى.";
+
+                return RedirectToAction(
+                    "Department",
+                    new { id });
+            }
+
+
+            //----------------------------------------------------------
+            // Detail Mode Result Sets
+            //
+            // Table[0] = Permissions
+            // Table[1] = Financial Residents
+            // Table[2] = Paging / Meta
+            // Table[3] = Charge Types
+            //
+            // Do NOT call SplitDataSet.
+            //----------------------------------------------------------
+            DataTable? detailsTable =
+                ds.Tables.Count > 1
+                    ? ds.Tables[1]
+                    : null;
+
+            DataTable? metaTable =
+                ds.Tables.Count > 2
+                    ? ds.Tables[2]
+                    : null;
+
+            DataTable? chargeTypesTable =
+                ds.Tables.Count > 3
+                    ? ds.Tables[3]
+                    : null;
+
+
+            DataRow? metaRow =
+                metaTable != null &&
+                metaTable.Rows.Count > 0
+                    ? metaTable.Rows[0]
+                    : null;
+
+
+            //----------------------------------------------------------
+            // Effective values returned by SQL
+            //----------------------------------------------------------
+            var effectivePageNumber =
+                metaRow == null
+                    ? pageNumber
+                    : DbInt(
+                          metaRow,
+                          "PageNumber")
+                      ?? pageNumber;
+
+            var effectivePageSize =
+                metaRow == null
+                    ? pageSize
+                    : DbInt(
+                          metaRow,
+                          "PageSize")
+                      ?? pageSize;
+
+
+            //----------------------------------------------------------
+            // ViewModel
+            //----------------------------------------------------------
+            var vm =
+                new DepFinancialDetailsViewModel
+                {
+                    DepartmentId =
+                        id,
+
+                    DepartmentName =
+                        metaRow == null
+                            ? string.Empty
+                            : DbString(
+                                metaRow,
+                                "IdaraName"),
+
+                    Mode =
+                        mode,
+
+                    Title =
+                        GetFinancialDetailsTitle(
+                            mode),
+
+                    SearchText =
+                        metaRow == null
+                            ? searchText ?? string.Empty
+                            : DbString(
+                                metaRow,
+                                "SearchText"),
+
+                    BillChargeTypeID =
+                        metaRow == null
+                            ? billChargeTypeID
+                            : DbInt(
+                                metaRow,
+                                "BillChargeTypeID"),
+
+                    SortKey =
+                        metaRow == null
+                            ? sortKey
+                            : DbString(
+                                metaRow,
+                                "SortKey"),
+
+                    PageNumber =
+                        effectivePageNumber,
+
+                    PageSize =
+                        effectivePageSize,
+
+                    TotalRows =
+                        metaRow == null
+                            ? 0
+                            : DbLong(
+                                metaRow,
+                                "TotalRows")
+                              ?? 0,
+
+                    TotalPages =
+                        metaRow == null
+                            ? 0
+                            : DbLong(
+                                metaRow,
+                                "TotalPages")
+                              ?? 0,
+
+                    TotalClaims =
+                        metaRow == null
+                            ? 0m
+                            : DbDecimal(
+                                metaRow,
+                                "TotalClaims")
+                              ?? 0m,
+
+                    TotalPayments =
+                        metaRow == null
+                            ? 0m
+                            : DbDecimal(
+                                metaRow,
+                                "TotalPayments")
+                              ?? 0m,
+
+                    DeficitAmount =
+                        metaRow == null
+                            ? 0m
+                            : DbDecimal(
+                                metaRow,
+                                "DeficitAmount")
+                              ?? 0m,
+
+                    SurplusAmount =
+                        metaRow == null
+                            ? 0m
+                            : DbDecimal(
+                                metaRow,
+                                "SurplusAmount")
+                              ?? 0m,
+
+                    ClaimsCount =
+                        metaRow == null
+                            ? 0
+                            : DbLong(
+                                metaRow,
+                                "ClaimsCount")
+                              ??
+                              DbLong(
+                                  metaRow,
+                                  "BillsCount")
+                              ?? 0,
+
+                    PaymentsCount =
+                        metaRow == null
+                            ? 0
+                            : DbLong(
+                                metaRow,
+                                "PaymentsCount")
+                              ?? 0,
+
+                    Rows =
+                        BuildFinancialDetailsRows(
+                            detailsTable,
+                            effectivePageNumber,
+                            effectivePageSize),
+
+                    ChargeTypes =
+                        BuildFinancialChargeTypes(
+                            chargeTypesTable)
+                };
+
+
+            return View(vm);
+        }
+
+
+
+
+
+        public async Task<IActionResult> ResidentFinancialDetails(
+    string id,
+    long residentInfoID,
+    string? returnMode = null)
+        {
+            //----------------------------------------------------------
+            // Context
+            //----------------------------------------------------------
+            if (!InitPageContext(out var redirect))
+                return redirect!;
+
+            ControllerName =
+                "HousingCommandCenterDashboard";
+
+            PageName =
+                "HousingCommandCenterDashboard";
+
+
+            //----------------------------------------------------------
+            // Target department
+            //----------------------------------------------------------
+            if (!long.TryParse(
+                    id,
+                    NumberStyles.None,
+                    CultureInfo.InvariantCulture,
+                    out var targetIdaraID)
+                || targetIdaraID <= 0)
+            {
+                return RedirectToAction("Index");
+            }
+
+
+            //----------------------------------------------------------
+            // Resident
+            //----------------------------------------------------------
+            if (residentInfoID <= 0)
+            {
+                return RedirectToAction(
+                    "Department",
+                    new { id });
+            }
+
+
+            //----------------------------------------------------------
+            // Return mode
+            //----------------------------------------------------------
+            returnMode =
+                (returnMode ?? string.Empty)
+                .Trim()
+                .ToUpperInvariant();
+
+
+            var allowedReturnModes =
+                new HashSet<string>(
+                    StringComparer.OrdinalIgnoreCase)
+                {
+            "CLAIMS",
+            "PAYMENTS",
+            "DEFICIT",
+            "SURPLUS",
+            "BALANCED"
+                };
+
+
+            if (!allowedReturnModes.Contains(returnMode))
+            {
+                returnMode = "CLAIMS";
+            }
+
+
+            //----------------------------------------------------------
+            // DataLoad
+            //
+            // parameter_01 = targetIdaraID
+            // parameter_02 = finance
+            // parameter_03 = RESIDENT
+            // parameter_04 = NULL
+            // parameter_05 = NULL
+            // parameter_06 = NULL
+            // parameter_07 = NULL
+            // parameter_08 = NULL
+            // parameter_09 = residentInfoID
+            //----------------------------------------------------------
+            var spParameters = new object?[]
+            {
+        PageName,
+        IdaraId,
+        usersId,
+        HostName,
+
+        targetIdaraID,       // parameter_01
+        "finance",           // parameter_02
+        "RESIDENT",          // parameter_03
+        null,                // parameter_04
+        null,                // parameter_05
+        null,                // parameter_06
+        null,                // parameter_07
+        null,                // parameter_08
+        residentInfoID       // parameter_09
+            };
+
+
+            DataSet ds;
+
+            try
+            {
+                ds = await _mastersServies
+                    .GetDataLoadDataSetAsync(
+                        spParameters);
+            }
+            catch (Exception)
+            {
+                TempData["Error"] =
+                    "حدث خطأ أثناء تحميل التفاصيل المالية للمستفيد.";
+
+                return RedirectToAction(
+                    "FinancialDetails",
+                    new
+                    {
+                        id,
+                        mode = returnMode
+                    });
+            }
+
+
+            //----------------------------------------------------------
+            // Result Sets
+            //
+            // Table[0] = Permissions
+            // Table[1] = Beneficiary / Financial Position
+            // Table[2] = Summary By Charge Type
+            // Table[3] = Claims
+            // Table[4] = Payments
+            //
+            // Do NOT call SplitDataSet.
+            //----------------------------------------------------------
+            DataTable? summaryTable =
+                ds.Tables.Count > 1
+                    ? ds.Tables[1]
+                    : null;
+
+            DataTable? chargeTypesTable =
+                ds.Tables.Count > 2
+                    ? ds.Tables[2]
+                    : null;
+
+            DataTable? claimsTable =
+                ds.Tables.Count > 3
+                    ? ds.Tables[3]
+                    : null;
+
+            DataTable? paymentsTable =
+                ds.Tables.Count > 4
+                    ? ds.Tables[4]
+                    : null;
+
+
+            //----------------------------------------------------------
+            // SQL intentionally returns no summary row when:
+            // - resident does not exist
+            // - resident has no financial movement in selected Idara
+            //----------------------------------------------------------
+            if (summaryTable == null ||
+                summaryTable.Rows.Count == 0)
+            {
+                TempData["Error"] =
+                    "لا توجد حركة مالية لهذا المستفيد ضمن الإدارة المحددة.";
+
+                return RedirectToAction(
+                    "FinancialDetails",
+                    new
+                    {
+                        id,
+                        mode = returnMode
+                    });
+            }
+
+
+            var row =
+                summaryTable.Rows[0];
+
+
+            //----------------------------------------------------------
+            // ViewModel
+            //----------------------------------------------------------
+            var vm =
+                new DepResidentFinancialDetailsViewModel
+                {
+                    DepartmentId =
+                        id,
+
+                    ReturnMode =
+                        returnMode,
+
+                    ResidentInfoID =
+                        DbLong(
+                            row,
+                            "residentInfoID")
+                        ?? residentInfoID,
+
+                    GeneralNo =
+                        DbString(
+                            row,
+                            "GeneralNo"),
+
+                    RankName =
+                        DbString(
+                            row,
+                            "RankName"),
+
+                    FullName =
+                        DbString(
+                            row,
+                            "FullName"),
+
+                    MilitaryUnitName =
+                        DbString(
+                            row,
+                            "MilitaryUnitName"),
+
+                    IdaraID =
+                        DbLong(
+                            row,
+                            "IdaraID"),
+
+                    IdaraName =
+                        DbString(
+                            row,
+                            "IdaraName"),
+
+                    TotalClaims =
+                        DbDecimal(
+                            row,
+                            "TotalClaims")
+                        ?? 0m,
+
+                    TotalPayments =
+                        DbDecimal(
+                            row,
+                            "TotalPayments")
+                        ?? 0m,
+
+                    BalanceDifference =
+                        DbDecimal(
+                            row,
+                            "BalanceDifference")
+                        ?? 0m,
+
+                    FinancialStatus =
+                        DbString(
+                            row,
+                            "FinancialStatus"),
+
+                    BalanceAmount =
+                        DbDecimal(
+                            row,
+                            "BalanceAmount")
+                        ?? 0m,
+
+                    ClaimsCount =
+                        DbLong(
+                            row,
+                            "ClaimsCount")
+                        ?? 0,
+
+                    PaymentsCount =
+                        DbLong(
+                            row,
+                            "PaymentsCount")
+                        ?? 0,
+
+                    LastClaimDate =
+                        DbDate(
+                            row,
+                            "LastClaimDate"),
+
+                    LastPaymentDate =
+                        DbDate(
+                            row,
+                            "LastPaymentDate"),
+
+                    LastActionID =
+                        DbLong(
+                            row,
+                            "LastActionID"),
+
+                    LastActionTypeID =
+                        DbInt(
+                            row,
+                            "LastActionTypeID"),
+
+                    HousingStatus =
+                        DbString(
+                            row,
+                            "HousingStatus"),
+
+                    LastActionBuildingID =
+                        DbLong(
+                            row,
+                            "LastActionBuildingID"),
+
+                    LastActionBuildingNo =
+                        DbString(
+                            row,
+                            "LastActionBuildingNo"),
+
+                    LastActionDate =
+                        DbDate(
+                            row,
+                            "LastActionDate"),
+
+                    ChargeTypes =
+                        BuildResidentFinancialTypeSummary(
+                            chargeTypesTable),
+
+                    Claims =
+                        BuildResidentFinancialClaims(
+                            claimsTable),
+
+                    Payments =
+                        BuildResidentFinancialPayments(
+                            paymentsTable)
+                };
+
+
+            return View(vm);
+        }
+
+
+        // ───────────────────────────────────────────────────────
+        private static ChartCardConfig BuildCommandCenterCard(
+     List<HousingCommandCenterMetric> metrics,
+     List<HousingCommandCenterDepartment> departments)
+        {
             var summaryRow = BuildSummaryRow(metrics, departments);
 
             return new ChartCardConfig
@@ -93,20 +1309,25 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
                 Variant = ChartCardVariant.Soft,
                 ExtraCss = "hccm-dashboard-card",
 
-                HousingCommandCenterBoardOptions = new HousingCommandCenterBoardOptions
-                {
-                    TitleText = "لوحة قيادة الإدارات التشغيلية والصيانة",
-                    SubtitleText = "خمسة معايير قرار رئيسية تعكس الجاهزية السكنية، كفاءة التخصيص، أداء الطلبات، الكفاءة المالية، والصيانة والجودة",
-                    ShowHeader = false,
-                    ShowSummaryRow = false,
-                    ShowDepartmentRanking = false,
-                    ShowMetricProgressBar = true,
-                    ShowMetricTargetActual = true,
-                    AutoCalculatePercentages = true,
-                    PreferredCardsPerRow = 5,
-                    PercentFormat = "0.0",
-                    NumberFormat = "0"
-                },
+                HousingCommandCenterBoardOptions =
+                    new HousingCommandCenterBoardOptions
+                    {
+                        TitleText =
+                            "لوحة قيادة الإدارات التشغيلية والصيانة",
+
+                        SubtitleText =
+                            "خمسة معايير قرار رئيسية تعكس الجاهزية السكنية، كفاءة التخصيص، أداء الطلبات، الكفاءة المالية، والصيانة والجودة",
+
+                        ShowHeader = false,
+                        ShowSummaryRow = false,
+                        ShowDepartmentRanking = false,
+                        ShowMetricProgressBar = true,
+                        ShowMetricTargetActual = true,
+                        AutoCalculatePercentages = true,
+                        PreferredCardsPerRow = 5,
+                        PercentFormat = "0.0",
+                        NumberFormat = "0"
+                    },
 
                 HousingCommandCenterMetrics = metrics,
                 HousingCommandCenterDepartments = departments,
@@ -114,76 +1335,896 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
             };
         }
 
+        private static decimal? CalculateWorkflowEfficiency(
+    decimal targetDays,
+    int completedCount,
+    decimal? averageDays)
+        {
+            if (completedCount <= 0 ||
+                !averageDays.HasValue)
+            {
+                return null;
+            }
+
+            if (averageDays.Value <= 0)
+            {
+                return 100m;
+            }
+
+            return Math.Round(
+                Math.Min(
+                    100m,
+                    targetDays /
+                    averageDays.Value *
+                    100m),
+                1);
+        }
+
+
+        private static
+        (
+            int CompletedCount,
+            decimal? AverageDays,
+            decimal? EfficiencyPercent
+        )
+        GetDepartmentWorkflowPerformance(
+            DataTable? table,
+            string idaraID,
+            string workflowKey,
+            decimal targetDays)
+        {
+            if (table == null)
+            {
+                return (0, null, null);
+            }
+
+            var row =
+                table
+                    .AsEnumerable()
+                    .FirstOrDefault(r =>
+                        Convert.ToString(
+                            r["idaraID"],
+                            CultureInfo.InvariantCulture)
+                            == idaraID
+                        &&
+                        string.Equals(
+                            Convert.ToString(
+                                r["WorkflowKey"],
+                                CultureInfo.InvariantCulture),
+                            workflowKey,
+                            StringComparison.OrdinalIgnoreCase));
+
+            if (row == null)
+            {
+                return (0, null, null);
+            }
+
+            var completedCount =
+                row["CompletedCount"] == DBNull.Value
+                    ? 0
+                    : Convert.ToInt32(
+                        row["CompletedCount"],
+                        CultureInfo.InvariantCulture);
+
+            decimal? averageDays =
+                row["AverageDays"] == DBNull.Value
+                    ? null
+                    : Convert.ToDecimal(
+                        row["AverageDays"],
+                        CultureInfo.InvariantCulture);
+
+            var efficiency =
+                CalculateWorkflowEfficiency(
+                    targetDays,
+                    completedCount,
+                    averageDays);
+
+            return
+            (
+                completedCount,
+                averageDays,
+                efficiency
+            );
+        }
+
+
+        private static List<HousingCommandCenterDepartment>
+    BuildDepartmentsFromDatabase(
+        DataTable? idaraTable,
+        DataTable? occupancyTable,
+        DataTable? waitingTable,
+        DataTable? financialTable,
+        DataTable? workflowPerformanceTable,
+        List<HousingCommandCenterMetric> metrics)
+        {
+            var departments =
+                new List<HousingCommandCenterDepartment>();
+
+            if (idaraTable == null || idaraTable.Rows.Count == 0)
+                return departments;
+
+            var departmentColors = new[]
+            {
+        Color.Navy,
+        Color.Green,
+        Color.SteelBlue,
+        Color.Cyan,
+        Color.Purple,
+        Color.Orange,
+        Color.Slate
+    };
+
+            var sortOrder = 1;
+
+            foreach (DataRow row in idaraTable.Rows)
+            {
+                if (row["idaraID"] == DBNull.Value)
+                    continue;
+
+                var idaraID =
+                    Convert.ToString(
+                        row["idaraID"],
+                        CultureInfo.InvariantCulture);
+
+                if (string.IsNullOrWhiteSpace(idaraID))
+                    continue;
+
+                var longName =
+                    row["idaraLongName_A"] == DBNull.Value
+                        ? string.Empty
+                        : row["idaraLongName_A"]?.ToString()?.Trim()
+                            ?? string.Empty;
+
+                var shortName =
+                    row["idaraShortName_A"] == DBNull.Value
+                        ? string.Empty
+                        : row["idaraShortName_A"]?.ToString()?.Trim()
+                            ?? string.Empty;
+
+                if (string.IsNullOrWhiteSpace(shortName))
+                    shortName = longName;
+
+                var color =
+                    departmentColors[
+                        (sortOrder - 1) % departmentColors.Length];
+
+                //----------------------------------------------------------
+                // بيانات جاهزية السكن ونسبة الإشغال لهذه الإدارة
+                //----------------------------------------------------------
+                DataRow? occupancyRow = null;
+
+                if (occupancyTable != null)
+                {
+                    occupancyRow =
+                        occupancyTable
+                            .AsEnumerable()
+                            .FirstOrDefault(r =>
+                                Convert.ToString(
+                                    r["idaraID"],
+                                    CultureInfo.InvariantCulture)
+                                == idaraID);
+                }
+
+                decimal totalHousingUnits = 0;
+                decimal occupiedHousingUnits = 0;
+                decimal unoccupiedHousingUnits = 0;
+                decimal occupancyPercent = 0;
+
+                if (occupancyRow != null)
+                {
+                    totalHousingUnits =
+                        occupancyRow["TotalHousingUnits"] == DBNull.Value
+                            ? 0
+                            : Convert.ToDecimal(
+                                occupancyRow["TotalHousingUnits"],
+                                CultureInfo.InvariantCulture);
+
+                    occupiedHousingUnits =
+                        occupancyRow["OccupiedHousingUnits"] == DBNull.Value
+                            ? 0
+                            : Convert.ToDecimal(
+                                occupancyRow["OccupiedHousingUnits"],
+                                CultureInfo.InvariantCulture);
+
+                    unoccupiedHousingUnits =
+                        occupancyRow["UnoccupiedHousingUnits"] == DBNull.Value
+                            ? 0
+                            : Convert.ToDecimal(
+                                occupancyRow["UnoccupiedHousingUnits"],
+                                CultureInfo.InvariantCulture);
+
+                    occupancyPercent =
+                        occupancyRow["OccupancyPercent"] == DBNull.Value
+                            ? 0
+                            : Convert.ToDecimal(
+                                occupancyRow["OccupancyPercent"],
+                                CultureInfo.InvariantCulture);
+                }
+
+                // لا يوجد مخزون سكني لدى الإدارة
+                // لذلك لا يوجد إخفاق في مؤشر الإشغال
+                if (totalHousingUnits <= 0)
+                {
+                    occupancyPercent = 100m;
+                }
+
+
+                //----------------------------------------------------------
+                // قوائم الانتظار الحالية لهذه الإدارة
+                //----------------------------------------------------------
+                DataRow? waitingRow = null;
+
+                if (waitingTable != null)
+                {
+                    waitingRow =
+                        waitingTable
+                            .AsEnumerable()
+                            .FirstOrDefault(r =>
+                                Convert.ToString(
+                                    r["idaraID"],
+                                    CultureInfo.InvariantCulture)
+                                == idaraID);
+                }
+
+                decimal currentWaitingCount = 0;
+
+                if (waitingRow != null)
+                {
+                    currentWaitingCount =
+                        waitingRow["CurrentWaitingCount"] == DBNull.Value
+                            ? 0
+                            : Convert.ToDecimal(
+                                waitingRow["CurrentWaitingCount"],
+                                CultureInfo.InvariantCulture);
+                }
+
+
+                // ------------------------------------------
+
+
+                decimal allocationEfficiencyPercent;
+
+                if (currentWaitingCount <= 0)
+                {
+                    // لا توجد قائمة انتظار، فلا توجد مشكلة تخصيص
+                    allocationEfficiencyPercent = 100m;
+                }
+                else
+                {
+                    // عدد الحالات التي يوجد لها مقابل عددي من المنازل الشاغرة
+                    var conflictingCount =
+                        Math.Min(
+                            currentWaitingCount,
+                            unoccupiedHousingUnits);
+
+                    // كلما زاد وجود منتظرين بالتزامن مع الشواغر انخفضت الكفاءة
+                    allocationEfficiencyPercent =
+                        Math.Round(
+                            100m -
+                            (
+                                conflictingCount * 100m /
+                                currentWaitingCount
+                            ),
+                            1);
+                }
+
+                // العجز العددي الحقيقي
+                var waitingDeficit =
+                    Math.Max(
+                        currentWaitingCount - unoccupiedHousingUnits,
+                        0m);
+
+
+
+                //------------------------------------------------
+
+
+                //----------------------------------------------------------
+                // البيانات المالية
+                //----------------------------------------------------------
+                DataRow? financialRow = null;
+
+                if (financialTable != null)
+                {
+                    financialRow =
+                        financialTable
+                            .AsEnumerable()
+                            .FirstOrDefault(r =>
+                                Convert.ToString(
+                                    r["idaraID"],
+                                    CultureInfo.InvariantCulture)
+                                == idaraID);
+                }
+
+                decimal totalClaims = 0m;
+                decimal totalPayments = 0m;
+
+                decimal amountToCollect = 0m;
+                decimal amountToRefund = 0m;
+
+                decimal totalFinancialGap = 0m;
+                decimal netFinancialPosition = 0m;
+
+                decimal? balancedBeneficiariesPercent = null;
+                decimal? financialEfficiencyPercent = null;
+
+                int financialBeneficiariesCount = 0;
+                int balancedBeneficiariesCount = 0;
+                int deficitBeneficiariesCount = 0;
+                int surplusBeneficiariesCount = 0;
+
+
+                if (financialRow != null)
+                {
+                    financialBeneficiariesCount =
+                        financialRow["FinancialBeneficiariesCount"] == DBNull.Value
+                            ? 0
+                            : Convert.ToInt32(
+                                financialRow["FinancialBeneficiariesCount"],
+                                CultureInfo.InvariantCulture);
+
+
+                    balancedBeneficiariesCount =
+                        financialRow["BalancedBeneficiariesCount"] == DBNull.Value
+                            ? 0
+                            : Convert.ToInt32(
+                                financialRow["BalancedBeneficiariesCount"],
+                                CultureInfo.InvariantCulture);
+
+
+                    deficitBeneficiariesCount =
+                        financialRow["DeficitBeneficiariesCount"] == DBNull.Value
+                            ? 0
+                            : Convert.ToInt32(
+                                financialRow["DeficitBeneficiariesCount"],
+                                CultureInfo.InvariantCulture);
+
+
+                    surplusBeneficiariesCount =
+                        financialRow["SurplusBeneficiariesCount"] == DBNull.Value
+                            ? 0
+                            : Convert.ToInt32(
+                                financialRow["SurplusBeneficiariesCount"],
+                                CultureInfo.InvariantCulture);
+
+
+                    totalClaims =
+                        financialRow["TotalClaims"] == DBNull.Value
+                            ? 0m
+                            : Convert.ToDecimal(
+                                financialRow["TotalClaims"],
+                                CultureInfo.InvariantCulture);
+
+
+                    totalPayments =
+                        financialRow["TotalPayments"] == DBNull.Value
+                            ? 0m
+                            : Convert.ToDecimal(
+                                financialRow["TotalPayments"],
+                                CultureInfo.InvariantCulture);
+
+
+                    amountToCollect =
+                        financialRow["AmountToCollect"] == DBNull.Value
+                            ? 0m
+                            : Convert.ToDecimal(
+                                financialRow["AmountToCollect"],
+                                CultureInfo.InvariantCulture);
+
+
+                    amountToRefund =
+                        financialRow["AmountToRefund"] == DBNull.Value
+                            ? 0m
+                            : Convert.ToDecimal(
+                                financialRow["AmountToRefund"],
+                                CultureInfo.InvariantCulture);
+
+
+                    totalFinancialGap =
+                        financialRow["TotalFinancialGap"] == DBNull.Value
+                            ? 0m
+                            : Convert.ToDecimal(
+                                financialRow["TotalFinancialGap"],
+                                CultureInfo.InvariantCulture);
+
+
+                    netFinancialPosition =
+                        financialRow["NetFinancialPosition"] == DBNull.Value
+                            ? 0m
+                            : Convert.ToDecimal(
+                                financialRow["NetFinancialPosition"],
+                                CultureInfo.InvariantCulture);
+
+
+                    balancedBeneficiariesPercent =
+                        financialRow["BalancedBeneficiariesPercent"] == DBNull.Value
+                            ? null
+                            : Convert.ToDecimal(
+                                financialRow["BalancedBeneficiariesPercent"],
+                                CultureInfo.InvariantCulture);
+
+
+                    financialEfficiencyPercent =
+                        financialRow["FinancialEfficiencyPercent"] == DBNull.Value
+                            ? null
+                            : Convert.ToDecimal(
+                                financialRow["FinancialEfficiencyPercent"],
+                                CultureInfo.InvariantCulture);
+                }
+
+                //----------------------------------------------------------
+                // مؤشرات الإدارة
+                //----------------------------------------------------------
+                //----------------------------------------------------------
+                // كفاءة إجراءات الإسكان
+                //----------------------------------------------------------
+
+                var allocationWorkflow =
+                    GetDepartmentWorkflowPerformance(
+                        workflowPerformanceTable,
+                        idaraID,
+                        "ALLOCATION",
+                        30m);
+
+                var extendWorkflow =
+                    GetDepartmentWorkflowPerformance(
+                        workflowPerformanceTable,
+                        idaraID,
+                        "EXTEND",
+                        5m);
+
+                var exitWorkflow =
+                    GetDepartmentWorkflowPerformance(
+                        workflowPerformanceTable,
+                        idaraID,
+                        "EXIT",
+                        5m);
+
+
+                var procedureEfficiencies =
+                    new decimal?[]
+                    {
+        allocationWorkflow.EfficiencyPercent,
+        extendWorkflow.EfficiencyPercent,
+        exitWorkflow.EfficiencyPercent
+                    }
+                    .Where(x => x.HasValue)
+                    .Select(x => x!.Value)
+                    .ToList();
+
+
+                decimal? housingProceduresEfficiencyPercent =
+                    procedureEfficiencies.Count > 0
+                        ? Math.Round(
+                            procedureEfficiencies.Average(),
+                            1)
+                        : null;
+
+
+                var procedureNotes =
+                    new List<string>();
+
+
+                if (allocationWorkflow.EfficiencyPercent.HasValue)
+                {
+                    procedureNotes.Add(
+                        $"التسكين: متوسط {allocationWorkflow.AverageDays:0.0} يوم " +
+                        $"| الهدف 30 يوم " +
+                        $"| الكفاءة {allocationWorkflow.EfficiencyPercent:0.0}% " +
+                        $"| مكتمل {allocationWorkflow.CompletedCount}");
+                }
+
+
+                if (extendWorkflow.EfficiencyPercent.HasValue)
+                {
+                    procedureNotes.Add(
+                        $"الإمهال: متوسط {extendWorkflow.AverageDays:0.0} يوم " +
+                        $"| الهدف 5 أيام " +
+                        $"| الكفاءة {extendWorkflow.EfficiencyPercent:0.0}% " +
+                        $"| مكتمل {extendWorkflow.CompletedCount}");
+                }
+
+
+                if (exitWorkflow.EfficiencyPercent.HasValue)
+                {
+                    procedureNotes.Add(
+                        $"الإخلاء: متوسط {exitWorkflow.AverageDays:0.0} يوم " +
+                        $"| الهدف 5 أيام " +
+                        $"| الكفاءة {exitWorkflow.EfficiencyPercent:0.0}% " +
+                        $"| مكتمل {exitWorkflow.CompletedCount}");
+                }
+
+
+                var housingProceduresNote =
+                    procedureNotes.Count > 0
+                        ? string.Join(
+                            " | ",
+                            procedureNotes)
+                        : "لا توجد دورات مكتملة يمكن احتساب الكفاءة منها.";
+
+
+
+                var departmentMetrics =
+                    metrics
+                        .OrderBy(x => x.SortOrder)
+                        .Select(metric =>
+                        {
+                            //--------------------------------------------------
+                            // الكارد الأول: جاهزية السكن ونسب الإشغال
+                            //--------------------------------------------------
+                            if (metric.Key == "m_housing_readiness")
+                            {
+                                return new HousingCommandCenterDepartmentMetric
+                                {
+                                    MetricKey = metric.Key,
+
+                                    // إجمالي الوحدات
+                                    Target = totalHousingUnits,
+
+                                    // الوحدات المشغولة
+                                    Actual = occupiedHousingUnits,
+
+                                    // نستخدم النسبة المحسوبة من SQL
+                                    CompletionPercent = occupancyPercent,
+
+                                    DisplayText =
+                                        $"{occupancyPercent:0.0}%",
+
+                                    Tone = metric.Tone,
+                                    Color = metric.Color,
+                                    
+
+                                    Note =
+                                        $"إجمالي الوحدات: {totalHousingUnits:0} | " +
+                                        $"المشغولة: {occupiedHousingUnits:0} | " +
+                                        $"غير المشغولة: {unoccupiedHousingUnits:0} | " +
+                                        $"نسبة الإشغال: {occupancyPercent:0.0}%"
+                                };
+                            }
+
+
+                            //--------------------------------------------------
+                            // الكارد الثاني:
+                            // قوائم الانتظار مقابل الوحدات غير المشغولة
+                            //--------------------------------------------------
+                            if (metric.Key == "m_allocation_balance")
+                            {
+                                return new HousingCommandCenterDepartmentMetric
+                                {
+                                    MetricKey = metric.Key,
+
+                                    // المنتظرون
+                                    Actual = currentWaitingCount,
+
+                                    // المنازل الشاغرة
+                                    Target = unoccupiedHousingUnits,
+
+                                    // كفاءة التخصيص هي النسبة التي تدخل في أداء الإدارة
+                                    CompletionPercent = allocationEfficiencyPercent,
+
+                                    DisplayText =
+                                        $"{allocationEfficiencyPercent:0.0}%",
+
+                                    Tone = metric.Tone,
+
+                                    Color = metric.Color,
+
+                                    Note =
+                                        $"المنتظرون: {currentWaitingCount:0} | " +
+                                        $"المنازل الشاغرة: {unoccupiedHousingUnits:0} | " +
+                                        $"المنتظرون بعد التغطية: {waitingDeficit:0} | " +
+                                        $"كفاءة التخصيص: {allocationEfficiencyPercent:0.0}%"
+                                };
+                            }
+
+
+                            //--------------------------------------------------
+                            // كفاءة إجراءات الإسكان
+                            //--------------------------------------------------
+                            if (metric.Key == "m_housing_procedures")
+                            {
+                                return new HousingCommandCenterDepartmentMetric
+                                {
+                                    MetricKey = metric.Key,
+
+                                    Target =
+                                        housingProceduresEfficiencyPercent.HasValue
+                                            ? 100m
+                                            : null,
+
+                                    Actual =
+                                        housingProceduresEfficiencyPercent,
+
+                                    CompletionPercent =
+                                        housingProceduresEfficiencyPercent,
+
+                                    DisplayText =
+                                        housingProceduresEfficiencyPercent.HasValue
+                                            ? $"{housingProceduresEfficiencyPercent.Value:0.0}%"
+                                            : "—",
+
+                                    Tone = metric.Tone,
+
+                                    Color = metric.Color,
+
+                                    Note =
+                                        housingProceduresNote
+                                };
+                            }
+                            //---------------------------------------------------
+
+                            if (metric.Key == "m_finance_utilities")
+                            {
+                                return new HousingCommandCenterDepartmentMetric
+                                {
+                                    MetricKey =
+                                        metric.Key,
+
+                                    //--------------------------------------------------
+                                    // إجمالي السدادات
+                                    //--------------------------------------------------
+                                    Actual =
+                                        totalPayments,
+
+                                    //--------------------------------------------------
+                                    // إجمالي المطالبات
+                                    //--------------------------------------------------
+                                    Target =
+                                        totalClaims,
+
+                                    //--------------------------------------------------
+                                    // الكفاءة الجديدة
+                                    //--------------------------------------------------
+                                    CompletionPercent =
+                                        financialEfficiencyPercent,
+
+                                    DisplayText =
+                                        financialEfficiencyPercent.HasValue
+                                            ? $"{financialEfficiencyPercent.Value:0.0}%"
+                                            : "—",
+
+                                    Tone =
+                                        metric.Tone,
+
+                                    Color =
+                                        metric.Color,
+
+                                    Note =
+                                        financialEfficiencyPercent.HasValue
+                                            ?
+                                                $"المستفيدون الماليون: {financialBeneficiariesCount:N0} | " +
+                                                $"المتوازنون: {balancedBeneficiariesCount:N0} | " +
+                                                $"بعجز: {deficitBeneficiariesCount:N0} | " +
+                                                $"بفائض: {surplusBeneficiariesCount:N0} | " +
+                                                $"إجمالي المطالبات: {totalClaims:N2} | " +
+                                                $"إجمالي السدادات: {totalPayments:N2} | " +
+                                                $"مطلوب تحصيله: {amountToCollect:N2} | " +
+                                                $"مطلوب إعادته: {amountToRefund:N2} | " +
+                                                $"الكفاءة المالية: {financialEfficiencyPercent.Value:0.0}%"
+                                            :
+                                                "لا توجد حركة مالية للمستفيدين يمكن احتساب الكفاءة منها."
+                                };
+                            }
+
+                            //--------------------------------------------------
+                            // بقية المؤشرات لم تربط بعد
+                            //--------------------------------------------------
+                            return new HousingCommandCenterDepartmentMetric
+                            {
+                                MetricKey = metric.Key,
+                                Target = null,
+                                Actual = null,
+                                CompletionPercent = null,
+                                DisplayText = "—",
+                                Tone = metric.Tone,
+                                Color = metric.Color,
+                                Note = "لم يتم ربط هذا المؤشر بالبيانات الحية بعد."
+                            };
+                        })
+                        .ToList();
+
+                //----------------------------------------------------------
+                // الأداء العام حاليًا يعتمد على المؤشرات المرتبطة فقط
+                //----------------------------------------------------------
+                var availablePercentages =
+                    departmentMetrics
+                        .Where(x => x.CompletionPercent.HasValue)
+                        .Select(x => x.CompletionPercent!.Value)
+                        .ToList();
+
+                decimal? overallCompletionPercent =
+                    availablePercentages.Count > 0
+                        ? Math.Round(
+                            availablePercentages.Average(),
+                            1)
+                        : null;
+
+                departments.Add(
+                    new HousingCommandCenterDepartment
+                    {
+                        Key = idaraID,
+                        SortOrder = sortOrder,
+
+                        Name = longName,
+                        ShortName = shortName,
+
+                        Icon = "fa-solid fa-building",
+                        Emoji = "🏢",
+
+                        Tone = "info",
+                        Color = color,
+
+                        Href =
+                            $"/HousingCommandCenterDashboard/Department?id={idaraID}",
+
+                        OverallCompletionPercent =
+                            overallCompletionPercent,
+
+                        Metrics = departmentMetrics
+                    });
+
+                sortOrder++;
+            }
+
+            return departments;
+        }
+
         // ═══════════════════════════════════════════════════════
         //  المعايير — 5 ألوان مختلفة تماماً وزاهية
         // ═══════════════════════════════════════════════════════
         private static List<HousingCommandCenterMetric> BuildMetrics() =>
         [
-            new HousingCommandCenterMetric
+           new HousingCommandCenterMetric
             {
                 Key        = "m_housing_readiness",
                 SortOrder  = 1,
-                Title      = "جاهزية المخزون السكني والأصول",
-                ShortTitle = "جاهزية السكن والأصول",
-                Subtitle   = "يقيس صلاحية الوحدات للتسكين الفعلي ويربط حالة المنازل بالأصول والمرافق الداعمة ومساحات الوحدات والغرف",
-                Target = 100, Actual = 83, Unit = "%",
-                Icon = "fa-solid fa-building-circle-check", Emoji = "🏛️",
+
+                Title      = "جاهزية السكن ونسب الإشغال",
+                ShortTitle = "جاهزية السكن ونسب الإشغال",
+
+                Subtitle =
+                    "يقيس نسبة الوحدات السكنية المشغولة من إجمالي الوحدات السكنية",
+                FormulaText =  "تقاس النسبة من نسبة الوحدات السكنية المشغولة من إجمالي الوحدات السكنية.",
+
+                Target = 100,
+                Actual = 0,
+
+                Unit = "%",
+            
+                // معنى القيم داخل هذا الكارد
+                ActualLabel = "المشغول",
+                TargetLabel = "الإجمالي",
+                RemainingLabel = "غير المشغول",
+            
+                // Actual و Target هنا أعداد وحدات وليست نسبًا مئوية
+                ShowValueUnit = false,
+
+                Icon  = "fa-solid fa-building-circle-check",
+                Emoji = "🏛️",
                 Tone  = "info",
                 Color = Color.Gold,
-                Hint  = "إذا انخفض هذا المؤشر فالمشكلة غالبًا في جاهزية الأصل نفسه أو دورة الإحالة بين الصيانة والجودة والخدمات العامة."
+
+
+                Hint =
+                    "نسبة الإشغال = عدد الوحدات المشغولة ÷ إجمالي الوحدات السكنية × 100"
             },
             new HousingCommandCenterMetric
             {
                 Key        = "m_allocation_balance",
                 SortOrder  = 2,
-                Title      = "كفاءة الإشغال والتخصيص وقوائم الانتظار",
-                ShortTitle = "الإشغال والانتظار",
-                Subtitle   = "يقيس توازن التوزيع بين الفئات السكنية ويكشف الفجوة بين المنتظرين والساكنين وحجم الاستفادة من الشواغر الجاهزة",
-                Target = 95, Actual = 79, Unit = "%",
-                Icon = "fa-solid fa-users-viewfinder", Emoji = "👥",
-                Tone  = "info",
-                Color = Color.Teal,        // تيل فيروزي
-                Hint  = "هذا المؤشر هو الأكثر ارتباطًا بعدالة التخصيص وكفاءة الاستفادة من المخزون الجاهز."
+
+                Title = "كفاءة تخصيص السكن للمنتظرين",
+                ShortTitle = "كفاءة تخصيص السكن للمنتظرين",
+                Subtitle = "يوضح كفاءة الإدارة في معالجة قوائم الانتظار في ضوء وجود منازل شاغرة",
+                FormulaText =   "تبدأ الكفاءة من 100% وتنخفض بحسب نسبة وجود منتظرين بالتزامن مع وجود منازل شاغرة.",
+
+                Target = 0,
+                Actual = 0,
+                CompletionPercent = 0,
+
+                Unit = "%",
+
+                ActualLabel = "المنتظرون",
+                TargetLabel = "المنازل الشاغرة",
+                RemainingLabel = "المنتظرون بعد تغطية المنازل الشاغرة",
+
+                ShowValueUnit = false,
+
+
+
+
+
+
+                Icon = "fa-solid fa-users-viewfinder",
+                Emoji = "👥",
+                Tone = "info",
+                Color = Color.Teal,
+
+                Hint = "يقيس المؤشر كفاءة الإدارة في تخصيص السكن للمنتظرين، وينخفض عند وجود منتظرين بالتزامن مع وجود منازل شاغرة."
+
             },
             new HousingCommandCenterMetric
+{
+    Key = "m_housing_procedures",
+    SortOrder = 3,
+
+    Title = "كفاءة إجراءات الإسكان",
+    ShortTitle = "كفاءة إجراءات الإسكان",
+
+    Subtitle =
+        "يقيس سرعة إنجاز التسكين والإمهال والإخلاء مقارنة بالمدد المستهدفة",
+
+    FormulaText = "تقارن متوسط مدة كل مسار بالمدة المستهدفة له بحد أقصى 100%، ثم تحسب متوسط المسارات المكتملة. المستهدف: التسكين 30 يومًا، الإمهال 5 أيام، الإخلاء 5 أيام.",
+    Target = 100,
+    Actual = 0,
+    CompletionPercent = null,
+
+    Unit = "%",
+
+    ActualLabel = "الكفاءة",
+    TargetLabel = "الهدف",
+    RemainingLabel = "الفجوة",
+
+    ShowValueUnit = true,
+
+    Icon = "fa-solid fa-stopwatch",
+    Emoji = "⏱️",
+
+    Tone = "info",
+    Color = Color.Emerald,
+
+    Hint =
+        "يتم احتساب كل مسار مقابل مدته المستهدفة بحد أقصى 100%، " +
+        "ثم يؤخذ متوسط المسارات التي لديها دورات مكتملة فقط."
+},
+           new HousingCommandCenterMetric
             {
-                Key        = "m_requests_sla",
-                SortOrder  = 3,
-                Title      = "أداء الطلبات ومدد الإنجاز مقابل الأهداف",
-                ShortTitle = "الطلبات وSLA",
-                Subtitle   = "يغطي طلبات الإمهال والإخلاء والتسكين تحت الإجراء، ويقارن المدد الفعلية بأهداف الإنجاز المعتمدة",
-                Target = 95, Actual = 74, Unit = "%",
-                Icon = "fa-solid fa-clipboard-check", Emoji = "📊",
-                //Tone  = "warning",
-                Color = Color.Emerald,
-                Hint  = "أي تراجع هنا يعني ضغطًا إجرائيًا حقيقيًا يؤثر على رضى المستفيد وسرعة دوران الوحدات."
-            },
-            new HousingCommandCenterMetric
-            {
-                Key        = "m_finance_utilities",
-                SortOrder  = 4,
-                Title      = "الكفاءة المالية والاستهلاك والمطالبات",
-                ShortTitle = "الماليات والاستهلاك",
-                Subtitle   = "يجمع المستحقات الإيجارية، المطالبات المالية حسب الفئة، ومؤشرات استهلاك الكهرباء والماء في قراءة مالية تشغيلية واحدة",
-                Target = 100, Actual = 81, Unit = "%",
-                Icon = "fa-solid fa-coins", Emoji = "💰",
-                Tone  = "success",
+                Key = "m_finance_utilities",
+                SortOrder = 4,
+
+                Title = "كفاءة التحصيل والتسوية المالية",
+                ShortTitle = "الكفاءة المالية",
+
+                Subtitle =
+                    "يقيس كفاءة تسوية المطالبات المالية بمختلف أنواعها مقابل السدادات الفعلية لكل إدارة",
+
+                Target = 0,
+                Actual = 0,
+                CompletionPercent = 0,
+
+                Unit = "%",
+
+                ActualLabel = "إجمالي السدادات",
+                TargetLabel = "إجمالي المطالبات",
+                RemainingLabel = "العجز / الفائض",
+
+                ShowValueUnit = false,
+
+                Icon = "fa-solid fa-coins",
+                Emoji = "💰",
+
+                Tone = "success",
                 Color = Color.RoyalBlue,
-                Hint  = "هذا المؤشر يقيس أثر التشغيل على التكلفة وجودة الإدارة المالية للأصل والمستفيد والخدمة."
+                FormulaText = "تبدأ الكفاءة من 100% وتنخفض بحسب مجموع فروقات أرصدة المستفيدين مقارنة بإجمالي مطالباتهم، بحيث لا يلغي فائض مستفيد عجز مستفيد آخر.",
+
+                Hint =
+                    "تقيس كفاءة التسوية مدى تقارب إجمالي السدادات من إجمالي المطالبات، " +
+                    "ويؤثر كل من العجز والفائض على نسبة الكفاءة."
             },
-            new HousingCommandCenterMetric
-            {
-                Key        = "m_maintenance_quality",
-                SortOrder  = 5,
-                Title      = "الصيانة الوقائية والجودة والخدمات والمركبات",
-                ShortTitle = "الصيانة والجودة",
-                Subtitle   = "يركز على فعالية الصيانة الوقائية للمباني والأسطول والمرافق، وسرعة الإحالات للجودة والخدمات العامة وإغلاقها",
-                Target = 100, Actual = 86, Unit = "%",
-                Icon = "fa-solid fa-tools", Emoji = "⚙️",
-                Tone  = "success",
-                Color = Color.Violet,      // بنفسجي ملكي
-                Hint  = "الإدارة القوية هنا تكون أقل اعتمادًا على الصيانة الطارئة وأكثر قدرة على المحافظة على الجاهزية."
-            }
+            //,
+            //new HousingCommandCenterMetric
+            //{
+            //    Key        = "m_maintenance_quality",
+            //    SortOrder  = 5,
+            //    Title      = "الصيانة الوقائية والجودة والخدمات والمركبات",
+            //    ShortTitle = "الصيانة والجودة",
+            //    Subtitle   = "يركز على فعالية الصيانة الوقائية للمباني والأسطول والمرافق، وسرعة الإحالات للجودة والخدمات العامة وإغلاقها",
+            //    Target = 100, Actual = 86, Unit = "%",
+            //    Icon = "fa-solid fa-tools", Emoji = "⚙️",
+            //    Tone  = "success",
+            //    Color = Color.Violet,      // بنفسجي ملكي
+            //    Hint  = "الإدارة القوية هنا تكون أقل اعتمادًا على الصيانة الطارئة وأكثر قدرة على المحافظة على الجاهزية."
+            //}
         ];
 
         // ═══════════════════════════════════════════════════════
@@ -381,6 +2422,1982 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
             return summary;
         }
 
+
+
+
+
+
+        private static DepHousingDetail? BuildHousingDetailFromDatabase(
+    DataTable? occupancyTable,
+    string idaraID)
+        {
+            if (occupancyTable == null ||
+                occupancyTable.Rows.Count == 0 ||
+                string.IsNullOrWhiteSpace(idaraID))
+            {
+                return null;
+            }
+
+            var row =
+                occupancyTable
+                    .AsEnumerable()
+                    .FirstOrDefault(r =>
+                        Convert.ToString(
+                            r["idaraID"],
+                            CultureInfo.InvariantCulture)
+                        == idaraID);
+
+            if (row == null)
+                return null;
+
+            int totalUnits =
+                row["TotalHousingUnits"] == DBNull.Value
+                    ? 0
+                    : Convert.ToInt32(
+                        row["TotalHousingUnits"],
+                        CultureInfo.InvariantCulture);
+
+            int occupied =
+                row["OccupiedHousingUnits"] == DBNull.Value
+                    ? 0
+                    : Convert.ToInt32(
+                        row["OccupiedHousingUnits"],
+                        CultureInfo.InvariantCulture);
+
+            int vacant =
+                row["UnoccupiedHousingUnits"] == DBNull.Value
+                    ? 0
+                    : Convert.ToInt32(
+                        row["UnoccupiedHousingUnits"],
+                        CultureInfo.InvariantCulture);
+
+            return new DepHousingDetail
+            {
+                TotalUnits = totalUnits,
+                Occupied = occupied,
+                Vacant = vacant,
+
+                AreaDistribution = new(),
+                RoomDistribution = new()
+            };
+        }
+
+
+
+
+        private static List<DepOccupancyLocationDetail>
+    BuildOccupancyLocationsFromDatabase(
+        DataTable? occupancyLocationTable,
+        string idaraID)
+        {
+            var result = new List<DepOccupancyLocationDetail>();
+
+            if (occupancyLocationTable == null ||
+                occupancyLocationTable.Rows.Count == 0 ||
+                string.IsNullOrWhiteSpace(idaraID))
+            {
+                return result;
+            }
+
+            foreach (DataRow row in occupancyLocationTable.Rows)
+            {
+                var rowIdaraID =
+                    Convert.ToString(
+                        row["idaraID"],
+                        CultureInfo.InvariantCulture);
+
+                if (rowIdaraID != idaraID)
+                    continue;
+
+                result.Add(
+                    new DepOccupancyLocationDetail
+                    {
+                        MilitaryLocationID =
+                            row["militaryLocationID_FK"] == DBNull.Value
+                                ? 0
+                                : Convert.ToInt32(
+                                    row["militaryLocationID_FK"],
+                                    CultureInfo.InvariantCulture),
+
+                        MilitaryLocationName =
+                            row["militaryLocationName_A"] == DBNull.Value
+                                ? "غير محدد"
+                                : row["militaryLocationName_A"]
+                                    ?.ToString()
+                                    ?.Trim()
+                                    ?? "غير محدد",
+
+                        TotalHousingUnits =
+                            row["TotalHousingUnits"] == DBNull.Value
+                                ? 0
+                                : Convert.ToInt32(
+                                    row["TotalHousingUnits"],
+                                    CultureInfo.InvariantCulture),
+
+                        OccupiedHousingUnits =
+                            row["OccupiedHousingUnits"] == DBNull.Value
+                                ? 0
+                                : Convert.ToInt32(
+                                    row["OccupiedHousingUnits"],
+                                    CultureInfo.InvariantCulture),
+
+                        UnoccupiedHousingUnits =
+                            row["UnoccupiedHousingUnits"] == DBNull.Value
+                                ? 0
+                                : Convert.ToInt32(
+                                    row["UnoccupiedHousingUnits"],
+                                    CultureInfo.InvariantCulture),
+
+                        OccupancyPercent =
+                            row["OccupancyPercent"] == DBNull.Value
+                                ? 0m
+                                : Convert.ToDecimal(
+                                    row["OccupancyPercent"],
+                                    CultureInfo.InvariantCulture)
+                    });
+            }
+
+            return result
+                .OrderBy(x => x.MilitaryLocationName)
+                .ToList();
+        }
+
+
+
+        private static DepHousingReadinessDetail?
+    BuildHousingReadinessFromDatabase(
+        DataTable? readinessTable,
+        string idaraID)
+        {
+            if (readinessTable == null ||
+                readinessTable.Rows.Count == 0 ||
+                string.IsNullOrWhiteSpace(idaraID))
+            {
+                return null;
+            }
+
+            var rows = readinessTable
+                .AsEnumerable()
+                .Where(r =>
+                    Convert.ToString(
+                        r["idaraID"],
+                        CultureInfo.InvariantCulture) == idaraID)
+                .ToList();
+
+            if (rows.Count == 0)
+                return null;
+
+            var totalHousingUnits =
+                rows[0]["TotalHousingUnits"] == DBNull.Value
+                    ? 0
+                    : Convert.ToInt32(
+                        rows[0]["TotalHousingUnits"],
+                        CultureInfo.InvariantCulture);
+
+            var groups = rows
+                .GroupBy(r => new
+                {
+                    Key =
+                        r["ReadinessGroupKey"] == DBNull.Value
+                            ? ""
+                            : r["ReadinessGroupKey"]
+                                ?.ToString()
+                                ?.Trim() ?? "",
+
+                    Name =
+                        r["ReadinessGroupName"] == DBNull.Value
+                            ? ""
+                            : r["ReadinessGroupName"]
+                                ?.ToString()
+                                ?.Trim() ?? "",
+
+                    Order =
+                        r["ReadinessGroupOrder"] == DBNull.Value
+                            ? 99
+                            : Convert.ToInt32(
+                                r["ReadinessGroupOrder"],
+                                CultureInfo.InvariantCulture)
+                })
+                .Select(g =>
+                {
+                    var actions = g
+                        .Select(r =>
+                            new DepHousingReadinessAction
+                            {
+                                ActionTypeID =
+                                    r["buildingActionTypeID_FK"] == DBNull.Value
+                                        ? null
+                                        : Convert.ToInt32(
+                                            r["buildingActionTypeID_FK"],
+                                            CultureInfo.InvariantCulture),
+
+                                ActionTypeName =
+                                    r["ActionTypeName"] == DBNull.Value
+                                        ? "لا يوجد إجراء نشط"
+                                        : r["ActionTypeName"]
+                                            ?.ToString()
+                                            ?.Trim()
+                                            ?? "لا يوجد إجراء نشط",
+
+                                BuildingStatus =
+                                    r["BuildingStatus"] == DBNull.Value
+                                        ? ""
+                                        : r["BuildingStatus"]
+                                            ?.ToString()
+                                            ?.Trim() ?? "",
+
+                                BuildingActionRoot =
+                                    r["buildingActionRoot"] == DBNull.Value
+                                        ? null
+                                        : Convert.ToInt32(
+                                            r["buildingActionRoot"],
+                                            CultureInfo.InvariantCulture),
+
+                                HousingUnitsCount =
+                                    r["HousingUnitsCount"] == DBNull.Value
+                                        ? 0
+                                        : Convert.ToInt32(
+                                            r["HousingUnitsCount"],
+                                            CultureInfo.InvariantCulture)
+                            })
+                        .OrderByDescending(x => x.HousingUnitsCount)
+                        .ThenBy(x => x.ActionTypeName)
+                        .ToList();
+
+                    var groupCount =
+                        actions.Sum(x => x.HousingUnitsCount);
+
+                    var percent =
+                        totalHousingUnits > 0
+                            ? Math.Round(
+                                groupCount * 100m /
+                                totalHousingUnits,
+                                1)
+                            : 0m;
+
+                    return new DepHousingReadinessGroup
+                    {
+                        Key = g.Key.Key,
+                        Name = g.Key.Name,
+                        Order = g.Key.Order,
+                        HousingUnitsCount = groupCount,
+                        Percent = percent,
+                        Actions = actions
+                    };
+                })
+                .OrderBy(x => x.Order)
+                .ToList();
+
+            return new DepHousingReadinessDetail
+            {
+                TotalHousingUnits = totalHousingUnits,
+                Groups = groups
+            };
+        }
+
+
+
+
+        private static DepHousingProceduresDetail?
+    BuildHousingProceduresFromDatabase(
+        DataTable? summaryTable,
+        DataTable? stagesTable,
+        DataTable? oldestTable,
+        DataTable? performanceTable,
+        string idaraID)
+        {
+            if (summaryTable == null ||
+                summaryTable.Rows.Count == 0 ||
+                string.IsNullOrWhiteSpace(idaraID))
+            {
+                return null;
+            }
+
+            //----------------------------------------------------------
+            // Summary - dt7
+            //----------------------------------------------------------
+            var summaryRow =
+                summaryTable
+                    .AsEnumerable()
+                    .FirstOrDefault(r =>
+                        Convert.ToString(
+                            r["idaraID"],
+                            CultureInfo.InvariantCulture)
+                        == idaraID);
+
+            if (summaryRow == null)
+                return null;
+
+            var result =
+                new DepHousingProceduresDetail
+                {
+                    TotalCurrentProcedures =
+                        DbInt(
+                            summaryRow,
+                            "TotalCurrentProcedures")
+                        ?? 0,
+
+                    AllocationCurrent =
+                        DbInt(
+                            summaryRow,
+                            "AllocationCurrent")
+                        ?? 0,
+
+                    ExtendCurrent =
+                        DbInt(
+                            summaryRow,
+                            "ExtendCurrent")
+                        ?? 0,
+
+                    ExitCurrent =
+                        DbInt(
+                            summaryRow,
+                            "ExitCurrent")
+                        ?? 0
+                };
+
+
+            //----------------------------------------------------------
+            // Stages - dt8
+            //----------------------------------------------------------
+            if (stagesTable != null)
+            {
+                foreach (DataRow row in stagesTable.Rows)
+                {
+                    var rowIdaraID =
+                        DbString(
+                            row,
+                            "idaraID");
+
+                    if (rowIdaraID != idaraID)
+                        continue;
+
+                    result.Stages.Add(
+                        new DepHousingProcedureStage
+                        {
+                            ProcedureGroupKey =
+                                DbString(
+                                    row,
+                                    "ProcedureGroupKey"),
+
+                            ProcedureGroupName =
+                                DbString(
+                                    row,
+                                    "ProcedureGroupName"),
+
+                            ActionTypeID =
+                                DbInt(
+                                    row,
+                                    "ActionTypeID")
+                                ?? 0,
+
+                            ActionTypeName =
+                                DbString(
+                                    row,
+                                    "ActionTypeName"),
+
+                            CurrentCases =
+                                DbInt(
+                                    row,
+                                    "CurrentCases")
+                                ?? 0,
+
+                            OldestCurrentStatusDate =
+                                DbDate(
+                                    row,
+                                    "OldestCurrentStatusDate"),
+
+                            OldestCurrentStatusDays =
+                                DbInt(
+                                    row,
+                                    "OldestCurrentStatusDays")
+                        });
+                }
+            }
+
+
+            //----------------------------------------------------------
+            // Oldest current procedures - dt9
+            //----------------------------------------------------------
+            if (oldestTable != null)
+            {
+                foreach (DataRow row in oldestTable.Rows)
+                {
+                    var rowIdaraID =
+                        DbString(
+                            row,
+                            "idaraID");
+
+                    if (rowIdaraID != idaraID)
+                        continue;
+
+                    result.OldestCurrent.Add(
+                        new DepHousingProcedureRow
+                        {
+                            RowNo =
+                                DbInt(
+                                    row,
+                                    "RowNo")
+                                ?? 0,
+
+                            ProcedureGroupKey =
+                                DbString(
+                                    row,
+                                    "ProcedureGroupKey"),
+
+                            ProcedureGroupName =
+                                DbString(
+                                    row,
+                                    "ProcedureGroupName"),
+
+                            BuildingDetailsID =
+                                DbLong(
+                                    row,
+                                    "buildingDetailsID")
+                                ?? 0,
+
+                            BuildingDetailsNo =
+                                DbString(
+                                    row,
+                                    "buildingDetailsNo"),
+
+                            GeneralNo =
+                                DbLong(
+                                    row,
+                                    "generalNo_FK"),
+
+                            BuildingActionID =
+                                DbLong(
+                                    row,
+                                    "buildingActionID")
+                                ?? 0,
+
+                            BuildingActionParentID =
+                                DbLong(
+                                    row,
+                                    "buildingActionParentID"),
+
+                            ActionTypeID =
+                                DbInt(
+                                    row,
+                                    "ActionTypeID")
+                                ?? 0,
+
+                            ActionTypeName =
+                                DbString(
+                                    row,
+                                    "ActionTypeName"),
+
+                            CurrentStatusSince =
+                                DbDate(
+                                    row,
+                                    "CurrentStatusSince"),
+
+                            CurrentStatusDateSource =
+                                DbString(
+                                    row,
+                                    "CurrentStatusDateSource"),
+
+                            DaysInCurrentStatus =
+                                DbInt(
+                                    row,
+                                    "DaysInCurrentStatus"),
+
+                            IsMoveDataGenerated =
+                                (
+                                    DbInt(
+                                        row,
+                                        "IsMoveDataGenerated")
+                                    ?? 0
+                                ) == 1
+                        });
+                }
+            }
+
+
+
+            //----------------------------------------------------------
+            // Workflow performance - dt10
+            //----------------------------------------------------------
+            if (performanceTable != null)
+            {
+                foreach (DataRow row in performanceTable.Rows)
+                {
+                    var rowIdaraID =
+                        DbString(
+                            row,
+                            "idaraID");
+
+                    if (rowIdaraID != idaraID)
+                        continue;
+
+                    result.Performance.Add(
+                        new DepHousingWorkflowPerformance
+                        {
+                            WorkflowKey =
+                                DbString(
+                                    row,
+                                    "WorkflowKey"),
+
+                            WorkflowName =
+                                DbString(
+                                    row,
+                                    "WorkflowName"),
+
+                            CompletedCount =
+                                DbInt(
+                                    row,
+                                    "CompletedCount")
+                                ?? 0,
+
+                            AverageDays =
+                                DbDecimal(
+                                    row,
+                                    "AverageDays"),
+
+                            MedianDays =
+                                DbDecimal(
+                                    row,
+                                    "MedianDays"),
+
+                            MinimumDays =
+                                DbDecimal(
+                                    row,
+                                    "MinimumDays"),
+
+                            MaximumDays =
+                                DbDecimal(
+                                    row,
+                                    "MaximumDays"),
+
+                            LastCompletedDate =
+                                DbDate(
+                                    row,
+                                    "LastCompletedDate")
+                        });
+                }
+            }
+
+
+            //----------------------------------------------------------
+            // Stable ordering
+            //----------------------------------------------------------
+            result.Stages =
+                result.Stages
+                    .OrderBy(x =>
+                        x.ProcedureGroupKey switch
+                        {
+                            "ALLOCATION" => 1,
+                            "EXTEND" => 2,
+                            "EXIT" => 3,
+                            _ => 9
+                        })
+                    .ThenByDescending(
+                        x => x.CurrentCases)
+                    .ThenBy(
+                        x => x.ActionTypeID)
+                    .ToList();
+
+
+            result.OldestCurrent =
+                result.OldestCurrent
+                    .OrderBy(
+                        x => x.RowNo)
+                    .ToList();
+
+
+            result.Performance =
+    result.Performance
+        .OrderBy(x =>
+            x.WorkflowKey switch
+            {
+                "ALLOCATION" => 1,
+                "EXTEND" => 2,
+                "EXIT" => 3,
+                _ => 9
+            })
+        .ToList();
+
+
+            return result;
+        }
+
+
+        private static DepFinanceDetail?
+ BuildFinanceDetailFromDatabase(
+     DataTable? financialTable,
+     DataTable? financialClaimsByTypeTable,
+     string idaraID)
+        {
+            if (financialTable == null ||
+                financialTable.Rows.Count == 0 ||
+                string.IsNullOrWhiteSpace(idaraID))
+            {
+                return null;
+            }
+
+
+            //----------------------------------------------------------
+            // بيانات الكفاءة المالية الإجمالية للإدارة
+            //----------------------------------------------------------
+            var row =
+                financialTable
+                    .AsEnumerable()
+                    .FirstOrDefault(r =>
+                        Convert.ToString(
+                            r["idaraID"],
+                            CultureInfo.InvariantCulture)
+                        == idaraID);
+
+
+            if (row == null)
+                return null;
+
+
+            //----------------------------------------------------------
+            // التحليل المالي حسب نوع الرسوم
+            //----------------------------------------------------------
+            var claimsByType =
+                new List<DepFinanceClaimType>();
+
+
+            if (financialClaimsByTypeTable != null)
+            {
+                foreach (
+                    DataRow claimRow
+                    in financialClaimsByTypeTable.Rows)
+                {
+                    var rowIdaraID =
+                        Convert.ToString(
+                            claimRow["idaraID"],
+                            CultureInfo.InvariantCulture);
+
+
+                    if (rowIdaraID != idaraID)
+                        continue;
+
+
+                    var billChargeTypeName =
+                        claimRow["BillChargeTypeName"] == DBNull.Value
+                            ? "غير محدد"
+                            : Convert.ToString(
+                                claimRow["BillChargeTypeName"],
+                                CultureInfo.InvariantCulture);
+
+
+                    if (string.IsNullOrWhiteSpace(
+                            billChargeTypeName))
+                    {
+                        billChargeTypeName =
+                            "غير محدد";
+                    }
+
+
+                    claimsByType.Add(
+                        new DepFinanceClaimType
+                        {
+                            BillChargeTypeID =
+                                claimRow["BillChargeTypeID"] ==
+                                DBNull.Value
+                                    ? (int?)null
+                                    : Convert.ToInt32(
+                                        claimRow[
+                                            "BillChargeTypeID"
+                                        ],
+                                        CultureInfo
+                                            .InvariantCulture),
+
+                            BillChargeTypeName =
+                                billChargeTypeName,
+
+                            FinancialBeneficiariesCount =
+                                claimRow[
+                                    "FinancialBeneficiariesCount"
+                                ] == DBNull.Value
+                                    ? 0L
+                                    : Convert.ToInt64(
+                                        claimRow[
+                                            "FinancialBeneficiariesCount"
+                                        ],
+                                        CultureInfo
+                                            .InvariantCulture),
+
+                            BillsCount =
+                                claimRow["BillsCount"] ==
+                                DBNull.Value
+                                    ? 0L
+                                    : Convert.ToInt64(
+                                        claimRow[
+                                            "BillsCount"
+                                        ],
+                                        CultureInfo
+                                            .InvariantCulture),
+
+                            BeneficiariesCount =
+                                claimRow[
+                                    "BeneficiariesCount"
+                                ] == DBNull.Value
+                                    ? 0L
+                                    : Convert.ToInt64(
+                                        claimRow[
+                                            "BeneficiariesCount"
+                                        ],
+                                        CultureInfo
+                                            .InvariantCulture),
+
+                            TotalClaims =
+                                claimRow["TotalClaims"] ==
+                                DBNull.Value
+                                    ? 0m
+                                    : Convert.ToDecimal(
+                                        claimRow[
+                                            "TotalClaims"
+                                        ],
+                                        CultureInfo
+                                            .InvariantCulture),
+
+                            TotalPayments =
+                                claimRow["TotalPayments"] ==
+                                DBNull.Value
+                                    ? 0m
+                                    : Convert.ToDecimal(
+                                        claimRow[
+                                            "TotalPayments"
+                                        ],
+                                        CultureInfo
+                                            .InvariantCulture),
+
+                            DeficitByType =
+                                claimRow["DeficitByType"] ==
+                                DBNull.Value
+                                    ? 0m
+                                    : Convert.ToDecimal(
+                                        claimRow[
+                                            "DeficitByType"
+                                        ],
+                                        CultureInfo
+                                            .InvariantCulture),
+
+                            SurplusByType =
+                                claimRow["SurplusByType"] ==
+                                DBNull.Value
+                                    ? 0m
+                                    : Convert.ToDecimal(
+                                        claimRow[
+                                            "SurplusByType"
+                                        ],
+                                        CultureInfo
+                                            .InvariantCulture),
+
+                            NetByType =
+                                claimRow["NetByType"] ==
+                                DBNull.Value
+                                    ? 0m
+                                    : Convert.ToDecimal(
+                                        claimRow[
+                                            "NetByType"
+                                        ],
+                                        CultureInfo
+                                            .InvariantCulture),
+
+                            ClaimsPercent =
+                                claimRow["ClaimsPercent"] ==
+                                DBNull.Value
+                                    ? 0m
+                                    : Convert.ToDecimal(
+                                        claimRow[
+                                            "ClaimsPercent"
+                                        ],
+                                        CultureInfo
+                                            .InvariantCulture)
+                        });
+                }
+            }
+
+
+            //----------------------------------------------------------
+            // ViewModel النهائي
+            //----------------------------------------------------------
+            return new DepFinanceDetail
+            {
+                FinancialBeneficiariesCount =
+                    DbInt(
+                        row,
+                        "FinancialBeneficiariesCount")
+                    ?? 0,
+
+                BalancedBeneficiariesCount =
+                    DbInt(
+                        row,
+                        "BalancedBeneficiariesCount")
+                    ?? 0,
+
+                DeficitBeneficiariesCount =
+                    DbInt(
+                        row,
+                        "DeficitBeneficiariesCount")
+                    ?? 0,
+
+                SurplusBeneficiariesCount =
+                    DbInt(
+                        row,
+                        "SurplusBeneficiariesCount")
+                    ?? 0,
+
+
+                TotalClaims =
+                    DbDecimal(
+                        row,
+                        "TotalClaims")
+                    ?? 0m,
+
+                TotalPayments =
+                    DbDecimal(
+                        row,
+                        "TotalPayments")
+                    ?? 0m,
+
+                AmountToCollect =
+                    DbDecimal(
+                        row,
+                        "AmountToCollect")
+                    ?? 0m,
+
+                AmountToRefund =
+                    DbDecimal(
+                        row,
+                        "AmountToRefund")
+                    ?? 0m,
+
+                TotalFinancialGap =
+                    DbDecimal(
+                        row,
+                        "TotalFinancialGap")
+                    ?? 0m,
+
+                NetFinancialPosition =
+                    DbDecimal(
+                        row,
+                        "NetFinancialPosition")
+                    ?? 0m,
+
+
+                BalancedBeneficiariesPercent =
+                    DbDecimal(
+                        row,
+                        "BalancedBeneficiariesPercent"),
+
+                FinancialEfficiencyPercent =
+                    DbDecimal(
+                        row,
+                        "FinancialEfficiencyPercent"),
+
+
+                ClaimsByType =
+                    claimsByType
+                        .OrderByDescending(
+                            x => x.TotalClaims)
+                        .ToList()
+            };
+        }
+
+
+        private static List<DepBuildingDetailRow>
+            BuildBuildingDetailsRows(
+                DataTable? table)
+        {
+            var result =
+                new List<DepBuildingDetailRow>();
+
+            if (table == null ||
+                table.Rows.Count == 0)
+            {
+                return result;
+            }
+
+            foreach (DataRow row in table.Rows)
+            {
+                result.Add(
+                    new DepBuildingDetailRow
+                    {
+                        BuildingDetailsID =
+                            DbLong(row, "buildingDetailsID") ?? 0,
+
+                        BuildingDetailsNo =
+                            DbString(row, "buildingDetailsNo"),
+
+                        MilitaryLocationName =
+                            DbString(
+                                row,
+                                "militaryLocationName_A"),
+
+                        BuildingTypeName =
+                            DbString(
+                                row,
+                                "buildingTypeName_A"),
+
+                        BuildingUtilityTypeName =
+                            DbString(
+                                row,
+                                "buildingUtilityTypeName_A"),
+
+                        BuildingClassName =
+                            DbString(
+                                row,
+                                "buildingClassName_A"),
+
+                        BuildingDetailsRooms =
+                            DbInt(
+                                row,
+                                "buildingDetailsRooms"),
+
+                        BuildingLevelsCount =
+                            DbInt(
+                                row,
+                                "buildingLevelsCount"),
+
+                        BuildingDetailsArea =
+                            DbDecimal(
+                                row,
+                                "buildingDetailsArea"),
+
+                        ReadinessGroupKey =
+                            DbString(
+                                row,
+                                "ReadinessGroupKey"),
+
+                        ReadinessGroupName =
+                            DbString(
+                                row,
+                                "ReadinessGroupName"),
+
+                        BuildingActionID =
+                            DbLong(
+                                row,
+                                "buildingActionID"),
+
+                        BuildingActionTypeID =
+                            DbInt(
+                                row,
+                                "buildingActionTypeID_FK"),
+
+                        CurrentActionName =
+                            DbString(
+                                row,
+                                "CurrentActionName"),
+
+                        CurrentBuildingStatus =
+                            DbString(
+                                row,
+                                "CurrentBuildingStatus"),
+
+                        CurrentStatusSince =
+                            DbDate(
+                                row,
+                                "CurrentStatusSince"),
+
+                        DaysInCurrentStatus =
+                            DbInt(
+                                row,
+                                "DaysInCurrentStatus"),
+
+                        CurrentActionDate =
+                            DbDate(
+                                row,
+                                "CurrentActionDate"),
+
+                        DecisionDate =
+                            DbDate(
+                                row,
+                                "DecisionDate"),
+
+                        ActionEntryDate =
+                            DbDate(
+                                row,
+                                "ActionEntryDate"),
+
+                        CurrentStatusDateSource =
+                            DbString(
+                                row,
+                                "CurrentStatusDateSource"),
+
+                        GeneralNo =
+                            DbString(
+                                row,
+                                "generalNo_FK"),
+
+                        ResidentRankName =
+                            DbString(
+                                row,
+                                "ResidentRankName"),
+
+                        ResidentFullName =
+                            DbString(
+                                row,
+                                "ResidentFullName"),
+
+                        ResidentMilitaryUnit =
+                            DbString(
+                                row,
+                                "ResidentMilitaryUnit"),
+
+                        OccupiedSince =
+                            DbDate(
+                                row,
+                                "OccupiedSince"),
+
+                        DaysOccupied =
+                            DbInt(
+                                row,
+                                "DaysOccupied"),
+
+                        VacantSince =
+                            DbDate(
+                                row,
+                                "VacantSince"),
+
+                        LastExitActionDate =
+                            DbDate(
+                                row,
+                                "LastExitActionDate"),
+
+                        DaysVacant =
+                            DbInt(
+                                row,
+                                "DaysVacant"),
+
+                        LastResidentGeneralNo =
+                            DbString(
+                                row,
+                                "LastResidentGeneralNo"),
+
+                        LastResidentRankName =
+                            DbString(
+                                row,
+                                "LastResidentRankName"),
+
+                        LastResidentFullName =
+                            DbString(
+                                row,
+                                "LastResidentFullName"),
+
+                        LastResidentMilitaryUnit =
+                            DbString(
+                                row,
+                                "LastResidentMilitaryUnit")
+                    });
+            }
+
+            return result;
+        }
+
+
+        private static List<DepProcedureDetailRow>
+    BuildProcedureDetailsRows(
+        DataTable? table)
+        {
+            var result =
+                new List<DepProcedureDetailRow>();
+
+            if (table == null ||
+                table.Rows.Count == 0)
+            {
+                return result;
+            }
+
+
+            foreach (DataRow row in table.Rows)
+            {
+                result.Add(
+                    new DepProcedureDetailRow
+                    {
+                        RowNo =
+                            DbInt(
+                                row,
+                                "RowNo")
+                            ?? 0,
+
+
+                        //--------------------------------------------------
+                        // Procedure
+                        //--------------------------------------------------
+
+                        ProcedureGroupKey =
+                            DbString(
+                                row,
+                                "ProcedureGroupKey"),
+
+                        ProcedureGroupName =
+                            DbString(
+                                row,
+                                "ProcedureGroupName"),
+
+
+                        //--------------------------------------------------
+                        // Beneficiary
+                        //--------------------------------------------------
+
+                        ResidentInfoID =
+                            DbLong(
+                                row,
+                                "residentInfoID_FK"),
+
+                        GeneralNo =
+                            DbString(
+                                row,
+                                "generalNo_FK"),
+
+                        ResidentRankName =
+                            DbString(
+                                row,
+                                "ResidentRankName"),
+
+                        ResidentFullName =
+                            DbString(
+                                row,
+                                "ResidentFullName"),
+
+                        ResidentMilitaryUnit =
+                            DbString(
+                                row,
+                                "ResidentMilitaryUnit"),
+
+
+                        //--------------------------------------------------
+                        // Building
+                        //--------------------------------------------------
+
+                        BuildingDetailsID =
+                            DbLong(
+                                row,
+                                "buildingDetailsID")
+                            ?? 0,
+
+                        BuildingDetailsNo =
+                            DbString(
+                                row,
+                                "buildingDetailsNo"),
+
+
+                        //--------------------------------------------------
+                        // Procedure Start
+                        //--------------------------------------------------
+
+                        StartActionID =
+                            DbLong(
+                                row,
+                                "StartActionID"),
+
+                        StartActionTypeID =
+                            DbInt(
+                                row,
+                                "StartActionTypeID"),
+
+                        StartActionTypeName =
+                            DbString(
+                                row,
+                                "StartActionTypeName"),
+
+                        ProcedureStartDate =
+                            DbDate(
+                                row,
+                                "ProcedureStartDate"),
+
+                        ProcedureStartSource =
+                            DbString(
+                                row,
+                                "ProcedureStartSource"),
+
+                        ProcedureElapsedSeconds =
+                            DbLong(
+                                row,
+                                "ProcedureElapsedSeconds"),
+
+                        ProcedureElapsedDays =
+                            DbDecimal(
+                                row,
+                                "ProcedureElapsedDays"),
+
+
+                        //--------------------------------------------------
+                        // Current Action
+                        //--------------------------------------------------
+
+                        CurrentActionID =
+                            DbLong(
+                                row,
+                                "CurrentActionID")
+                            ?? 0,
+
+                        CurrentActionParentID =
+                            DbLong(
+                                row,
+                                "CurrentActionParentID"),
+
+                        CurrentActionTypeID =
+                            DbInt(
+                                row,
+                                "CurrentActionTypeID")
+                            ?? 0,
+
+                        CurrentActionTypeName =
+                            DbString(
+                                row,
+                                "CurrentActionTypeName"),
+
+                        CurrentActionSourceType =
+                            DbString(
+                                row,
+                                "CurrentActionSourceType"),
+
+                        IsMoveDataGenerated =
+                            (
+                                DbInt(
+                                    row,
+                                    "IsMoveDataGenerated")
+                                ?? 0
+                            ) == 1,
+
+
+                        //--------------------------------------------------
+                        // Current Status Dates
+                        //--------------------------------------------------
+
+                        CurrentEntryDate =
+                            DbDate(
+                                row,
+                                "CurrentEntryDate"),
+
+                        CurrentActionDate =
+                            DbDate(
+                                row,
+                                "CurrentActionDate"),
+
+                        CurrentStatusSince =
+                            DbDate(
+                                row,
+                                "CurrentStatusSince"),
+
+                        CurrentStatusDateSource =
+                            DbString(
+                                row,
+                                "CurrentStatusDateSource"),
+
+                        CurrentStatusElapsedSeconds =
+                            DbLong(
+                                row,
+                                "CurrentStatusElapsedSeconds"),
+
+                        CurrentStatusElapsedDays =
+                            DbDecimal(
+                                row,
+                                "CurrentStatusElapsedDays"),
+
+
+                        //--------------------------------------------------
+                        // Business fields
+                        //--------------------------------------------------
+
+                        DecisionNo =
+                            DbString(
+                                row,
+                                "buildingActionDecisionNo"),
+
+                        DecisionDate =
+                            DbDate(
+                                row,
+                                "buildingActionDecisionDate"),
+
+                        FromDate =
+                            DbDate(
+                                row,
+                                "buildingActionFromDate"),
+
+                        ToDate =
+                            DbDate(
+                                row,
+                                "buildingActionToDate"),
+
+                        Note =
+                            DbString(
+                                row,
+                                "buildingActionNote"),
+
+
+                        //--------------------------------------------------
+                        // Counters
+                        //--------------------------------------------------
+
+                        FilteredTotalCount =
+                            DbInt(
+                                row,
+                                "FilteredTotalCount")
+                            ?? 0,
+
+                        ProcedureGroupCount =
+                            DbInt(
+                                row,
+                                "ProcedureGroupCount")
+                            ?? 0
+                    });
+            }
+
+
+            return result;
+        }
+
+
+        private static List<DepFinancialDetailRow>
+    BuildFinancialDetailsRows(
+        DataTable? table,
+        int pageNumber,
+        int pageSize)
+        {
+            var result =
+                new List<DepFinancialDetailRow>();
+
+            if (table == null ||
+                table.Rows.Count == 0)
+            {
+                return result;
+            }
+
+
+            long rowNo =
+                (
+                    (long)Math.Max(
+                        pageNumber - 1,
+                        0)
+                    * pageSize
+                ) + 1;
+
+
+            foreach (DataRow row in table.Rows)
+            {
+                result.Add(
+                    new DepFinancialDetailRow
+                    {
+                        RowNo =
+                            rowNo++,
+
+                        ResidentInfoID =
+                            DbLong(
+                                row,
+                                "residentInfoID")
+                            ?? 0,
+
+
+                        //--------------------------------------------------
+                        // Beneficiary
+                        //--------------------------------------------------
+
+                        GeneralNo =
+                            DbString(
+                                row,
+                                "GeneralNo"),
+
+                        RankName =
+                            DbString(
+                                row,
+                                "RankName"),
+
+                        FullName =
+                            DbString(
+                                row,
+                                "FullName"),
+
+                        MilitaryUnitName =
+                            DbString(
+                                row,
+                                "MilitaryUnitName"),
+
+
+                        //--------------------------------------------------
+                        // Financial
+                        //--------------------------------------------------
+
+                        TotalClaims =
+                            DbDecimal(
+                                row,
+                                "TotalClaims")
+                            ?? 0m,
+
+                        TotalPayments =
+                            DbDecimal(
+                                row,
+                                "TotalPayments")
+                            ?? 0m,
+
+                        DeficitAmount =
+                            DbDecimal(
+                                row,
+                                "DeficitAmount")
+                            ?? 0m,
+
+                        SurplusAmount =
+                            DbDecimal(
+                                row,
+                                "SurplusAmount")
+                            ?? 0m,
+
+                        ClaimsCount =
+                            DbLong(
+                                row,
+                                "ClaimsCount")
+                            ??
+                            DbLong(
+                                row,
+                                "BillsCount")
+                            ?? 0,
+
+                        PaymentsCount =
+                            DbLong(
+                                row,
+                                "PaymentsCount")
+                            ?? 0,
+
+                        LastClaimDate =
+                            DbDate(
+                                row,
+                                "LastClaimDate"),
+
+                        LastPaymentDate =
+                            DbDate(
+                                row,
+                                "LastPaymentDate"),
+
+                        LastFinancialActivityDate =
+                            DbDate(
+                                row,
+                                "LastFinancialActivityDate"),
+
+
+                        //--------------------------------------------------
+                        // Current housing status
+                        //--------------------------------------------------
+
+                        LastActionID =
+                            DbLong(
+                                row,
+                                "LastActionID"),
+
+                        LastActionTypeID =
+                            DbInt(
+                                row,
+                                "LastActionTypeID"),
+
+                        HousingStatus =
+                            DbString(
+                                row,
+                                "HousingStatus"),
+
+                        LastActionBuildingID =
+                            DbLong(
+                                row,
+                                "LastActionBuildingID"),
+
+                        LastActionBuildingNo =
+                            DbString(
+                                row,
+                                "LastActionBuildingNo"),
+
+                        LastActionDate =
+                            DbDate(
+                                row,
+                                "LastActionDate")
+                    });
+            }
+
+
+            return result;
+        }
+
+
+        private static List<DepFinancialChargeTypeOption>
+            BuildFinancialChargeTypes(
+                DataTable? table)
+        {
+            var result =
+                new List<DepFinancialChargeTypeOption>();
+
+            if (table == null ||
+                table.Rows.Count == 0)
+            {
+                return result;
+            }
+
+
+            foreach (DataRow row in table.Rows)
+            {
+                var id =
+                    DbInt(
+                        row,
+                        "BillChargeTypeID");
+
+                if (!id.HasValue)
+                    continue;
+
+
+                result.Add(
+                    new DepFinancialChargeTypeOption
+                    {
+                        BillChargeTypeID =
+                            id.Value,
+
+                        BillChargeTypeName =
+                            DbString(
+                                row,
+                                "BillChargeTypeName_A")
+                    });
+            }
+
+
+            return result;
+        }
+
+
+
+
+        private static List<DepResidentFinancialTypeSummary>
+    BuildResidentFinancialTypeSummary(
+        DataTable? table)
+        {
+            var result =
+                new List<DepResidentFinancialTypeSummary>();
+
+            if (table == null ||
+                table.Rows.Count == 0)
+            {
+                return result;
+            }
+
+
+            foreach (DataRow row in table.Rows)
+            {
+                result.Add(
+                    new DepResidentFinancialTypeSummary
+                    {
+                        BillChargeTypeID =
+                            DbLong(
+                                row,
+                                "BillChargeTypeID"),
+
+                        BillChargeTypeName =
+                            DbString(
+                                row,
+                                "BillChargeTypeName"),
+
+                        ClaimsCount =
+                            DbLong(
+                                row,
+                                "ClaimsCount")
+                            ?? 0,
+
+                        PaymentsCount =
+                            DbLong(
+                                row,
+                                "PaymentsCount")
+                            ?? 0,
+
+                        TotalClaims =
+                            DbDecimal(
+                                row,
+                                "TotalClaims")
+                            ?? 0m,
+
+                        TotalPayments =
+                            DbDecimal(
+                                row,
+                                "TotalPayments")
+                            ?? 0m,
+
+                        Difference =
+                            DbDecimal(
+                                row,
+                                "Difference")
+                            ?? 0m,
+
+                        BalanceAmountByType =
+                            DbDecimal(
+                                row,
+                                "BalanceAmountByType")
+                            ?? 0m,
+
+                        StatusByType =
+                            DbString(
+                                row,
+                                "StatusByType")
+                    });
+            }
+
+
+            return result;
+        }
+
+
+        private static List<DepResidentFinancialClaimRow>
+            BuildResidentFinancialClaims(
+                DataTable? table)
+        {
+            var result =
+                new List<DepResidentFinancialClaimRow>();
+
+            if (table == null ||
+                table.Rows.Count == 0)
+            {
+                return result;
+            }
+
+
+            foreach (DataRow row in table.Rows)
+            {
+                result.Add(
+                    new DepResidentFinancialClaimRow
+                    {
+                        BillsID =
+                            DbLong(
+                                row,
+                                "BillsID")
+                            ?? 0,
+
+                        BillNumber =
+                            DbString(
+                                row,
+                                "BillNumber"),
+
+                        BillChargeTypeID =
+                            DbLong(
+                                row,
+                                "BillChargeTypeID"),
+
+                        BillChargeTypeName =
+                            DbString(
+                                row,
+                                "BillChargeTypeName"),
+
+                        Amount =
+                            DbDecimal(
+                                row,
+                                "Amount")
+                            ?? 0m,
+
+                        PeriodMonth =
+                            DbInt(
+                                row,
+                                "PeriodMonth"),
+
+                        PeriodYear =
+                            DbInt(
+                                row,
+                                "PeriodYear"),
+
+                        BillsFromDate =
+                            DbDate(
+                                row,
+                                "BillsFromDate"),
+
+                        BillsToDate =
+                            DbDate(
+                                row,
+                                "BillsToDate"),
+
+                        BuildingDetailsID =
+                            DbLong(
+                                row,
+                                "BuildingDetailsID"),
+
+                        BuildingDetailsNo =
+                            DbString(
+                                row,
+                                "BuildingDetailsNo"),
+
+                        PenaltyReason =
+                            DbString(
+                                row,
+                                "PenaltyReason"),
+
+                        ClaimEntryDate =
+                            DbDate(
+                                row,
+                                "ClaimEntryDate")
+                    });
+            }
+
+
+            return result;
+        }
+
+
+        private static List<DepResidentFinancialPaymentRow>
+            BuildResidentFinancialPayments(
+                DataTable? table)
+        {
+            var result =
+                new List<DepResidentFinancialPaymentRow>();
+
+            if (table == null ||
+                table.Rows.Count == 0)
+            {
+                return result;
+            }
+
+
+            foreach (DataRow row in table.Rows)
+            {
+                result.Add(
+                    new DepResidentFinancialPaymentRow
+                    {
+                        PaymentID =
+                            DbLong(
+                                row,
+                                "paymentID")
+                            ?? 0,
+
+                        BillChargeTypeID =
+                            DbLong(
+                                row,
+                                "BillChargeTypeID"),
+
+                        BillChargeTypeName =
+                            DbString(
+                                row,
+                                "BillChargeTypeName"),
+
+                        Amount =
+                            DbDecimal(
+                                row,
+                                "Amount")
+                            ?? 0m,
+
+                        PaymentDate =
+                            DbDate(
+                                row,
+                                "PaymentDate"),
+
+                        PaymentNo =
+                            DbString(
+                                row,
+                                "PaymentNo"),
+
+                        DeductName =
+                            DbString(
+                                row,
+                                "DeductName"),
+
+                        PaymentDescription =
+                            DbString(
+                                row,
+                                "PaymentDescription"),
+
+                        BuildingDetailsID =
+                            DbLong(
+                                row,
+                                "BuildingDetailsID"),
+
+                        BuildingDetailsNo =
+                            DbString(
+                                row,
+                                "BuildingDetailsNo"),
+
+                        PaymentEntryDate =
+                            DbDate(
+                                row,
+                                "PaymentEntryDate")
+                    });
+            }
+
+
+            return result;
+        }
+
+        private static string GetFinancialDetailsTitle(
+            string mode)
+        {
+            return mode switch
+            {
+                "CLAIMS" =>
+                    "تفاصيل المطالبات المالية",
+
+                "PAYMENTS" =>
+                    "تفاصيل السدادات المالية",
+
+                "DEFICIT" =>
+                    "المستفيدون ذوو العجز المالي",
+
+                "SURPLUS" =>
+                    "المستفيدون ذوو الفائض المالي",
+
+                "BALANCED" =>
+                    "المستفيدون المتوازنون ماليًا",
+
+                _ =>
+                    "التفاصيل المالية"
+            };
+        }
+
+
+
+
+        private static string GetProcedureDetailsTitle(
+    string workflow)
+        {
+            return workflow switch
+            {
+                "ALL" =>
+                    "جميع إجراءات الإسكان الجارية",
+
+                "ALLOCATION" =>
+                    "إجراءات التخصيص الجارية",
+
+                "EXTEND" =>
+                    "إجراءات الإمهال الجارية",
+
+                "EXIT" =>
+                    "إجراءات الإخلاء الجارية",
+
+                _ =>
+                    "تفاصيل إجراءات الإسكان"
+            };
+        }
+
+
+
+
+
+
+        private static string GetBuildingDetailsTitle(
+            string section,
+            string status)
+        {
+            return (section, status) switch
+            {
+                ("occupancy", "OCCUPIED") =>
+                    "الوحدات السكنية المشغولة",
+
+                ("occupancy", "VACANT") =>
+                    "الوحدات السكنية الشاغرة",
+
+                ("readiness", "OCCUPIED") =>
+                    "المساكن المسكونة حاليًا",
+
+                ("readiness", "READY") =>
+                    "المساكن الجاهزة للتسكين",
+
+                ("readiness", "ALLOCATION") =>
+                    "المساكن تحت إجراءات التخصيص",
+
+                ("readiness", "MAINTENANCE") =>
+                    "المساكن ضمن دورة الصيانة",
+
+                ("readiness", "QUALITY") =>
+                    "المساكن ضمن دورة الجودة",
+
+                ("readiness", "GENERAL_SERVICES") =>
+                    "المساكن تحت اجراءات النظافه",
+
+                ("readiness", "HOUSING_DEPARTMENT") =>
+                    "المساكن تحت إجراءات قسم الإسكان",
+
+                ("readiness", "EXECUTION") =>
+                    "المساكن ضمن دورة قسم التنفيذ",
+
+                ("readiness", "VACANT_PENDING") =>
+                    "المساكن الخالية بانتظار اتخاذ إجراء",
+
+                ("readiness", "NO_ACTIVE_ACTION") =>
+                    "المساكن بدون إجراء نشط",
+
+                ("readiness", "OTHER") =>
+                    "حالات السكن الأخرى",
+
+                _ =>
+                    "تفاصيل الوحدات السكنية"
+            };
+        }
+
+
+        private static string DbString(
+            DataRow row,
+            string columnName)
+        {
+            if (!row.Table.Columns.Contains(columnName) ||
+                row[columnName] == DBNull.Value)
+            {
+                return string.Empty;
+            }
+
+            return Convert.ToString(
+                       row[columnName],
+                       CultureInfo.InvariantCulture)
+                   ?.Trim()
+                   ?? string.Empty;
+        }
+
+
+        private static int? DbInt(
+            DataRow row,
+            string columnName)
+        {
+            if (!row.Table.Columns.Contains(columnName) ||
+                row[columnName] == DBNull.Value)
+            {
+                return null;
+            }
+
+            return Convert.ToInt32(
+                row[columnName],
+                CultureInfo.InvariantCulture);
+        }
+
+
+        private static long? DbLong(
+            DataRow row,
+            string columnName)
+        {
+            if (!row.Table.Columns.Contains(columnName) ||
+                row[columnName] == DBNull.Value)
+            {
+                return null;
+            }
+
+            return Convert.ToInt64(
+                row[columnName],
+                CultureInfo.InvariantCulture);
+        }
+
+
+        private static decimal? DbDecimal(
+            DataRow row,
+            string columnName)
+        {
+            if (!row.Table.Columns.Contains(columnName) ||
+                row[columnName] == DBNull.Value)
+            {
+                return null;
+            }
+
+            return Convert.ToDecimal(
+                row[columnName],
+                CultureInfo.InvariantCulture);
+        }
+
+
+        private static DateTime? DbDate(
+            DataRow row,
+            string columnName)
+        {
+            if (!row.Table.Columns.Contains(columnName) ||
+                row[columnName] == DBNull.Value)
+            {
+                return null;
+            }
+
+            return Convert.ToDateTime(
+                row[columnName],
+                CultureInfo.InvariantCulture);
+        }
+
+
         // ═══════════════════════════════════════════════════════
         //  Detail Builders
         // ═══════════════════════════════════════════════════════
@@ -532,45 +4549,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
             }
         };
 
-        private static DepFinanceDetail BuildFinanceDetail(string depId) => depId switch
-        {
-            "dep_01" => new DepFinanceDetail
-            {
-                RentLastMonth = 412000,
-                RentLast3Months = 1189000,
-                RentLast12Months = 4538000,
-                Collected = 3941000,
-                Uncollected = 597000,
-                PaidFromSallary = 3211252,
-                PaidByATM = 521589,
-                PaidByCash = 208159,
-                UtilityEfficiency = new()
-                {
-                    new() { Label = "الإيجار",  Value = 89, Color = Color.Navy      },
-                    new() { Label = "الكهرباء", Value = 78, Color = Color.Amber     },
-                    new() { Label = "الماء",     Value = 64, Color = Color.SteelBlue },
-                    new() { Label = "الغاز",     Value = 97, Color = Color.Emerald   },
-                }
-            },
-            _ => new DepFinanceDetail
-            {
-                RentLastMonth = 250000,
-                RentLast3Months = 720000,
-                RentLast12Months = 2800000,
-                Collected = 2400000,
-                Uncollected = 400000,
-                PaidFromSallary = 2211252,
-                PaidByATM = 165852,
-                PaidByCash = 22896,
-                UtilityEfficiency = new()
-                {
-                    new() { Label = "الإيجار",  Value = 84, Color = Color.Navy      },
-                    new() { Label = "الكهرباء", Value = 78, Color = Color.Amber     },
-                    new() { Label = "الماء",     Value = 64, Color = Color.SteelBlue },
-                    new() { Label = "الغاز",     Value = 90, Color = Color.Emerald   },
-                }
-            }
-        };
+        
 
         private static DepMaintenanceDetail BuildMaintenanceDetail(string depId) => depId switch
         {
@@ -603,5 +4582,597 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
                 }
             }
         };
+
+
+
+
+
+
+        private static void ApplyHousingOccupancySummary(
+    List<HousingCommandCenterMetric> metrics,
+    DataTable? occupancyTable)
+        {
+            var metric =
+                metrics.FirstOrDefault(
+                    x => x.Key == "m_housing_readiness");
+
+            if (metric == null)
+                return;
+
+            decimal totalHousingUnits = 0;
+            decimal occupiedHousingUnits = 0;
+
+            if (occupancyTable != null)
+            {
+                foreach (DataRow row in occupancyTable.Rows)
+                {
+                    if (row["TotalHousingUnits"] != DBNull.Value)
+                    {
+                        totalHousingUnits +=
+                            Convert.ToDecimal(
+                                row["TotalHousingUnits"],
+                                CultureInfo.InvariantCulture);
+                    }
+
+                    if (row["OccupiedHousingUnits"] != DBNull.Value)
+                    {
+                        occupiedHousingUnits +=
+                            Convert.ToDecimal(
+                                row["OccupiedHousingUnits"],
+                                CultureInfo.InvariantCulture);
+                    }
+                }
+            }
+
+            var occupancyPercent =
+                totalHousingUnits > 0
+                    ? Math.Round(
+                        occupiedHousingUnits * 100m / totalHousingUnits,
+                        1)
+                    : 0m;
+
+            metric.Target = totalHousingUnits;
+            metric.Actual = occupiedHousingUnits;
+
+            metric.Hint =
+                $"إجمالي الوحدات السكنية: {totalHousingUnits:0} | " +
+                $"المشغولة: {occupiedHousingUnits:0} | " +
+                $"نسبة الإشغال: {occupancyPercent:0.0}%";
+        }
+
+
+        private static void ApplyWaitingStockSummary(
+    List<HousingCommandCenterMetric> metrics,
+    DataTable? occupancyTable,
+    DataTable? waitingTable)
+        {
+            var metric =
+                metrics.FirstOrDefault(
+                    x => x.Key == "m_allocation_balance");
+
+            if (metric == null)
+                return;
+
+            decimal totalUnoccupied = 0;
+            decimal totalWaiting = 0;
+
+            if (occupancyTable != null)
+            {
+                foreach (DataRow row in occupancyTable.Rows)
+                {
+                    if (row["UnoccupiedHousingUnits"] != DBNull.Value)
+                    {
+                        totalUnoccupied +=
+                            Convert.ToDecimal(
+                                row["UnoccupiedHousingUnits"],
+                                CultureInfo.InvariantCulture);
+                    }
+                }
+            }
+
+            if (waitingTable != null)
+            {
+                foreach (DataRow row in waitingTable.Rows)
+                {
+                    if (row["CurrentWaitingCount"] != DBNull.Value)
+                    {
+                        totalWaiting +=
+                            Convert.ToDecimal(
+                                row["CurrentWaitingCount"],
+                                CultureInfo.InvariantCulture);
+                    }
+                }
+            }
+
+            decimal coveragePercent;
+
+            if (totalWaiting <= 0)
+            {
+                coveragePercent = 100m;
+            }
+            else
+            {
+                coveragePercent =
+                    Math.Round(
+                        Math.Min(
+                            totalUnoccupied * 100m /
+                            totalWaiting,
+                            100m),
+                        1);
+            }
+
+            var availableAfterCoverage =
+                Math.Max(totalUnoccupied - totalWaiting, 0m);
+
+            var waitingDeficit =
+                Math.Max(totalWaiting - totalUnoccupied, 0m);
+
+            metric.Actual = totalWaiting;
+            metric.Target = totalUnoccupied;
+            metric.CompletionPercent = coveragePercent;
+
+            metric.Hint =
+                $"المنتظرون: {totalWaiting:0} | " +
+                $"الوحدات غير المشغولة: {totalUnoccupied:0} | " +
+                $"المتاح بعد التغطية: {availableAfterCoverage:0} | " +
+                $"العجز العددي: {waitingDeficit:0} | " +
+                $"نسبة التغطية العددية: {coveragePercent:0.0}%";
+        }
+
+
+
+        private static void ApplyAllocationEfficiencySummary(
+    List<HousingCommandCenterMetric> metrics,
+    DataTable? occupancyTable,
+    DataTable? waitingTable)
+        {
+            var metric =
+                metrics.FirstOrDefault(
+                    x => x.Key == "m_allocation_balance");
+
+            if (metric == null)
+                return;
+
+            decimal totalWaiting = 0;
+            decimal totalUnoccupiedHousingUnits = 0;
+
+            //----------------------------------------------------------
+            // إجمالي المنازل الشاغرة
+            //----------------------------------------------------------
+            if (occupancyTable != null)
+            {
+                foreach (DataRow row in occupancyTable.Rows)
+                {
+                    if (row["UnoccupiedHousingUnits"] != DBNull.Value)
+                    {
+                        totalUnoccupiedHousingUnits +=
+                            Convert.ToDecimal(
+                                row["UnoccupiedHousingUnits"],
+                                CultureInfo.InvariantCulture);
+                    }
+                }
+            }
+
+            //----------------------------------------------------------
+            // إجمالي المنتظرين
+            //----------------------------------------------------------
+            if (waitingTable != null)
+            {
+                foreach (DataRow row in waitingTable.Rows)
+                {
+                    if (row["CurrentWaitingCount"] != DBNull.Value)
+                    {
+                        totalWaiting +=
+                            Convert.ToDecimal(
+                                row["CurrentWaitingCount"],
+                                CultureInfo.InvariantCulture);
+                    }
+                }
+            }
+
+            //----------------------------------------------------------
+            // كفاءة التخصيص على مستوى جميع الإدارات
+            //----------------------------------------------------------
+            decimal allocationEfficiencyPercent;
+
+            if (totalWaiting <= 0)
+            {
+                allocationEfficiencyPercent = 100m;
+            }
+            else
+            {
+                var conflictingCount =
+                    Math.Min(
+                        totalWaiting,
+                        totalUnoccupiedHousingUnits);
+
+                allocationEfficiencyPercent =
+                    Math.Round(
+                        100m -
+                        (
+                            conflictingCount * 100m /
+                            totalWaiting
+                        ),
+                        1);
+            }
+
+            //----------------------------------------------------------
+            // المنتظرون بعد تغطية المنازل الشاغرة
+            //----------------------------------------------------------
+            var waitingAfterCoverage =
+                Math.Max(
+                    totalWaiting - totalUnoccupiedHousingUnits,
+                    0m);
+
+            //----------------------------------------------------------
+            // تحديث الكارد الرئيسي
+            //----------------------------------------------------------
+            metric.Actual = totalWaiting;
+            metric.Target = totalUnoccupiedHousingUnits;
+            metric.CompletionPercent = allocationEfficiencyPercent;
+
+            metric.Hint =
+                $"إجمالي المنتظرين: {totalWaiting:0} | " +
+                $"إجمالي المنازل الشاغرة: {totalUnoccupiedHousingUnits:0} | " +
+                $"المنتظرون بعد تغطية المنازل الشاغرة: {waitingAfterCoverage:0} | " +
+                $"كفاءة التخصيص: {allocationEfficiencyPercent:0.0}%";
+        }
+
+
+        private static void ApplyHousingProceduresSummary(
+    List<HousingCommandCenterMetric> metrics,
+    DataTable? workflowPerformanceTable)
+        {
+            var metric =
+                metrics.FirstOrDefault(
+                    x => x.Key == "m_housing_procedures");
+
+            if (metric == null)
+                return;
+
+
+            if (workflowPerformanceTable == null ||
+                workflowPerformanceTable.Rows.Count == 0)
+            {
+                metric.Target = null;
+                metric.Actual = null;
+                metric.CompletionPercent = null;
+                return;
+            }
+
+
+            var workflowScores =
+                new List<decimal>();
+
+            var notes =
+                new List<string>();
+
+
+            void AddWorkflow(
+                string workflowKey,
+                string workflowName,
+                decimal targetDays)
+            {
+                var rows =
+                    workflowPerformanceTable
+                        .AsEnumerable()
+                        .Where(r =>
+                            string.Equals(
+                                Convert.ToString(
+                                    r["WorkflowKey"],
+                                    CultureInfo.InvariantCulture),
+                                workflowKey,
+                                StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+
+
+                decimal weightedDays = 0m;
+
+                var totalCompleted = 0;
+
+
+                foreach (var row in rows)
+                {
+                    var completed =
+                        row["CompletedCount"] == DBNull.Value
+                            ? 0
+                            : Convert.ToInt32(
+                                row["CompletedCount"],
+                                CultureInfo.InvariantCulture);
+
+
+                    if (completed <= 0 ||
+                        row["AverageDays"] == DBNull.Value)
+                    {
+                        continue;
+                    }
+
+
+                    var averageDays =
+                        Convert.ToDecimal(
+                            row["AverageDays"],
+                            CultureInfo.InvariantCulture);
+
+
+                    weightedDays +=
+                        averageDays *
+                        completed;
+
+                    totalCompleted +=
+                        completed;
+                }
+
+
+                if (totalCompleted <= 0)
+                    return;
+
+
+                var globalAverageDays =
+                    weightedDays /
+                    totalCompleted;
+
+
+                var efficiency =
+                    CalculateWorkflowEfficiency(
+                        targetDays,
+                        totalCompleted,
+                        globalAverageDays);
+
+
+                if (!efficiency.HasValue)
+                    return;
+
+
+                workflowScores.Add(
+                    efficiency.Value);
+
+
+                notes.Add(
+                    $"{workflowName}: متوسط {globalAverageDays:0.0} يوم " +
+                    $"| الهدف {targetDays:0} يوم " +
+                    $"| الكفاءة {efficiency.Value:0.0}% " +
+                    $"| مكتمل {totalCompleted}");
+            }
+
+
+            AddWorkflow(
+                "ALLOCATION",
+                "التسكين",
+                30m);
+
+            AddWorkflow(
+                "EXTEND",
+                "الإمهال",
+                5m);
+
+            AddWorkflow(
+                "EXIT",
+                "الإخلاء",
+                5m);
+
+
+            if (workflowScores.Count == 0)
+            {
+                metric.Target = null;
+                metric.Actual = null;
+                metric.CompletionPercent = null;
+                metric.Hint =
+                    "لا توجد دورات مكتملة يمكن احتساب الكفاءة منها.";
+
+                return;
+            }
+
+
+            var overallEfficiency =
+                Math.Round(
+                    workflowScores.Average(),
+                    1);
+
+
+            metric.Target = 100m;
+
+            metric.Actual =
+                overallEfficiency;
+
+            metric.CompletionPercent =
+                overallEfficiency;
+
+            metric.Hint =
+                string.Join(
+                    " | ",
+                    notes);
+        }
+
+
+
+        private static void ApplyFinancialSummary(
+    List<HousingCommandCenterMetric> metrics,
+    DataTable? financialTable)
+        {
+            var metric =
+                metrics.FirstOrDefault(
+                    x =>
+                        x.Key ==
+                        "m_finance_utilities");
+
+            if (metric == null)
+                return;
+
+
+            decimal totalClaims = 0m;
+            decimal totalPayments = 0m;
+
+            decimal amountToCollect = 0m;
+            decimal amountToRefund = 0m;
+
+            decimal totalFinancialGap = 0m;
+
+            int financialBeneficiariesCount = 0;
+            int balancedBeneficiariesCount = 0;
+            int deficitBeneficiariesCount = 0;
+            int surplusBeneficiariesCount = 0;
+
+
+            if (financialTable != null)
+            {
+                foreach (DataRow row in financialTable.Rows)
+                {
+                    financialBeneficiariesCount +=
+                        row["FinancialBeneficiariesCount"] == DBNull.Value
+                            ? 0
+                            : Convert.ToInt32(
+                                row["FinancialBeneficiariesCount"],
+                                CultureInfo.InvariantCulture);
+
+
+                    balancedBeneficiariesCount +=
+                        row["BalancedBeneficiariesCount"] == DBNull.Value
+                            ? 0
+                            : Convert.ToInt32(
+                                row["BalancedBeneficiariesCount"],
+                                CultureInfo.InvariantCulture);
+
+
+                    deficitBeneficiariesCount +=
+                        row["DeficitBeneficiariesCount"] == DBNull.Value
+                            ? 0
+                            : Convert.ToInt32(
+                                row["DeficitBeneficiariesCount"],
+                                CultureInfo.InvariantCulture);
+
+
+                    surplusBeneficiariesCount +=
+                        row["SurplusBeneficiariesCount"] == DBNull.Value
+                            ? 0
+                            : Convert.ToInt32(
+                                row["SurplusBeneficiariesCount"],
+                                CultureInfo.InvariantCulture);
+
+
+                    totalClaims +=
+                        row["TotalClaims"] == DBNull.Value
+                            ? 0m
+                            : Convert.ToDecimal(
+                                row["TotalClaims"],
+                                CultureInfo.InvariantCulture);
+
+
+                    totalPayments +=
+                        row["TotalPayments"] == DBNull.Value
+                            ? 0m
+                            : Convert.ToDecimal(
+                                row["TotalPayments"],
+                                CultureInfo.InvariantCulture);
+
+
+                    amountToCollect +=
+                        row["AmountToCollect"] == DBNull.Value
+                            ? 0m
+                            : Convert.ToDecimal(
+                                row["AmountToCollect"],
+                                CultureInfo.InvariantCulture);
+
+
+                    amountToRefund +=
+                        row["AmountToRefund"] == DBNull.Value
+                            ? 0m
+                            : Convert.ToDecimal(
+                                row["AmountToRefund"],
+                                CultureInfo.InvariantCulture);
+
+
+                    totalFinancialGap +=
+                        row["TotalFinancialGap"] == DBNull.Value
+                            ? 0m
+                            : Convert.ToDecimal(
+                                row["TotalFinancialGap"],
+                                CultureInfo.InvariantCulture);
+                }
+            }
+
+
+            //----------------------------------------------------------
+            // الكفاءة المالية الإجمالية
+            //----------------------------------------------------------
+
+            decimal? financialEfficiencyPercent;
+
+
+            if (financialBeneficiariesCount <= 0)
+            {
+                financialEfficiencyPercent =
+                    null;
+            }
+            else if (totalClaims <= 0m)
+            {
+                financialEfficiencyPercent =
+                    totalPayments > 0m
+                        ? 0m
+                        : null;
+            }
+            else if (totalFinancialGap >= totalClaims)
+            {
+                financialEfficiencyPercent =
+                    0m;
+            }
+            else
+            {
+                financialEfficiencyPercent =
+                    Math.Round(
+                        100m -
+                        (
+                            totalFinancialGap *
+                            100m /
+                            totalClaims
+                        ),
+                        1);
+            }
+
+
+            //----------------------------------------------------------
+            // تحديث المؤشر الرئيسي
+            //----------------------------------------------------------
+
+            metric.Target =
+                totalClaims;
+
+            metric.Actual =
+                totalPayments;
+
+            metric.CompletionPercent =
+                financialEfficiencyPercent;
+
+
+            if (!financialEfficiencyPercent.HasValue)
+            {
+                metric.Hint =
+                    "لا توجد حركة مالية للمستفيدين يمكن احتساب الكفاءة منها.";
+
+                return;
+            }
+
+
+            metric.Hint =
+                $"المستفيدون الماليون: {financialBeneficiariesCount:N0} | " +
+                $"المتوازنون: {balancedBeneficiariesCount:N0} | " +
+                $"بعجز: {deficitBeneficiariesCount:N0} | " +
+                $"بفائض: {surplusBeneficiariesCount:N0} | " +
+                $"إجمالي المطالبات: {totalClaims:N2} | " +
+                $"إجمالي السدادات: {totalPayments:N2} | " +
+                $"مطلوب تحصيله: {amountToCollect:N2} | " +
+                $"مطلوب إعادته: {amountToRefund:N2} | " +
+                $"الكفاءة المالية: {financialEfficiencyPercent.Value:0.0}%";
+        }
+
+
+
+
+
+
+
+
+
+
+
     }
 }

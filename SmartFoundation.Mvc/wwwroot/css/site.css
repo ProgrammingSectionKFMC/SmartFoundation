@@ -18503,3 +18503,11 @@ html, body {
     }
   }
 }
+
+
+
+/* Show refund cancellation modal above SmartDrawer */
+body:has(#sf-refund-drawer.is-open) .sf-modal-backdrop {
+    z-index: 10000030 !important;
+}
+

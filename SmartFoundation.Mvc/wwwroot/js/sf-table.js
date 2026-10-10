@@ -4170,6 +4170,232 @@
                         return;
                     }
 
+
+                    
+                    // SmartDrawer - optional action.
+                    // Existing Modal behavior remains unchanged.
+                    const openDrawerFlag = !!(
+                        action.openDrawer ?? action.OpenDrawer
+                    );
+
+                    if (openDrawerFlag) {
+                        const drawerId = String(
+                            action.drawerId ?? action.DrawerId ?? ""
+                        ).trim().replace(/^#/, "");
+
+                        if (!drawerId || !window.SmartDrawer) {
+                            this.showToast(
+                                "إعدادات اللوحة الجانبية غير مكتملة",
+                                "error"
+                            );
+                            return;
+                        }
+
+                        const beforeJs =
+                            action.onBeforeOpenJs ??
+                            action.OnBeforeOpenJs ?? "";
+
+                        if (beforeJs && String(beforeJs).trim()) {
+                            try {
+                                const runner = new Function(
+                                    "table", "act", "row",
+                                    String(beforeJs).trim()
+                                );
+
+                                runner(this, action, row || null);
+                            } catch (err) {
+                                this.showToast(
+                                    "فشل تجهيز اللوحة الجانبية",
+                                    "error"
+                                );
+                                return;
+                            }
+                        }
+
+                        if (action.__cancelOpen) {
+                            this.showToast(
+                                "لا يوجد إجراء لاحق لهذه الحالة",
+                                "error"
+                            );
+                            return;
+                        }
+
+                        
+                            
+                        const paramMap =
+                            action.drawerParamMap ??
+                            action.DrawerParamMap ??
+                            {};
+                        
+                        let drawerContext = row || null;
+                        
+                        if (Object.keys(paramMap).length > 0) {
+                            if (!row) {
+                                this.showToast("تعذر تحديد بيانات الصف", "error");
+                                return;
+                            }
+                        
+                            drawerContext = {};
+                        
+                            for (const [paramName, fieldName] of Object.entries(paramMap)) {
+                                const key = String(paramName).trim();
+                                const field = String(fieldName).trim();
+                        
+                                if (!key || !field || row[field] == null || row[field] === "") {
+                                    this.showToast("معاملات اللوحة الجانبية غير مكتملة", "error");
+                                    return;
+                                }
+                        
+                                drawerContext[key] = row[field];
+                            }
+                        }
+                        
+                        
+                        const opened = window.SmartDrawer.open(drawerId, drawerContext);
+                        
+                        if (!opened) {
+                            this.showToast("تعذر فتح اللوحة الجانبية", "error");
+                            return;
+                        }
+
+                        
+const drawerElement = document.getElementById(drawerId);
+
+const titleElement =
+    drawerElement?.querySelector(".sf-drawer-title");
+
+const subtitleElement =
+    drawerElement?.querySelector(".sf-drawer-subtitle");
+
+const titleTemplate =
+    action.drawerTitleTemplate ?? action.DrawerTitleTemplate;
+
+const subtitleTemplate =
+    action.drawerSubtitleTemplate ?? action.DrawerSubtitleTemplate;
+
+// المصدر: الصف المحدد في الجدول الرئيسي، وليس DrawerParamMap.
+const formatDrawerText = (template) => {
+    return String(template).replace(/\{([^{}]+)\}/g, (_, field) => {
+        const value = row?.[field.trim()];
+        return value === null || value === undefined || value === ""
+            ? "—"
+            : String(value);
+    });
+};
+
+if (titleElement) {
+    titleElement.dataset.defaultText ??= titleElement.textContent;
+
+    titleElement.textContent = titleTemplate
+        ? formatDrawerText(titleTemplate)
+        : titleElement.dataset.defaultText;
+}
+
+if (subtitleElement) {
+    subtitleElement.dataset.defaultText ??= subtitleElement.textContent;
+
+    subtitleElement.textContent = subtitleTemplate
+        ? formatDrawerText(subtitleTemplate)
+        : subtitleElement.dataset.defaultText;
+}
+
+                        
+                        const meta = action.meta ?? action.Meta;
+                        const request = meta?.extraRequest;
+                        const endpoint = meta?.extraEndpoint;
+                        
+                        // لا نحمل بيانات إلا إذا كان الإجراء مهيأ للتحميل الإضافي.
+                        if (!request || !endpoint) return;
+                        
+                        const drawer = document.getElementById(drawerId);
+                        const host = drawer?.querySelector('[x-data^="sfTable("]');
+                        const table = host && window.Alpine?.$data(host);
+                        
+                        if (!table) {
+                            this.showToast("تعذر العثور على جدول اللوحة الجانبية", "error");
+                            return;
+                        }
+                        
+                        // منع استجابة قديمة من استبدال بيانات اختيار أحدث.
+                        const loadId = (drawer.__sfLoadId || 0) + 1;
+                        drawer.__sfLoadId = loadId;
+                        
+                        // إزالة بيانات المستفيد السابق فورًا.
+                        table.clearSelection?.();
+                        table.q = "";
+                        table.page = 1;
+                        table.initialRows = [];
+                        table.allRows = [];
+                        table.rows = [];
+                        table.filteredRows = [];
+                        table.error = null;
+                        table.loading = true;
+                        table.invalidateRowCaches?.();
+                        table.applyFiltersAndSort();
+                        
+                        try {
+                            const token = window.getRequestVerificationToken?.();
+                        
+                            if (!token) {
+                                throw new Error("Anti-Forgery Token missing");
+                            }
+                        
+                            const response = await fetch(endpoint, {
+                                method: "POST",
+                                credentials: "same-origin",
+                                headers: {
+                                    "Content-Type": "application/json",
+                                    "X-Requested-With": "XMLHttpRequest",
+                                    "RequestVerificationToken": token
+                                },
+                                body: JSON.stringify({
+                                    pageName_: request.pageName_,
+                                    ActionType: request.ActionType,
+                                    tableIndex: request.tableIndex ?? 0,
+                                    parameters: drawerContext
+                                })
+                            });
+                        
+                            if (!response.ok) {
+                                throw new Error(`HTTP ${response.status}`);
+                            }
+                        
+                            const result = await response.json();
+                        
+                            if (result.success !== true) {
+                                throw new Error("فشل تحميل السجلات");
+                            }
+                        
+                            const rows = result.table?.rows;
+                        
+                            if (!Array.isArray(rows)) {
+                                throw new Error("صيغة بيانات الجدول غير صحيحة");
+                            }
+                        
+                            if (drawer.__sfLoadId !== loadId) return;
+                        
+                            table.initialRows = rows;
+                            table.allRows = [...rows];
+                            table.invalidateRowCaches?.();
+                            table.applyFiltersAndSort();
+                        
+                        } catch (error) {
+                            if (drawer.__sfLoadId === loadId) {
+                                table.error = "تعذر تحميل بيانات اللوحة الجانبية";
+                                this.showToast(table.error, "error");
+                                console.error("SmartDrawer data load failed:", error.message);
+                            }
+                        } finally {
+                            if (drawer.__sfLoadId === loadId) {
+                                table.loading = false;
+                            }
+                        }
+                        
+                        return;
+                        
+                    }
+
+
                     const saveSp = action.saveSp ?? action.SaveSp ?? "";
                     if (saveSp) {
                         const op = action.saveOp ?? action.SaveOp ?? "execute";
@@ -5165,10 +5391,64 @@
 
                         const formToRender = JSON.parse(JSON.stringify(baseForm));
 
+                        
+                        
+                        const formParamMap =
+                            meta.formParamMap ?? meta.FormParamMap ?? {};
+                        
+                        let formRow = row;
+                        
+                        // ربط عام للحقول - يعمل فقط عند تعريف formParamMap
+                        if (
+                            formParamMap &&
+                            typeof formParamMap === "object" &&
+                            !Array.isArray(formParamMap) &&
+                            Object.keys(formParamMap).length > 0
+                        ) {
+                            const selectedRow =
+                                row ?? this.getSelectedRowFromCurrentData?.() ?? null;
+                        
+                            if (!selectedRow) {
+                                this.showToast("يرجى اختيار سجل أولاً", "error");
+                                this.closeModal();
+                                return;
+                            }
+                        
+                            formRow = { ...selectedRow };
+                        
+                            for (const [targetField, sourceField] of Object.entries(formParamMap)) {
+                        
+                                const target = String(targetField).trim();
+                                const source = String(sourceField).trim();
+                                const value = selectedRow[source];
+                        
+                                if (
+                                    !target ||
+                                    !source ||
+                                    ["__proto__", "constructor", "prototype"].includes(target) ||
+                                    value === undefined ||
+                                    value === null ||
+                                    (typeof value === "string" && !value.trim())
+                                ) {
+                                    this.showToast(
+                                        "تعذر قراءة الحقل المطلوب: " + source,
+                                        "error"
+                                    );
+                        
+                                    this.closeModal();
+                                    return;
+                                }
+                        
+                                formRow[target] = value;
+                            }
+                        }
+
+                        
+
                         const isDynamicFields = (meta.dynamicFieldsByRow ?? meta.DynamicFieldsByRow) === true;
 
                         if (!isDynamicFields || !row) {
-                            this.modal.html = this.generateFormHtml(formToRender, row);
+                         this.modal.html = this.generateFormHtml(formToRender, formRow);
                         } else {
                             const targetField = String(meta.dynamicFieldsField ?? meta.DynamicFieldsField ?? "").trim();
                             const rawMap = meta.dynamicFieldsMap ?? meta.DynamicFieldsMap ?? null;
@@ -5201,7 +5481,7 @@
                                 formToRender.Fields = defaultFields;
                             }
 
-                            this.modal.html = this.generateFormHtml(formToRender, row);
+                            this.modal.html = this.generateFormHtml(formToRender, formRow);
                         }
                     }
 

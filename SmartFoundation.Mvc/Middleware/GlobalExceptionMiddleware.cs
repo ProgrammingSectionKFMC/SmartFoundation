@@ -47,7 +47,6 @@ public sealed class GlobalExceptionMiddleware
                 }
                 catch (Exception loggingException)
                 {
-                    dataSourceUnavailable = IsDatabaseConnectionFailure(loggingException);
                     _logger.LogError(loggingException, "Failed to save exception in dbo.ErrorLog");
                 }
             }

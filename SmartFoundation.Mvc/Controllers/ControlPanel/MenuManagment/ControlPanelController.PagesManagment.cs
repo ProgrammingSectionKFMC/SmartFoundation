@@ -456,7 +456,8 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                             ["distributorName_A"] = "اسم الموزع",
                             ["distributorType_FK"] = "نوع الموزع",
                             ["permissionTypeName_A"] = "اسم الصلاحية",
-                            ["permissionTypeName_E"] = "Permission Name",
+                            ["permissionTypeName_E"] = "اسم الصلاحية بالانجليزي",
+                            ["permissionAuthLvlName_A"] = "من يمكنه اعطاء الصلاحية ؟",
                             ["distributorPermissionTypeStartDate"] = "تاريخ البداية",
                             ["distributorPermissionTypeEndDate"] = "تاريخ النهاية",
                             ["distributorPermissionTypeActive"] = "الحالة"
@@ -505,6 +506,8 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                             dict["p05"] = Get("distributorPermissionTypeEndDate");
                             dict["p06"] = Get("distributorPermissionTypeActive");
                             dict["p07"] = Get("permissionAuthLvl");
+                            dict["p08"] = Get("permissionTypeName_A");
+                            dict["p09"] = Get("permissionTypeName_E");
 
                             rowsListPermissions.Add(dict);
                         }
@@ -760,7 +763,9 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
 
                 new FieldConfig { Name = "p01", Label = "المعرف", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p02", Label = "نوع الصلاحية", Type = "select", Select2 = true, ColCss = "3", Required = true, Options = pagePermissionTypeOptions },
+                new FieldConfig { Name = "p02", Label = "نوع الصلاحية", Type = "select", Select2 = true, ColCss = "3", Readonly = true, Required = true, Options = pagePermissionTypeOptions },
+                new FieldConfig { Name = "p08", Label = "اسم الصلاحية (عربي)", Type = "text", TextMode = "arabic", ColCss = "3", Required = true },
+                new FieldConfig { Name = "p09", Label = "اسم الصلاحية (إنجليزي)", Type = "text", TextMode = "english", ColCss = "3", Required = true },
                 new FieldConfig { Name = "p07", Label = "مستوى الصلاحية", Type = "select", Select2 = true, ColCss = "3", Required = true, Options = permissionAuthLevelOptions },
             };
 
@@ -774,6 +779,9 @@ namespace SmartFoundation.Mvc.Controllers.ControlPanel
                 new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
 
                 new FieldConfig { Name = "p01", Label = "المعرف", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p02", Label = "نوع الصلاحية", Type = "select", Select2 = true, ColCss = "3", Readonly = true, Required = true, Options = pagePermissionTypeOptions },
+                new FieldConfig { Name = "p08", Label = "اسم الصلاحية (عربي)", Type = "text", TextMode = "arabic", ColCss = "3", Readonly = true, Required = true },
+                new FieldConfig { Name = "p09", Label = "اسم الصلاحية (إنجليزي)", Type = "text", TextMode = "english", ColCss = "3", Readonly = true, Required = true },
                 new FieldConfig { Name = "p06", Label = "الحالة", Type = "select", ColCss = "3", Options = ActiveOptions, Required = true },
             };
 

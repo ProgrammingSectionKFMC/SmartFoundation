@@ -689,13 +689,26 @@
                     </thead>
 
                     <tbody>
-                        <template x-if="loading">
-                            <tr>
-                                <td x-bind:colspan="visibleColumns().length + (selectable ? 1 : 0) + (hasRowEndActions() ? 1 : 0)" class="td-loading">
-                                    <i class="fa fa-spinner animate-spin"></i> جاري التحميل...
-                                </td>
-                            </tr>
-                        </template>
+                        
+                    <template x-if="loading">
+                        <tr>
+                            <td x-bind:colspan="visibleColumns().length + (selectable ? 1 : 0) + (hasRowEndActions() ? 1 : 0)"
+                                class="td-loading">
+                    
+                                <div class="flex w-full items-center justify-center gap-2 py-6"
+                                     dir="rtl">
+                    
+                                    <i class="fa fa-spinner animate-spin"></i>
+                    
+                                    <span class="whitespace-nowrap">
+                                        جاري التحميل...
+                                    </span>
+                    
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+
 
                         <template x-if="!loading && error">
                             <tr>

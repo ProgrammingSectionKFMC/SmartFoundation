@@ -5,8 +5,37 @@
     Layout = null;
     var dep = Model.Department;
     var housing = Model.HousingDetail;
+    var occupancyLocations = Model.OccupancyLocations;
+    var readiness = Model.HousingReadiness;
+
+var readinessGroups =
+    readiness?.Groups?
+        .OrderBy(x => x.Order)
+        .ToList()
+    ?? new List<SmartFoundation.UI.ViewModels.SmartCharts.DepHousingReadinessGroup>();
+
+var readinessTotal =
+    readiness?.TotalHousingUnits ?? 0;
+
     var alloc = Model.AllocationDetail;
-    var req = Model.RequestsDetail;
+    var procedures = Model.HousingProcedures;
+
+var allocationPerformance =
+    procedures?.Performance
+        .FirstOrDefault(x =>
+            x.WorkflowKey == "ALLOCATION");
+
+var extendPerformance =
+    procedures?.Performance
+        .FirstOrDefault(x =>
+            x.WorkflowKey == "EXTEND");
+
+var exitPerformance =
+    procedures?.Performance
+        .FirstOrDefault(x =>
+            x.WorkflowKey == "EXIT");
+
+
     var fin = Model.FinanceDetail;
     var maint = Model.MaintenanceDetail;
     var car = Model.CarsDetail;
@@ -20,12 +49,89 @@
 
     var jsonOpts = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
 
-    var occPct = housing != null && housing.TotalUnits > 0 ? Math.Round((decimal)housing.Occupied / housing.TotalUnits * 100, 1) : 0m;
+var occPct =
+    housing == null
+        ? 0m
+        : housing.TotalUnits <= 0
+            ? 100m
+            : Math.Round(
+                (decimal)housing.Occupied /
+                housing.TotalUnits * 100,
+                1);
     var vacPct = housing != null && housing.TotalUnits > 0 ? Math.Round((decimal)housing.Vacant / housing.TotalUnits * 100, 1) : 0m;
-    var collPct = fin != null && (fin.Collected + fin.Uncollected) > 0 ? Math.Round(fin.Collected / (fin.Collected + fin.Uncollected) * 100, 1) : 0m;
     var mPct = maint != null && maint.PlannedJobs > 0 ? Math.Round((decimal)maint.CompletedJobs / maint.PlannedJobs * 100, 1) : 0m;
-    var totReq = req?.OpenRequests.Sum(r => (int)r.Value) ?? 0;
+    
 }
+
+@functions
+{
+    private static string FmtDuration(decimal? durationDays)
+    {
+        if (!durationDays.HasValue)
+            return "—";
+
+        var totalMinutes =
+            (long)Math.Round(
+                durationDays.Value * 24m * 60m,
+                MidpointRounding.AwayFromZero);
+
+        if (totalMinutes <= 0)
+            return "أقل من دقيقة";
+
+        var days =
+            totalMinutes / 1440;
+
+        var hours =
+            (totalMinutes % 1440) / 60;
+
+        var minutes =
+            totalMinutes % 60;
+
+        var result = "";
+
+        if (days > 0)
+{
+    if (days == 1)
+    {
+        result += "يوم واحد";
+    }
+    else if (days == 2)
+    {
+        result += "يومان";
+    }
+    else if (days >= 3 && days <= 10)
+    {
+        result += $"{days} أيام";
+    }
+    else
+    {
+        result += $"{days} يوم";
+    }
+}
+
+        if (hours > 0)
+        {
+            if (!string.IsNullOrWhiteSpace(result))
+                result += " ";
+
+            result += $"{hours} ساعة";
+        }
+
+        if (minutes > 0)
+        {
+            if (!string.IsNullOrWhiteSpace(result))
+                result += " ";
+
+            result += $"{minutes} دقيقة";
+        }
+
+        return string.IsNullOrWhiteSpace(result)
+            ? "أقل من دقيقة"
+            : result;
+    }
+}
+
+
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
@@ -39,6 +145,69 @@
     <link rel="stylesheet" href="~/css/statistics.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/smartcharts/smartcharts.housingcommandcenter.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/smartcharts/smartcharts.housingdepartment.css" asp-append-version="true" />
+
+    <style>
+        .dep-drill-card {
+            color: inherit;
+            text-decoration: none;
+            cursor: pointer;
+            transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+        }
+
+        .dep-drill-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(15, 23, 42, .08);
+        }
+
+        .readiness-drill-link {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            color: inherit;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .summary-item:has(.readiness-drill-link) {
+            transition: background .16s ease, transform .16s ease;
+        }
+
+        .summary-item:has(.readiness-drill-link):hover {
+            background: rgba(30, 58, 95, .035);
+            transform: translateY(-1px);
+        }
+
+        .drill-arrow {
+            margin-inline-start: 6px;
+            color: #94a3b8;
+            font-size: 9px;
+        }
+
+        .dep-drill-hint {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 10px;
+    padding: 7px 11px;
+    border: 1px solid #dbe5ef;
+    border-radius: 9px;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.dep-drill-hint i {
+    color: #2b6cb0;
+    font-size: 11px;
+}
+
+.dep-drill-hint strong {
+    color: #334155;
+}
+    </style>
 </head>
 <body>
 
@@ -80,66 +249,352 @@
         <!-- TABS NAV -->
         <div class="dep-wrap">
             <nav class="dep-tabs">
-                <button class="dep-tab is-active" data-tab="t1"><i class="fa-solid fa-house-circle-check"></i><span>جاهزية السكن</span></button>
-                <button class="dep-tab" data-tab="t2"><i class="fa-solid fa-people-roof"></i><span>الإشغال</span></button>
+                <button class="dep-tab is-active" data-tab="t1">
+    <i class="fa-solid fa-house-circle-check"></i>
+    <span>جاهزية السكن</span>
+</button>
+
+<button class="dep-tab" data-tab="t2">
+    <i class="fa-solid fa-people-roof"></i>
+    <span>إشغال المباني</span>
+</button>
                 <button class="dep-tab" data-tab="t3"><i class="fa-solid fa-stopwatch"></i><span>اجراءات الاسكان</span></button>
-                <button class="dep-tab" data-tab="t4"><i class="fa-solid fa-money-bill-wave"></i><span>الماليات</span></button>
-                <button class="dep-tab" data-tab="t5"><i class="fa-solid fa-screwdriver-wrench"></i><span>الصيانة</span></button>
+                <button class="dep-tab" data-tab="t4"><i class="fa-solid fa-money-bill-wave"></i><span>الكفاءة المالية</span></button>
+               @*  <button class="dep-tab" data-tab="t5"><i class="fa-solid fa-screwdriver-wrench"></i><span>الصيانة</span></button>
                 <button class="dep-tab" data-tab="t6"><i class="fa-solid fa-car"></i><span>صيانة العربات</span></button>
                 <button class="dep-tab" data-tab="t7"><i class="fa-solid fa-screwdriver-wrench"></i><span>برنامج طلبات الصيانة</span></button>
+            *@
             </nav>
 
+
+
             <!-- TAB 1 — جاهزية السكن -->
-            @if (housing != null)
+<div class="dep-panel is-active" id="t1">
+
+    <div class="dep-drill-hint">
+        <i class="fa-solid fa-hand-pointer"></i>
+
+        <span>
+            لاستعراض التفاصيل،
+            <strong>اضغط على أي حالة من حالات جاهزية السكن</strong>
+            أدناه.
+        </span>
+    </div>
+
+    @if (readiness != null && readiness.Groups.Any())
+    {
+        
+
+        <!-- Row 1: Housing Readiness Chart + Summary -->
+
+
+         <!-- Summary -->
+    <div class="summary-card">
+
+        <div class="summary-title"
+     style="
+        display:flex;
+        align-items:center;
+        justify-content:space-between">
+
+    <span>
+        <i class="fa-solid fa-list-check"></i>
+        حالات جاهزية السكن — اضغط للتفاصيل
+    </span>
+
+    <span class="ccard-badge">
+        إجمالي الوحدات:
+        @Fmt(readinessTotal)
+    </span>
+
+</div>
+
+        <ul class="summary-list"
+    style="
+        display:grid;
+        grid-template-columns:repeat(3,minmax(0,1fr));
+        column-gap:24px;
+        row-gap:0">
+
+           
+
+
+            @foreach (var group in readinessGroups)
             {
-                <div class="dep-panel is-active" id="t1">
+                var itemColor =
+                    group.Key == "OCCUPIED" ? "#276749" :
+                    group.Key == "READY" ? "#0f766e" :
+                    group.Key == "ALLOCATION" ? "#2b6cb0" :
+                    group.Key == "MAINTENANCE" ? "#c05621" :
+                    group.Key == "QUALITY" ? "#553c9a" :
+                    group.Key == "GENERAL_SERVICES" ? "#086f83" :
+                    group.Key == "HOUSING_DEPARTMENT" ? "#805ad5" :
+                    group.Key == "EXECUTION" ? "#b7791f" :
+                    group.Key == "VACANT_PENDING" ? "#9b2c2c" :
+                    group.Key == "NO_ACTIVE_ACTION" ? "#718096" :
+                    "#4a5568";
+
+                var itemIcon =
+                    group.Key == "OCCUPIED" ? "fa-solid fa-house-user" :
+                    group.Key == "READY" ? "fa-solid fa-house-circle-check" :
+                    group.Key == "ALLOCATION" ? "fa-solid fa-user-check" :
+                    group.Key == "MAINTENANCE" ? "fa-solid fa-screwdriver-wrench" :
+                    group.Key == "QUALITY" ? "fa-solid fa-medal" :
+                    group.Key == "GENERAL_SERVICES" ? "fa-solid fa-broom" :
+                    group.Key == "HOUSING_DEPARTMENT" ? "fa-solid fa-building-user" :
+                    group.Key == "EXECUTION" ? "fa-solid fa-gears" :
+                    group.Key == "VACANT_PENDING" ? "fa-solid fa-house-circle-exclamation" :
+                    group.Key == "NO_ACTIVE_ACTION" ? "fa-solid fa-circle-question" :
+                    "fa-solid fa-circle-info";
+
+                <li class="summary-item">
+
+                    <a class="readiness-drill-link"
+                       title="عرض تفاصيل @group.Name"
+                       href="@Url.Action(
+                           "BuildingDetails",
+                           "HousingCommandCenterDashboard",
+                           new
+                           {
+                               id = dep.Key,
+                               section = "readiness",
+                               status = group.Key
+                           })">
+
+                        <span class="summary-label">
+
+                            <i style="
+                                background:rgba(74,85,104,.08);
+                                color:@itemColor"
+                               class="@itemIcon">
+                            </i>
+
+                            @group.Name
+
+                            <i class="fa-solid fa-chevron-left drill-arrow"></i>
+
+                        </span>
+
+                        <span class="summary-value"
+                              style="color:@itemColor">
+
+                            @Fmt(group.HousingUnitsCount)
+
+                            <small style="
+                                display:block;
+                                font-size:10px;
+                                color:#718096;
+                                font-weight:600">
+
+                                @group.Percent.ToString("0.0")%
+
+                            </small>
+
+                        </span>
+
+                    </a>
+
+                </li>
+            }
+
+        </ul>
+
+    </div>
+
+
+<div class="ccard"
+     style="margin-top:16px;margin-bottom:16px">
+
+    <div class="ccard-hdr">
+
+        <div class="ccard-title">
+            <i class="fa-solid fa-chart-column"></i>
+            حالة جاهزية الوحدات السكنية
+        </div>
+
+        <span class="ccard-badge">
+            @readinessGroups.Count حالة
+        </span>
+
+    </div>
+
+    <div class="ch-wrap"
+         style="height:300px">
+
+        <canvas id="c-readiness-status"></canvas>
+
+    </div>
+
+</div>
+
+
+
+
+
+   
+
+    }
+    else
+    {
+        <div class="ccard">
+            <div style="
+                min-height:300px;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                color:#718096">
+
+                لا توجد بيانات جاهزية سكن لهذه الإدارة
+
+            </div>
+        </div>
+    }
+
+</div>
+
+
+
+           <!-- TAB 2 — الإشغال -->
+@if (housing != null)
+{
+    <div class="dep-panel" id="t2">
+
+       
+
                     <div class="krow">
-                        <div class="kc" style="--ka:rgba(30,58,95,.06);--kt:#1e3a5f"><i class="fa-solid fa-building"></i><div><strong>@Fmt(housing.TotalUnits)</strong><span>إجمالي الوحدات</span></div></div>
-                        <div class="kc" style="--ka:rgba(39,103,73,.06);--kt:#276749"><i class="fa-solid fa-check-circle"></i><div><strong>@Fmt(housing.Occupied)</strong><span>مشغولة <em>@occPct.ToString("0.0")%</em></span></div></div>
-                        <div class="kc" style="--ka:rgba(43,108,176,.06);--kt:#2b6cb0"><i class="fa-solid fa-door-open"></i><div><strong>@Fmt(housing.Vacant)</strong><span>شاغرة <em>@vacPct.ToString("0.0")%</em></span></div></div>
-                        <div class="kc" style="--ka:rgba(192,86,33,.06);--kt:#c05621"><i class="fa-solid fa-wrench"></i><div><strong>@Fmt(housing.UnderMaintenance)</strong><span>تحت الصيانة</span></div></div>
-                        <div class="kc" style="--ka:rgba(155,44,44,.06);--kt:#9b2c2c"><i class="fa-solid fa-triangle-exclamation"></i><div><strong>@Fmt(housing.ReferredQuality)</strong><span>إحالة جودة</span></div></div>
-                        <div class="kc" style="--ka:rgba(85,60,154,.06);--kt:#553c9a"><i class="fa-solid fa-tools"></i><div><strong>@Fmt(housing.ReferredServices)</strong><span>إحالة خدمات</span></div></div>
-                        <div class="kc" style="--ka:rgba(8,111,131,.06);--kt:#086f83"><i class="fa-solid fa-key"></i><div><strong>@Fmt(housing.ReadyToAllocate)</strong><span>جاهزة للتخصيص</span></div></div>
+
+    <div class="kc"
+     style="--ka:rgba(74,85,104,.06);--kt:#4a5568">
+
+        <i class="fa-solid fa-building"></i>
+
+        <div>
+            <strong>@Fmt(housing.TotalUnits)</strong>
+            <span>إجمالي الوحدات</span>
+        </div>
+    </div>
+
+    <a class="kc dep-drill-card"
+       title="عرض الوحدات السكنية المشغولة"
+       href="@Url.Action(
+           "BuildingDetails",
+           "HousingCommandCenterDashboard",
+           new
+           {
+               id = dep.Key,
+               section = "occupancy",
+               status = "OCCUPIED"
+           })"
+       style="--ka:rgba(39,103,73,.06);--kt:#276749">
+
+        <i class="fa-solid fa-check-circle"></i>
+
+        <div>
+            <strong>@Fmt(housing.Occupied)</strong>
+
+            <span>
+                مشغولة
+                <em>@occPct.ToString("0.0")%</em>
+            </span>
+        </div>
+    </a>
+
+    <a class="kc dep-drill-card"
+       title="عرض الوحدات السكنية الشاغرة"
+       href="@Url.Action(
+           "BuildingDetails",
+           "HousingCommandCenterDashboard",
+           new
+           {
+               id = dep.Key,
+               section = "occupancy",
+               status = "VACANT"
+           })"
+       style="--ka:rgba(155,44,44,.06);--kt:#9b2c2c">
+
+        <i class="fa-solid fa-door-open"></i>
+
+        <div>
+            <strong>@Fmt(housing.Vacant)</strong>
+
+            <span>
+                شاغرة
+                <em>@vacPct.ToString("0.0")%</em>
+            </span>
+        </div>
+
+    </a>
+
+    <div class="kc"
+     style="--ka:rgba(85,60,154,.06);--kt:#553c9a">
+
+    <i class="fa-solid fa-map-location-dot"></i>
+
+    <div>
+        <strong>@occupancyLocations.Count</strong>
+        <span>المواقع السكنية</span>
+    </div>
+</div>
+
+</div>
+
+ <div class="dep-drill-hint">
+    <i class="fa-solid fa-hand-pointer"></i>
+
+    <span>
+        لاستعراض التفاصيل،
+        <strong>اضغط على بطاقة مشغولة أو شاغرة</strong>
+        أعلاه.
+    </span>
+</div>
+
+                    <!-- حالة الإشغال — الكروت بالأعلى هي الـ Drill-down -->
+                    <div class="ccard" style="margin-bottom:16px">
+                        <div class="ccard-hdr">
+                            <div class="ccard-title">
+                                <i class="fa-solid fa-chart-pie"></i>
+                                حالة الوحدات السكنية
+                            </div>
+
+                            <span class="ccard-badge success">
+                                <i class="fa-solid fa-arrow-up"></i>
+                                @occPct.ToString("0.0")% إشغال
+                            </span>
+                        </div>
+
+                        <div class="ch-wrap ch250">
+                            <canvas id="c-unit-status"></canvas>
+
+                            <div class="ch-center" style="color:#1e3a5f">
+                                <strong>@occPct.ToString("0.0")%</strong>
+                                <small>نسبة الإشغال</small>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Row 1: Main status chart + Summary -->
-                    <div class="cgrid cgrid-2-1" style="margin-bottom:16px">
-                        <div class="ccard">
-                            <div class="ccard-hdr">
-                                <div class="ccard-title"><i class="fa-solid fa-chart-pie"></i> حالة الوحدات السكنية</div>
-                                <span class="ccard-badge success"><i class="fa-solid fa-arrow-up"></i> @occPct.ToString("0.0")% إشغال</span>
-                            </div>
-                            <div class="ch-wrap ch250">
-                                <canvas id="c-unit-status"></canvas>
-                                <div class="ch-center" style="color:#1e3a5f"><strong>@occPct.ToString("0.0")%</strong><small>نسبة الإشغال</small></div>
-                            </div>
-                        </div>
-                        <div class="summary-card">
-                            <div class="summary-title"><i class="fa-solid fa-list-check"></i> ملخص الحالة</div>
-                            <ul class="summary-list">
-                                <li class="summary-item">
-                                    <span class="summary-label"><i style="background:rgba(39,103,73,.08);color:#276749" class="fa-solid fa-check"></i> مشغولة</span>
-                                    <span class="summary-value">@Fmt(housing.Occupied)</span>
-                                </li>
-                                <li class="summary-item">
-                                    <span class="summary-label"><i style="background:rgba(43,108,176,.08);color:#2b6cb0" class="fa-solid fa-door-open"></i> شاغرة</span>
-                                    <span class="summary-value">@Fmt(housing.Vacant)</span>
-                                </li>
-                                <li class="summary-item">
-                                    <span class="summary-label"><i style="background:rgba(192,86,33,.08);color:#c05621" class="fa-solid fa-wrench"></i> صيانة</span>
-                                    <span class="summary-value">@Fmt(housing.UnderMaintenance)</span>
-                                </li>
-                                <li class="summary-item">
-                                    <span class="summary-label"><i style="background:rgba(8,111,131,.08);color:#086f83" class="fa-solid fa-key"></i> جاهزة</span>
-                                    <span class="summary-value">@Fmt(housing.ReadyToAllocate)</span>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
+                    @if (occupancyLocations.Any())
+{
+    <div class="ccard" style="margin-bottom:16px">
+        <div class="ccard-hdr">
+            <div class="ccard-title">
+                <i class="fa-solid fa-chart-column"></i>
+                الإشغال حسب الموقع السكني
+            </div>
+
+            <span class="ccard-badge" id="occupancy-location-page">
+                1 / @Math.Ceiling(occupancyLocations.Count / 5m)
+            </span>
+        </div>
+
+        <div class="ch-wrap" style="height:280px">
+            <canvas id="c-occupancy-locations"></canvas>
+        </div>
+    </div>
+}
+
 
                     <!-- Row 2: Distribution charts -->
-                    <div class="cgrid cgrid-2">
+          @*           <div class="cgrid cgrid-2">
                         <div class="ccard">
                             <div class="ccard-hdr">
                                 <div class="ccard-title"><i class="fa-solid fa-ruler-combined"></i> توزيع المساحات (م²)</div>
@@ -154,12 +609,12 @@
                             </div>
                             <div class="ch-wrap ch220"><canvas id="c-rooms"></canvas></div>
                         </div>
-                    </div>
+                    </div> *@
                 </div>
             }
 
             <!-- TAB 2 — الإشغال -->
-            @if (alloc != null)
+           @*  @if (alloc != null)
             {
                 var totalResidents = alloc.Categories.Sum(c => c.Residents);
                 var totalWaiting = alloc.Categories.Sum(c => c.Waiting);
@@ -169,10 +624,10 @@
                         <div class="kc" style="--ka:rgba(155,44,44,.06);--kt:#9b2c2c"><i class="fa-solid fa-clock"></i><div><strong>@Fmt(totalWaiting)</strong><span>قائمة الانتظار</span></div></div>
                         <div class="kc" style="--ka:rgba(30,58,95,.06);--kt:#1e3a5f"><i class="fa-solid fa-map-location-dot"></i><div><strong>@alloc.Districts.Count()</strong><span>عدد الأحياء</span></div></div>
                         @* <div class="kc" style="--ka:rgba(192,86,33,.06);--kt:#c05621"><i class="fa-solid fa-layer-group"></i><div><strong>@alloc.Categories.Count()</strong><span>فئات التخصيص</span></div></div> *@
-                    </div>
+                    @* </div> *@
 
                     <!-- Categories Chart - Full Width -->
-                    <div class="cgrid" style="margin-bottom:16px">
+                    @* <div class="cgrid" style="margin-bottom:16px">
                         <div class="ccard">
                             <div class="ccard-hdr">
                                 <div class="ccard-title"><i class="fa-solid fa-users-viewfinder"></i> توزيع الفئات — الساكنين مقابل قائمة الانتظار</div>
@@ -180,10 +635,10 @@
                             </div>
                             <div class="ch-wrap ch280"><canvas id="c-categories"></canvas></div>
                         </div>
-                    </div>
+                    </div> *@
 
                     <!-- Districts Chart + Summary -->
-                    <div class="cgrid cgrid-2">
+                   @*  <div class="cgrid cgrid-2">
                         <div class="ccard">
                             <div class="ccard-hdr">
                                 <div class="ccard-title"><i class="fa-solid fa-map"></i> توزيع السكان على الأحياء</div>
@@ -227,137 +682,1056 @@
                         </div>
                     </div>
                 </div>
-            }
+            } *@ 
 
-            <!-- TAB 3 — اجراءات الاسكان -->
-            @if (req != null)
-            {
-                <div class="dep-panel" id="t3">
-                    <div class="krow">
-                        <div class="kc" style="--ka:rgba(192,86,33,.06);--kt:#c05621"><i class="fa-solid fa-list-check"></i><div><strong>@totReq</strong><span>إجمالي الطلبات المفتوحة</span></div></div>
-                        @foreach (var r in req.OpenRequests.Take(3))
-                        {
-                            <div class="kc" style="--ka:rgba(192,86,33,.04);--kt:#c05621"><i class="fa-solid fa-file-alt"></i><div><strong>@((int)r.Value)</strong><span>@r.Label</span></div></div>
-                        }
-                        @foreach (var s in req.SlaComparison.Take(3))
-                        {
-                            var over = s.Actual > s.Target;
-                            <div class="kc" style="--ka:@(over ? "rgba(155,44,44,.06)" : "rgba(39,103,73,.06)");--kt:@(over ? "#9b2c2c" : "#276749")"><i class="fa-solid fa-stopwatch"></i><div><strong>@s.Actual.ToString("0.0") يوم</strong><span>@s.Label <em>هدف: @s.Target.ToString("0.0")</em></span></div></div>
-                        }
+<!-- TAB 3 — إجراءات الإسكان -->
+<div class="dep-panel" id="t3">
+
+    @if (procedures == null)
+    {
+        <div class="ccard">
+            <div class="ccard-hdr">
+                <div class="ccard-title">
+                    <i class="fa-solid fa-house-circle-exclamation"></i>
+                    إجراءات الإسكان
+                </div>
+            </div>
+
+            <div style="
+                padding:28px;
+                text-align:center;
+                color:#64748b;
+                font-size:13px;
+                font-weight:700">
+                لا توجد بيانات تشغيلية متاحة لهذه الإدارة.
+            </div>
+        </div>
+    }
+    else
+    {
+        var totalProcedures =
+            procedures.TotalCurrentProcedures;
+
+        var maxStageCases =
+            procedures.Stages.Any()
+                ? procedures.Stages.Max(x => x.CurrentCases)
+                : 0;
+
+        var oldestRows =
+            procedures.OldestCurrent
+                .Take(5)
+                .ToList();
+
+
+        <!-- =====================================================
+             Row 1 — Current Operational Workload
+             ===================================================== -->
+
+      <div class="krow">
+
+
+    <!-- ALL -->
+    <a class="kc dep-drill-card"
+       title="عرض جميع إجراءات الإسكان الجارية"
+       href="@Url.Action(
+           "ProcedureDetails",
+           "HousingCommandCenterDashboard",
+           new
+           {
+               id = dep.Key,
+               workflow = "ALL"
+           })"
+       style="--ka:rgba(30,58,95,.06);--kt:#1e3a5f">
+
+        <i class="fa-solid fa-list-check"></i>
+
+        <div>
+
+            <strong>
+                @procedures.TotalCurrentProcedures
+            </strong>
+
+            <span>
+                إجمالي الإجراءات الجارية
+            </span>
+
+        </div>
+
+    </a>
+
+
+    <!-- ALLOCATION -->
+    <a class="kc dep-drill-card"
+       title="عرض إجراءات التخصيص الجارية"
+       href="@Url.Action(
+           "ProcedureDetails",
+           "HousingCommandCenterDashboard",
+           new
+           {
+               id = dep.Key,
+               workflow = "ALLOCATION"
+           })"
+       style="--ka:rgba(43,108,176,.06);--kt:#2b6cb0">
+
+        <i class="fa-solid fa-house-circle-check"></i>
+
+        <div>
+
+            <strong>
+                @procedures.AllocationCurrent
+            </strong>
+
+            <span>
+                إجراءات التخصيص
+            </span>
+
+        </div>
+
+    </a>
+
+
+    <!-- EXTEND -->
+    <a class="kc dep-drill-card"
+       title="عرض إجراءات الإمهال الجارية"
+       href="@Url.Action(
+           "ProcedureDetails",
+           "HousingCommandCenterDashboard",
+           new
+           {
+               id = dep.Key,
+               workflow = "EXTEND"
+           })"
+       style="--ka:rgba(128,90,213,.06);--kt:#805ad5">
+
+        <i class="fa-solid fa-clock-rotate-left"></i>
+
+        <div>
+
+            <strong>
+                @procedures.ExtendCurrent
+            </strong>
+
+            <span>
+                إجراءات الإمهال
+            </span>
+
+        </div>
+
+    </a>
+
+
+    <!-- EXIT -->
+    <a class="kc dep-drill-card"
+       title="عرض إجراءات الإخلاء الجارية"
+       href="@Url.Action(
+           "ProcedureDetails",
+           "HousingCommandCenterDashboard",
+           new
+           {
+               id = dep.Key,
+               workflow = "EXIT"
+           })"
+       style="--ka:rgba(192,86,33,.06);--kt:#c05621">
+
+        <i class="fa-solid fa-door-open"></i>
+
+        <div>
+
+            <strong>
+                @procedures.ExitCurrent
+            </strong>
+
+            <span>
+                إجراءات الإخلاء
+            </span>
+
+        </div>
+
+    </a>
+
+
+</div>
+
+        <!-- =====================================================
+             Row 2
+             Current Stages + Workflow Performance
+             ===================================================== -->
+
+        <div class="cgrid cgrid-2"
+             style="margin-bottom:14px">
+
+
+            <!-- Current Stage Distribution -->
+            <div class="ccard">
+
+                <div class="ccard-hdr">
+
+                    <div class="ccard-title">
+                        <i class="fa-solid fa-bars-progress"></i>
+                        توزيع الإجراءات الجارية حسب المرحلة
                     </div>
 
-                    <div class="cgrid cgrid-2" style="margin-bottom:16px">
-                        <div class="ccard">
-                            <div class="ccard-hdr">
-                                <div class="ccard-title"><i class="fa-solid fa-chart-pie"></i> توزيع الطلبات المفتوحة</div>
-                                <span class="ccard-badge warning">@totReq طلب</span>
-                            </div>
-                            <div class="ch-wrap ch280">
-                                <canvas id="c-open-req"></canvas>
-                                <div class="ch-center" style="color:#c05621"><strong>@totReq</strong><small>طلب مفتوح</small></div>
-                            </div>
-                        </div>
-                        <div class="ccard">
-                            <div class="ccard-hdr">
-                                <div class="ccard-title"><i class="fa-solid fa-clock"></i> مدد الإنجاز — الفعلي مقابل الهدف</div>
-                                <span class="ccard-badge">بالأيام</span>
-                            </div>
-                            <div class="ch-wrap ch280"><canvas id="c-sla"></canvas></div>
-                        </div>
-                    </div>
+                    <span class="ccard-badge">
+                        @Fmt(totalProcedures) إجراء
+                    </span>
 
-                    <!-- SLA Progress Summary -->
-                    <div class="ccard">
-                        <div class="ccard-hdr">
-                            <div class="ccard-title"><i class="fa-solid fa-gauge-high"></i> أداء مستوى الخدمة (SLA)</div>
-                        </div>
-                        <div class="progress-list">
-                            @foreach (var s in req.SlaComparison)
-                            {
-                                var over = s.Actual > s.Target;
-                                var pct = s.Target > 0 ? Math.Min(100, Math.Round(s.Actual / s.Target * 100, 0)) : 0;
-                                <div class="progress-item">
-                                    <div class="progress-header">
-                                        <span class="progress-label">@s.Label</span>
-                                        <span class="progress-value" style="color:@(over ? "#9b2c2c" : "#276749")">@s.Actual.ToString("0.0") / @s.Target.ToString("0.0") يوم</span>
-                                    </div>
-                                    <div class="progress-bar">
-                                        <div class="progress-fill" style="width:@pct%;background:@(over ? "linear-gradient(90deg,#9b2c2c,#c53030)" : "linear-gradient(90deg,#276749,#38a169)")"></div>
-                                    </div>
+                </div>
+
+
+                @if (procedures.Stages.Any())
+                {
+                    <div class="progress-list">
+
+                        @foreach (var stage in procedures.Stages)
+                        {
+                            var pct =
+                                totalProcedures > 0
+                                    ? Math.Round(
+                                        stage.CurrentCases * 100m /
+                                        totalProcedures,
+                                        1)
+                                    : 0m;
+
+                            var stageColor =
+                                stage.ProcedureGroupKey switch
+                                {
+                                    "ALLOCATION" => "#2b6cb0",
+                                    "EXTEND" => "#553c9a",
+                                    "EXIT" => "#c05621",
+                                    _ => "#64748b"
+                                };
+
+                            <div class="progress-item">
+
+                                <div class="progress-header">
+
+                                    <span class="progress-label">
+                                        @stage.ActionTypeName
+                                    </span>
+
+                                    <span class="progress-value"
+                                          style="color:@stageColor">
+
+                                        @Fmt(stage.CurrentCases)
+
+                                        <span style="
+                                            color:#94a3b8;
+                                            font-size:10px;
+                                            margin-right:4px">
+                                            (@pct.ToString("0.0")%)
+                                        </span>
+
+                                    </span>
+
                                 </div>
-                            }
-                        </div>
-                    </div>
-                </div>
-            }
 
-            <!-- TAB 4 — الماليات -->
-            @if (fin != null)
+
+                                <div class="progress-bar">
+
+                                    <div class="progress-fill"
+                                         style="
+                                            width:@pct%;
+                                            background:@stageColor">
+                                    </div>
+
+                                </div>
+
+                            </div>
+                        }
+
+                    </div>
+                }
+                else
+                {
+                    <div style="
+                        padding:24px;
+                        text-align:center;
+                        color:#64748b;
+                        font-size:12px;
+                        font-weight:700">
+                        لا توجد إجراءات جارية حاليًا.
+                    </div>
+                }
+
+            </div>
+
+
+            <!-- Workflow Performance -->
+            <div class="ccard">
+
+                <div class="ccard-hdr">
+
+                    <div class="ccard-title">
+                        <i class="fa-solid fa-stopwatch"></i>
+                        كفاءة دورات إجراءات الإسكان
+                    </div>
+
+                    <span class="ccard-badge">
+                        النظام الحالي
+                    </span>
+
+                </div>
+
+
+                <div class="mini-stats">
+
+    <!-- التسكين -->
+    <div class="mini-stat">
+
+        <span class="mini-stat-val"
+              style="color:#2b6cb0">
+
+            @if (allocationPerformance?.CompletedCount > 0 &&
+                 allocationPerformance.AverageDays.HasValue)
             {
-                var totalRent = fin.Collected + fin.Uncollected;
-                <div class="dep-panel" id="t4">
-                    <div class="krow">
-                        <div class="kc" style="--ka:rgba(39,103,73,.06);--kt:#276749"><i class="fa-solid fa-money-bill"></i><div><strong>@Html.Raw(FmtSar(fin.RentLastMonth))</strong><span>مطالبات الشهر الماضي</span></div></div>
-                        <div class="kc" style="--ka:rgba(43,108,176,.06);--kt:#2b6cb0"><i class="fa-solid fa-calendar"></i><div><strong>@Html.Raw(FmtSar(fin.RentLast3Months))</strong><span>مطالبات آخر 3 أشهر</span></div></div>
-                        <div class="kc" style="--ka:rgba(43,108,176,.06);--kt:#2b6cb0"><i class="fa-solid fa-calendar"></i><div><strong>@Html.Raw(FmtSar(fin.RentLast12Months))</strong><span>مطالبات آخر 12 أشهر</span></div></div>
-                        <div class="kc" style="--ka:rgba(30,58,95,.06);--kt:#1e3a5f"><i class="fa-solid fa-hand-holding-dollar"></i><div><strong>@Html.Raw(FmtSar(fin.Collected))</strong><span>المبالغ المحصّلة <em>@collPct.ToString("0.0")%</em></span></div></div>
-                        <div class="kc" style="--ka:rgba(155,44,44,.06);--kt:#9b2c2c"><i class="fa-solid fa-circle-xmark"></i><div><strong>@Html.Raw(FmtSar(fin.Uncollected))</strong><span>المبالغ المتأخرة</span></div></div>
-                    </div>
+                @FmtDuration(allocationPerformance.AverageDays)
+            }
+            else
+            {
+                @:—
+            }
 
-                    <div class="cgrid cgrid-2" style="margin-bottom:16px">
-                        <div class="ccard">
-                            <div class="ccard-hdr">
-                                <div class="ccard-title"><i class="fa-solid fa-chart-pie"></i> نسبة التحصيل المالي</div>
-                                <span class="ccard-badge success">@collPct.ToString("0.0")%</span>
-                            </div>
-                            <div class="ch-wrap ch280">
-                                <canvas id="c-collection"></canvas>
-                                <div class="ch-center" style="color:#276749"><strong>@collPct.ToString("0.0")%</strong><small>نسبة التحصيل</small></div>
-                            </div>
-                        </div>
-                        <div class="ccard">
-                            <div class="ccard-hdr">
-                                <div class="ccard-title"><i class="fa-solid fa-bolt"></i> كفاءة التحصيل حسب التصنيف</div>
-                            </div>
-                            <div class="ch-wrap ch280"><canvas id="c-utility"></canvas></div>
-                        </div>
-                    </div>
+        </span>
 
-                    <!-- Financial Summary -->
-                    <div class="ccard">
-                        <div class="ccard-hdr">
-                            <div class="ccard-title"><i class="fa-solid fa-coins"></i> ملخص التحصيل حسب نوع السداد</div>
-                        </div>
-                        <div class="mini-stats">
-                           @*  <div class="mini-stat">
-                                <span class="mini-stat-val" style="color:#276749">@Html.Raw(FmtSar(fin.RentLastMonth))</span>
-                                <span class="mini-stat-lbl">الشهر الماضي</span>
-                            </div>
-                            <div class="mini-stat">
-                                <span class="mini-stat-val" style="color:#2b6cb0">@Html.Raw(FmtSar(fin.RentLast3Months))</span>
-                                <span class="mini-stat-lbl">آخر 3 أشهر</span>
-                            </div>
- *@
-                            <div class="mini-stat">
-                                <span class="mini-stat-val" style="color:#2b6cb0">@Html.Raw(FmtSar(fin.Collected))</span>
-                                <span class="mini-stat-lbl">آخر 12 أشهر</span>
-                            </div>
-                            <div class="mini-stat">
-                                <span class="mini-stat-val" style="color:#1e3a5f">@Html.Raw(FmtSar(fin.PaidFromSallary))</span>
-                                <span class="mini-stat-lbl">حسم من الراتب</span>
-                            </div>
-                            <div class="mini-stat">
-                                <span class="mini-stat-val" style="color:#9b2c2c">@Html.Raw(FmtSar(fin.PaidByATM))</span>
-                                <span class="mini-stat-lbl">نقاط بيع</span>
-                            </div>
-                            <div class="mini-stat">
-                                <span class="mini-stat-val" style="color:#553c9a">@Html.Raw(FmtSar(fin.PaidByCash))</span>
-                                <span class="mini-stat-lbl">دفع نقدي</span>
-                            </div>
-                        </div>
+        <span class="mini-stat-lbl">
+            متوسط مدة التسكين
+        </span>
+
+        @if (allocationPerformance?.CompletedCount > 0)
+        {
+            <span style="
+                font-size:9px;
+                color:#64748b;
+                margin-top:3px">
+
+                الوسيط:
+                @FmtDuration(allocationPerformance.MedianDays)
+
+                &nbsp;|&nbsp;
+
+                مكتمل:
+                @allocationPerformance.CompletedCount
+
+            </span>
+        }
+        else
+        {
+            <span style="
+                font-size:9px;
+                color:#94a3b8;
+                margin-top:3px">
+                لا توجد دورات مكتملة
+            </span>
+        }
+
+    </div>
+
+
+    <!-- الإمهال -->
+    <div class="mini-stat">
+
+        <span class="mini-stat-val"
+              style="color:#553c9a">
+
+            @if (extendPerformance?.CompletedCount > 0 &&
+                 extendPerformance.AverageDays.HasValue)
+            {
+                @FmtDuration(extendPerformance.AverageDays)
+            }
+            else
+            {
+                @:—
+            }
+
+        </span>
+
+        <span class="mini-stat-lbl">
+            متوسط مدة الإمهال
+        </span>
+
+        @if (extendPerformance?.CompletedCount > 0)
+        {
+            <span style="
+                font-size:9px;
+                color:#64748b;
+                margin-top:3px">
+
+                الوسيط:
+                @FmtDuration(extendPerformance.MedianDays)
+
+                &nbsp;|&nbsp;
+
+                مكتمل:
+                @extendPerformance.CompletedCount
+
+            </span>
+        }
+        else
+        {
+            <span style="
+                font-size:9px;
+                color:#94a3b8;
+                margin-top:3px">
+                لا توجد دورات مكتملة
+            </span>
+        }
+
+    </div>
+
+
+    <!-- الإخلاء -->
+    <div class="mini-stat">
+
+        <span class="mini-stat-val"
+              style="color:#c05621">
+
+            @if (exitPerformance?.CompletedCount > 0 &&
+                 exitPerformance.AverageDays.HasValue)
+            {
+                @FmtDuration(exitPerformance.AverageDays)
+            }
+            else
+            {
+                @:—
+            }
+
+        </span>
+
+        <span class="mini-stat-lbl">
+            متوسط مدة الإخلاء
+        </span>
+
+        @if (exitPerformance?.CompletedCount > 0)
+        {
+            <span style="
+                font-size:9px;
+                color:#64748b;
+                margin-top:3px">
+
+                الوسيط:
+                @FmtDuration(exitPerformance.MedianDays)
+
+                &nbsp;|&nbsp;
+
+                مكتمل:
+                @exitPerformance.CompletedCount
+
+            </span>
+        }
+        else
+        {
+            <span style="
+                font-size:9px;
+                color:#94a3b8;
+                margin-top:3px">
+                لا توجد دورات مكتملة
+            </span>
+        }
+
+    </div>
+
+</div>
+
+
+                <div style="
+                    margin-top:12px;
+                    padding:9px 11px;
+                    border:1px solid #e2e8f0;
+                    border-radius:8px;
+                    background:#f8fafc;
+                    color:#64748b;
+                    font-size:10px;
+                    line-height:1.8">
+
+                    <i class="fa-solid fa-circle-info"
+                       style="color:#2b6cb0;margin-left:4px"></i>
+
+                    مؤشرات المدة ستُحسب من معدل وقت انجاز دورات العمل المكتملة
+                    في النظام علما أن التأخير في بعض المعاملات يكون بسبب أن المستفيد لم يراجع مثل الاخلاء لم يحضر للسداد او لازالت اجراءاته منظورة.
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- =====================================================
+             Row 3 — Oldest Current Procedures
+             ===================================================== -->
+
+        <div class="ccard">
+
+            <div class="ccard-hdr">
+
+                <div class="ccard-title">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    أعلى خمس إجراءات نشطه متأخرة
+                </div>
+
+                <span class="ccard-badge">
+                    أعلى @oldestRows.Count
+                </span>
+
+            </div>
+
+
+            @if (oldestRows.Any())
+            {
+                <div style="
+                    display:grid;
+                    grid-template-columns:
+                        58px
+                        minmax(90px,.8fr)
+                        minmax(130px,1.6fr)
+                        minmax(90px,.8fr)
+                        80px;
+                    gap:8px;
+                    padding:7px 10px;
+                    border-bottom:1px solid #e2e8f0;
+                    color:#64748b;
+                    font-size:9px;
+                    font-weight:800">
+
+                    <span>المبنى</span>
+                    <span>الدورة</span>
+                    <span>الحالة الحالية</span>
+                    <span>منذ</span>
+                    <span>المدة</span>
+
+                </div>
+
+
+                @foreach (var row in oldestRows)
+                {
+                    var groupColor =
+                        row.ProcedureGroupKey switch
+                        {
+                            "ALLOCATION" => "#2b6cb0",
+                            "EXTEND" => "#553c9a",
+                            "EXIT" => "#c05621",
+                            _ => "#64748b"
+                        };
+
+                    <div style="
+                        display:grid;
+                        grid-template-columns:
+                            58px
+                            minmax(90px,.8fr)
+                            minmax(130px,1.6fr)
+                            minmax(90px,.8fr)
+                            80px;
+                        align-items:center;
+                        gap:8px;
+                        padding:8px 10px;
+                        border-bottom:1px solid #f1f5f9;
+                        font-size:10px">
+
+                        <strong style="color:#334155">
+                            @row.BuildingDetailsNo
+                        </strong>
+
+
+                        <span style="
+                            color:@groupColor;
+                            font-weight:800">
+                            @row.ProcedureGroupName
+                        </span>
+
+
+                        <span style="
+                            color:#475569;
+                            font-weight:700">
+                            @row.ActionTypeName
+                        </span>
+
+
+                        <span style="color:#64748b">
+
+                            @(row.CurrentStatusSince.HasValue
+                                ? row.CurrentStatusSince.Value
+                                    .ToString("yyyy/MM/dd")
+                                : "—")
+
+                        </span>
+
+
+                        <span style="
+                            color:@groupColor;
+                            font-weight:900">
+
+                            @(row.DaysInCurrentStatus.HasValue
+                                ? $"{row.DaysInCurrentStatus:N0} يوم"
+                                : "—")
+
+                            
+
+                        </span>
+
                     </div>
+                }
+
+
+                @* @if (oldestRows.Any(x => x.IsMoveDataGenerated))
+                {
+                    <div style="
+                        padding:7px 10px;
+                        color:#94a3b8;
+                        font-size:9px;
+                        font-weight:700">
+
+                        <i class="fa-solid fa-circle-info"></i>
+
+                        ظهور «بيانات مرحّلة» يعني أن تاريخ الحالة ناتج عن
+                        بيانات الانتقال من النظام السابق، ولا يمثل بحد ذاته
+                        تأخرًا أو تجاوزًا لمستوى خدمة.
+
+                    </div>
+                } *@
+
+            }
+            else
+            {
+                <div style="
+                    padding:24px;
+                    text-align:center;
+                    color:#64748b;
+                    font-size:12px;
+                    font-weight:700">
+                    لا توجد إجراءات جارية حاليًا.
                 </div>
             }
+
+        </div>
+
+    }
+
+</div>
+
+           
+
+
+
+
+
+            <!-- TAB 4 — الكفاءة المالية -->
+@if (fin != null)
+{
+    var efficiencyText =
+        fin.FinancialEfficiencyPercent.HasValue
+            ? $"{fin.FinancialEfficiencyPercent.Value:0.0}%"
+            : "—";
+
+    var balancedPercentText =
+        fin.BalancedBeneficiariesPercent.HasValue
+            ? $"{fin.BalancedBeneficiariesPercent.Value:0.0}%"
+            : "—";
+
+
+    var netAmount =
+        Math.Abs(
+            fin.NetFinancialPosition);
+
+
+    var netLabel =
+        fin.NetFinancialPosition < 0
+            ? "صافي العجز المالي"
+            : fin.NetFinancialPosition > 0
+                ? "صافي الفائض المالي"
+                : "المركز المالي متوازن";
+
+
+    var netIcon =
+        fin.NetFinancialPosition < 0
+            ? "fa-solid fa-arrow-trend-down"
+            : fin.NetFinancialPosition > 0
+                ? "fa-solid fa-arrow-trend-up"
+                : "fa-solid fa-scale-balanced";
+
+
+    var netColor =
+        fin.NetFinancialPosition < 0
+            ? "#9b2c2c"
+            : fin.NetFinancialPosition > 0
+                ? "#276749"
+                : "#1e3a5f";
+
+
+    <div class="dep-panel" id="t4">
+
+<div class="dep-drill-hint">
+
+    <i class="fa-solid fa-hand-pointer"></i>
+
+    <span>
+        لاستعراض التفاصيل،
+        <strong>
+            اضغط على بطاقات المطالبات أو السدادات أو حالة المستفيد المالية
+        </strong>
+        أدناه.
+    </span>
+
+</div>
+
+        <!-- ======================================================
+             الصف الأول — الصورة المالية الرئيسية
+             ====================================================== -->
+        <div class="krow">
+
+            <div class="kc"
+                 style="--ka:rgba(5,122,85,.06);--kt:#057a55">
+
+                <i class="fa-solid fa-chart-line"></i>
+
+                <div>
+                    <strong>@efficiencyText</strong>
+                    <span>الكفاءة المالية</span>
+                </div>
+
+            </div>
+
+
+            <a class="kc dep-drill-card"
+   title="عرض تفاصيل المطالبات المالية"
+   href="@Url.Action(
+       "FinancialDetails",
+       "HousingCommandCenterDashboard",
+       new
+       {
+           id = dep.Key,
+           mode = "CLAIMS"
+       })"
+   style="--ka:rgba(43,108,176,.06);--kt:#2b6cb0">
+
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+
+                <div>
+                    <strong>
+                        @Html.Raw(
+                            FmtSar(
+                                fin.TotalClaims))
+                    </strong>
+
+                    <span>إجمالي المطالبات</span>
+                </div>
+
+            </a>
+
+
+            <a class="kc dep-drill-card"
+   title="عرض تفاصيل السدادات المالية"
+   href="@Url.Action(
+       "FinancialDetails",
+       "HousingCommandCenterDashboard",
+       new
+       {
+           id = dep.Key,
+           mode = "PAYMENTS"
+       })"
+   style="--ka:rgba(39,103,73,.06);--kt:#276749">
+
+                <i class="fa-solid fa-money-bill-transfer"></i>
+
+                <div>
+                    <strong>
+                        @Html.Raw(
+                            FmtSar(
+                                fin.TotalPayments))
+                    </strong>
+
+                    <span>إجمالي السدادات</span>
+                </div>
+
+            </a>
+
+
+            <div class="kc"
+                 style="--ka:rgba(30,58,95,.06);--kt:@netColor">
+
+                <i class="@netIcon"></i>
+
+                <div>
+                    <strong>
+                        @Html.Raw(
+                            FmtSar(
+                                netAmount))
+                    </strong>
+
+                    <span>@netLabel</span>
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ======================================================
+             الصف الثاني — حالة المستفيدين والتسويات المطلوبة
+             ====================================================== -->
+        <div class="krow">
+
+            <a class="kc dep-drill-card"
+   title="عرض المستفيدين المتوازنين ماليًا"
+   href="@Url.Action(
+       "FinancialDetails",
+       "HousingCommandCenterDashboard",
+       new
+       {
+           id = dep.Key,
+           mode = "BALANCED"
+       })"
+   style="--ka:rgba(39,103,73,.06);--kt:#276749">
+
+                <i class="fa-solid fa-circle-check"></i>
+
+                <div>
+                    <strong>
+                        @fin.BalancedBeneficiariesCount.ToString("N0")
+                    </strong>
+
+                    <span>
+                        مستفيدون متوازنون
+                        <em>@balancedPercentText</em>
+                    </span>
+                </div>
+
+            </a>
+
+
+            <a class="kc dep-drill-card"
+   title="عرض المستفيدين ذوي العجز المالي"
+   href="@Url.Action(
+       "FinancialDetails",
+       "HousingCommandCenterDashboard",
+       new
+       {
+           id = dep.Key,
+           mode = "DEFICIT"
+       })"
+   style="--ka:rgba(155,44,44,.06);--kt:#9b2c2c">
+
+                <i class="fa-solid fa-user-minus"></i>
+
+                <div>
+                    <strong>
+                        @fin.DeficitBeneficiariesCount.ToString("N0")
+                    </strong>
+
+                    <span>مستفيدون بعجز</span>
+                </div>
+
+            </a>
+
+
+            <a class="kc dep-drill-card"
+   title="عرض المستفيدين ذوي الفائض المالي"
+   href="@Url.Action(
+       "FinancialDetails",
+       "HousingCommandCenterDashboard",
+       new
+       {
+           id = dep.Key,
+           mode = "SURPLUS"
+       })"
+   style="--ka:rgba(43,108,176,.06);--kt:#2b6cb0">
+
+                <i class="fa-solid fa-user-plus"></i>
+
+                <div>
+                    <strong>
+                        @fin.SurplusBeneficiariesCount.ToString("N0")
+                    </strong>
+
+                    <span>مستفيدون بفائض</span>
+                </div>
+
+            </a>
+
+
+            <a class="kc dep-drill-card"
+   title="عرض تفاصيل المبالغ المطلوب تحصيلها"
+   href="@Url.Action(
+       "FinancialDetails",
+       "HousingCommandCenterDashboard",
+       new
+       {
+           id = dep.Key,
+           mode = "DEFICIT"
+       })"
+   style="--ka:rgba(155,44,44,.06);--kt:#9b2c2c">
+
+                <i class="fa-solid fa-hand-holding-dollar"></i>
+
+                <div>
+                    <strong>
+                        @Html.Raw(
+                            FmtSar(
+                                fin.AmountToCollect))
+                    </strong>
+
+                    <span>مطلوب تحصيله</span>
+                </div>
+
+            </a>
+
+
+            <a class="kc dep-drill-card"
+   title="عرض تفاصيل المبالغ المطلوب إعادتها"
+   href="@Url.Action(
+       "FinancialDetails",
+       "HousingCommandCenterDashboard",
+       new
+       {
+           id = dep.Key,
+           mode = "SURPLUS"
+       })"
+   style="--ka:rgba(85,60,154,.06);--kt:#553c9a">
+
+                <i class="fa-solid fa-money-bill-wave"></i>
+
+                <div>
+                    <strong>
+                        @Html.Raw(
+                            FmtSar(
+                                fin.AmountToRefund))
+                    </strong>
+
+                    <span>مطلوب إعادته</span>
+                </div>
+
+            </a>
+
+        </div>
+
+
+        <!-- ======================================================
+     الرسوم
+     ====================================================== -->
+<div style="
+    display:grid;
+    grid-template-columns:1fr;
+    gap:14px;">
+
+
+    <!-- ==================================================
+         تحليل المطالبات والسدادات حسب النوع
+         ================================================== -->
+    <div class="ccard">
+
+        <div class="ccard-hdr">
+
+            <div class="ccard-title">
+
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+
+                تحليل المطالبات والسدادات حسب النوع
+
+            </div>
+
+
+            <span class="ccard-badge">
+
+                @fin.ClaimsByType.Count نوع
+
+            </span>
+
+        </div>
+
+
+        @if (fin.ClaimsByType.Any())
+        {
+            <div class="ch-wrap"
+                 style="height:250px;">
+
+                <canvas id="c-finance-claims-type">
+                </canvas>
+
+            </div>
+        }
+        else
+        {
+            <div style="
+                min-height:360px;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                color:#94a3b8;
+                font-size:12px;
+                font-weight:700">
+
+                لا توجد بيانات مالية حسب النوع لهذه الإدارة
+
+            </div>
+        }
+
+    </div>
+
+
+    <!-- ==================================================
+         توزيع الحالة المالية للمستفيدين
+         ================================================== -->
+    <div class="ccard">
+
+        <div class="ccard-hdr">
+
+            <div class="ccard-title">
+
+                <i class="fa-solid fa-users"></i>
+
+                توزيع الحالة المالية للمستفيدين
+
+            </div>
+
+
+            <span class="ccard-badge">
+
+                @fin.FinancialBeneficiariesCount.ToString("N0")
+                مستفيد
+
+            </span>
+
+        </div>
+
+
+        <div style="
+            margin:6px 12px 0;
+            color:#64748b;
+            font-size:10px;
+            font-weight:600;
+            line-height:1.7;
+            text-align:right">
+
+            <i class="fa-solid fa-circle-info"
+               style="
+                   color:#2b6cb0;
+                   margin-left:4px">
+            </i>
+
+            المتوازن: المطالبات تساوي السدادات،
+            العجز: المطالبات أعلى من السدادات،
+            الفائض: السدادات أعلى من المطالبات.
+
+        </div>
+
+
+        <div class="ch-wrap"
+             style="height:190px;">
+
+            <canvas id="c-finance-beneficiaries">
+            </canvas>
+
+        </div>
+
+    </div>
+
+</div>
+<!-- نهاية الرسوم -->
+
+    </div>
+    <!-- نهاية dep-panel t4 -->
+
+}
+
 
             <!-- TAB 5 — الصيانة -->
             @if (maint != null)
@@ -452,7 +1826,7 @@
 
 
             <!-- TAB 6 — صيانة العربات -->
-            <div class="dep-panel" id="t6">
+           @*  <div class="dep-panel" id="t6">
                 <div class="krow">
                     <div class="kc" style="--ka:rgba(30,58,95,.06);--kt:#1e3a5f">
                         <i class="fa-solid fa-car-side"></i>
@@ -579,7 +1953,7 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </div> *@
 
 
 
@@ -746,11 +2120,58 @@
     </footer>
 
     <!-- Data islands -->
+
+   @if (readinessGroups.Any())
+{
+    <script id="d-readiness-status"
+            type="application/json">
+
+        @Html.Raw(
+            JsonSerializer.Serialize(
+                new
+                {
+                    labels = readinessGroups
+                        .Select(x => x.Name)
+                        .ToArray(),
+
+                    values = readinessGroups
+                        .Select(x => x.HousingUnitsCount)
+                        .ToArray(),
+
+                    keys = readinessGroups
+                        .Select(x => x.Key)
+                        .ToArray()
+                },
+                jsonOpts
+            )
+        )
+
+    </script>
+}
+
     @if (housing != null)
     {
         var jsonOpts2 = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
-        <script id="d-unit-status" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = new[] { "مشغولة", "شاغرة", "تحت الصيانة", "إحالة جودة", "إحالة خدمات", "جاهزة" }, values = new[] { housing.Occupied, housing.Vacant, housing.UnderMaintenance, housing.ReferredQuality, housing.ReferredServices, housing.ReadyToAllocate } }, jsonOpts2))</script>
-        <script id="d-areas" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = housing.AreaDistribution.Select(s => s.Label).ToArray(), values = housing.AreaDistribution.Select(s => (double)s.Value).ToArray() }, jsonOpts2))</script>
+<script id="d-unit-status"
+        type="application/json">
+    @Html.Raw(
+        JsonSerializer.Serialize(
+            new
+            {
+                labels = new[]
+                {
+                    "مشغولة",
+                    "شاغرة"
+                },
+
+                values = new[]
+                {
+                    housing.Occupied,
+                    housing.Vacant
+                }
+            },
+            jsonOpts2))
+</script>        <script id="d-areas" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = housing.AreaDistribution.Select(s => s.Label).ToArray(), values = housing.AreaDistribution.Select(s => (double)s.Value).ToArray() }, jsonOpts2))</script>
         <script id="d-rooms" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = housing.RoomDistribution.Select(s => s.Label).ToArray(), values = housing.RoomDistribution.Select(s => (double)s.Value).ToArray() }, jsonOpts2))</script>
 
         <script id="d-cars" type="application/json">
@@ -796,25 +2217,174 @@
     </script>
 
     }
+
+
+
+
+    @if (occupancyLocations.Any())
+{
+    <script id="d-occupancy-locations"
+            type="application/json">
+        @Html.Raw(
+            JsonSerializer.Serialize(
+                new
+                {
+                    items = occupancyLocations.Select(x => new
+                    {
+                        name = x.MilitaryLocationName,
+                        total = x.TotalHousingUnits,
+                        occupied = x.OccupiedHousingUnits,
+                        vacant = x.UnoccupiedHousingUnits,
+                        percent = x.OccupancyPercent
+                    }).ToArray()
+                },
+                jsonOpts))
+    </script>
+}
+
+
+
     @if (alloc != null)
     {
         var jsonOpts2 = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
         <script id="d-categories" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = alloc.Categories.Select(c => c.Label).ToArray(), residents = alloc.Categories.Select(c => c.Residents).ToArray(), waiting = alloc.Categories.Select(c => c.Waiting).ToArray() }, jsonOpts2))</script>
         <script id="d-districts" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = alloc.Districts.Select(d => d.Label).ToArray(), values = alloc.Districts.Select(d => (double)d.Value).ToArray() }, jsonOpts2))</script>
     }
-    @if (req != null)
-    {
-        var jsonOpts2 = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
-        <script id="d-open-req" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = req.OpenRequests.Select(r => r.Label).ToArray(), values = req.OpenRequests.Select(r => (int)r.Value).ToArray(), colors = req.OpenRequests.Select(r => r.Color ?? "#d97706").ToArray(), total = req.OpenRequests.Sum(r => (int)r.Value) }, jsonOpts2))</script>
-        <script id="d-sla" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = req.SlaComparison.Select(s => s.Label).ToArray(), actual = req.SlaComparison.Select(s => (double)s.Actual).ToArray(), target = req.SlaComparison.Select(s => (double)s.Target).ToArray() }, jsonOpts2))</script>
-    }
+    
+
+
+
+
     @if (fin != null)
-    {
-        var jsonOpts2 = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
-        var cPct = fin.Collected + fin.Uncollected > 0 ? Math.Round(fin.Collected / (fin.Collected + fin.Uncollected) * 100, 1) : 0m;
-        <script id="d-collection" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { collected = (long)fin.Collected, uncollected = (long)fin.Uncollected, pct = cPct }, jsonOpts2))</script>
-        <script id="d-utility" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = fin.UtilityEfficiency.Select(u => u.Label).ToArray(), values = fin.UtilityEfficiency.Select(u => (double)u.Value).ToArray(), colors = fin.UtilityEfficiency.Select(u => u.Color ?? "#0f766e").ToArray() }, jsonOpts2))</script>
-    }
+{
+    var jsonOpts2 =
+        new JsonSerializerOptions
+        {
+            Encoder =
+                JavaScriptEncoder
+                    .UnsafeRelaxedJsonEscaping
+        };
+
+
+    <script id="d-finance-beneficiaries"
+            type="application/json">
+        @Html.Raw(
+            JsonSerializer.Serialize(
+                new
+                {
+                    labels = new[]
+                    {
+                        "متوازن",
+                        "عجز",
+                        "فائض"
+                    },
+
+                    values = new[]
+                    {
+                        fin.BalancedBeneficiariesCount,
+                        fin.DeficitBeneficiariesCount,
+                        fin.SurplusBeneficiariesCount
+                    },
+
+                    colors = new[]
+                    {
+                        "#276749",
+                        "#9b2c2c",
+                        "#2b6cb0"
+                    },
+
+                    total =
+                        fin.FinancialBeneficiariesCount
+                },
+                jsonOpts2))
+    </script>
+
+
+   <script id="d-finance-claims-type"
+        type="application/json">
+
+    @Html.Raw(
+        JsonSerializer.Serialize(
+            new
+            {
+                labels =
+                    fin.ClaimsByType
+                        .Select(
+                            x =>
+                                x.BillChargeTypeName)
+                        .ToArray(),
+
+                claims =
+                    fin.ClaimsByType
+                        .Select(
+                            x =>
+                                (double)x.TotalClaims)
+                        .ToArray(),
+
+                payments =
+                    fin.ClaimsByType
+                        .Select(
+                            x =>
+                                (double)x.TotalPayments)
+                        .ToArray(),
+
+                deficits =
+                    fin.ClaimsByType
+                        .Select(
+                            x =>
+                                (double)x.DeficitByType)
+                        .ToArray(),
+
+                surpluses =
+                    fin.ClaimsByType
+                        .Select(
+                            x =>
+                                (double)x.SurplusByType)
+                        .ToArray(),
+
+                net =
+                    fin.ClaimsByType
+                        .Select(
+                            x =>
+                                (double)x.NetByType)
+                        .ToArray(),
+
+                percents =
+                    fin.ClaimsByType
+                        .Select(
+                            x =>
+                                (double)x.ClaimsPercent)
+                        .ToArray(),
+
+                bills =
+                    fin.ClaimsByType
+                        .Select(
+                            x =>
+                                x.BillsCount)
+                        .ToArray(),
+
+                beneficiaries =
+                    fin.ClaimsByType
+                        .Select(
+                            x =>
+                                x.BeneficiariesCount)
+                        .ToArray(),
+
+                financialBeneficiaries =
+                    fin.ClaimsByType
+                        .Select(
+                            x =>
+                                x.FinancialBeneficiariesCount)
+                        .ToArray()
+            },
+            jsonOpts2))
+
+</script>
+}
+    
+
+
+
     @if (maint != null)
     {
         var jsonOpts2 = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
@@ -982,7 +2552,584 @@
 
         /* ══ 1 — حالة الوحدات ══ */
         var d1 = get('d-unit-status');
-        if (d1) mk('c-unit-status', donut(d1.labels, d1.values, [COLORS.success, COLORS.info, COLORS.warning, COLORS.danger, COLORS.purple, COLORS.cyan]));
+        if (d1) mk('c-unit-status', donut(d1.labels, d1.values, [COLORS.success, COLORS.danger, COLORS.warning, COLORS.danger, COLORS.purple, COLORS.cyan]));
+
+
+  /* ══════════════════════════════════════════════════════
+   جاهزية الوحدات السكنية — All Current Statuses
+   ══════════════════════════════════════════════════════ */
+
+var dReadiness =
+    get('d-readiness-status');
+
+if (
+    dReadiness &&
+    Array.isArray(dReadiness.labels) &&
+    dReadiness.labels.length > 0
+) {
+
+    var readinessItems =
+        dReadiness.labels.map(
+            function (label, index) {
+
+                return {
+                    label: label,
+                    value: dReadiness.values[index],
+                    key: dReadiness.keys[index]
+                };
+
+            });
+
+
+    var readinessCanvas =
+        document.getElementById(
+            'c-readiness-status'
+        );
+
+
+    var readinessColorMap = {
+
+        OCCUPIED:
+            COLORS.success,
+
+        READY:
+            '#0f766e',
+
+        ALLOCATION:
+            COLORS.info,
+
+        MAINTENANCE:
+            COLORS.warning,
+
+        QUALITY:
+            COLORS.purple,
+
+        GENERAL_SERVICES:
+            COLORS.cyan,
+
+        HOUSING_DEPARTMENT:
+            '#805ad5',
+
+        EXECUTION:
+            '#b7791f',
+
+        VACANT_PENDING:
+            COLORS.danger,
+
+        NO_ACTIVE_ACTION:
+            COLORS.gray,
+
+        OTHER:
+            COLORS.grayLight
+    };
+
+
+    new Chart(
+        readinessCanvas,
+        {
+            type: 'bar',
+
+            plugins: [
+                ChartDataLabels
+            ],
+
+            data: {
+
+                labels:
+                    readinessItems.map(
+                        function (x) {
+                            return x.label;
+                        }),
+
+                datasets: [
+                    {
+                        label: 'عدد الوحدات',
+
+                        data:
+                            readinessItems.map(
+                                function (x) {
+                                    return x.value;
+                                }),
+
+                        backgroundColor:
+                            readinessItems.map(
+                                function (x) {
+                                    return readinessColorMap[x.key]
+                                        || COLORS.gray;
+                                }),
+
+                        borderRadius: 5,
+                        borderSkipped: false,
+
+                        maxBarThickness: 50
+                    }
+                ]
+            },
+
+            options: {
+
+                responsive: true,
+                maintainAspectRatio: false,
+
+                animation: {
+                    duration: 600,
+                    easing: 'easeOutQuart'
+                },
+
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+
+                plugins: {
+
+                    legend: {
+                        display: false
+                    },
+
+                    datalabels: {
+
+                        anchor: 'end',
+                        align: 'top',
+                        offset: 2,
+
+                        color: '#2d3748',
+
+                        font: {
+                            size: 10,
+                            weight: '700'
+                        },
+
+                        formatter:
+                            function (value) {
+
+                                return value > 0
+                                    ? value.toLocaleString('en-US')
+                                    : '';
+
+                            }
+                    },
+
+                    tooltip: {
+
+                        backgroundColor: '#1a1a2e',
+                        padding: 12,
+                        cornerRadius: 6,
+
+                        callbacks: {
+
+                            label:
+                                function (context) {
+
+                                    return ' ' +
+                                        context.parsed.y
+                                            .toLocaleString('en-US') +
+                                        ' وحدة';
+
+                                }
+                        }
+                    }
+                },
+
+                scales: {
+
+                    x: {
+
+                        grid: {
+                            display: false
+                        },
+
+                        ticks: {
+
+                            autoSkip: false,
+
+                            color: '#2d3748',
+
+                            font: {
+                                size: 10,
+                                weight: '600'
+                            },
+
+                            maxRotation: 0,
+                            minRotation: 0
+                        }
+                    },
+
+                    y: {
+
+                        beginAtZero: true,
+                        grace: '10%',
+
+                        grid: {
+                            color: 'rgba(0,0,0,.04)',
+                            drawBorder: false
+                        },
+
+                        ticks: {
+
+                            color: '#718096',
+
+                            font: {
+                                size: 11
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    );
+}
+
+
+
+        /* ══════════════════════════════════════════════════════
+   الإشغال حسب الموقع السكني — Auto Rotation
+   ══════════════════════════════════════════════════════ */
+
+var dOccLocations = get('d-occupancy-locations');
+
+if (
+    dOccLocations &&
+    Array.isArray(dOccLocations.items) &&
+    dOccLocations.items.length > 0
+) {
+    var occupancyItems = dOccLocations.items;
+
+    // عدد المواقع المعروضة في كل شاشة
+    var occupancyPageSize = 5;
+
+    var occupancyPageIndex = 0;
+
+    var occupancyTotalPages =
+        Math.ceil(
+            occupancyItems.length /
+            occupancyPageSize
+        );
+
+    var occupancyCanvas =
+        document.getElementById(
+            'c-occupancy-locations'
+        );
+
+    var occupancyPageBadge =
+        document.getElementById(
+            'occupancy-location-page'
+        );
+
+    function getOccupancyPage() {
+
+        var start =
+            occupancyPageIndex *
+            occupancyPageSize;
+
+        return occupancyItems.slice(
+            start,
+            start + occupancyPageSize
+        );
+    }
+
+    function updateOccupancyPageBadge() {
+
+        if (!occupancyPageBadge)
+            return;
+
+        occupancyPageBadge.textContent =
+            (occupancyPageIndex + 1) +
+            ' / ' +
+            occupancyTotalPages;
+    }
+
+    var firstOccupancyPage =
+        getOccupancyPage();
+
+    var occupancyLocationsChart =
+        new Chart(
+            occupancyCanvas,
+            {
+                type: 'bar',
+
+                plugins: [
+                    ChartDataLabels
+                ],
+
+                data: {
+                    labels:
+                        firstOccupancyPage.map(
+                            function (x) {
+                                return x.name;
+                            }),
+
+                    datasets: [
+                        {
+                            label: 'الإجمالي',
+                            data:
+                                firstOccupancyPage.map(
+                                    function (x) {
+                                        return x.total;
+                                    }),
+
+                            backgroundColor:
+                                COLORS.grayLight,
+
+                            borderRadius: 4,
+                            borderSkipped: false
+                        },
+
+                        {
+                            label: 'المشغول',
+                            data:
+                                firstOccupancyPage.map(
+                                    function (x) {
+                                        return x.occupied;
+                                    }),
+
+                            backgroundColor:
+                                COLORS.success,
+
+                            borderRadius: 4,
+                            borderSkipped: false
+                        },
+
+                        {
+                            label: 'الشاغر',
+                            data:
+                                firstOccupancyPage.map(
+                                    function (x) {
+                                        return x.vacant;
+                                    }),
+
+                            backgroundColor:
+                                COLORS.danger,
+
+                            borderRadius: 4,
+                            borderSkipped: false
+                        }
+                    ]
+                },
+
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+
+                    animation: {
+                        duration: 600,
+                        easing: 'easeOutQuart'
+                    },
+
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+
+                    plugins: {
+
+                        legend: {
+                            position: 'top',
+
+                            labels: {
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                padding: 18,
+                                font: {
+                                    size: 11,
+                                    weight: '600'
+                                }
+                            }
+                        },
+
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'top',
+                            offset: 2,
+
+                            color: '#2d3748',
+
+                            font: {
+                                size: 10,
+                                weight: '700'
+                            },
+
+                            formatter: function (value) {
+                                return value > 0
+                                    ? value.toLocaleString('en-US')
+                                    : '';
+                            }
+                        },
+
+                        tooltip: {
+                            backgroundColor: '#1a1a2e',
+                            padding: 12,
+                            cornerRadius: 6,
+
+                            callbacks: {
+
+                                afterBody: function (items) {
+
+                                    if (!items ||
+                                        items.length === 0)
+                                        return '';
+
+                                    var index =
+                                        items[0].dataIndex;
+
+                                    var page =
+                                        getOccupancyPage();
+
+                                    var item =
+                                        page[index];
+
+                                    if (!item)
+                                        return '';
+
+                                    return [
+                                        '',
+                                        'نسبة الإشغال: ' +
+                                        Number(
+                                            item.percent
+                                        ).toFixed(2) +
+                                        '%'
+                                    ];
+                                }
+                            }
+                        }
+                    },
+
+                    scales: {
+
+                        x: {
+                            stacked: false,
+
+                            grid: {
+                                display: false
+                            },
+
+                            ticks: {
+                                autoSkip: false,
+                                maxRotation: 0,
+                                minRotation: 0,
+
+                                font: {
+                                    size: 10,
+                                    weight: '600'
+                                },
+
+                                color: '#2d3748'
+                            }
+                        },
+
+                        y: {
+                            beginAtZero: true,
+
+                            grid: {
+                                color:
+                                    'rgba(0,0,0,.05)'
+                            },
+
+                            ticks: {
+                                precision: 0,
+
+                                font: {
+                                    size: 10
+                                },
+
+                                color: '#718096'
+                            }
+                        }
+                    }
+                }
+            });
+
+    updateOccupancyPageBadge();
+
+    function showNextOccupancyPage() {
+
+        if (occupancyTotalPages <= 1)
+            return;
+
+        occupancyPageIndex =
+            (
+                occupancyPageIndex + 1
+            ) %
+            occupancyTotalPages;
+
+        var page =
+            getOccupancyPage();
+
+        occupancyLocationsChart.data.labels =
+            page.map(
+                function (x) {
+                    return x.name;
+                });
+
+        occupancyLocationsChart
+            .data
+            .datasets[0]
+            .data =
+            page.map(
+                function (x) {
+                    return x.total;
+                });
+
+        occupancyLocationsChart
+            .data
+            .datasets[1]
+            .data =
+            page.map(
+                function (x) {
+                    return x.occupied;
+                });
+
+        occupancyLocationsChart
+            .data
+            .datasets[2]
+            .data =
+            page.map(
+                function (x) {
+                    return x.vacant;
+                });
+
+        occupancyLocationsChart.update();
+
+        updateOccupancyPageBadge();
+    }
+
+    // الانتقال إلى 5 مواقع جديدة كل 8 ثوانٍ
+    var occupancyRotationTimer =
+        setInterval(
+            showNextOccupancyPage,
+            8000
+        );
+
+    // إيقاف التدوير أثناء وضع المؤشر على الرسم
+    occupancyCanvas.addEventListener(
+        'mouseenter',
+        function () {
+
+            clearInterval(
+                occupancyRotationTimer
+            );
+        });
+
+    // استكمال التدوير بعد إبعاد المؤشر
+    occupancyCanvas.addEventListener(
+        'mouseleave',
+        function () {
+
+            clearInterval(
+                occupancyRotationTimer
+            );
+
+            occupancyRotationTimer =
+                setInterval(
+                    showNextOccupancyPage,
+                    8000
+                );
+        });
+}
+
+
+
+
 
         /* ══ 1b — مساحات ══ */
         var dA = get('d-areas');
@@ -1170,15 +3317,668 @@
             }
         });
 
-        /* ══ 4 — تحصيل ══ */
-        var d4 = get('d-collection');
-        if (d4) {
-            var c4 = donut(['محصّل', 'غير محصّل'], [d4.collected, d4.uncollected], [COLORS.success, COLORS.danger], '65%');
-            c4.options.plugins.tooltip.callbacks.label = function(c) {
-                return ' ' + c.label + ': ' + Number(c.parsed).toLocaleString('en-US') + ' ر.س';
-            };
-            mk('c-collection', c4);
+       /* ══════════════════════════════════════════════════════
+   4 — الكفاءة المالية
+   ══════════════════════════════════════════════════════ */
+
+
+/* ------------------------------------------------------
+   توزيع الحالة المالية للمستفيدين - عمودي
+------------------------------------------------------ */
+
+var dFinanceBeneficiaries =
+    get(
+        'd-finance-beneficiaries'
+    );
+
+if (dFinanceBeneficiaries) {
+
+    const financeTotal =
+        Number(
+            dFinanceBeneficiaries.total || 0
+        );
+
+    function getFinanceStatusMeaning(label) {
+
+        switch ((label || '').trim()) {
+
+            case 'متوازن':
+                return 'المتوازن: عدد المستفيدون الي إجمالي مطالباتهم يساوي إجمالي سداداتـهم، ولا يوجد عليه عجز ولا له فائض.';
+
+            case 'عجز':
+                return 'العجز: عدد المستفيدون الي إجمالي مطالباتهم أعلى من إجمالي سداداتـهم، ويوجد مبلغ مطلوب تحصيله منه.';
+
+            case 'فائض':
+                return 'الفائض: عدد المستفيدون الي إجمالي سداداتـهم أعلى من إجمالي مطالباتهم، ويوجد مبلغ مستحق إعادته له.';
+
+            default:
+                return 'يوضح الشارت توزيع المستفيدين حسب حالتهم المالية.';
         }
+    }
+
+    mk(
+        'c-finance-beneficiaries',
+        {
+            type: 'bar',
+
+            plugins: [
+                ChartDataLabels
+            ],
+
+            data: {
+                labels:
+                    dFinanceBeneficiaries.labels,
+
+                datasets: [
+                    {
+                        data:
+                            dFinanceBeneficiaries.values,
+
+                        backgroundColor:
+                            dFinanceBeneficiaries.colors,
+
+                        borderRadius: 8,
+
+                        borderSkipped: false,
+
+                        maxBarThickness: 72,
+
+                        minBarLength: 6
+                    }
+                ]
+            },
+
+            options: {
+
+                maintainAspectRatio: false,
+
+                layout: {
+                    padding: {
+                        top: 24,
+                        right: 12,
+                        left: 12,
+                        bottom: 8
+                    }
+                },
+
+                plugins: {
+
+                    legend: {
+                        display: false
+                    },
+
+                    datalabels: {
+
+                        anchor: 'end',
+                        align: 'end',
+                        offset: 2,
+                        clamp: true,
+                        clip: false,
+
+                        color: '#334155',
+
+                        font: {
+                            size: 11,
+                            weight: '800'
+                        },
+
+                        formatter:
+                            function (value) {
+
+                                const count =
+                                    Number(value || 0);
+
+                                const pct =
+                                    financeTotal > 0
+                                        ? (count * 100 / financeTotal)
+                                        : 0;
+
+                                return (
+                                    count.toLocaleString('en-US') +
+                                    '\n' +
+                                    '(' + pct.toFixed(1) + '%)'
+                                );
+                            }
+                    },
+
+                    tooltip: {
+
+                        backgroundColor: '#1a1a2e',
+                        titleColor: '#ffffff',
+                        bodyColor: '#e5e7eb',
+                        footerColor: '#cbd5e1',
+                        padding: 12,
+                        cornerRadius: 8,
+                        displayColors: true,
+
+                        callbacks: {
+
+                            title:
+                                function (items) {
+
+                                    if (!items || !items.length)
+                                        return '';
+
+                                    return 'الحالة: ' + items[0].label;
+                                },
+
+                            label:
+                                function (context) {
+
+                                    const count =
+                                        Number(
+                                            context.parsed.y || 0
+                                        );
+
+                                    const pct =
+                                        financeTotal > 0
+                                            ? (count * 100 / financeTotal)
+                                            : 0;
+
+                                    return [
+                                        'العدد: ' + count.toLocaleString('en-US'),
+                                        'النسبة: ' + pct.toFixed(2) + '%'
+                                    ];
+                                },
+
+                            afterBody:
+                                function (items) {
+
+                                    if (!items || !items.length)
+                                        return [];
+
+                                    const label =
+                                        items[0].label || '';
+
+                                    return [
+                                        ' ',
+                                        getFinanceStatusMeaning(label)
+                                    ];
+                                },
+
+                            footer:
+                                function () {
+
+                                    return 'يعتمد التصنيف على مقارنة إجمالي المطالبات بإجمالي السدادات لكل مستفيد.';
+                                }
+                        }
+                    }
+                },
+
+                scales: {
+
+                    x: {
+
+                        grid: {
+                            display: false
+                        },
+
+                        ticks: {
+                            color: '#334155',
+                            font: {
+                                size: 12,
+                                weight: '700'
+                            }
+                        }
+                    },
+
+                    y: {
+
+                        beginAtZero: true,
+
+                        grid: {
+                            color: 'rgba(0,0,0,.05)'
+                        },
+
+                        ticks: {
+
+                            color: '#64748b',
+
+                            font: {
+                                size: 10
+                            },
+
+                            callback:
+                                function (value) {
+                                    return Number(value).toLocaleString('en-US');
+                                }
+                        }
+                    }
+                }
+            }
+        }
+    );
+
+}
+
+
+
+/* ------------------------------------------------------
+   مقارنة القيم المالية
+------------------------------------------------------ */
+
+/* ------------------------------------------------------
+   تحليل المطالبات والسدادات حسب النوع
+------------------------------------------------------ */
+
+var dFinanceClaimsType =
+    get(
+        'd-finance-claims-type'
+    );
+
+
+if (dFinanceClaimsType) {
+
+    mk(
+        'c-finance-claims-type',
+        {
+            type: 'bar',
+
+            plugins: [
+                ChartDataLabels
+            ],
+
+            data: {
+
+                labels:
+                    dFinanceClaimsType.labels,
+
+                datasets: [
+                    {
+                        label:
+                            'المطالبات',
+
+                        data:
+                            dFinanceClaimsType.claims,
+
+                        backgroundColor:
+                            '#2b6cb0',
+
+                        borderRadius: 5,
+
+                        borderSkipped: false
+                    },
+
+                    {
+                        label:
+                            'السدادات',
+
+                        data:
+                            dFinanceClaimsType.payments,
+
+                        backgroundColor:
+                            '#276749',
+
+                        borderRadius: 5,
+
+                        borderSkipped: false
+                    },
+
+                    {
+                        label:
+                            'العجز',
+
+                        data:
+                            dFinanceClaimsType.deficits,
+
+                        backgroundColor:
+                            '#9b2c2c',
+
+                        borderRadius: 5,
+
+                        borderSkipped: false
+                    },
+
+                    {
+                        label:
+                            'الفائض',
+
+                        data:
+                            dFinanceClaimsType.surpluses,
+
+                        backgroundColor:
+                            '#553c9a',
+
+                        borderRadius: 5,
+
+                        borderSkipped: false
+                    }
+                ]
+            },
+
+            options: {
+
+                maintainAspectRatio: false,
+
+                responsive: true,
+                layout: {
+    padding: {
+        top: 28
+    }
+},
+
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+
+                plugins: {
+
+                    legend: {
+
+                        display: true,
+
+                        position: 'top',
+
+                        labels: {
+
+                            usePointStyle: true,
+
+                            pointStyle: 'circle',
+
+                            padding: 18,
+
+                            font: {
+                                size: 11,
+                                weight: '700'
+                            }
+                        }
+                    },
+
+
+                    datalabels: {
+
+    display:
+        function (context) {
+
+            const value =
+                Number(
+                    context.dataset.data[
+                        context.dataIndex
+                    ] || 0
+                );
+
+            return value > 0;
+        },
+
+    anchor: 'end',
+
+    align: 'top',
+
+    //--------------------------------------------------
+    // إزاحة مختلفة لكل Series
+    // لمنع تداخل القيم الصغيرة قرب خط الصفر
+    //--------------------------------------------------
+    offset:
+        function (context) {
+
+            return 3 +
+                (
+                    context.datasetIndex *
+                    5
+                );
+        },
+
+    clamp: true,
+
+    clip: false,
+
+    color: '#334155',
+
+    font: {
+        size: 9,
+        weight: '700'
+    },
+
+    formatter:
+        function (value) {
+
+            const amount =
+                Number(
+                    value || 0
+                );
+
+
+            if (amount <= 0)
+                return '';
+
+
+            //--------------------------------------------------
+            // مليون
+            //--------------------------------------------------
+            if (amount >= 1000000) {
+
+                return (
+                    amount /
+                    1000000
+                )
+                .toLocaleString(
+                    'en-US',
+                    {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 2
+                    }
+                ) +
+                ' مليون';
+            }
+
+
+            //--------------------------------------------------
+            // ألف
+            //--------------------------------------------------
+            if (amount >= 1000) {
+
+                return (
+                    amount /
+                    1000
+                )
+                .toLocaleString(
+                    'en-US',
+                    {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 1
+                    }
+                ) +
+                ' ألف';
+            }
+
+
+            //--------------------------------------------------
+            // أقل من ألف
+            //--------------------------------------------------
+            return amount
+                .toLocaleString(
+                    'en-US',
+                    {
+                        minimumFractionDigits:
+                            amount % 1 === 0
+                                ? 0
+                                : 2,
+
+                        maximumFractionDigits: 2
+                    }
+                ) +
+                ' ريال';
+        }
+},
+
+
+                    tooltip: {
+
+                        backgroundColor:
+                            '#1a1a2e',
+
+                        padding: 12,
+
+                        cornerRadius: 6,
+
+                        callbacks: {
+
+                            title:
+                                function (items) {
+
+                                    if (
+                                        !items ||
+                                        !items.length
+                                    ) {
+                                        return '';
+                                    }
+
+
+                                    return items[0]
+                                        .label;
+                                },
+
+
+                            label:
+                                function (c) {
+
+                                    const amount =
+                                        Number(
+                                            c.parsed.y || 0
+                                        );
+
+
+                                    return (
+                                        ' ' +
+                                        c.dataset.label +
+                                        ': ' +
+                                        amount
+                                            .toLocaleString(
+                                                'en-US',
+                                                {
+                                                    minimumFractionDigits: 2,
+                                                    maximumFractionDigits: 2
+                                                }
+                                            ) +
+                                        ' ريال'
+                                    );
+                                },
+
+
+                            afterBody:
+    function () {
+        return [];
+    }
+                        }
+                    }
+                },
+
+
+                scales: {
+
+                    x: {
+
+                        stacked: false,
+
+                        grid: {
+                            display: false
+                        },
+
+                        ticks: {
+
+                            color:
+                                '#334155',
+
+                            font: {
+                                size: 11,
+                                weight: '700'
+                            }
+                        }
+                    },
+
+
+                    y: {
+
+                        stacked: false,
+
+                        beginAtZero: true,
+
+                        grid: {
+                            color:
+                                'rgba(0,0,0,.04)'
+                        },
+
+                        ticks: {
+
+                            color:
+                                '#64748b',
+
+                            font: {
+                                size: 10
+                            },
+
+                            callback:
+                                function (value) {
+
+                                    const n =
+                                        Number(value);
+
+
+                                    if (
+                                        Math.abs(n) >=
+                                        1000000
+                                    ) {
+
+                                        const millions =
+                                            n /
+                                            1000000;
+
+
+                                        return (
+                                            Number.isInteger(
+                                                millions
+                                            )
+                                                ? millions
+                                                    .toFixed(0)
+                                                : millions
+                                                    .toFixed(1)
+                                        ) +
+                                        ' مليون ريال';
+                                    }
+
+
+                                    if (
+                                        Math.abs(n) >=
+                                        1000
+                                    ) {
+
+                                        const thousands =
+                                            n /
+                                            1000;
+
+
+                                        return (
+                                            Number.isInteger(
+                                                thousands
+                                            )
+                                                ? thousands
+                                                    .toFixed(0)
+                                                : thousands
+                                                    .toFixed(1)
+                                        ) +
+                                        ' ألف ريال';
+                                    }
+
+
+                                    return (
+                                        n
+                                            .toLocaleString(
+                                                'en-US'
+                                            ) +
+                                        ' ريال'
+                                    );
+                                }
+                        }
+                    }
+                }
+            }
+        }
+    );
+}
+
+
+
 
         /* ══ 4b — مرافق ══ */
         var dU = get('d-utility');
@@ -1244,18 +4044,78 @@
         })));
 
         /* ── TABS ── */
-        document.querySelectorAll('.dep-tab').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('.dep-tab').forEach(function(b) { b.classList.remove('is-active'); });
-                document.querySelectorAll('.dep-panel').forEach(function(p) { p.classList.remove('is-active'); });
-                btn.classList.add('is-active');
-                var p = document.getElementById(btn.dataset.tab);
-                if (p) {
-                    p.classList.add('is-active');
-                    window.dispatchEvent(new Event('resize'));
-                }
+        function activateDepartmentTab(tabId, updateHash) {
+            if (!/^t[1-7]$/.test(tabId || '')) return;
+
+            var btn =
+                document.querySelector(
+                    '.dep-tab[data-tab="' + tabId + '"]'
+                );
+
+            var panel =
+                document.getElementById(tabId);
+
+            if (!btn || !panel) return;
+
+            document
+                .querySelectorAll('.dep-tab')
+                .forEach(function(b) {
+                    b.classList.remove('is-active');
+                });
+
+            document
+                .querySelectorAll('.dep-panel')
+                .forEach(function(p) {
+                    p.classList.remove('is-active');
+                });
+
+            btn.classList.add('is-active');
+            panel.classList.add('is-active');
+
+            if (updateHash &&
+                window.history &&
+                window.history.replaceState) {
+
+                window.history.replaceState(
+                    null,
+                    '',
+                    window.location.pathname +
+                    window.location.search +
+                    '#' +
+                    tabId
+                );
+            }
+
+            window.requestAnimationFrame(function() {
+                window.dispatchEvent(new Event('resize'));
             });
-        });
+        }
+
+        document
+            .querySelectorAll('.dep-tab')
+            .forEach(function(btn) {
+
+                btn.addEventListener(
+                    'click',
+                    function() {
+                        activateDepartmentTab(
+                            btn.dataset.tab,
+                            true
+                        );
+                    }
+                );
+            });
+
+        var requestedTab =
+            (window.location.hash || '')
+                .replace('#', '');
+
+        if (/^t[1-7]$/.test(requestedTab)) {
+            activateDepartmentTab(
+                requestedTab,
+                false
+            );
+        }
 
         })();
     </script>

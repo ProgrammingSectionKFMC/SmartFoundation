@@ -1,0 +1,106 @@
+﻿
+@using SmartFoundation.UI.ViewModels.SmartDrawer
+@model SmartDrawerConfig
+
+@if (Model.Show)
+{
+    var drawerId = Model.Id;
+    var titleId = drawerId + "-title";
+
+    var sideClass = Model.Side == SmartDrawerSide.Left
+        ? "sf-drawer-left"
+        : "sf-drawer-right";
+
+    var sizeClass = Model.Size switch
+    {
+        SmartDrawerSize.Small => "sf-drawer-small",
+        SmartDrawerSize.Medium => "sf-drawer-medium",
+        SmartDrawerSize.Full => "sf-drawer-full",
+        _ => "sf-drawer-large"
+    };
+
+    <div id="@drawerId"
+         class="sf-drawer-root @sideClass @sizeClass"
+         data-sf-drawer
+         data-close-on-escape="@Model.CloseOnEscape.ToString().ToLowerInvariant()"
+         data-close-on-backdrop="@Model.CloseOnBackdropClick.ToString().ToLowerInvariant()"
+         data-lock-scroll="@Model.LockBodyScroll.ToString().ToLowerInvariant()"
+         hidden>
+
+        @if (Model.ShowBackdrop)
+        {
+            <div class="sf-drawer-backdrop"
+                 data-sf-drawer-backdrop
+                 aria-hidden="true"></div>
+        }
+
+        <section class="sf-drawer-panel"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-labelledby="@titleId"
+                 tabindex="-1">
+
+            <header class="sf-drawer-header">
+                <div class="sf-drawer-heading">
+                    @if (!string.IsNullOrWhiteSpace(Model.Icon))
+                    {
+                        <i class="@Model.Icon" aria-hidden="true"></i>
+                    }
+
+                    <div>
+                        <h2 id="@titleId"
+                            class="sf-drawer-title">
+                            @Model.Title
+                        </h2>
+
+                        @if (!string.IsNullOrWhiteSpace(Model.Subtitle))
+                        {
+                            <p class="sf-drawer-subtitle">
+                                @Model.Subtitle
+                            </p>
+                        }
+                    </div>
+                </div>
+
+                @if (Model.ShowCloseButton)
+                {
+                    <button type="button"
+                            class="sf-drawer-close"
+                            data-sf-drawer-close
+                            aria-label="إغلاق اللوحة">
+                        <i class="fa-solid fa-xmark"
+                           aria-hidden="true"></i>
+                    </button>
+                }
+            </header>
+
+            <div class="sf-drawer-body">
+
+                @if (Model.Table is not null)
+                {
+                    @await Component.InvokeAsync(
+                        "SmartTableDS",
+                        new { model = Model.Table, embedded = true }
+                    )
+                }
+
+                @if (Model.Form is not null)
+                {
+                    @await Component.InvokeAsync(
+                        "SmartForm",
+                        new { model = Model.Form, embedded = true }
+                    )
+                }
+
+                @if (Model.Table is null && Model.Form is null)
+                {
+                    <div class="sf-drawer-empty">
+                        @Model.EmptyText
+                    </div>
+                }
+
+            </div>
+
+        </section>
+    </div>
+}

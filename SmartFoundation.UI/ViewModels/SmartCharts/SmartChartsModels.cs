@@ -247,21 +247,29 @@ namespace SmartFoundation.UI.ViewModels.SmartCharts
         public string Title { get; set; } = "";
         public string? ShortTitle { get; set; }
         public string? Subtitle { get; set; }
+        public string? FormulaText { get; set; }
 
         public decimal? Target { get; set; }
         public decimal? Actual { get; set; }
-        public decimal? CompletionPercent { get; set; }   // إذا فاضي نحسبه من Actual / Target
+        public decimal? CompletionPercent { get; set; }
 
         public string? Unit { get; set; }
         public string? Icon { get; set; }
         public string? Emoji { get; set; }
 
-        public string? Tone { get; set; }                 // info/success/warning/danger/neutral
+        public string? Tone { get; set; }
         public string? Color { get; set; }
 
         public string? Hint { get; set; }
         public string? Href { get; set; }
+
         public int SortOrder { get; set; } = 0;
+
+        public string? ActualLabel { get; set; }
+        public string? TargetLabel { get; set; }
+        public string? RemainingLabel { get; set; }
+
+        public bool ShowValueUnit { get; set; } = true;
     }
 
     public class HousingCommandCenterDepartmentMetric
@@ -343,6 +351,59 @@ namespace SmartFoundation.UI.ViewModels.SmartCharts
         public List<ChartSlice> FacilityTypes { get; set; } = new();
     }
 
+
+
+    public class DepHousingReadinessDetail
+    {
+        public int TotalHousingUnits { get; set; }
+
+        public List<DepHousingReadinessGroup> Groups { get; set; } = new();
+    }
+
+    public class DepHousingReadinessGroup
+    {
+        public string Key { get; set; } = "";
+
+        public string Name { get; set; } = "";
+
+        public int Order { get; set; }
+
+        public int HousingUnitsCount { get; set; }
+
+        public decimal Percent { get; set; }
+
+        public List<DepHousingReadinessAction> Actions { get; set; } = new();
+    }
+
+    public class DepHousingReadinessAction
+    {
+        public int? ActionTypeID { get; set; }
+
+        public string ActionTypeName { get; set; } = "";
+
+        public string BuildingStatus { get; set; } = "";
+
+        public int? BuildingActionRoot { get; set; }
+
+        public int HousingUnitsCount { get; set; }
+    }
+
+
+    public class DepOccupancyLocationDetail
+    {
+        public int MilitaryLocationID { get; set; }
+
+        public string MilitaryLocationName { get; set; } = "";
+
+        public int TotalHousingUnits { get; set; }
+
+        public int OccupiedHousingUnits { get; set; }
+
+        public int UnoccupiedHousingUnits { get; set; }
+
+        public decimal OccupancyPercent { get; set; }
+    }
+
     public class DepAllocationDetail
     {
         // فئات السكان: ساكنين
@@ -377,19 +438,71 @@ namespace SmartFoundation.UI.ViewModels.SmartCharts
 
     public class DepFinanceDetail
     {
-        public decimal RentLastMonth { get; set; }
-        public decimal RentLast3Months { get; set; }
-        public decimal RentLast12Months { get; set; }
-        public decimal Collected { get; set; }
-        public decimal Uncollected { get; set; }
+        public int FinancialBeneficiariesCount { get; set; }
 
-        public decimal PaidFromSallary { get; set; }
-        public decimal PaidByATM { get; set; }
-        public decimal PaidByCash { get; set; }
+        public int BalancedBeneficiariesCount { get; set; }
 
-        // استهلاك الكهرباء والماء
-        public List<ChartSlice> UtilityEfficiency { get; set; } = new();
+        public int DeficitBeneficiariesCount { get; set; }
+
+        public int SurplusBeneficiariesCount { get; set; }
+
+
+        public decimal TotalClaims { get; set; }
+
+        public decimal TotalPayments { get; set; }
+
+        public decimal AmountToCollect { get; set; }
+
+        public decimal AmountToRefund { get; set; }
+
+        public decimal TotalFinancialGap { get; set; }
+
+        public decimal NetFinancialPosition { get; set; }
+
+
+        public decimal? BalancedBeneficiariesPercent { get; set; }
+
+        public decimal? FinancialEfficiencyPercent { get; set; }
+
+
+        public List<DepFinanceClaimType> ClaimsByType
+        {
+            get;
+            set;
+        } = new();
+
+
     }
+
+
+
+    public class DepFinanceClaimType
+    {
+        public int? BillChargeTypeID { get; set; }
+
+        public string BillChargeTypeName { get; set; }
+            = "";
+
+        public long FinancialBeneficiariesCount { get; set; }
+
+        public long BillsCount { get; set; }
+
+        public long BeneficiariesCount { get; set; }
+
+        public decimal TotalClaims { get; set; }
+
+        public decimal TotalPayments { get; set; }
+
+        public decimal DeficitByType { get; set; }
+
+        public decimal SurplusByType { get; set; }
+
+        public decimal NetByType { get; set; }
+
+        public decimal ClaimsPercent { get; set; }
+    }
+
+
 
     public class DepMaintenanceDetail
     {
@@ -410,20 +523,655 @@ namespace SmartFoundation.UI.ViewModels.SmartCharts
         public string? Color { get; set; }
     }
 
+    public class DepHousingProceduresDetail
+    {
+        public int TotalCurrentProcedures { get; set; }
+
+        public int AllocationCurrent { get; set; }
+
+        public int ExtendCurrent { get; set; }
+
+        public int ExitCurrent { get; set; }
+
+        public List<DepHousingProcedureStage> Stages { get; set; } = new();
+
+        public List<DepHousingProcedureRow> OldestCurrent { get; set; } = new();
+
+        public List<DepHousingWorkflowPerformance> Performance { get; set; } = new();
+    }
+
+
+    public class DepHousingWorkflowPerformance
+    {
+        public string WorkflowKey { get; set; } = "";
+
+        public string WorkflowName { get; set; } = "";
+
+        public int CompletedCount { get; set; }
+
+        public decimal? AverageDays { get; set; }
+
+        public decimal? MedianDays { get; set; }
+
+        public decimal? MinimumDays { get; set; }
+
+        public decimal? MaximumDays { get; set; }
+
+        public DateTime? LastCompletedDate { get; set; }
+    }
+
+
+
+    public class DepHousingProcedureStage
+    {
+        public string ProcedureGroupKey { get; set; } = "";
+
+        public string ProcedureGroupName { get; set; } = "";
+
+        public int ActionTypeID { get; set; }
+
+        public string ActionTypeName { get; set; } = "";
+
+        public int CurrentCases { get; set; }
+
+        public DateTime? OldestCurrentStatusDate { get; set; }
+
+        public int? OldestCurrentStatusDays { get; set; }
+    }
+
+
+    public class DepHousingProcedureRow
+    {
+        public int RowNo { get; set; }
+
+        public string ProcedureGroupKey { get; set; } = "";
+
+        public string ProcedureGroupName { get; set; } = "";
+
+        public long BuildingDetailsID { get; set; }
+
+        public string BuildingDetailsNo { get; set; } = "";
+
+        public long? GeneralNo { get; set; }
+
+        public long BuildingActionID { get; set; }
+
+        public long? BuildingActionParentID { get; set; }
+
+        public int ActionTypeID { get; set; }
+
+        public string ActionTypeName { get; set; } = "";
+
+        public DateTime? CurrentStatusSince { get; set; }
+
+        public string CurrentStatusDateSource { get; set; } = "";
+
+        public int? DaysInCurrentStatus { get; set; }
+
+        public bool IsMoveDataGenerated { get; set; }
+    }
+
+
+
     public class DepartmentDetailViewModel
     {
         public HousingCommandCenterDepartment Department { get; set; } = new();
         public List<HousingCommandCenterMetric> Metrics { get; set; } = new();
 
         public DepHousingDetail? HousingDetail { get; set; }
+
+        public List<DepOccupancyLocationDetail> OccupancyLocations { get; set; } = new();
+
         public DepAllocationDetail? AllocationDetail { get; set; }
         public DepRequestsDetail? RequestsDetail { get; set; }
         public DepFinanceDetail? FinanceDetail { get; set; }
         public DepMaintenanceDetail? MaintenanceDetail { get; set; }
         public DepMaintenanceDetail? CarsDetail { get; set; }
+        public DepHousingReadinessDetail? HousingReadiness { get; set; }
+        public DepHousingProceduresDetail? HousingProcedures { get; set; }
+
     }
 
     #endregion
+
+    public class DepBuildingDetailsViewModel
+    {
+        public string DepartmentId { get; set; } = "";
+
+        public string Section { get; set; } = "";
+
+        public string Status { get; set; } = "";
+
+        public string Title { get; set; } = "";
+
+        public int TotalCount => Rows.Count;
+
+        public List<DepBuildingDetailRow> Rows { get; set; } = new();
+    }
+
+
+    public class DepBuildingDetailRow
+    {
+        public long BuildingDetailsID { get; set; }
+
+        public string BuildingDetailsNo { get; set; } = "";
+
+        public string MilitaryLocationName { get; set; } = "";
+
+        public string BuildingTypeName { get; set; } = "";
+
+        public string BuildingUtilityTypeName { get; set; } = "";
+
+        public string BuildingClassName { get; set; } = "";
+
+        public int? BuildingDetailsRooms { get; set; }
+
+        public int? BuildingLevelsCount { get; set; }
+
+        public decimal? BuildingDetailsArea { get; set; }
+
+
+        // ---------------------------------------------------------
+        // Current operational status
+        // ---------------------------------------------------------
+
+        public string ReadinessGroupKey { get; set; } = "";
+
+        public string ReadinessGroupName { get; set; } = "";
+
+        public long? BuildingActionID { get; set; }
+
+        public int? BuildingActionTypeID { get; set; }
+
+        public string CurrentActionName { get; set; } = "";
+
+        public string CurrentBuildingStatus { get; set; } = "";
+
+        public DateTime? CurrentStatusSince { get; set; }
+
+        public int? DaysInCurrentStatus { get; set; }
+
+        public DateTime? CurrentActionDate { get; set; }
+
+        public DateTime? DecisionDate { get; set; }
+
+        public DateTime? ActionEntryDate { get; set; }
+
+        public string CurrentStatusDateSource { get; set; } = "";
+
+
+        // ---------------------------------------------------------
+        // Current beneficiary
+        // ---------------------------------------------------------
+
+        public string GeneralNo { get; set; } = "";
+
+        public string ResidentRankName { get; set; } = "";
+
+        public string ResidentFullName { get; set; } = "";
+
+        public string ResidentMilitaryUnit { get; set; } = "";
+
+
+        // ---------------------------------------------------------
+        // Occupancy
+        // ---------------------------------------------------------
+
+        public DateTime? OccupiedSince { get; set; }
+
+        public int? DaysOccupied { get; set; }
+
+
+        // ---------------------------------------------------------
+        // Vacancy / previous occupant
+        // ---------------------------------------------------------
+
+        public DateTime? VacantSince { get; set; }
+
+        public DateTime? LastExitActionDate { get; set; }
+
+        public int? DaysVacant { get; set; }
+
+        public string LastResidentGeneralNo { get; set; } = "";
+
+        public string LastResidentRankName { get; set; } = "";
+
+        public string LastResidentFullName { get; set; } = "";
+
+        public string LastResidentMilitaryUnit { get; set; } = "";
+    }
+
+
+
+
+    
+        public class DepProcedureDetailsViewModel
+        {
+            public string DepartmentId { get; set; } = "";
+
+            public string Workflow { get; set; } = "";
+
+            public string Title { get; set; } = "";
+
+            public int TotalCount => Rows.Count;
+
+            public List<DepProcedureDetailRow> Rows { get; set; } = new();
+        }
+
+
+        public class DepProcedureDetailRow
+        {
+            public int RowNo { get; set; }
+
+            // ---------------------------------------------------------
+            // Procedure
+            // ---------------------------------------------------------
+
+            public string ProcedureGroupKey { get; set; } = "";
+
+            public string ProcedureGroupName { get; set; } = "";
+
+
+            // ---------------------------------------------------------
+            // Beneficiary
+            // ---------------------------------------------------------
+
+            public long? ResidentInfoID { get; set; }
+
+            public string GeneralNo { get; set; } = "";
+
+            public string ResidentRankName { get; set; } = "";
+
+            public string ResidentFullName { get; set; } = "";
+
+            public string ResidentMilitaryUnit { get; set; } = "";
+
+
+            // ---------------------------------------------------------
+            // Building
+            // ---------------------------------------------------------
+
+            public long BuildingDetailsID { get; set; }
+
+            public string BuildingDetailsNo { get; set; } = "";
+
+
+            // ---------------------------------------------------------
+            // Procedure start
+            // ---------------------------------------------------------
+
+            public long? StartActionID { get; set; }
+
+            public int? StartActionTypeID { get; set; }
+
+            public string StartActionTypeName { get; set; } = "";
+
+            public DateTime? ProcedureStartDate { get; set; }
+
+            public string ProcedureStartSource { get; set; } = "";
+
+            public long? ProcedureElapsedSeconds { get; set; }
+
+            public decimal? ProcedureElapsedDays { get; set; }
+
+
+            // ---------------------------------------------------------
+            // Current action
+            // ---------------------------------------------------------
+
+            public long CurrentActionID { get; set; }
+
+            public long? CurrentActionParentID { get; set; }
+
+            public int CurrentActionTypeID { get; set; }
+
+            public string CurrentActionTypeName { get; set; } = "";
+
+            public string CurrentActionSourceType { get; set; } = "";
+
+            public bool IsMoveDataGenerated { get; set; }
+
+            public DateTime? CurrentEntryDate { get; set; }
+
+            public DateTime? CurrentActionDate { get; set; }
+
+            public DateTime? CurrentStatusSince { get; set; }
+
+            public string CurrentStatusDateSource { get; set; } = "";
+
+            public long? CurrentStatusElapsedSeconds { get; set; }
+
+            public decimal? CurrentStatusElapsedDays { get; set; }
+
+
+            // ---------------------------------------------------------
+            // Business data
+            // ---------------------------------------------------------
+
+            public string DecisionNo { get; set; } = "";
+
+            public DateTime? DecisionDate { get; set; }
+
+            public DateTime? FromDate { get; set; }
+
+            public DateTime? ToDate { get; set; }
+
+            public string Note { get; set; } = "";
+
+            public int FilteredTotalCount { get; set; }
+
+            public int ProcedureGroupCount { get; set; }
+        }
+
+
+
+
+    // =============================================================
+    // Financial Details
+    // =============================================================
+
+    public class DepFinancialDetailsViewModel
+    {
+        public string DepartmentId { get; set; } = "";
+
+        public string DepartmentName { get; set; } = "";
+
+        public string Mode { get; set; } = "";
+
+        public string Title { get; set; } = "";
+
+        public string SearchText { get; set; } = "";
+
+        public int? BillChargeTypeID { get; set; }
+
+        public string SortKey { get; set; } = "";
+
+        public int PageNumber { get; set; } = 1;
+
+        public int PageSize { get; set; } = 25;
+
+        public long TotalRows { get; set; }
+
+        public long TotalPages { get; set; }
+
+
+        // ---------------------------------------------------------
+        // Financial totals for the currently filtered result
+        // ---------------------------------------------------------
+
+        public decimal TotalClaims { get; set; }
+
+        public decimal TotalPayments { get; set; }
+
+        public decimal DeficitAmount { get; set; }
+
+        public decimal SurplusAmount { get; set; }
+
+        public long ClaimsCount { get; set; }
+
+        public long PaymentsCount { get; set; }
+
+
+        // ---------------------------------------------------------
+        // Rows / filters
+        // ---------------------------------------------------------
+
+        public List<DepFinancialDetailRow> Rows { get; set; } = new();
+
+        public List<DepFinancialChargeTypeOption> ChargeTypes { get; set; } = new();
+
+
+        // ---------------------------------------------------------
+        // UI helpers
+        // ---------------------------------------------------------
+
+        public bool ShowChargeTypeFilter =>
+            Mode == "CLAIMS" ||
+            Mode == "PAYMENTS";
+
+        public bool HasPreviousPage =>
+            PageNumber > 1;
+
+        public bool HasNextPage =>
+            PageNumber < TotalPages;
+    }
+
+
+    public class DepFinancialDetailRow
+    {
+        public long RowNo { get; set; }
+
+        public long ResidentInfoID { get; set; }
+
+
+        // ---------------------------------------------------------
+        // Beneficiary
+        // ---------------------------------------------------------
+
+        public string GeneralNo { get; set; } = "";
+
+        public string RankName { get; set; } = "";
+
+        public string FullName { get; set; } = "";
+
+        public string MilitaryUnitName { get; set; } = "";
+
+
+        // ---------------------------------------------------------
+        // Financial
+        // ---------------------------------------------------------
+
+        public decimal TotalClaims { get; set; }
+
+        public decimal TotalPayments { get; set; }
+
+        public decimal DeficitAmount { get; set; }
+
+        public decimal SurplusAmount { get; set; }
+
+        public long ClaimsCount { get; set; }
+
+        public long PaymentsCount { get; set; }
+
+        public DateTime? LastClaimDate { get; set; }
+
+        public DateTime? LastPaymentDate { get; set; }
+
+        public DateTime? LastFinancialActivityDate { get; set; }
+
+
+        // ---------------------------------------------------------
+        // Current housing status
+        // ---------------------------------------------------------
+
+        public long? LastActionID { get; set; }
+
+        public int? LastActionTypeID { get; set; }
+
+        public string HousingStatus { get; set; } = "";
+
+        public long? LastActionBuildingID { get; set; }
+
+        public string LastActionBuildingNo { get; set; } = "";
+
+        public DateTime? LastActionDate { get; set; }
+    }
+
+
+    public class DepFinancialChargeTypeOption
+    {
+        public int BillChargeTypeID { get; set; }
+
+        public string BillChargeTypeName { get; set; } = "";
+    }
+
+
+    // =============================================================
+    // Resident Financial Details
+    // =============================================================
+
+    public class DepResidentFinancialDetailsViewModel
+    {
+        // ---------------------------------------------------------
+        // Navigation
+        // ---------------------------------------------------------
+
+        public string DepartmentId { get; set; } = "";
+
+        public string ReturnMode { get; set; } = "CLAIMS";
+
+
+        // ---------------------------------------------------------
+        // Beneficiary
+        // ---------------------------------------------------------
+
+        public long ResidentInfoID { get; set; }
+
+        public string GeneralNo { get; set; } = "";
+
+        public string RankName { get; set; } = "";
+
+        public string FullName { get; set; } = "";
+
+        public string MilitaryUnitName { get; set; } = "";
+
+        public long? IdaraID { get; set; }
+
+        public string IdaraName { get; set; } = "";
+
+
+        // ---------------------------------------------------------
+        // Final Financial Position
+        // ---------------------------------------------------------
+
+        public decimal TotalClaims { get; set; }
+
+        public decimal TotalPayments { get; set; }
+
+        public decimal BalanceDifference { get; set; }
+
+        public string FinancialStatus { get; set; } = "";
+
+        public decimal BalanceAmount { get; set; }
+
+        public long ClaimsCount { get; set; }
+
+        public long PaymentsCount { get; set; }
+
+        public DateTime? LastClaimDate { get; set; }
+
+        public DateTime? LastPaymentDate { get; set; }
+
+
+        // ---------------------------------------------------------
+        // Housing Status
+        // ---------------------------------------------------------
+
+        public long? LastActionID { get; set; }
+
+        public int? LastActionTypeID { get; set; }
+
+        public string HousingStatus { get; set; } = "";
+
+        public long? LastActionBuildingID { get; set; }
+
+        public string LastActionBuildingNo { get; set; } = "";
+
+        public DateTime? LastActionDate { get; set; }
+
+
+        // ---------------------------------------------------------
+        // Details
+        // ---------------------------------------------------------
+
+        public List<DepResidentFinancialTypeSummary> ChargeTypes { get; set; }
+            = new();
+
+        public List<DepResidentFinancialClaimRow> Claims { get; set; }
+            = new();
+
+        public List<DepResidentFinancialPaymentRow> Payments { get; set; }
+            = new();
+    }
+
+
+    public class DepResidentFinancialTypeSummary
+    {
+        public long? BillChargeTypeID { get; set; }
+
+        public string BillChargeTypeName { get; set; } = "";
+
+        public long ClaimsCount { get; set; }
+
+        public long PaymentsCount { get; set; }
+
+        public decimal TotalClaims { get; set; }
+
+        public decimal TotalPayments { get; set; }
+
+        public decimal Difference { get; set; }
+
+        public decimal BalanceAmountByType { get; set; }
+
+        public string StatusByType { get; set; } = "";
+    }
+
+
+    public class DepResidentFinancialClaimRow
+    {
+        public long BillsID { get; set; }
+
+        public string BillNumber { get; set; } = "";
+
+        public long? BillChargeTypeID { get; set; }
+
+        public string BillChargeTypeName { get; set; } = "";
+
+        public decimal Amount { get; set; }
+
+        public int? PeriodMonth { get; set; }
+
+        public int? PeriodYear { get; set; }
+
+        public DateTime? BillsFromDate { get; set; }
+
+        public DateTime? BillsToDate { get; set; }
+
+        public long? BuildingDetailsID { get; set; }
+
+        public string BuildingDetailsNo { get; set; } = "";
+
+        public string PenaltyReason { get; set; } = "";
+
+        public DateTime? ClaimEntryDate { get; set; }
+    }
+
+
+    public class DepResidentFinancialPaymentRow
+    {
+        public long PaymentID { get; set; }
+
+        public long? BillChargeTypeID { get; set; }
+
+        public string BillChargeTypeName { get; set; } = "";
+
+        public decimal Amount { get; set; }
+
+        public DateTime? PaymentDate { get; set; }
+
+        public string PaymentNo { get; set; } = "";
+
+        public string DeductName { get; set; } = "";
+
+        public string PaymentDescription { get; set; } = "";
+
+        public long? BuildingDetailsID { get; set; }
+
+        public string BuildingDetailsNo { get; set; } = "";
+
+        public DateTime? PaymentEntryDate { get; set; }
+    }
+
 
 
 

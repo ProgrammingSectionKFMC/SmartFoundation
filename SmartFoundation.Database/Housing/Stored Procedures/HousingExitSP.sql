@@ -118,6 +118,107 @@ DECLARE @PenaltyPriceDecimal DECIMAL(18,2) =
             ;THROW 50001, N'العملية مطلوبة', 1;
         END
 
+        -- Keep physical vacancy independent from the resident's financial workflow.
+        -- All exit writes use the same transaction lock as final occupancy.
+        IF @Action IN (N'HOUSINGEXIT', N'EDITHOUSINGEXIT', N'CANCELHOUSINGEXIT',
+                       N'SENDHOUSINGEXITTOFINANCE', N'APPROVEHOUSINGEXIT', N'HOUSINGEXITPENALTYRECORD')
+        BEGIN
+            DECLARE @OccupancyLockResult INT;
+            DECLARE @OccupancyLockResource NVARCHAR(255) = CONCAT(
+                N'Housing.Occupancy:', @IdaraID_INT, N':', @BuildingDetailsID_BIGINT);
+            EXEC @OccupancyLockResult = sys.sp_getapplock
+                  @Resource = @OccupancyLockResource
+                , @LockMode = 'Exclusive'
+                , @LockOwner = 'Transaction'
+                , @LockTimeout = 10000;
+            IF @OccupancyLockResult < 0
+                THROW 50001, N'تجري معالجة أخرى للمنزل؛ يرجى إعادة المحاولة.', 1;
+
+            -- Reject stale or mismatched form context before changing dates or bills.
+            IF NOT EXISTS
+            (
+                SELECT 1 FROM Housing.BuildingAction currentAction
+                WHERE currentAction.buildingActionID = TRY_CONVERT(BIGINT, @LastActionID)
+                  AND currentAction.residentInfoID_FK = @ResidentInfoID_BIGINT
+                  AND currentAction.buildingDetailsID_FK = @BuildingDetailsID_BIGINT
+                  AND currentAction.IdaraId_FK = @IdaraID_INT
+                  AND currentAction.buildingActionActive = 1
+                  AND NOT EXISTS
+                  (
+                      SELECT 1 FROM Housing.BuildingAction child
+                      WHERE child.buildingActionParentID = currentAction.buildingActionID
+                        AND child.buildingActionActive = 1
+                  )
+            )
+                THROW 50001, N'تغيرت حالة طلب الإخلاء؛ يرجى تحديث الصفحة وإعادة المحاولة.', 1;
+
+            DECLARE @ExitOccupancyActionID BIGINT;
+            DECLARE @StoredOccupentDate DATE;
+            DECLARE @StoredExitDate DATE;
+            DECLARE @NextOccupentDate DATE;
+            DECLARE @ExitOverlapMessage NVARCHAR(1000);
+
+            SELECT TOP (1)
+                  @ExitOccupancyActionID = history.buildingActionID
+                , @StoredOccupentDate = CONVERT(DATE, COALESCE(history.OccupentDate, history.buildingActionDate, history.entryDate))
+            FROM Housing.fn_BuildingAction_ChainToRoot(TRY_CONVERT(BIGINT, @LastActionID)) history
+            WHERE history.buildingActionTypeID_FK = 2
+              AND history.buildingActionActive = 1
+              AND history.residentInfoID_FK = @ResidentInfoID_BIGINT
+              AND history.buildingDetailsID_FK = @BuildingDetailsID_BIGINT
+              AND history.IdaraId_FK = @IdaraID_INT
+            ORDER BY history.Lvl DESC
+            OPTION (MAXRECURSION 32767);
+
+            IF @ExitOccupancyActionID IS NULL OR @StoredOccupentDate IS NULL
+                THROW 50001, N'تعذر تحديد فترة التسكين المرتبطة بطلب الإخلاء.', 1;
+
+            SELECT @StoredExitDate = period.ExitDate
+            FROM Housing.fn_BuildingOccupancyPeriods(@BuildingDetailsID_BIGINT, @IdaraID_INT) period
+            WHERE period.OccupancyActionID = @ExitOccupancyActionID
+            OPTION (MAXRECURSION 32767);
+
+            -- Financial stages carry the saved physical date; hidden posted dates
+            -- must not silently change it after another resident has moved in.
+            IF @Action NOT IN (N'HOUSINGEXIT', N'EDITHOUSINGEXIT')
+                SET @ExitDate_DATE = @StoredExitDate;
+            SET @ExitDate = CONVERT(NVARCHAR(10), @ExitDate_DATE, 23);
+            SET @OccupentDate_DATE = @StoredOccupentDate;
+            SET @OccupentDate = CONVERT(NVARCHAR(10), @StoredOccupentDate, 23);
+
+            SELECT TOP (1)
+                  @NextOccupentDate = CONVERT(DATE, COALESCE(nextOccupancy.OccupentDate, nextOccupancy.buildingActionDate, nextOccupancy.entryDate))
+            FROM Housing.BuildingAction nextOccupancy
+            WHERE nextOccupancy.buildingDetailsID_FK = @BuildingDetailsID_BIGINT
+              AND nextOccupancy.IdaraId_FK = @IdaraID_INT
+              AND nextOccupancy.buildingActionTypeID_FK = 2
+              AND nextOccupancy.buildingActionActive = 1
+              AND CONVERT(DATE, COALESCE(nextOccupancy.OccupentDate, nextOccupancy.buildingActionDate, nextOccupancy.entryDate)) >= @StoredOccupentDate
+              AND (nextOccupancy.residentInfoID_FK <> @ResidentInfoID_BIGINT
+                   OR CONVERT(DATE, COALESCE(nextOccupancy.OccupentDate, nextOccupancy.buildingActionDate, nextOccupancy.entryDate)) > @StoredOccupentDate)
+            ORDER BY CONVERT(DATE, COALESCE(nextOccupancy.OccupentDate, nextOccupancy.buildingActionDate, nextOccupancy.entryDate)),
+                     nextOccupancy.buildingActionID;
+
+            IF @Action = N'CANCELHOUSINGEXIT' AND @NextOccupentDate IS NOT NULL
+            BEGIN
+                SET @ExitOverlapMessage = CONCAT(N'لا يمكن إلغاء الإخلاء؛ تم تسكين مستفيد آخر بالمنزل بتاريخ ',
+                    CONVERT(NVARCHAR(10), @NextOccupentDate, 23), N'.');
+                THROW 50001, @ExitOverlapMessage, 1;
+            END;
+
+            IF @Action <> N'CANCELHOUSINGEXIT'
+            BEGIN
+                IF @ExitDate_DATE IS NULL OR @ExitDate_DATE < @StoredOccupentDate
+                    THROW 50001, N'تاريخ الإخلاء غير صحيح أو يسبق تاريخ التسكين.', 1;
+                IF @NextOccupentDate IS NOT NULL AND @ExitDate_DATE >= @NextOccupentDate
+                BEGIN
+                    SET @ExitOverlapMessage = CONCAT(N'لا يمكن حفظ تاريخ الإخلاء؛ يجب أن يكون قبل تاريخ تسكين المستفيد التالي ',
+                        CONVERT(NVARCHAR(10), @NextOccupentDate, 23), N'، لأن المنزل يتاح من اليوم التالي للإخلاء.');
+                    THROW 50001, @ExitOverlapMessage, 1;
+                END;
+            END;
+        END;
+
    
 
 

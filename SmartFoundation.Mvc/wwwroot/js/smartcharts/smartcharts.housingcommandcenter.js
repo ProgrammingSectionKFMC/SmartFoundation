@@ -190,6 +190,19 @@
         const unit = metric?.unit || '';
         const displayPercent = fmtPercent(percent, 1);
 
+        const actualLabel = has(metric?.actualLabel)
+    ? metric.actualLabel
+    : 'المنجز';
+
+const targetLabel = has(metric?.targetLabel)
+    ? metric.targetLabel
+    : 'المستهدف';
+
+const valueUnit =
+    metric?.showValueUnit === false
+        ? ''
+        : unit;
+
         const iconHtml = has(metric?.emoji)
             ? `<span class="sf-hccm-metric-emoji">${esc(metric.emoji)}</span>`
             : has(metric?.icon)
@@ -197,19 +210,33 @@
                 : `<span class="sf-hccm-metric-emoji">📊</span>`;
 
         let metaHtml = '';
-        if (opts.showMetricTargetActual) {
-            const actualHtml = actual !== null && actual !== undefined && actual !== ''
-                ? `<span class="sf-hccm-mini-chip is-actual">المنجز: <strong>${esc(fmtNumber(actual, 0))}${has(unit) ? ' ' + esc(unit) : ''}</strong></span>`
-                : '';
 
-            const targetHtml = target !== null && target !== undefined && target !== ''
-                ? `<span class="sf-hccm-mini-chip is-target">المستهدف: <strong>${esc(fmtNumber(target, 0))}${has(unit) ? ' ' + esc(unit) : ''}</strong></span>`
-                : '';
+if (opts.showMetricTargetActual) {
 
-            metaHtml = (actualHtml || targetHtml)
-                ? `<div class="sf-hccm-metric-meta">${actualHtml}${targetHtml}</div>`
-                : '';
-        }
+    const actualHtml =
+        actual !== null && actual !== undefined && actual !== ''
+            ? `<span class="sf-hccm-mini-chip is-actual">
+                   ${esc(actualLabel)}:
+                   <strong>${esc(fmtNumber(actual, 0))}${has(valueUnit) ? ' ' + esc(valueUnit) : ''}</strong>
+               </span>`
+            : '';
+
+    const targetHtml =
+        target !== null && target !== undefined && target !== ''
+            ? `<span class="sf-hccm-mini-chip is-target">
+                   ${esc(targetLabel)}:
+                   <strong>${esc(fmtNumber(target, 0))}${has(valueUnit) ? ' ' + esc(valueUnit) : ''}</strong>
+               </span>`
+            : '';
+
+    metaHtml =
+        (actualHtml || targetHtml)
+            ? `<div class="sf-hccm-metric-meta">
+                   ${actualHtml}
+                   ${targetHtml}
+               </div>`
+            : '';
+}
 
         const hrefOpen = has(metric?.href)
             ? `<a class="sf-hccm-metric-link-cover" href="${esc(metric.href)}" aria-label="${esc(metric.title || '')}"></a>`
@@ -303,8 +330,30 @@
 
         const actual = depMetric?.actual;
         const target = depMetric?.target;
-        const remaining = Math.max(num(target) - num(actual), 0);
+        
+        const remaining =
+    metric?.key === 'm_allocation_balance'
+        ? Math.max(num(actual) - num(target), 0)
+        : metric?.key === 'm_finance_utilities'
+            ? Math.abs(num(target) - num(actual))
+            : Math.max(num(target) - num(actual), 0);
+
+
+
         const displayText = has(depMetric.displayText) ? depMetric.displayText : fmtPercent(percent, 1);
+
+        const actualLabel = has(metric?.actualLabel)
+    ? metric.actualLabel
+    : 'منجز';
+
+const targetLabel = has(metric?.targetLabel)
+    ? metric.targetLabel
+    : 'مستهدف';
+
+const remainingLabel = has(metric?.remainingLabel)
+    ? metric.remainingLabel
+    : 'المتبقي';
+
         const noteHtml = has(depMetric?.note)
             ? `<div class="sf-hccm-tcell-tooltip">
         <div class="sf-hccm-tooltip-title">${esc(metric?.shortTitle || metric?.title || '')}</div>
@@ -340,22 +389,28 @@
         ${opts.showMetricProgressBar ? buildCellProgress(percent, s.accent) : ''}
 
         <div class="sf-hccm-tcell-stats">
+
     <div class="sf-hccm-tcell-stat-line is-actual-target">
+
         <span class="sf-hccm-tcell-stat-label">
-            <span class="is-actual">منجز</span>
+            <span class="is-actual">${esc(actualLabel)}</span>
             <span class="slash"> / </span>
-            <span class="is-target">مستهدف</span>
+            <span class="is-target">${esc(targetLabel)}</span>
         </span>
+
         <strong>
             <span class="is-actual">${esc(fmtNumber(actual, 0))}</span>
             <span class="slash"> / </span>
             <span class="is-target">${esc(fmtNumber(target, 0))}</span>
         </strong>
+
     </div>
+
     <div class="sf-hccm-tcell-stat-line is-remaining">
-        <span class="sf-hccm-tcell-stat-label">المتبقي</span>
+        <span class="sf-hccm-tcell-stat-label">${esc(remainingLabel)}</span>
         <strong>${esc(fmtNumber(remaining, 0))}</strong>
     </div>
+
 </div>
 </td>`;
     }
@@ -376,7 +431,26 @@
 
         const actual = summaryMetric?.actual;
         const target = summaryMetric?.target;
-        const remaining = Math.max(num(target) - num(actual), 0);
+        
+        const remaining =
+    metric?.key === 'm_allocation_balance'
+        ? Math.max(num(actual) - num(target), 0)
+        : metric?.key === 'm_finance_utilities'
+            ? Math.abs(num(target) - num(actual))
+            : Math.max(num(target) - num(actual), 0);
+
+        const actualLabel = has(metric?.actualLabel)
+    ? metric.actualLabel
+    : 'منجز';
+
+const targetLabel = has(metric?.targetLabel)
+    ? metric.targetLabel
+    : 'مستهدف';
+
+const remainingLabel = has(metric?.remainingLabel)
+    ? metric.remainingLabel
+    : 'متبقي';
+
         const displayText = has(summaryMetric.displayText) ? summaryMetric.displayText : fmtPercent(percent, 1);
 
         // الأعلى والأدنى من الـ metric
@@ -396,15 +470,15 @@
 
         <div class="sf-hccm-sum-stats">
             <div class="sf-hccm-sum-stat">
-                <span class="sf-hccm-sum-stat-label">منجز</span>
+                <span class="sf-hccm-sum-stat-label">${esc(actualLabel)}</span>
                 <strong class="is-actual">${esc(fmtNumber(actual, 0))}</strong>
             </div>
             <div class="sf-hccm-sum-stat">
-                <span class="sf-hccm-sum-stat-label">مستهدف</span>
+                <span class="sf-hccm-sum-stat-label">${esc(targetLabel)}</span>
                 <strong class="is-target">${esc(fmtNumber(target, 0))}</strong>
             </div>
             <div class="sf-hccm-sum-stat">
-                <span class="sf-hccm-sum-stat-label">متبقي</span>
+                <span class="sf-hccm-sum-stat-label">${esc(remainingLabel)}</span>
                 <strong class="is-remaining">${esc(fmtNumber(remaining, 0))}</strong>
             </div>
         </div>
@@ -622,27 +696,109 @@
         </svg>`,
 
         // أيقونة جاهزية السكن والأصول - مباني
-        housing: `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px;margin-inline-start:6px;display:inline-block;vertical-align:middle">
-            <rect x="3" y="10" width="7" height="11" rx="1" fill="#2563eb"/>
-            <rect x="14" y="10" width="7" height="11" rx="1" fill="#0f766e"/>
-            <path d="M6.5 3L12 7L17.5 3" stroke="#c9a227" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-            <rect x="5" y="13" width="3" height="3" rx="0.5" fill="#93c5fd"/>
-            <rect x="16" y="13" width="3" height="3" rx="0.5" fill="#6ee7b7"/>
-            <line x1="6.5" y1="7" x2="6.5" y2="10" stroke="#64748b" stroke-width="1.5"/>
-            <line x1="17.5" y1="7" x2="17.5" y2="10" stroke="#64748b" stroke-width="1.5"/>
-        </svg>`,
+        // الكارد الأول: منزل
+housing: `<svg viewBox="0 0 24 24" fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    style="width:14px;height:14px;margin-inline-start:6px;display:inline-block;vertical-align:middle">
+    <path d="M3 11.5L12 4L21 11.5"
+          stroke="#2563eb"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"/>
+    <path d="M5 10.5V20H19V10.5"
+          fill="#0f766e"/>
+    <rect x="9.5" y="14" width="5" height="6"
+          rx="1"
+          fill="#c9a227"/>
+    <rect x="7" y="12.5" width="3" height="3"
+          rx="0.5"
+          fill="#93c5fd"/>
+    <rect x="14" y="12.5" width="3" height="3"
+          rx="0.5"
+          fill="#6ee7b7"/>
+</svg>`,
+
+// الكارد الثاني: مستفيدون
+occupancy: `<svg viewBox="0 0 24 24" fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    style="width:14px;height:14px;margin-inline-start:6px;display:inline-block;vertical-align:middle">
+    <circle cx="9" cy="7" r="3"
+            fill="#2563eb"/>
+    <circle cx="16.5" cy="8" r="2.5"
+            fill="#0f766e"/>
+    <path d="M3.5 20C3.5 16.7 5.9 14 9 14C12.1 14 14.5 16.7 14.5 20"
+          fill="#2563eb"/>
+    <path d="M13 20C13 17.5 14.8 15.5 17 15.5C19.2 15.5 21 17.5 21 20"
+          fill="#0f766e"/>
+    <circle cx="18.5" cy="5" r="2"
+            fill="#c9a227"/>
+</svg>`,
+
+// الكارد الثالث: أموال
+// أيقونة المالية - رمز الريال السعودي
+finance: `<svg viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    style="width:14px;height:14px;margin-inline-start:6px;display:inline-block;vertical-align:middle">
+
+    <path
+        d="
+        M16.94 1.25
+        L14.11 3.38
+        L14.11 11.07
+        L11.36 11.61
+        L11.29 0
+        L8.48 2.10
+        L8.46 12.15
+        L2.15 13.36
+        L1.32 16.08
+        L8.45 14.74
+        L8.46 17.98
+        L0.81 19.44
+        L0 22.18
+        L9.10 20.19
+        L11.21 17.48
+        L11.37 14.18
+        L14.11 13.68
+        L14.12 18.83
+        L23.17 17.11
+        L23.99 14.37
+        L16.94 15.70
+        L16.94 13.14
+        L23.17 11.94
+        L23.99 9.33
+        L16.94 10.54
+        Z"
+        fill="currentColor"/>
+
+    <path
+        d="
+        M23.99 19.54
+        L14.93 21.26
+        L14.40 22.58
+        L14.11 23.99
+        L23.16 22.28
+        L23.71 20.95
+        Z"
+        fill="currentColor"/>
+
+</svg>`,
 
         // أيقونة الإشغال وقوائم الانتظار - أشخاص
-        occupancy: `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px;margin-inline-start:6px;display:inline-block;vertical-align:middle">
-            <circle cx="8" cy="6" r="3" fill="#2563eb"/>
-            <circle cx="16" cy="6" r="3" fill="#0f766e"/>
-            <circle cx="12" cy="14" r="3" fill="#c9a227"/>
-            <path d="M5 12C5 10.3 6.3 9 8 9" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round"/>
-            <path d="M19 12C19 10.3 17.7 9 16 9" stroke="#0f766e" stroke-width="1.5" stroke-linecap="round"/>
-            <path d="M9 20C9 18.3 10.3 17 12 17C13.7 17 15 18.3 15 20" stroke="#c9a227" stroke-width="1.5" stroke-linecap="round"/>
-            <rect x="2" y="19" width="4" height="3" rx="1" fill="#93c5fd"/>
-            <rect x="18" y="19" width="4" height="3" rx="1" fill="#6ee7b7"/>
-        </svg>`,
+        occupancy: `<svg viewBox="0 0 24 24" fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    style="width:14px;height:14px;margin-inline-start:6px;display:inline-block;vertical-align:middle">
+    <circle cx="9" cy="7" r="3"
+            fill="#2563eb"/>
+    <circle cx="16.5" cy="8" r="2.5"
+            fill="#0f766e"/>
+    <path d="M3.5 20C3.5 16.7 5.9 14 9 14C12.1 14 14.5 16.7 14.5 20"
+          fill="#2563eb"/>
+    <path d="M13 20C13 17.5 14.8 15.5 17 15.5C19.2 15.5 21 17.5 21 20"
+          fill="#0f766e"/>
+    <circle cx="18.5" cy="5" r="2"
+            fill="#c9a227"/>
+</svg>`,
 
         // أيقونة الطلبات وSLA - مستند مع ساعة
         requests: `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px;margin-inline-start:6px;display:inline-block;vertical-align:middle">
@@ -655,13 +811,36 @@
         </svg>`,
 
         // أيقونة الماليات والاستهلاك - محفظة
-        finance: `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px;margin-inline-start:6px;display:inline-block;vertical-align:middle">
-            <rect x="2" y="6" width="20" height="14" rx="2" fill="#0f766e"/>
-            <rect x="2" y="6" width="20" height="4" fill="#064e3b"/>
-            <circle cx="12" cy="15" r="3" fill="#c9a227"/>
-            <rect x="5" y="13" width="2" height="4" rx="0.5" fill="#6ee7b7"/>
-            <rect x="17" y="13" width="2" height="4" rx="0.5" fill="#6ee7b7"/>
-        </svg>`,
+//        finance: `<svg viewBox="0 0 24 24" fill="none"
+//     xmlns="http://www.w3.org/2000/svg"
+//     style="width:14px;height:14px;margin-inline-start:6px;display:inline-block;vertical-align:middle">
+//     <rect x="3" y="5" width="18" height="14"
+//           rx="2"
+//           fill="#0f766e"/>
+//     <rect x="5" y="8" width="14" height="8"
+//           rx="1"
+//           fill="#ecfdf5"/>
+//     <circle cx="12" cy="12" r="3"
+//             fill="#c9a227"/>
+//     <path d="M12 10V14"
+//           stroke="#ffffff"
+//           stroke-width="1.5"
+//           stroke-linecap="round"/>
+//     <path d="M10.5 11H13"
+//           stroke="#ffffff"
+//           stroke-width="1.2"
+//           stroke-linecap="round"/>
+//     <path d="M11 14H13.5"
+//           stroke="#ffffff"
+//           stroke-width="1.2"
+//           stroke-linecap="round"/>
+//     <rect x="5" y="10.5" width="2" height="3"
+//           rx="0.5"
+//           fill="#2563eb"/>
+//     <rect x="17" y="10.5" width="2" height="3"
+//           rx="0.5"
+//           fill="#2563eb"/>
+// </svg>`,
 
         // أيقونة الصيانة والجودة - مفتاح ربط مع علامة صح
         maintenance: `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:14px;height:14px;margin-inline-start:6px;display:inline-block;vertical-align:middle">
@@ -740,28 +919,31 @@
     }
 
     // دالة للحصول على أيقونة SVG بناءً على مفتاح المعيار
-    function getMetricSvgIcon(metricKey, metricIndex) {
-        const key = String(metricKey || '').toLowerCase();
+    function getMetricSvgIcon(metricKey) {
+    const key = String(metricKey || '').toLowerCase();
 
-        // تطابق المفاتيح مع الأيقونات
-        if (key.includes('housing') || key.includes('asset') || key.includes('سكن') || key.includes('أصول') || metricIndex === 0) {
-            return COLUMN_SVG_ICONS.housing;
-        }
-        if (key.includes('occupancy') || key.includes('waiting') || key.includes('إشغال') || key.includes('انتظار') || metricIndex === 1) {
-            return COLUMN_SVG_ICONS.occupancy;
-        }
-        if (key.includes('request') || key.includes('sla') || key.includes('طلب') || metricIndex === 2) {
-            return COLUMN_SVG_ICONS.requests;
-        }
-        if (key.includes('finance') || key.includes('consumption') || key.includes('مالي') || key.includes('استهلاك') || metricIndex === 3) {
-            return COLUMN_SVG_ICONS.finance;
-        }
-        if (key.includes('maintenance') || key.includes('quality') || key.includes('صيانة') || key.includes('جودة') || metricIndex === 4) {
-            return COLUMN_SVG_ICONS.maintenance;
-        }
-
-        return COLUMN_SVG_ICONS.default;
+    if (key === 'm_housing_readiness') {
+        return COLUMN_SVG_ICONS.housing;
     }
+
+    if (key === 'm_allocation_balance') {
+        return COLUMN_SVG_ICONS.occupancy;
+    }
+
+    if (key === 'm_housing_procedures') {
+    return COLUMN_SVG_ICONS.requests;
+    }
+
+    if (key === 'm_finance_utilities') {
+        return COLUMN_SVG_ICONS.finance;
+    }
+
+    if (key === 'm_maintenance_quality') {
+        return COLUMN_SVG_ICONS.maintenance;
+    }
+
+    return COLUMN_SVG_ICONS.default;
+}
 
     
     function formatSubtitleWithIcon(text) {
@@ -772,31 +954,108 @@
         return esc(trimmed);
     }
 
-    function buildDynamicHead(metrics) {
-        return `
+   function buildDynamicHead(metrics) {
+
+    return `
 <tr>
+
     <th class="is-sticky-col is-department-col">
-        <div class="sf-hccm-th-main">${COLUMN_SVG_ICONS.department} الإدارة</div>
-        <div class="sf-hccm-th-sub">اسم الإدارة والإجمالي العام</div>
+
+        <div class="sf-hccm-th-main">
+            ${COLUMN_SVG_ICONS.department}
+            الإدارة
+        </div>
+
+        <div class="sf-hccm-th-sub">
+            اسم الإدارة
+        </div>
+
     </th>
+
+
     ${metrics.map((metric, i) => {
-        const s = toneStyle(metric.tone, metric.color, i);
-        const svgIcon = getMetricSvgIcon(metric.key, i);
-        const subtitleContent = formatSubtitleWithIcon(metric.unit || metric.subtitle || '');
+
+        const s =
+            toneStyle(
+                metric.tone,
+                metric.color,
+                i);
+
+        const svgIcon =
+            getMetricSvgIcon(
+                metric.key,
+                i);
+
+        const formulaText =
+            String(
+                metric.formulaText || ''
+            ).trim();
+
+
+        const formulaHelp =
+    formulaText
+        ? `
+            <span class="sf-hccm-th-help"
+                  tabindex="0"
+                  role="button"
+                  aria-label="طريقة احتساب المؤشر"
+                  data-tooltip-title="طريقة احتساب المؤشر"
+                  data-tooltip-text="${esc(formulaText)}">
+
+                <i class="fa-solid fa-circle-info"></i>
+
+            </span>`
+        : '';
+
+
         return `
         <th>
-            <div class="sf-hccm-th-main" style="color:${s.accent}">
-                ${svgIcon} ${esc(metric.shortTitle || metric.title || '')}
+
+            <div class="sf-hccm-th-main"
+                 style="color:${s.accent}">
+
+                ${svgIcon}
+
+                ${esc(
+                    metric.shortTitle ||
+                    metric.title ||
+                    ''
+                )}
+
+                ${formulaHelp}
+
             </div>
-            <div class="sf-hccm-th-sub">${subtitleContent}</div>
+
         </th>`;
+
     }).join('')}
+
+
     <th class="is-summary-col">
-        <div class="sf-hccm-th-main">${COLUMN_SVG_ICONS.total} الإجمالي</div>
-        <div class="sf-hccm-th-sub">متوسط أداء الإدارة</div>
+
+        <div class="sf-hccm-th-main">
+
+            ${COLUMN_SVG_ICONS.total}
+
+            الإجمالي
+
+            <span class="sf-hccm-th-help"
+      tabindex="0"
+      role="button"
+      aria-label="طريقة احتساب متوسط أداء الإدارة"
+      data-tooltip-title="طريقة احتساب متوسط أداء الإدارة"
+      data-tooltip-text="يتم احتساب أداء الإدارة من متوسط نسب المؤشرات المتاحة لها.">
+
+    <i class="fa-solid fa-circle-info"></i>
+
+</span>
+
+        </div>
+
     </th>
+
 </tr>`;
-    }
+}
 
     /* =========================================================
        Main render
@@ -834,7 +1093,21 @@
 
         if (!metricsBox || !matrixBody || !matrixHead) return;
 
-        host.style.setProperty('--hccm-metric-cols', String(opts.preferredCardsPerRow));
+        const metricColumns =
+    Math.max(
+        1,
+        Math.min(
+            metrics.length,
+            opts.preferredCardsPerRow
+        )
+    );
+
+host.style.setProperty(
+    '--hccm-metric-cols',
+    String(metricColumns)
+);
+
+        // host.style.setProperty('--hccm-metric-cols', String(opts.preferredCardsPerRow));
 
         if (titleEl) titleEl.textContent = opts.titleText || '';
         if (subtitleEl) subtitleEl.textContent = opts.subtitleText || '';
@@ -910,23 +1183,414 @@
         }
     }
 
-    document.addEventListener('mousemove', function(e) {
-        const tooltip = document.querySelector('.sf-hccm-tcell:hover .sf-hccm-tcell-tooltip');
-        if (!tooltip) return;
+  
 
-        const tw = 360;
-        const margin = 12;
-        let left = e.clientX - tw - margin;
-        let top = e.clientY - margin;
+//==========================================================
+// Header tooltip
+//==========================================================
 
-        if (left < margin) left = e.clientX + margin;
 
-        if (top + tooltip.offsetHeight > window.innerHeight - margin) {
-            top = window.innerHeight - tooltip.offsetHeight - margin;
+
+//==========================================================
+// Header formula tooltip
+// Tooltip واحد مستقل خارج الجدول
+//==========================================================
+
+function getHeaderTooltip() {
+
+    let tooltip =
+        document.getElementById(
+            'sf-hccm-header-tooltip-global'
+        );
+
+
+    if (tooltip)
+        return tooltip;
+
+
+    tooltip =
+        document.createElement('div');
+
+
+    tooltip.id =
+        'sf-hccm-header-tooltip-global';
+
+
+    tooltip.className =
+        'sf-hccm-header-tooltip-global';
+
+
+    tooltip.innerHTML = `
+        <div class="sf-hccm-tooltip-title"></div>
+
+        <div class="sf-hccm-tooltip-body">
+
+            <div class="sf-hccm-tooltip-row">
+
+                <div class="sf-hccm-tooltip-dot"></div>
+
+                <span class="sf-hccm-header-tooltip-text"></span>
+
+            </div>
+
+        </div>
+    `;
+
+
+    document.body.appendChild(
+        tooltip
+    );
+
+
+    return tooltip;
+}
+
+
+function showHeaderTooltip(trigger) {
+
+    if (!trigger)
+        return;
+
+
+    const text =
+        trigger.dataset.tooltipText || '';
+
+
+    if (!text)
+        return;
+
+
+    const title =
+        trigger.dataset.tooltipTitle ||
+        'طريقة احتساب المؤشر';
+
+
+    const tooltip =
+        getHeaderTooltip();
+
+
+    const titleElement =
+        tooltip.querySelector(
+            '.sf-hccm-tooltip-title'
+        );
+
+
+    const textElement =
+        tooltip.querySelector(
+            '.sf-hccm-header-tooltip-text'
+        );
+
+
+    if (titleElement) {
+        titleElement.textContent =
+            title;
+    }
+
+
+    if (textElement) {
+        textElement.textContent =
+            text;
+    }
+
+
+    //------------------------------------------------------
+    // إظهار مؤقت حتى نستطيع قياس الحجم الحقيقي
+    //------------------------------------------------------
+    tooltip.classList.add(
+        'is-visible'
+    );
+
+
+    const triggerRect =
+        trigger.getBoundingClientRect();
+
+
+    const tooltipRect =
+        tooltip.getBoundingClientRect();
+
+
+    const margin = 12;
+    const gap = 9;
+
+
+    //------------------------------------------------------
+    // المنتصف الحقيقي لنفس أيقونة المعلومات
+    //------------------------------------------------------
+    let left =
+        triggerRect.left +
+        (triggerRect.width / 2) -
+        (tooltipRect.width / 2);
+
+
+    let top =
+        triggerRect.bottom +
+        gap;
+
+
+    //------------------------------------------------------
+    // منع الخروج من يسار الشاشة
+    //------------------------------------------------------
+    if (left < margin) {
+        left = margin;
+    }
+
+
+    //------------------------------------------------------
+    // منع الخروج من يمين الشاشة
+    //------------------------------------------------------
+    if (
+        left +
+        tooltipRect.width >
+        window.innerWidth -
+        margin
+    ) {
+        left =
+            window.innerWidth -
+            tooltipRect.width -
+            margin;
+    }
+
+
+    //------------------------------------------------------
+    // إذا لم توجد مساحة أسفل الأيقونة
+    // يظهر فوقها
+    //------------------------------------------------------
+    if (
+        top +
+        tooltipRect.height >
+        window.innerHeight -
+        margin
+    ) {
+        top =
+            triggerRect.top -
+            tooltipRect.height -
+            gap;
+    }
+
+
+    if (top < margin) {
+        top = margin;
+    }
+
+
+    tooltip.style.left =
+        Math.round(left) +
+        'px';
+
+
+    tooltip.style.top =
+        Math.round(top) +
+        'px';
+}
+
+
+function hideHeaderTooltip() {
+
+    const tooltip =
+        document.getElementById(
+            'sf-hccm-header-tooltip-global'
+        );
+
+
+    if (!tooltip)
+        return;
+
+
+    tooltip.classList.remove(
+        'is-visible'
+    );
+}
+
+
+//----------------------------------------------------------
+// Mouse
+//----------------------------------------------------------
+
+document.addEventListener(
+    'mouseover',
+    function (e) {
+
+        const trigger =
+            e.target.closest(
+                '.sf-hccm-th-help'
+            );
+
+
+        if (!trigger)
+            return;
+
+
+        const previous =
+            e.relatedTarget;
+
+
+        if (
+            previous &&
+            trigger.contains(previous)
+        ) {
+            return;
         }
 
-        tooltip.style.left = left + 'px';
-        tooltip.style.top = top + 'px';
+
+        showHeaderTooltip(
+            trigger
+        );
+    });
+
+
+document.addEventListener(
+    'mouseout',
+    function (e) {
+
+        const trigger =
+            e.target.closest(
+                '.sf-hccm-th-help'
+            );
+
+
+        if (!trigger)
+            return;
+
+
+        const next =
+            e.relatedTarget;
+
+
+        if (
+            next &&
+            trigger.contains(next)
+        ) {
+            return;
+        }
+
+
+        hideHeaderTooltip();
+    });
+
+
+//----------------------------------------------------------
+// Keyboard / touch focus
+//----------------------------------------------------------
+
+document.addEventListener(
+    'focusin',
+    function (e) {
+
+        const trigger =
+            e.target.closest(
+                '.sf-hccm-th-help'
+            );
+
+
+        if (!trigger)
+            return;
+
+
+        showHeaderTooltip(
+            trigger
+        );
+    });
+
+
+document.addEventListener(
+    'focusout',
+    function (e) {
+
+        if (
+            !e.target.closest(
+                '.sf-hccm-th-help'
+            )
+        ) {
+            return;
+        }
+
+
+        hideHeaderTooltip();
+    });
+
+//==========================================================
+// Existing table-cell tooltip
+// يبقى يتحرك مع مؤشر الماوس
+//==========================================================
+
+document.addEventListener(
+    'mousemove',
+    function (e) {
+
+        const tooltip =
+            document.querySelector(
+                '.sf-hccm-tcell:hover .sf-hccm-tcell-tooltip'
+            );
+
+
+        if (!tooltip)
+            return;
+
+
+        const tooltipWidth = 360;
+        const margin = 12;
+
+
+        let left =
+            e.clientX -
+            tooltipWidth -
+            margin;
+
+
+        let top =
+            e.clientY +
+            margin;
+
+
+        if (left < margin) {
+
+            left =
+                e.clientX +
+                margin;
+        }
+
+
+        if (
+            left +
+            tooltipWidth >
+            window.innerWidth -
+            margin
+        ) {
+            left =
+                window.innerWidth -
+                tooltipWidth -
+                margin;
+        }
+
+
+        const tooltipHeight =
+            tooltip.offsetHeight;
+
+
+        if (
+            top +
+            tooltipHeight >
+            window.innerHeight -
+            margin
+        ) {
+            top =
+                e.clientY -
+                tooltipHeight -
+                margin;
+        }
+
+
+        if (top < margin) {
+
+            top = margin;
+        }
+
+
+        tooltip.style.left =
+            left + 'px';
+
+        tooltip.style.top =
+            top + 'px';
     });
 
     window.SmartCharts.renderHousingCommandCenter = renderHousingCommandCenter;

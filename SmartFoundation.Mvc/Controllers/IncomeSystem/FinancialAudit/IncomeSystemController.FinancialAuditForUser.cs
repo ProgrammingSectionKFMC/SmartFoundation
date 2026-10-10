@@ -1517,9 +1517,11 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                     ShowColumns = true,
                     ShowExportCsv = false,
                     ShowExportExcel = false,
-                    ShowAdd = canFinancialAuditForUser ,
-                    EnableAdd = readyToSend && canFinancialAuditForUser ,
-                    
+                    //ShowAdd = canFinancialAuditForUser ,
+                    //EnableAdd = readyToSend && canFinancialAuditForUser ,
+                    ShowAdd = false,
+                    EnableAdd = false,
+
                     ShowBulkDelete = false,
 
 

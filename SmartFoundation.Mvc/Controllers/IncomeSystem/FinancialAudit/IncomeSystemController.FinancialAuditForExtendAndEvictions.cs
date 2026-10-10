@@ -368,13 +368,13 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                                 {
                                     new FieldConfig
                                     {
-                                        SectionTitle = "اختيار الساكن",
+                                        SectionTitle = "اختيار المستفيد",
                                         Name = "WaitingList",
                                         Type = "select",
                                         Select2 = true,
                                         Options = ResidentDetailsOptions,
-                                        ColCss = "3",
-                                        Placeholder = "اختر الساكن",
+                                        ColCss = "4",
+                                        Placeholder = "اختيار المستفيد",
                                         Icon = "fa fa-user",
                                         Value = residentInfoID_,
                                         OnChangeJs = "sfNav(this)",

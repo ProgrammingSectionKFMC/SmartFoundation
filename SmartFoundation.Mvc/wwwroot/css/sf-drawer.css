@@ -1,0 +1,235 @@
+﻿
+/*
+ * SmartFoundation - SmartDrawer
+ * Independent, reusable side panel.
+ * Scoped styles: sf-drawer-* only.
+ */
+
+.sf-drawer-root {
+    position: fixed;
+    inset: 0;
+    z-index: 10000010;
+    display: block;
+    direction: rtl;
+    isolation: isolate;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 240ms ease;
+}
+
+    .sf-drawer-root[hidden] {
+        display: none !important;
+    }
+
+    .sf-drawer-root.is-open {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    /* Backdrop */
+    .sf-drawer-root .sf-drawer-backdrop {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        background: rgba(15, 23, 42, 0.55);
+        opacity: 0;
+        transition: opacity 240ms ease;
+    }
+
+    .sf-drawer-root.is-open .sf-drawer-backdrop {
+        opacity: 1;
+    }
+
+    /* Panel */
+    .sf-drawer-root .sf-drawer-panel {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        width: var(--sf-drawer-width, 75vw);
+        max-width: 100vw;
+        height: 100vh;
+        height: 100dvh;
+        overflow: hidden;
+        box-sizing: border-box;
+        background: #ffffff;
+        color: #1f2937;
+        box-shadow: 0 0 40px rgba(0, 0, 0, 0.20);
+        transition: transform 260ms ease;
+        will-change: transform;
+    }
+
+    /* Direction */
+    .sf-drawer-root.sf-drawer-right .sf-drawer-panel {
+        right: 0;
+        left: auto;
+        transform: translateX(105%);
+        border-radius: 12px 0 0 12px;
+    }
+
+    .sf-drawer-root.sf-drawer-left .sf-drawer-panel {
+        left: 0;
+        right: auto;
+        transform: translateX(-105%);
+        border-radius: 0 12px 12px 0;
+    }
+
+    .sf-drawer-root.is-open .sf-drawer-panel {
+        transform: translateX(0);
+    }
+
+    /* Sizes */
+    .sf-drawer-root.sf-drawer-small {
+        --sf-drawer-width: max(320px, 30vw);
+    }
+
+    .sf-drawer-root.sf-drawer-medium {
+        --sf-drawer-width: max(420px, 50vw);
+    }
+
+    .sf-drawer-root.sf-drawer-large {
+        --sf-drawer-width: 75vw;
+    }
+
+    .sf-drawer-root.sf-drawer-full {
+        --sf-drawer-width: 100vw;
+    }
+
+        .sf-drawer-root.sf-drawer-full .sf-drawer-panel {
+            border-radius: 0;
+        }
+
+    /* Header */
+    .sf-drawer-root .sf-drawer-header {
+        position: relative !important;
+        z-index: 2 !important;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-shrink: 0;
+        min-height: 74px;
+        padding: 16px 24px;
+        background: #064e3b;
+        color: #ffffff;
+        border-bottom: 1px solid #047857;
+        box-sizing: border-box;
+    }
+
+    .sf-drawer-root .sf-drawer-heading {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        min-width: 0;
+    }
+
+        .sf-drawer-root .sf-drawer-heading > i {
+            font-size: 23px;
+            color: #d1fae5;
+            flex-shrink: 0;
+        }
+
+    .sf-drawer-root .sf-drawer-title {
+        margin: 0;
+        font-size: 19px;
+        font-weight: 700;
+        line-height: 1.6;
+        color: #ffffff;
+    }
+
+    .sf-drawer-root .sf-drawer-subtitle {
+        margin: 3px 0 0;
+        font-size: 13px;
+        line-height: 1.5;
+        color: #d1fae5;
+    }
+
+    /* Close button */
+    .sf-drawer-root .sf-drawer-close {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 38px;
+        height: 38px;
+        flex-shrink: 0;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.10);
+        color: #ffffff;
+        font-size: 19px;
+        cursor: pointer;
+        transition: background 150ms ease;
+    }
+
+        .sf-drawer-root .sf-drawer-close:hover {
+            background: rgba(255, 255, 255, 0.22);
+        }
+
+        .sf-drawer-root .sf-drawer-close:focus-visible {
+            outline: 3px solid #a7f3d0;
+            outline-offset: 3px;
+        }
+
+    /* Scrollable content */
+    .sf-drawer-root .sf-drawer-body {
+        flex: 1 1 auto;
+        min-height: 0;
+        min-width: 0;
+        overflow-x: auto;
+        overflow-y: auto;
+        padding: 24px;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+    }
+
+    /* Empty content */
+    .sf-drawer-root .sf-drawer-empty {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 160px;
+        padding: 24px;
+        color: #64748b;
+        text-align: center;
+        font-size: 14px;
+        border: 1px dashed #cbd5e1;
+        border-radius: 10px;
+        background: #f8fafc;
+    }
+
+/* Mobile */
+@media (max-width: 768px) {
+    .sf-drawer-root {
+        --sf-drawer-width: 100vw;
+    }
+
+        .sf-drawer-root .sf-drawer-panel {
+            width: 100vw;
+            max-width: 100vw;
+            border-radius: 0 !important;
+        }
+
+        .sf-drawer-root .sf-drawer-header {
+            min-height: 64px;
+            padding: 12px 16px;
+        }
+
+        .sf-drawer-root .sf-drawer-title {
+            font-size: 17px;
+        }
+
+        .sf-drawer-root .sf-drawer-body {
+            padding: 14px;
+        }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .sf-drawer-root,
+    .sf-drawer-root .sf-drawer-backdrop,
+    .sf-drawer-root .sf-drawer-panel {
+        transition: none !important;
+    }
+}

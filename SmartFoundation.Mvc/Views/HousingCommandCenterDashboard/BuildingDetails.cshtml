@@ -1,0 +1,1590 @@
+@model SmartFoundation.UI.ViewModels.SmartCharts.DepBuildingDetailsViewModel
+@using System.Globalization
+@{
+    Layout = null;
+
+    var rows = Model.Rows ?? new List<SmartFoundation.UI.ViewModels.SmartCharts.DepBuildingDetailRow>();
+
+    var isOccupancy = string.Equals(Model.Section, "occupancy", StringComparison.OrdinalIgnoreCase);
+    var isReadiness = string.Equals(Model.Section, "readiness", StringComparison.OrdinalIgnoreCase);
+    var isOccupied = isOccupancy && string.Equals(Model.Status, "OCCUPIED", StringComparison.OrdinalIgnoreCase);
+    var isVacant = isOccupancy && string.Equals(Model.Status, "VACANT", StringComparison.OrdinalIgnoreCase);
+
+    var contextLabel = isOccupancy ? "إشغال المباني" : "جاهزية السكن";
+    var backTab = isOccupancy ? "t2" : "t1";
+
+    var accent =
+        Model.Status == "OCCUPIED" ? "#276749" :
+        Model.Status == "READY" ? "#0f766e" :
+        Model.Status == "ALLOCATION" ? "#2b6cb0" :
+        Model.Status == "MAINTENANCE" ? "#c05621" :
+        Model.Status == "QUALITY" ? "#553c9a" :
+        Model.Status == "GENERAL_SERVICES" ? "#086f83" :
+        Model.Status == "HOUSING_DEPARTMENT" ? "#805ad5" :
+        Model.Status == "EXECUTION" ? "#b7791f" :
+        Model.Status == "VACANT_PENDING" ? "#9b2c2c" :
+        Model.Status == "NO_ACTIVE_ACTION" ? "#718096" :
+        Model.Status == "VACANT" ? "#9b2c2c" :
+        "#4a5568";
+
+    var icon =
+        Model.Status == "OCCUPIED" ? "fa-solid fa-house-user" :
+        Model.Status == "READY" ? "fa-solid fa-house-circle-check" :
+        Model.Status == "ALLOCATION" ? "fa-solid fa-user-check" :
+        Model.Status == "MAINTENANCE" ? "fa-solid fa-screwdriver-wrench" :
+        Model.Status == "QUALITY" ? "fa-solid fa-medal" :
+        Model.Status == "GENERAL_SERVICES" ? "fa-solid fa-broom" :
+        Model.Status == "HOUSING_DEPARTMENT" ? "fa-solid fa-building-user" :
+        Model.Status == "EXECUTION" ? "fa-solid fa-gears" :
+        Model.Status == "VACANT_PENDING" ? "fa-solid fa-house-circle-exclamation" :
+        Model.Status == "NO_ACTIVE_ACTION" ? "fa-solid fa-circle-question" :
+        Model.Status == "VACANT" ? "fa-solid fa-door-open" :
+        "fa-solid fa-building";
+
+    int? DurationOf(SmartFoundation.UI.ViewModels.SmartCharts.DepBuildingDetailRow row)
+    {
+        if (isOccupied)
+            return row.DaysOccupied;
+
+        if (isVacant)
+            return row.DaysVacant;
+
+        return row.DaysInCurrentStatus;
+    }
+
+    var durationValues = rows
+        .Select(DurationOf)
+        .Where(x => x.HasValue && x.Value >= 0)
+        .Select(x => x!.Value)
+        .ToList();
+
+    var avgDuration = durationValues.Count > 0
+        ? Math.Round(durationValues.Average(), 0)
+        : (double?)null;
+
+    var maxDuration = durationValues.Count > 0
+        ? durationValues.Max()
+        : (int?)null;
+
+    var missingDurationCount = rows.Count - durationValues.Count;
+
+    var locationCount = rows
+        .Select(x => x.MilitaryLocationName)
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .Count();
+
+    var actionCount = rows
+        .Select(x => x.CurrentActionName)
+        .Where(x => !string.IsNullOrWhiteSpace(x))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .Count();
+
+    var showDecisionDate = isReadiness && rows.Any(x => x.DecisionDate.HasValue);
+
+    string FmtInt(int value) =>
+        value.ToString("N0", CultureInfo.InvariantCulture);
+
+    string FmtNullableInt(int? value) =>
+        value.HasValue
+            ? value.Value.ToString("N0", CultureInfo.InvariantCulture)
+            : "—";
+
+    string FmtDate(DateTime? value) =>
+        value.HasValue
+            ? value.Value.ToString("yyyy/MM/dd", CultureInfo.InvariantCulture)
+            : "—";
+
+    string DateSourceLabel(string source) =>
+        source == "ACTION_DATE"
+            ? "تاريخ الإجراء"
+            : source == "ENTRY_DATE_FALLBACK"
+                ? "تاريخ التسجيل"
+                : "غير محدد";
+}
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>@Model.Title</title>
+
+    <link rel="icon" type="image/svg+xml"
+          href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='2' y='18' width='7' height='12' rx='3.5' fill='%230f766e'/><rect x='12' y='10' width='7' height='20' rx='3.5' fill='%232563eb'/><rect x='22' y='4' width='7' height='26' rx='3.5' fill='%23d97706'/></svg>" />
+
+    <link rel="stylesheet" href="~/css/Fontawesome6-5-0.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/statistics.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/smartcharts/smartcharts.housingcommandcenter.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/smartcharts/smartcharts.housingdepartment.css" asp-append-version="true" />
+
+    <style>
+        :root {
+            --bdd-accent: @accent;
+            --bdd-border: #e2e8f0;
+            --bdd-muted: #718096;
+            --bdd-text: #1e293b;
+            --bdd-bg: #f6f8fb;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bdd-bg);
+            color: var(--bdd-text);
+        }
+
+        .bdd-hdr {
+            position: relative;
+            overflow: hidden;
+            color: #fff;
+            background: linear-gradient(135deg, #172a46 0%, #1e3a5f 62%, #274c77 100%);
+            border-bottom: 4px solid var(--bdd-accent);
+            box-shadow: 0 7px 22px rgba(15, 23, 42, .13);
+        }
+
+        .bdd-hdr::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            opacity: .08;
+            background-image:
+                linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px);
+            background-size: 34px 34px;
+            pointer-events: none;
+        }
+
+        .bdd-hdr-inner {
+            position: relative;
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 22px 28px 20px;
+        }
+
+        .bdd-hdr-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 14px;
+        }
+
+        .bdd-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 38px;
+            padding: 8px 14px;
+            border: 1px solid rgba(255,255,255,.24);
+            border-radius: 10px;
+            background: rgba(255,255,255,.09);
+            color: #fff;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 700;
+            transition: .18s ease;
+        }
+
+        .bdd-back:hover {
+            background: rgba(255,255,255,.16);
+            transform: translateY(-1px);
+        }
+
+        .bdd-context {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 7px 11px;
+            border-radius: 999px;
+            background: rgba(255,255,255,.1);
+            border: 1px solid rgba(255,255,255,.18);
+            font-size: 12px;
+            font-weight: 700;
+            color: #edf2f7;
+        }
+
+        .bdd-hdr-main {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+        }
+
+        .bdd-title-wrap {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 0;
+        }
+
+        .bdd-title-icon {
+            width: 58px;
+            height: 58px;
+            flex: 0 0 58px;
+            display: grid;
+            place-items: center;
+            border-radius: 16px;
+            background: rgba(255,255,255,.11);
+            border: 1px solid rgba(255,255,255,.18);
+            font-size: 25px;
+            color: #fff;
+        }
+
+        .bdd-kicker {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            margin-bottom: 5px;
+            color: #cbd5e1;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .bdd-kicker-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            background: var(--bdd-accent);
+            box-shadow: 0 0 0 4px rgba(255,255,255,.07);
+        }
+
+        .bdd-title {
+            margin: 0;
+            font-size: clamp(21px, 2vw, 30px);
+            font-weight: 900;
+            line-height: 1.25;
+        }
+
+        .bdd-subtitle {
+            margin-top: 6px;
+            color: #d7e0ea;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .bdd-total {
+            flex: 0 0 auto;
+            min-width: 130px;
+            padding: 12px 16px;
+            text-align: center;
+            border-radius: 14px;
+            background: rgba(255,255,255,.1);
+            border: 1px solid rgba(255,255,255,.18);
+        }
+
+        .bdd-total strong {
+            display: block;
+            font-size: 28px;
+            line-height: 1;
+            font-weight: 900;
+            color: #fff;
+        }
+
+        .bdd-total span {
+            display: block;
+            margin-top: 6px;
+            color: #dbe5ef;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .bdd-wrap {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 12px 20px 12px;
+        }
+
+        .bdd-stats {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .bdd-stat {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-height: 66px;
+            padding: 10px 14px;
+            border: 1px solid var(--bdd-border);
+            border-radius: 14px;
+            background: #fff;
+            box-shadow: 0 4px 14px rgba(15,23,42,.045);
+        }
+
+        .bdd-stat > i {
+            width: 36px;
+            height: 36px;
+            flex: 0 0 36px;
+            display: grid;
+            place-items: center;
+            border-radius: 11px;
+            background: color-mix(in srgb, var(--bdd-accent) 9%, white);
+            color: var(--bdd-accent);
+            font-size: 15px;
+        }
+
+        .bdd-stat strong {
+            display: block;
+            font-size: 18px;
+            line-height: 1.1;
+            color: #1e3a5f;
+            font-weight: 900;
+        }
+
+        .bdd-stat span {
+            display: block;
+            margin-top: 3px;
+            color: var(--bdd-muted);
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .bdd-card {
+            overflow: hidden;
+            border: 1px solid var(--bdd-border);
+            border-radius: 15px;
+            background: #fff;
+            box-shadow: 0 5px 18px rgba(15,23,42,.05);
+        }
+
+        .bdd-toolbar {
+            display: grid;
+            grid-template-columns: minmax(260px, 1.8fr) minmax(180px, .8fr) minmax(180px, .8fr) minmax(190px, .8fr) 110px;
+            gap: 8px;
+            align-items: end;
+            padding: 9px 11px;
+            border-bottom: 1px solid var(--bdd-border);
+            background: #fbfcfe;
+        }
+
+        .bdd-field {
+            min-width: 0;
+        }
+
+        .bdd-field label {
+            display: block;
+            margin: 0 0 5px;
+            color: #475569;
+            font-size: 10px;
+            font-weight: 800;
+        }
+
+        .bdd-input,
+        .bdd-select {
+            width: 100%;
+            height: 34px;
+            padding: 0 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 9px;
+            background: #fff;
+            color: #1e293b;
+            outline: none;
+            font: inherit;
+            font-size: 12px;
+        }
+
+        .bdd-input:focus,
+        .bdd-select:focus {
+            border-color: var(--bdd-accent);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--bdd-accent) 12%, transparent);
+        }
+
+        .bdd-search-wrap {
+            position: relative;
+        }
+
+        .bdd-search-wrap > i {
+            position: absolute;
+            right: 11px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 12px;
+            pointer-events: none;
+        }
+
+        .bdd-search-wrap .bdd-input {
+            padding-right: 32px;
+        }
+
+        .bdd-reset {
+            height: 34px;
+            border: 1px solid #cbd5e1;
+            border-radius: 9px;
+            background: #fff;
+            color: #475569;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .bdd-reset:hover {
+            border-color: var(--bdd-accent);
+            color: var(--bdd-accent);
+        }
+
+        .bdd-table-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--bdd-border);
+        }
+
+        .bdd-result-text {
+            color: #475569;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .bdd-result-text strong {
+            color: var(--bdd-accent);
+            font-size: 13px;
+        }
+
+        .bdd-date-note {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #718096;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .bdd-table-scroll {
+            width: 100%;
+            overflow: auto;
+
+            /* Keep the grid inside the visible dashboard page. */
+            height: calc(100vh - 435px);
+            height: clamp(280px, calc(100dvh - 435px), 455px);
+            min-height: 280px;
+            max-height: 455px;
+        }
+
+        .bdd-table {
+            width: 100%;
+            min-width: 1320px;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 11px;
+        }
+
+        .bdd-table th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            padding: 8px 8px;
+            white-space: nowrap;
+            text-align: right;
+            color: #334155;
+            background: #f4f7fa;
+            border-bottom: 1px solid #dbe3ec;
+            font-size: 10px;
+            font-weight: 900;
+        }
+
+        .bdd-table td {
+            padding: 7px 8px;
+            vertical-align: middle;
+            border-bottom: 1px solid #edf1f5;
+            color: #334155;
+            white-space: nowrap;
+        }
+
+        .bdd-table tbody tr:hover td {
+            background: #fafcff;
+        }
+
+        .bdd-table tbody tr[hidden] {
+            display: none !important;
+        }
+
+        .bdd-building {
+            color: #1e3a5f;
+            font-weight: 900;
+        }
+
+        .bdd-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            max-width: 240px;
+            padding: 4px 8px;
+            border: 1px solid color-mix(in srgb, var(--bdd-accent) 25%, white);
+            border-radius: 999px;
+            background: color-mix(in srgb, var(--bdd-accent) 7%, white);
+            color: var(--bdd-accent);
+            font-size: 10px;
+            font-weight: 800;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .bdd-person {
+            max-width: 230px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 800;
+            color: #334155;
+        }
+
+        .bdd-muted {
+            color: #94a3b8 !important;
+        }
+
+        .bdd-date {
+            font-weight: 800;
+            color: #334155;
+        }
+
+        .bdd-date-src {
+            display: block;
+            margin-top: 2px;
+            color: #94a3b8;
+            font-size: 9px;
+            font-weight: 600;
+        }
+
+        .bdd-days {
+            display: inline-flex;
+            min-width: 62px;
+            justify-content: center;
+            padding: 4px 7px;
+            border-radius: 7px;
+            background: #f1f5f9;
+            color: #475569;
+            font-weight: 900;
+        }
+
+        .bdd-pager {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 8px 12px;
+            border-top: 1px solid var(--bdd-border);
+            background: #fbfcfe;
+        }
+
+        .bdd-pager-info {
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .bdd-pager-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .bdd-page-btn {
+            min-width: 34px;
+            height: 34px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background: #fff;
+            color: #475569;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .bdd-page-btn:hover:not(:disabled) {
+            border-color: var(--bdd-accent);
+            color: var(--bdd-accent);
+        }
+
+        .bdd-page-btn:disabled {
+            opacity: .45;
+            cursor: default;
+        }
+
+        .bdd-page-current {
+            min-width: 70px;
+            text-align: center;
+            color: #334155;
+            font-size: 11px;
+            font-weight: 900;
+        }
+
+        .bdd-empty {
+            display: none;
+            min-height: 280px;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 8px;
+            color: #718096;
+        }
+
+        .bdd-empty i {
+            font-size: 30px;
+            color: #a0aec0;
+        }
+
+        .bdd-empty.is-visible {
+            display: flex;
+        }
+
+        .bdd-footer {
+            padding: 10px 20px 12px;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        @@media (max-width: 1200px) {
+            .bdd-stats {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .bdd-toolbar {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .bdd-toolbar .bdd-field:first-child {
+                grid-column: 1 / -1;
+            }
+        }
+
+        @@media (max-width: 700px) {
+            .bdd-hdr-inner,
+            .bdd-wrap {
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+
+            .bdd-hdr-main {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .bdd-total {
+                width: 100%;
+            }
+
+            .bdd-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .bdd-toolbar {
+                grid-template-columns: 1fr;
+            }
+
+            .bdd-toolbar .bdd-field:first-child {
+                grid-column: auto;
+            }
+
+            .bdd-table-scroll {
+                height: auto;
+                min-height: 300px;
+                max-height: none;
+            }
+        }
+
+        @@media print {
+            .bdd-toolbar,
+            .bdd-pager,
+            .bdd-back {
+                display: none !important;
+            }
+
+            .bdd-wrap {
+                max-width: none;
+                padding: 8px;
+            }
+
+            .bdd-table-scroll {
+                overflow: visible;
+                max-height: none;
+            }
+
+            .bdd-table {
+                min-width: 0;
+                font-size: 8px;
+            }
+
+            .bdd-table th,
+            .bdd-table td {
+                padding: 5px 4px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header class="dep-hdr">
+    <div class="dep-hdr-bg"></div>
+    <div class="dep-hdr-grid"></div>
+
+    <a href="/HousingCommandCenterDashboard/Department?id=@Model.DepartmentId#@backTab"
+       class="dep-hdr-back">
+        <i class="fa-solid fa-arrow-right"></i>
+        العودة
+    </a>
+
+    <div class="dep-hdr-body">
+
+        <div class="dep-hdr-main">
+            <div class="dep-hdr-icon">
+                <i class="@icon"></i>
+            </div>
+
+            <div class="dep-hdr-copy">
+                <div class="dep-hdr-label">
+                    <span class="dep-hdr-dot"></span>
+                    @contextLabel — تفاصيل الوحدات السكنية
+                </div>
+
+                <div class="dep-hdr-name">
+                    @Model.Title
+                </div>
+            </div>
+        </div>
+
+        <div class="dep-hdr-stats">
+
+            <div class="dep-hdr-stat">
+                <span class="dep-hdr-stat-val">
+                    @FmtInt(Model.TotalCount)
+                </span>
+                <span class="dep-hdr-stat-lbl">
+                    النتائج
+                </span>
+            </div>
+
+            <div class="dep-hdr-stat">
+                <span class="dep-hdr-stat-val">
+                    @DateTime.Now.ToString("yyyy-MM-dd")
+                </span>
+                <span class="dep-hdr-stat-lbl">
+                    @DateTime.Now.ToString(
+                        "dddd",
+                        new CultureInfo("ar-SA"))
+                </span>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="dep-hdr-bar">
+        <div class="dep-hdr-bar-fill"
+             style="width:100%;background:@accent"></div>
+    </div>
+</header>
+
+
+<main class="bdd-wrap">
+
+    <section class="bdd-stats">
+
+        <div class="bdd-stat">
+            <i class="@icon"></i>
+            <div>
+                <strong>@FmtInt(Model.TotalCount)</strong>
+                <span>@Model.Title</span>
+            </div>
+        </div>
+
+        <div class="bdd-stat">
+            <i class="fa-solid fa-map-location-dot"></i>
+            <div>
+                <strong>@FmtInt(locationCount)</strong>
+                <span>المواقع السكنية ضمن النتائج</span>
+            </div>
+        </div>
+
+        <div class="bdd-stat">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <div>
+                <strong>
+                    @(avgDuration.HasValue
+                        ? avgDuration.Value.ToString("N0", CultureInfo.InvariantCulture)
+                        : "—")
+                </strong>
+                <span>
+                    @(isOccupied
+                        ? "متوسط مدة الإشغال بالأيام"
+                        : isVacant
+                            ? "متوسط مدة الشغور بالأيام"
+                            : "متوسط المدة في الحالة بالأيام")
+                </span>
+            </div>
+        </div>
+
+        <div class="bdd-stat">
+            <i class="fa-solid fa-chart-simple"></i>
+            <div>
+                <strong>
+                    @(isReadiness
+                        ? FmtInt(actionCount)
+                        : maxDuration.HasValue
+                            ? maxDuration.Value.ToString("N0", CultureInfo.InvariantCulture)
+                            : "—")
+                </strong>
+                <span>
+                    @(isReadiness
+                        ? "الإجراءات الحالية المختلفة"
+                        : isOccupied
+                            ? "أطول مدة إشغال بالأيام"
+                            : "أطول مدة شغور بالأيام")
+                </span>
+            </div>
+        </div>
+
+    </section>
+
+
+    <section class="bdd-card">
+
+        <div class="bdd-toolbar">
+
+            <div class="bdd-field">
+                <label for="bdd-search">بحث</label>
+                <div class="bdd-search-wrap">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input id="bdd-search"
+                           class="bdd-input"
+                           type="search"
+                           autocomplete="off"
+                           placeholder="رقم المبنى، الموقع، الإجراء، اسم المستفيد أو الرقم العام..." />
+                </div>
+            </div>
+
+            <div class="bdd-field">
+                <label for="bdd-location">الموقع السكني</label>
+                <select id="bdd-location" class="bdd-select">
+                    <option value="">جميع المواقع</option>
+                    @foreach (var value in rows
+                        .Select(x => x.MilitaryLocationName)
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .OrderBy(x => x))
+                    {
+                        <option value="@value">@value</option>
+                    }
+                </select>
+            </div>
+
+            <div class="bdd-field">
+                <label for="bdd-action">الإجراء الحالي</label>
+                <select id="bdd-action" class="bdd-select">
+                    <option value="">جميع الإجراءات</option>
+                    @foreach (var value in rows
+                        .Select(x => x.CurrentActionName)
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .OrderBy(x => x))
+                    {
+                        <option value="@value">@value</option>
+                    }
+                </select>
+            </div>
+
+            <div class="bdd-field">
+                <label for="bdd-sort">الترتيب</label>
+                <select id="bdd-sort" class="bdd-select">
+                    <option value="duration-desc">الأطول مدة أولًا</option>
+                    <option value="duration-asc">الأقصر مدة أولًا</option>
+                    <option value="building-asc">رقم المبنى تصاعديًا</option>
+                    <option value="building-desc">رقم المبنى تنازليًا</option>
+                </select>
+            </div>
+
+            <button id="bdd-reset"
+                    type="button"
+                    class="bdd-reset">
+                <i class="fa-solid fa-rotate-left"></i>
+                إعادة
+            </button>
+
+        </div>
+
+
+        <div class="bdd-table-head">
+
+            <div class="bdd-result-text">
+                المعروض:
+                <strong id="bdd-filtered-count">@FmtInt(Model.TotalCount)</strong>
+                من
+                @FmtInt(Model.TotalCount)
+            </div>
+
+            <div class="bdd-date-note">
+                <i class="fa-solid fa-circle-info"></i>
+
+                @if (isOccupied)
+                {
+                    <span>مدة الإشغال محسوبة من تاريخ السكن الفعلي عند توفره.</span>
+                }
+                else if (isVacant)
+                {
+                    <span>مدة الشغور محسوبة من آخر إخلاء فعلي، وقد تكون غير متوفرة لبعض الوحدات.</span>
+                }
+                else
+                {
+                    <span>
+                        تاريخ الحالة يعتمد على تاريخ الإجراء، ويستخدم تاريخ التسجيل فقط عند عدم توفره.
+                        @if (missingDurationCount > 0)
+                        {
+                            <text> عدد الحالات بلا مدة محسوبة: @FmtInt(missingDurationCount).</text>
+                        }
+                    </span>
+                }
+            </div>
+
+        </div>
+
+
+        <div class="bdd-table-scroll">
+
+            <table class="bdd-table" id="bdd-table">
+
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>رقم المبنى</th>
+                        <th>الموقع السكني</th>
+                        <th>نوع المبنى</th>
+                        <th>تصنيف المبنى</th>
+                        <th>الغرف</th>
+
+                        @if (isOccupied)
+                        {
+                            <th>الرقم العام</th>
+                            <th>الرتبة</th>
+                            <th>المستفيد الحالي</th>
+                            <th>الوحدة العسكرية</th>
+                            <th>بداية الإشغال</th>
+                            <th>مدة الإشغال</th>
+                            <th>الإجراء الحالي</th>
+                            <th>منذ الإجراء</th>
+                        }
+                        else if (isVacant)
+                        {
+                            <th>الحالة الحالية</th>
+                            <th>الإجراء الحالي</th>
+                            <th>بداية الشغور</th>
+                            <th>مدة الشغور</th>
+                            <th>الرقم العام السابق</th>
+                            <th>آخر مستفيد</th>
+                            <th>رتبة آخر مستفيد</th>
+                            <th>وحدة آخر مستفيد</th>
+                        }
+                        else
+                        {
+                            <th>الحالة التشغيلية</th>
+                            <th>الإجراء الحالي</th>
+                            <th>حالة المبنى</th>
+                            <th>منذ الحالة</th>
+                            <th>المدة</th>
+
+                            @if (showDecisionDate)
+                            {
+                                <th>تاريخ القرار</th>
+                            }
+
+                            <th>الرقم العام</th>
+                            <th>المستفيد المرتبط</th>
+                            <th>الرتبة</th>
+                        }
+                    </tr>
+                </thead>
+
+                <tbody id="bdd-body">
+
+                    @for (var i = 0; i < rows.Count; i++)
+                    {
+                        var row = rows[i];
+                        var duration = DurationOf(row);
+
+                        var searchText = string.Join(" ",
+                            new[]
+                            {
+                                row.BuildingDetailsNo,
+                                row.MilitaryLocationName,
+                                row.BuildingTypeName,
+                                row.BuildingUtilityTypeName,
+                                row.BuildingClassName,
+                                row.ReadinessGroupName,
+                                row.CurrentActionName,
+                                row.CurrentBuildingStatus,
+                                row.GeneralNo,
+                                row.ResidentRankName,
+                                row.ResidentFullName,
+                                row.ResidentMilitaryUnit,
+                                row.LastResidentGeneralNo,
+                                row.LastResidentRankName,
+                                row.LastResidentFullName,
+                                row.LastResidentMilitaryUnit
+                            }
+                            .Where(x => !string.IsNullOrWhiteSpace(x)));
+
+                        <tr data-search="@searchText"
+                            data-location="@row.MilitaryLocationName"
+                            data-action="@row.CurrentActionName"
+                            data-duration="@(duration?.ToString(CultureInfo.InvariantCulture) ?? "")"
+                            data-building="@row.BuildingDetailsNo">
+
+                            <td class="bdd-row-number">@(i + 1)</td>
+
+                            <td>
+                                <span class="bdd-building">
+                                    @(string.IsNullOrWhiteSpace(row.BuildingDetailsNo)
+                                        ? "—"
+                                        : row.BuildingDetailsNo)
+                                </span>
+                            </td>
+
+                            <td>
+                                @(string.IsNullOrWhiteSpace(row.MilitaryLocationName)
+                                    ? "—"
+                                    : row.MilitaryLocationName)
+                            </td>
+
+                            <td>
+                                @(string.IsNullOrWhiteSpace(row.BuildingTypeName)
+                                    ? "—"
+                                    : row.BuildingTypeName)
+                            </td>
+
+                            <td>
+                                @(string.IsNullOrWhiteSpace(row.BuildingClassName)
+                                    ? "—"
+                                    : row.BuildingClassName)
+                            </td>
+
+                            <td>
+                                @(row.BuildingDetailsRooms.HasValue
+                                    ? row.BuildingDetailsRooms.Value.ToString(CultureInfo.InvariantCulture)
+                                    : "—")
+                            </td>
+
+
+                            @if (isOccupied)
+                            {
+                                <td>
+                                    @(string.IsNullOrWhiteSpace(row.GeneralNo)
+                                        ? "—"
+                                        : row.GeneralNo)
+                                </td>
+
+                                <td>
+                                    @(string.IsNullOrWhiteSpace(row.ResidentRankName)
+                                        ? "—"
+                                        : row.ResidentRankName)
+                                </td>
+
+                                <td class="bdd-person"
+                                    title="@row.ResidentFullName">
+                                    @(string.IsNullOrWhiteSpace(row.ResidentFullName)
+                                        ? "—"
+                                        : row.ResidentFullName)
+                                </td>
+
+                                <td class="bdd-person"
+                                    title="@row.ResidentMilitaryUnit">
+                                    @(string.IsNullOrWhiteSpace(row.ResidentMilitaryUnit)
+                                        ? "—"
+                                        : row.ResidentMilitaryUnit)
+                                </td>
+
+                                <td class="bdd-date">
+                                    @FmtDate(row.OccupiedSince)
+                                </td>
+
+                                <td>
+                                    <span class="bdd-days">
+                                        @(row.DaysOccupied.HasValue
+                                            ? $"{FmtNullableInt(row.DaysOccupied)} يوم"
+                                            : "—")
+                                    </span>
+                                </td>
+
+                                <td>
+                                    @if (!string.IsNullOrWhiteSpace(row.CurrentActionName))
+                                    {
+                                        <span class="bdd-chip"
+                                              title="@row.CurrentActionName">
+                                            @row.CurrentActionName
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="bdd-muted">—</span>
+                                    }
+                                </td>
+
+                                <td class="bdd-date">
+                                    @FmtDate(row.CurrentStatusSince)
+                                    @if (row.CurrentStatusSince.HasValue)
+                                    {
+                                        <span class="bdd-date-src">
+                                            @DateSourceLabel(row.CurrentStatusDateSource)
+                                        </span>
+                                    }
+                                </td>
+                            }
+                            else if (isVacant)
+                            {
+                                <td>
+                                    <span class="bdd-chip"
+                                          title="@row.ReadinessGroupName">
+                                        @(string.IsNullOrWhiteSpace(row.ReadinessGroupName)
+                                            ? "حالة أخرى"
+                                            : row.ReadinessGroupName)
+                                    </span>
+                                </td>
+
+                                <td>
+                                    @(string.IsNullOrWhiteSpace(row.CurrentActionName)
+                                        ? "لا يوجد إجراء نشط"
+                                        : row.CurrentActionName)
+                                </td>
+
+                                <td class="bdd-date">
+                                    @FmtDate(row.VacantSince)
+                                </td>
+
+                                <td>
+                                    <span class="bdd-days">
+                                        @(row.DaysVacant.HasValue
+                                            ? $"{FmtNullableInt(row.DaysVacant)} يوم"
+                                            : "—")
+                                    </span>
+                                </td>
+
+                                <td>
+                                    @(string.IsNullOrWhiteSpace(row.LastResidentGeneralNo)
+                                        ? "—"
+                                        : row.LastResidentGeneralNo)
+                                </td>
+
+                                <td class="bdd-person"
+                                    title="@row.LastResidentFullName">
+                                    @(string.IsNullOrWhiteSpace(row.LastResidentFullName)
+                                        ? "—"
+                                        : row.LastResidentFullName)
+                                </td>
+
+                                <td>
+                                    @(string.IsNullOrWhiteSpace(row.LastResidentRankName)
+                                        ? "—"
+                                        : row.LastResidentRankName)
+                                </td>
+
+                                <td class="bdd-person"
+                                    title="@row.LastResidentMilitaryUnit">
+                                    @(string.IsNullOrWhiteSpace(row.LastResidentMilitaryUnit)
+                                        ? "—"
+                                        : row.LastResidentMilitaryUnit)
+                                </td>
+                            }
+                            else
+                            {
+                                <td>
+                                    <span class="bdd-chip"
+                                          title="@row.ReadinessGroupName">
+                                        @(string.IsNullOrWhiteSpace(row.ReadinessGroupName)
+                                            ? "حالة أخرى"
+                                            : row.ReadinessGroupName)
+                                    </span>
+                                </td>
+
+                                <td>
+                                    @(string.IsNullOrWhiteSpace(row.CurrentActionName)
+                                        ? "لا يوجد إجراء نشط"
+                                        : row.CurrentActionName)
+                                </td>
+
+                                <td>
+                                    @(string.IsNullOrWhiteSpace(row.CurrentBuildingStatus)
+                                        ? "—"
+                                        : row.CurrentBuildingStatus)
+                                </td>
+
+                                <td class="bdd-date">
+                                    @FmtDate(row.CurrentStatusSince)
+
+                                    @if (row.CurrentStatusSince.HasValue)
+                                    {
+                                        <span class="bdd-date-src">
+                                            @DateSourceLabel(row.CurrentStatusDateSource)
+                                        </span>
+                                    }
+                                </td>
+
+                                <td>
+                                    <span class="bdd-days">
+                                        @(row.DaysInCurrentStatus.HasValue
+                                            ? $"{FmtNullableInt(row.DaysInCurrentStatus)} يوم"
+                                            : "—")
+                                    </span>
+                                </td>
+
+                                @if (showDecisionDate)
+                                {
+                                    <td class="bdd-date">
+                                        @FmtDate(row.DecisionDate)
+                                    </td>
+                                }
+
+                                <td>
+                                    @(string.IsNullOrWhiteSpace(row.GeneralNo)
+                                        ? "—"
+                                        : row.GeneralNo)
+                                </td>
+
+                                <td class="bdd-person"
+                                    title="@row.ResidentFullName">
+                                    @(string.IsNullOrWhiteSpace(row.ResidentFullName)
+                                        ? "—"
+                                        : row.ResidentFullName)
+                                </td>
+
+                                <td>
+                                    @(string.IsNullOrWhiteSpace(row.ResidentRankName)
+                                        ? "—"
+                                        : row.ResidentRankName)
+                                </td>
+                            }
+
+                        </tr>
+                    }
+
+                </tbody>
+
+            </table>
+
+
+            <div id="bdd-empty"
+                 class="bdd-empty">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <strong>لا توجد نتائج مطابقة</strong>
+                <span>غيّر البحث أو عوامل التصفية.</span>
+            </div>
+
+        </div>
+
+
+        <div class="bdd-pager">
+
+            <div class="bdd-pager-info">
+                <span id="bdd-range">—</span>
+            </div>
+
+            <div class="bdd-pager-actions">
+
+                <select id="bdd-page-size"
+                        class="bdd-select"
+                        style="width:90px;height:34px">
+                    <option value="25">25</option>
+                    <option value="50" selected>50</option>
+                    <option value="100">100</option>
+                    <option value="200">200</option>
+                </select>
+
+                <button id="bdd-first"
+                        type="button"
+                        class="bdd-page-btn"
+                        title="الصفحة الأولى">
+                    <i class="fa-solid fa-angles-right"></i>
+                </button>
+
+                <button id="bdd-prev"
+                        type="button"
+                        class="bdd-page-btn"
+                        title="السابق">
+                    <i class="fa-solid fa-angle-right"></i>
+                </button>
+
+                <span id="bdd-page-current"
+                      class="bdd-page-current">
+                    1 / 1
+                </span>
+
+                <button id="bdd-next"
+                        type="button"
+                        class="bdd-page-btn"
+                        title="التالي">
+                    <i class="fa-solid fa-angle-left"></i>
+                </button>
+
+                <button id="bdd-last"
+                        type="button"
+                        class="bdd-page-btn"
+                        title="الصفحة الأخيرة">
+                    <i class="fa-solid fa-angles-left"></i>
+                </button>
+
+            </div>
+
+        </div>
+
+    </section>
+
+</main>
+
+
+<footer class="bdd-footer">
+    لوحة قيادة الإدارات التشغيلية والصيانة © @DateTime.Now.Year
+</footer>
+
+
+<script>
+    (function () {
+        'use strict';
+
+        var body = document.getElementById('bdd-body');
+        if (!body) return;
+
+        var rows = Array.prototype.slice.call(
+            body.querySelectorAll('tr')
+        );
+
+        var search = document.getElementById('bdd-search');
+        var locationFilter = document.getElementById('bdd-location');
+        var actionFilter = document.getElementById('bdd-action');
+        var sort = document.getElementById('bdd-sort');
+        var reset = document.getElementById('bdd-reset');
+        var pageSizeSelect = document.getElementById('bdd-page-size');
+
+        var filteredCount = document.getElementById('bdd-filtered-count');
+        var range = document.getElementById('bdd-range');
+        var empty = document.getElementById('bdd-empty');
+
+        var firstBtn = document.getElementById('bdd-first');
+        var prevBtn = document.getElementById('bdd-prev');
+        var nextBtn = document.getElementById('bdd-next');
+        var lastBtn = document.getElementById('bdd-last');
+        var currentPageText = document.getElementById('bdd-page-current');
+
+        var page = 1;
+        var visibleRows = [];
+
+        function normalize(value) {
+            return (value || '')
+                .toString()
+                .trim()
+                .toLocaleLowerCase('ar');
+        }
+
+        function compareBuilding(a, b) {
+            var av = (a.dataset.building || '').trim();
+            var bv = (b.dataset.building || '').trim();
+
+            var an = Number(av);
+            var bn = Number(bv);
+
+            if (!Number.isNaN(an) && !Number.isNaN(bn)) {
+                return an - bn;
+            }
+
+            return av.localeCompare(
+                bv,
+                'ar',
+                { numeric: true, sensitivity: 'base' }
+            );
+        }
+
+       function compareDuration(a, b, descending) {
+    var aRaw = a.dataset.duration;
+    var bRaw = b.dataset.duration;
+
+    var aMissing = aRaw === '';
+    var bMissing = bRaw === '';
+
+    // الصفوف التي لا يوجد لها تاريخ/مدة تبقى دائمًا في آخر الجدول
+    if (aMissing && bMissing) {
+        return compareBuilding(a, b);
+    }
+
+    if (aMissing) return 1;
+    if (bMissing) return -1;
+
+    var aValue = Number(aRaw);
+    var bValue = Number(bRaw);
+
+    if (aValue === bValue) {
+        return compareBuilding(a, b);
+    }
+
+    return descending
+        ? bValue - aValue
+        : aValue - bValue;
+}
+
+function applySort(items) {
+    var mode = sort.value;
+
+    items.sort(function (a, b) {
+        if (mode === 'duration-desc') {
+            return compareDuration(a, b, true);
+        }
+
+        if (mode === 'duration-asc') {
+            return compareDuration(a, b, false);
+        }
+
+        if (mode === 'building-desc') {
+            return compareBuilding(b, a);
+        }
+
+        return compareBuilding(a, b);
+    });
+}
+
+        function apply() {
+            var q = normalize(search.value);
+            var locationValue = normalize(locationFilter.value);
+            var actionValue = normalize(actionFilter.value);
+
+            visibleRows = rows.filter(function (row) {
+                var rowSearch = normalize(row.dataset.search);
+                var rowLocation = normalize(row.dataset.location);
+                var rowAction = normalize(row.dataset.action);
+
+                var searchOk =
+                    !q ||
+                    rowSearch.indexOf(q) !== -1;
+
+                var locationOk =
+                    !locationValue ||
+                    rowLocation === locationValue;
+
+                var actionOk =
+                    !actionValue ||
+                    rowAction === actionValue;
+
+                return searchOk &&
+                       locationOk &&
+                       actionOk;
+            });
+
+            applySort(visibleRows);
+
+            visibleRows.forEach(function (row) {
+                body.appendChild(row);
+            });
+
+            page = 1;
+            render();
+        }
+
+        function render() {
+            var pageSize = Number(pageSizeSelect.value) || 50;
+            var total = visibleRows.length;
+            var pages = Math.max(1, Math.ceil(total / pageSize));
+
+            if (page > pages) page = pages;
+            if (page < 1) page = 1;
+
+            rows.forEach(function (row) {
+                row.hidden = true;
+            });
+
+            var start = (page - 1) * pageSize;
+            var end = Math.min(start + pageSize, total);
+
+            for (var i = start; i < end; i++) {
+                visibleRows[i].hidden = false;
+
+                var numberCell =
+                    visibleRows[i].querySelector('.bdd-row-number');
+
+                if (numberCell) {
+                    numberCell.textContent = (i + 1).toLocaleString('en-US');
+                }
+            }
+
+            filteredCount.textContent =
+                total.toLocaleString('en-US');
+
+            currentPageText.textContent =
+                page.toLocaleString('en-US') +
+                ' / ' +
+                pages.toLocaleString('en-US');
+
+            if (total === 0) {
+                range.textContent = 'لا توجد نتائج';
+                empty.classList.add('is-visible');
+            } else {
+                range.textContent =
+                    'عرض ' +
+                    (start + 1).toLocaleString('en-US') +
+                    ' - ' +
+                    end.toLocaleString('en-US') +
+                    ' من ' +
+                    total.toLocaleString('en-US');
+
+                empty.classList.remove('is-visible');
+            }
+
+            firstBtn.disabled = page <= 1;
+            prevBtn.disabled = page <= 1;
+            nextBtn.disabled = page >= pages;
+            lastBtn.disabled = page >= pages;
+        }
+
+        search.addEventListener('input', apply);
+        locationFilter.addEventListener('change', apply);
+        actionFilter.addEventListener('change', apply);
+        sort.addEventListener('change', apply);
+
+        pageSizeSelect.addEventListener('change', function () {
+            page = 1;
+            render();
+        });
+
+        reset.addEventListener('click', function () {
+            search.value = '';
+            locationFilter.value = '';
+            actionFilter.value = '';
+            sort.value = 'duration-desc';
+            pageSizeSelect.value = '50';
+            apply();
+        });
+
+        firstBtn.addEventListener('click', function () {
+            page = 1;
+            render();
+        });
+
+        prevBtn.addEventListener('click', function () {
+            page -= 1;
+            render();
+        });
+
+        nextBtn.addEventListener('click', function () {
+            page += 1;
+            render();
+        });
+
+        lastBtn.addEventListener('click', function () {
+            var pageSize = Number(pageSizeSelect.value) || 50;
+            page = Math.max(
+                1,
+                Math.ceil(visibleRows.length / pageSize)
+            );
+            render();
+        });
+
+        apply();
+    })();
+</script>
+
+</body>
+</html>

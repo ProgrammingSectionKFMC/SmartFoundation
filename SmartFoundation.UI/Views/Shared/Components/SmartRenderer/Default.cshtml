@@ -1,4 +1,5 @@
 @using SmartFoundation.UI.ViewModels.SmartPage
+@using SmartFoundation.UI.ViewModels.SmartDrawer
 @model SmartFoundation.UI.ViewModels.SmartPage.SmartPageViewModel
 
 @{
@@ -245,6 +246,44 @@
         </div>
     </div>
 }
+
+
+
+@* SmartDrawers - Page scoped with body teleport *@
+@{
+    var pageDrawers = Model.TableDS?.Toolbar?.Drawers;
+}
+
+@if (pageDrawers is not null &&
+     pageDrawers.Any(d => d is not null && d.Show))
+{
+    <div x-data="{}">
+        <template x-teleport="body">
+            <div class="sf-page-drawers-portal">
+                @{
+                    var renderedDrawerIds =
+                        new HashSet<string>(
+                            StringComparer.OrdinalIgnoreCase);
+                }
+
+                @foreach (var drawer in pageDrawers)
+                {
+                    if (drawer is not null
+                        && drawer.Show
+                        && !string.IsNullOrWhiteSpace(drawer.Id)
+                        && renderedDrawerIds.Add(drawer.Id))
+                    {
+                        @await Component.InvokeAsync(
+                            "SmartDrawer",
+                            new { model = drawer })
+                    }
+                }
+            </div>
+        </template>
+    </div>
+}
+
+
 
 @* ===== Global Print Iframe (ONE TIME) ===== *@
 <iframe id="sf-print-frame"

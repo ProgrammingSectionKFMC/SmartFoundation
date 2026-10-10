@@ -1600,3 +1600,150 @@
 .sf-hccm-dep-card:hover .sf-hccm-medal-svg {
     transform: scale(1.08);
 }
+
+
+/* =========================================================
+   Housing Command Center
+   Header Formula Help
+========================================================= */
+
+/* =========================================================
+   Header information icon
+========================================================= */
+
+.sf-hccm-th-help {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    margin-inline-start: 5px;
+    border-radius: 50%;
+    color: #64748b;
+    font-size: 12px;
+    cursor: help;
+    vertical-align: middle;
+    outline: none;
+}
+
+
+    .sf-hccm-th-help:hover,
+    .sf-hccm-th-help:focus {
+        color: #1e3a5f;
+    }
+
+
+/* =========================================================
+   Global Header Tooltip
+   مهم: هذا العنصر أصبح داخل body وليس داخل الجدول
+========================================================= */
+
+.sf-hccm-header-tooltip-global {
+    position: fixed;
+    z-index: 2147483000;
+    width: 360px;
+    max-width: calc(100vw - 24px);
+    border: 1px solid #dbe3ed;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, .20);
+    direction: rtl;
+    text-align: right;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(4px);
+    transition: opacity .12s ease, transform .12s ease, visibility .12s ease;
+}
+
+
+    .sf-hccm-header-tooltip-global.is-visible {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+
+    .sf-hccm-header-tooltip-global .sf-hccm-tooltip-title {
+        padding: 10px 12px;
+        border-bottom: 1px solid #e5e7eb;
+        border-radius: 11px 11px 0 0;
+        background: #315984;
+        color: #ffffff;
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+
+    .sf-hccm-header-tooltip-global .sf-hccm-tooltip-body {
+        padding: 11px 12px;
+        color: #475569;
+        font-size: 11px;
+        line-height: 1.8;
+        white-space: normal;
+    }
+
+
+    .sf-hccm-header-tooltip-global .sf-hccm-tooltip-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 7px;
+    }
+
+
+    .sf-hccm-header-tooltip-global .sf-hccm-tooltip-dot {
+        flex: 0 0 auto;
+        width: 6px;
+        height: 6px;
+        margin-top: 7px;
+        border-radius: 50%;
+        background: #315984;
+    }
+
+
+    .sf-hccm-th-help:hover,
+    .sf-hccm-th-help:focus {
+        color: #1e3a5f;
+    }
+
+
+
+
+
+
+
+.sf-hccm-head-tooltip .sf-hccm-tooltip-title {
+    padding: 10px 12px;
+    border-bottom: 1px solid #e5e7eb;
+    background: #315984;
+    color: #ffffff;
+    border-radius: 11px 11px 0 0;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+
+.sf-hccm-head-tooltip .sf-hccm-tooltip-body {
+    padding: 11px 12px;
+    color: #475569;
+    font-size: 11px;
+    line-height: 1.8;
+    white-space: normal;
+}
+
+
+.sf-hccm-head-tooltip .sf-hccm-tooltip-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+}
+
+
+.sf-hccm-head-tooltip .sf-hccm-tooltip-dot {
+    flex: 0 0 auto;
+    width: 6px;
+    height: 6px;
+    margin-top: 7px;
+    border-radius: 50%;
+    background: #315984;
+}
