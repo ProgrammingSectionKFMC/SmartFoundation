@@ -529,6 +529,8 @@ namespace SmartFoundation.UI.ViewModels.SmartCharts
 
         public int AllocationCurrent { get; set; }
 
+        public int HousingCurrent { get; set; }
+
         public int ExtendCurrent { get; set; }
 
         public int ExitCurrent { get; set; }
@@ -612,6 +614,105 @@ namespace SmartFoundation.UI.ViewModels.SmartCharts
     }
 
 
+    public class DepWaitingListDetail
+    {
+        public int TotalWaitingRecords { get; set; }
+        public int WaitingResidents { get; set; }
+        public int AllocationResidents { get; set; }
+        public int HousingProcedureResidents { get; set; }
+
+        public int MainWaitingResidents { get; set; }
+        public int SideWaitingResidents { get; set; }
+
+        public List<DepWaitingClassDetail> Classes { get; set; } = new();
+        public List<DepWaitingStageDetail> Stages { get; set; } = new();
+    }
+
+    public class DepWaitingListDetailsViewModel
+    {
+        public string DepartmentId { get; set; } = "";
+
+        public string Title { get; set; } = "";
+
+        public string Mode { get; set; } = "DETAIL_ALL";
+
+        public int? WaitingClassID { get; set; }
+
+        public string SearchText { get; set; } = "";
+
+        public int PageNumber { get; set; } = 1;
+
+        public int PageSize { get; set; } = 25;
+
+        public long TotalRows { get; set; }
+
+        public long TotalPages { get; set; }
+
+        public List<DepWaitingListDetailRow> Rows { get; set; } = new();
+
+        public bool HasPreviousPage => PageNumber > 1;
+
+        public bool HasNextPage => PageNumber < TotalPages;
+    }
+
+
+    public class DepWaitingListDetailRow
+    {
+        public long WaitingListOrder { get; set; }
+
+        public long ActionID { get; set; }
+
+        public long ResidentInfoID { get; set; }
+
+        public string GeneralNo { get; set; } = "";
+
+        public string FullName { get; set; } = "";
+
+        public string NationalID { get; set; } = "";
+
+        public string RankName { get; set; } = "";
+
+        public int WaitingClassID { get; set; }
+
+        public string WaitingClassName { get; set; } = "";
+
+        public string ClassType { get; set; } = "";
+
+        public string ActionDecisionNo { get; set; } = "";
+
+        public string ActionDecisionDate { get; set; } = "";
+
+        public int? LastActionTypeID { get; set; }
+
+        public string LastActionTypeName { get; set; } = "";
+
+        public string WaitingStage { get; set; } = "";
+
+        public DateTime? LastActionDate { get; set; }
+
+        public string BuildingDetailsNo { get; set; } = "";
+    }
+
+    public class DepWaitingClassDetail
+    {
+        public int WaitingClassID { get; set; }
+        public string WaitingClassName { get; set; } = "";
+        public int SortOrder { get; set; }
+        public string ClassType { get; set; } = "";
+
+        public int WaitingResidents { get; set; }
+        public int AllocationResidents { get; set; }
+        public int HousingProcedureResidents { get; set; }
+    }
+
+    public class DepWaitingStageDetail
+    {
+        public int ActionTypeID { get; set; }
+        public string ActionName { get; set; } = "";
+        public string WaitingStage { get; set; } = "";
+        public int ResidentsCount { get; set; }
+    }
+
 
     public class DepartmentDetailViewModel
     {
@@ -629,6 +730,7 @@ namespace SmartFoundation.UI.ViewModels.SmartCharts
         public DepMaintenanceDetail? CarsDetail { get; set; }
         public DepHousingReadinessDetail? HousingReadiness { get; set; }
         public DepHousingProceduresDetail? HousingProcedures { get; set; }
+        public DepWaitingListDetail? WaitingList { get; set; }
 
     }
 

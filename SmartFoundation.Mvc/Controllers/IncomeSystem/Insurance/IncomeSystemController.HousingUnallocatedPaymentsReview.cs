@@ -68,21 +68,21 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
             var headerMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
-                ["order_"] = "م",
-                ["residentInfoID"] = "الرقم المرجعي للمستفيد",
-                ["NationalID"] = "رقم الهوية",
-                ["generalNo_FK"] = "الرقم العام",
-                ["FullName_A"] = "الاسم",
-                ["BillChargeTypeName_A"] = "نوع الخدمة",
-                ["FirstOccupancyDate"] = "تاريخ أول إشغال",
-                ["PaymentCount"] = "عدد الحركات",
-                ["TotalPositivePayments"] = "إجمالي السدادات",
-                ["TotalOldRefunds"] = "الاستردادات القديمة",
-                ["EligiblePositivePayments"] = "السدادات المؤهلة",
-                ["PaymentsRequiringReview"] = "سداد بحاجة للمراجعة",
-                ["RawGeneralBalance"] = "الرصيد العام الصافي",
-                ["TotalNewRefunds"] = "الاستردادات الموثقة الجديدة",
-                ["RemainingForReview"] = "المتبقي غير المسجل كمعاد"
+                //["order_"] = "م",
+                //["residentInfoID"] = "الرقم المرجعي للمستفيد",
+                //["NationalID"] = "رقم الهوية",
+                //["generalNo_FK"] = "الرقم العام",
+                //["FullName_A"] = "الاسم",
+                //["BillChargeTypeName_A"] = "نوع الخدمة",
+                //["FirstOccupancyDate"] = "تاريخ أول إشغال",
+                //["PaymentCount"] = "عدد الحركات",
+                //["TotalPositivePayments"] = "إجمالي السدادات",
+                //["TotalOldRefunds"] = "الاستردادات القديمة",
+                //["EligiblePositivePayments"] = "السدادات المؤهلة",
+                //["PaymentsRequiringReview"] = "سداد بحاجة للمراجعة",
+                //["RawGeneralBalance"] = "الرصيد العام الصافي",
+                //["TotalNewRefunds"] = "المبالغ المعالجة",
+                //["RemainingForReview"] = "المتبقي بانتظار المعالجة"
             };
 
             if (dt1 != null && dt1.Columns.Count > 0)
@@ -103,6 +103,11 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
                     bool isHidden =  c.ColumnName.Equals("BillChargeTypeID", StringComparison.OrdinalIgnoreCase)
                         || c.ColumnName.Equals("FirstOccupancyDate", StringComparison.OrdinalIgnoreCase)
+                        || c.ColumnName.Equals("PaymentCount", StringComparison.OrdinalIgnoreCase)
+                        || c.ColumnName.Equals("PaymentsRequiringReview", StringComparison.OrdinalIgnoreCase)
+                        || c.ColumnName.Equals("residentInfoID", StringComparison.OrdinalIgnoreCase)
+                        || c.ColumnName.Equals("TotalPositivePayments", StringComparison.OrdinalIgnoreCase)
+                        || c.ColumnName.Equals("TotalOldRefunds", StringComparison.OrdinalIgnoreCase)
                         || c.ColumnName.Equals("EligiblePositivePayments", StringComparison.OrdinalIgnoreCase);
 
                     dynamicColumns.Add(new TableColumn

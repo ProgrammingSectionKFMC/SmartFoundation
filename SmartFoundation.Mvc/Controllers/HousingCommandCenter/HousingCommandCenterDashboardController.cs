@@ -20,6 +20,8 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
             public const string Emerald = "#057a55";
             public const string Violet = "#6d28d9";
 
+            public const string DarkGray = "#4b5563";
+
             // ── ألوان الإدارات
             public const string Navy = "#1e3a8a";
             public const string SteelBlue = "#1d4ed8";
@@ -75,15 +77,33 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
 
             ViewBag.CommandCenterMetricCount = metrics.Count;
 
-            ApplyHousingOccupancySummary(metrics, dt2);
-
-            ApplyAllocationEfficiencySummary(metrics, dt2, dt3);
-
+            // المؤشرات الحالية الأخرى
             ApplyFinancialSummary(metrics, dt4);
 
-            var departments =
-                BuildDepartmentsFromDatabase(dt1, dt2, dt3, dt4,dt10, metrics);
+            ApplyWaitingListSummary(metrics, dt3);
+
+            // إنشاء بيانات الإدارات أولًا
+            var departments = BuildDepartmentsFromDatabase(
+                dt1,
+                dt2,
+                dt3,
+                dt4,
+                dt6,
+                dt10,
+                metrics);
+
+
+
             ViewBag.CommandCenterDepartmentCount = departments.Count;
+
+
+            ApplyOccupancySummary(metrics, departments);
+
+            // حساب كفاءة جاهزية المباني غير المشغولة
+            ApplyReadinessSummary(metrics, departments);
+
+            // حساب كفاءة إجراءات الإسكان من الدورات المكتملة
+            ApplyHousingProceduresSummary(metrics, dt10);
 
             var card =
                 BuildCommandCenterCard(metrics, departments);
@@ -159,6 +179,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
                     dt2,
                     dt3,
                     dt4,
+                    dt6,
                     dt10,
                     metrics);
 
@@ -219,7 +240,446 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
 
 
 
+        [HttpGet]
+        public async Task<IActionResult> WaitingListData(string id)
+        {
+            if (!InitPageContext(out _))
+                return Unauthorized(new { message = "انتهت جلسة المستخدم." });
 
+            ControllerName = "HousingCommandCenterDashboard";
+            PageName = "HousingCommandCenterDashboard";
+
+            if (!long.TryParse(
+                    id,
+                    NumberStyles.None,
+                    CultureInfo.InvariantCulture,
+                    out var targetIdaraID)
+                || targetIdaraID <= 0)
+            {
+                return BadRequest(new { message = "رقم الإدارة غير صحيح." });
+            }
+
+            // قيد مؤقت مطابق لقيد SQL الحالي.
+            // لا نسمح بالوصول إلى إدارة أخرى حتى اكتمال
+            // تطبيق CanViewAllHousingDashboard.
+            if (!long.TryParse(
+                    IdaraId,
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var currentIdaraID)
+                || currentIdaraID != targetIdaraID)
+            {
+                return StatusCode(403,
+                    new { message = "غير مصرح بعرض قوائم انتظار هذه الإدارة." });
+            }
+
+            var spParameters = new object?[]
+            {
+        PageName,
+        IdaraId,
+        usersId,
+        HostName,
+        targetIdaraID,   // parameter_01
+        "waitinglist",   // parameter_02
+        null             // parameter_03
+            };
+
+            DataSet ds;
+
+            try
+            {
+                ds = await _mastersServies
+                    .GetDataLoadDataSetAsync(spParameters);
+            }
+            catch (Exception)
+            {
+                return StatusCode(500,
+                    new { message = "حدث خطأ أثناء تحميل قوائم الانتظار." });
+            }
+
+            // Table[0] = Permissions
+            // Table[1] = Summary
+            // Table[2] = Waiting Classes
+            // Table[3] = Allocation / Housing Stages
+
+
+            if (ds.Tables.Count < 4
+                || ds.Tables[1].Rows.Count == 0
+                || !ds.Tables[1].Columns.Contains("TotalUniqueResidents")
+                || !ds.Tables[2].Columns.Contains("WaitingClassID")
+                || !ds.Tables[3].Columns.Contains("ActionTypeID"))
+            {
+                return StatusCode(500, new
+                {
+                    message = "نتائج قوائم الانتظار غير مكتملة."
+                });
+            }
+
+
+            var summary = ds.Tables[1].Rows[0];
+
+            var model = new DepWaitingListDetail
+            {
+                TotalWaitingRecords =
+                    DbInt(summary, "TotalWaitingRecords") ?? 0,
+
+                WaitingResidents =
+                    DbInt(summary, "WaitingResidents") ?? 0,
+
+                AllocationResidents =
+                    DbInt(summary, "AllocationResidents") ?? 0,
+
+                HousingProcedureResidents =
+                    DbInt(summary, "HousingProcedureResidents") ?? 0,
+
+                MainWaitingResidents =
+                    DbInt(summary, "MainWaitingResidents") ?? 0,
+
+                SideWaitingResidents =
+                    DbInt(summary, "SideWaitingResidents") ?? 0
+            };
+
+            foreach (DataRow row in ds.Tables[2].Rows)
+            {
+                model.Classes.Add(new DepWaitingClassDetail
+                {
+                    WaitingClassID =
+                        DbInt(row, "WaitingClassID") ?? 0,
+
+                    WaitingClassName =
+                        DbString(row, "WaitingClassName"),
+
+                    SortOrder =
+                        DbInt(row, "SortOrder") ?? 0,
+
+                    ClassType =
+                        DbString(row, "ClassType"),
+
+                    WaitingResidents =
+                        DbInt(row, "WaitingResidents") ?? 0,
+
+                    AllocationResidents =
+                        DbInt(row, "AllocationResidents") ?? 0,
+
+                    HousingProcedureResidents =
+                        DbInt(row, "HousingProcedureResidents") ?? 0
+                });
+            }
+
+            foreach (DataRow row in ds.Tables[3].Rows)
+            {
+                model.Stages.Add(new DepWaitingStageDetail
+                {
+                    ActionTypeID =
+                        DbInt(row, "ActionTypeID") ?? 0,
+
+                    ActionName =
+                        DbString(row, "ActionName"),
+
+                    WaitingStage =
+                        DbString(row, "WaitingStage"),
+
+                    ResidentsCount =
+                        DbInt(row, "ResidentsCount") ?? 0
+                });
+            }
+
+            return Json(model);
+        }
+
+
+
+
+        [HttpGet]
+        public async Task<IActionResult> WaitingListDetails(
+    string id,
+    string mode = "DETAIL_ALL",
+    int? waitingClassID = null,
+    string? searchText = null,
+    int pageNumber = 1,
+    int pageSize = 25)
+        {
+            // --------------------------------------------------
+            // Context
+            // --------------------------------------------------
+            if (!InitPageContext(out var redirect))
+                return redirect!;
+
+            ControllerName = "HousingCommandCenterDashboard";
+            PageName = "HousingCommandCenterDashboard";
+
+            // --------------------------------------------------
+            // Department
+            // --------------------------------------------------
+            if (!long.TryParse(
+                    id,
+                    NumberStyles.None,
+                    CultureInfo.InvariantCulture,
+                    out var targetIdaraID)
+                || targetIdaraID <= 0)
+            {
+                return BadRequest("رقم الإدارة غير صحيح.");
+            }
+
+            // نفس قيد الصلاحية المستخدم في WaitingListData
+            if (!long.TryParse(
+                    IdaraId,
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out var currentIdaraID)
+                || currentIdaraID != targetIdaraID)
+            {
+                return StatusCode(
+                    403,
+                    "غير مصرح بعرض قوائم انتظار هذه الإدارة.");
+            }
+
+            // --------------------------------------------------
+            // Mode
+            // --------------------------------------------------
+            mode = (mode ?? string.Empty)
+                .Trim()
+                .ToUpperInvariant();
+
+            var allowedModes = new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase)
+    {
+        "DETAIL_ALL",
+        "DETAIL_WAITING",
+        "DETAIL_ALLOCATION",
+        "DETAIL_HOUSING",
+        "DETAIL_MAIN_WAITING",
+        "DETAIL_SIDE_WAITING"
+    };
+
+            if (!allowedModes.Contains(mode))
+            {
+                return BadRequest("نوع تفاصيل قوائم الانتظار غير صحيح.");
+            }
+
+            // --------------------------------------------------
+            // Filters
+            // --------------------------------------------------
+            if (waitingClassID.HasValue && waitingClassID.Value <= 0)
+            {
+                return BadRequest("فئة قائمة الانتظار غير صحيحة.");
+            }
+
+            searchText = string.IsNullOrWhiteSpace(searchText)
+                ? null
+                : searchText.Trim();
+
+            if (pageNumber < 1)
+                pageNumber = 1;
+
+            if (pageSize != 25 &&
+                pageSize != 50 &&
+                pageSize != 100)
+            {
+                pageSize = 25;
+            }
+
+            // --------------------------------------------------
+            // DataLoad
+            //
+            // parameter_01 = targetIdaraID
+            // parameter_02 = waitinglist
+            // parameter_03 = mode
+            // parameter_04 = searchText
+            // parameter_05 = waitingClassID
+            // parameter_06 = NULL
+            // parameter_07 = pageNumber
+            // parameter_08 = pageSize
+            // --------------------------------------------------
+            var spParameters = new object?[]
+            {
+        PageName,
+        IdaraId,
+        usersId,
+        HostName,
+
+        targetIdaraID,
+        "waitinglist",
+        mode,
+        searchText,
+        waitingClassID,
+        null,
+        pageNumber,
+        pageSize
+            };
+
+            DataSet ds;
+
+            try
+            {
+                ds = await _mastersServies
+                    .GetDataLoadDataSetAsync(spParameters);
+            }
+            catch (Exception)
+            {
+                TempData["Error"] =
+                    "حدث خطأ أثناء تحميل تفاصيل قوائم الانتظار.";
+
+                return RedirectToAction(
+                    "Department",
+                    new { id });
+            }
+
+            // --------------------------------------------------
+            // Result Sets
+            //
+            // Table[0] = Permissions
+            // Table[1] = Waiting List Details
+            // Table[2] = Paging Metadata
+            //
+            // Do NOT call SplitDataSet.
+            // --------------------------------------------------
+            if (ds.Tables.Count < 3 ||
+    !ds.Tables[2].Columns.Contains("TotalRows") ||
+    ds.Tables[2].Rows.Count == 0 ||
+    (ds.Tables[1].Rows.Count > 0 &&
+        (!ds.Tables[1].Columns.Contains("WaitingListOrder") ||
+         !ds.Tables[1].Columns.Contains("WaitingClassID"))))
+            {
+                TempData["Error"] =
+                    "نتائج تفاصيل قوائم الانتظار غير مكتملة.";
+
+                return RedirectToAction(
+                    "Department",
+                    new { id });
+            }
+
+            var detailsTable = ds.Tables[1];
+            var metaRow = ds.Tables[2].Rows[0];
+
+            // --------------------------------------------------
+            // Rows
+            // --------------------------------------------------
+            var rows = new List<DepWaitingListDetailRow>();
+
+            foreach (DataRow row in detailsTable.Rows)
+            {
+                rows.Add(new DepWaitingListDetailRow
+                {
+                    WaitingListOrder =
+                        DbLong(row, "WaitingListOrder") ?? 0,
+
+                    ActionID =
+                        DbLong(row, "ActionID") ?? 0,
+
+                    ResidentInfoID =
+                        DbLong(row, "residentInfoID") ?? 0,
+
+                    GeneralNo =
+                        DbString(row, "GeneralNo"),
+
+                    FullName =
+                        DbString(row, "FullName"),
+
+                    NationalID =
+                        DbString(row, "NationalID"),
+
+                    RankName =
+                        DbString(row, "RankName"),
+
+                    WaitingClassID =
+                        DbInt(row, "WaitingClassID") ?? 0,
+
+                    WaitingClassName =
+                        DbString(row, "WaitingClassName"),
+
+                    ClassType =
+                        DbString(row, "ClassType"),
+
+                    ActionDecisionNo =
+                        DbString(row, "ActionDecisionNo"),
+
+                    ActionDecisionDate =
+                        DbString(row, "ActionDecisionDate"),
+
+                    LastActionTypeID =
+                        DbInt(row, "LastActionTypeID"),
+
+                    LastActionTypeName =
+                        DbString(row, "LastActionTypeName"),
+
+                    WaitingStage =
+                        DbString(row, "WaitingStage"),
+
+                    LastActionDate =
+                        DbDate(row, "LastActionDate"),
+
+                    BuildingDetailsNo =
+                        DbString(row, "buildingDetailsNo")
+                });
+            }
+
+            // --------------------------------------------------
+            // Title
+            // --------------------------------------------------
+            var title = mode switch
+            {
+                "DETAIL_WAITING" =>
+                    "إجمالي المنتظرين",
+
+                "DETAIL_ALLOCATION" =>
+                    "في مراحل التخصيص",
+
+                "DETAIL_HOUSING" =>
+                    "في مراحل التسكين",
+
+                "DETAIL_MAIN_WAITING" =>
+                    "قوائم الانتظار الرئيسية",
+
+                "DETAIL_SIDE_WAITING" =>
+                    "قوائم الانتظار الجانبية",
+
+                _ =>
+                    "إجمالي سجلات قوائم الانتظار"
+            };
+
+            if (waitingClassID.HasValue)
+            {
+                var className = rows
+                    .FirstOrDefault()?
+                    .WaitingClassName;
+
+                if (!string.IsNullOrWhiteSpace(className))
+                    title = className;
+            }
+
+            // --------------------------------------------------
+            // ViewModel
+            // --------------------------------------------------
+            var vm = new DepWaitingListDetailsViewModel
+            {
+                DepartmentId = id,
+
+                Title = title,
+
+                Mode = mode,
+
+                WaitingClassID = waitingClassID,
+
+                SearchText = searchText ?? string.Empty,
+
+                PageNumber =
+                    DbInt(metaRow, "PageNumber") ?? pageNumber,
+
+                PageSize =
+                    DbInt(metaRow, "PageSize") ?? pageSize,
+
+                TotalRows =
+                    DbLong(metaRow, "TotalRows") ?? 0,
+
+                TotalPages =
+                    DbLong(metaRow, "TotalPages") ?? 0,
+
+                Rows = rows
+            };
+
+            return View("WaitingListDetails", vm);
+        }
 
         public async Task<IActionResult> BuildingDetails(
             string id,
@@ -422,14 +882,15 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
             // Server-side allowlist
             //----------------------------------------------------------
             var allowedWorkflows =
-                new HashSet<string>(
-                    StringComparer.OrdinalIgnoreCase)
-                {
-            "ALL",
-            "ALLOCATION",
-            "EXTEND",
-            "EXIT"
-                };
+    new HashSet<string>(
+        StringComparer.OrdinalIgnoreCase)
+    {
+        "ALL",
+        "ALLOCATION",
+        "HOUSING",
+        "EXTEND",
+        "EXIT"
+    };
 
             if (!allowedWorkflows.Contains(workflow))
             {
@@ -484,11 +945,17 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
             //
             // Do NOT call SplitDataSet.
             //----------------------------------------------------------
+
+
+           
+
             DataTable? detailsTable =
                 ds.Tables.Count > 1
                     ? ds.Tables[1]
                     : null;
 
+
+           
 
             //----------------------------------------------------------
             // ViewModel
@@ -1361,6 +1828,44 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
         }
 
 
+        private static string FormatWorkflowDuration(decimal? averageDays)
+        {
+            if (!averageDays.HasValue)
+                return "—";
+
+            var totalSeconds = (long)Math.Round(
+                Math.Max(0m, averageDays.Value) * 86400m,
+                0,
+                MidpointRounding.AwayFromZero);
+
+            if (totalSeconds < 60)
+                return $"{totalSeconds} ثانية";
+
+            if (totalSeconds < 3600)
+            {
+                var minutes = totalSeconds / 60;
+                var seconds = totalSeconds % 60;
+
+                return seconds == 0
+                    ? $"{minutes} دقيقة"
+                    : $"{minutes} دقيقة و{seconds} ثانية";
+            }
+
+            if (totalSeconds < 86400)
+            {
+                var hours = totalSeconds / 3600;
+                var minutes = (totalSeconds % 3600) / 60;
+
+                return minutes == 0
+                    ? $"{hours} ساعة"
+                    : $"{hours} ساعة و{minutes} دقيقة";
+            }
+
+            return $"{averageDays.Value:0.0} يوم";
+        }
+
+
+
         private static
         (
             int CompletedCount,
@@ -1428,12 +1933,81 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
         }
 
 
+        private static (
+    decimal? Percent,
+    decimal? Actual,
+    decimal? Target,
+    int Ready,
+    int Allocation,
+    string Status
+) GetReadinessKpi(DataTable? readinessTable, string idaraID)
+        {
+            if (readinessTable == null)
+                return (null, null, null, 0, 0,
+                    "بيانات الجاهزية غير متاحة");
+
+            // نفس الدالة التي تبني مجموعات التبويب t1
+            var detail = BuildHousingReadinessFromDatabase(
+                readinessTable, idaraID);
+
+            if (detail == null)
+                return (null, null, null, 0, 0,
+                    "لا يوجد مساكن غير مشغولة");
+
+            int CountGroup(string key) =>
+                detail.Groups
+                    .Where(x => string.Equals(
+                        x.Key, key,
+                        StringComparison.OrdinalIgnoreCase))
+                    .Sum(x => x.HousingUnitsCount);
+
+            int total = detail.TotalHousingUnits;
+            int occupied = CountGroup("OCCUPIED");
+            int ready = CountGroup("READY");
+            int allocation = CountGroup("ALLOCATION");
+
+            int groupedTotal =
+                detail.Groups.Sum(x => x.HousingUnitsCount);
+
+            int nonOccupied = total - occupied;
+            int readyTotal = ready + allocation;
+
+            // منع إصدار نسبة عند اختلاف بيانات التصنيف
+            if (total != groupedTotal ||
+                nonOccupied < 0 ||
+                readyTotal > nonOccupied)
+            {
+                return (null, null, null, ready, allocation,
+                    "يوجد اختلاف في بيانات الجاهزية");
+            }
+
+            if (nonOccupied == 0)
+            {
+                return (null, null, null, ready, allocation,
+                    "لا يوجد مساكن غير مشغولة");
+            }
+
+            decimal percent = Math.Round(
+                readyTotal * 100m / nonOccupied, 1);
+
+            return (
+                percent,
+                readyTotal,
+                nonOccupied,
+                ready,
+                allocation,
+                "قابل للاحتساب"
+            );
+        }
+
+
         private static List<HousingCommandCenterDepartment>
     BuildDepartmentsFromDatabase(
         DataTable? idaraTable,
         DataTable? occupancyTable,
         DataTable? waitingTable,
         DataTable? financialTable,
+        DataTable? readinessTable,
         DataTable? workflowPerformanceTable,
         List<HousingCommandCenterMetric> metrics)
         {
@@ -1760,11 +2334,18 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
                 //----------------------------------------------------------
 
                 var allocationWorkflow =
+    GetDepartmentWorkflowPerformance(
+        workflowPerformanceTable,
+        idaraID,
+        "ALLOCATION",
+        30m);
+
+                var housingWorkflow =
                     GetDepartmentWorkflowPerformance(
                         workflowPerformanceTable,
                         idaraID,
-                        "ALLOCATION",
-                        30m);
+                        "HOUSING",
+                        5m);
 
                 var extendWorkflow =
                     GetDepartmentWorkflowPerformance(
@@ -1782,15 +2363,16 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
 
 
                 var procedureEfficiencies =
-                    new decimal?[]
-                    {
+    new decimal?[]
+    {
         allocationWorkflow.EfficiencyPercent,
+        housingWorkflow.EfficiencyPercent,
         extendWorkflow.EfficiencyPercent,
         exitWorkflow.EfficiencyPercent
-                    }
-                    .Where(x => x.HasValue)
-                    .Select(x => x!.Value)
-                    .ToList();
+    }
+    .Where(x => x.HasValue)
+    .Select(x => x!.Value)
+    .ToList();
 
 
                 decimal? housingProceduresEfficiencyPercent =
@@ -1808,17 +2390,26 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
                 if (allocationWorkflow.EfficiencyPercent.HasValue)
                 {
                     procedureNotes.Add(
-                        $"التسكين: متوسط {allocationWorkflow.AverageDays:0.0} يوم " +
+                        $"التخصيص: متوسط {FormatWorkflowDuration(allocationWorkflow.AverageDays)} " +
                         $"| الهدف 30 يوم " +
                         $"| الكفاءة {allocationWorkflow.EfficiencyPercent:0.0}% " +
                         $"| مكتمل {allocationWorkflow.CompletedCount}");
+                }
+
+                if (housingWorkflow.EfficiencyPercent.HasValue)
+                {
+                    procedureNotes.Add(
+                        $"التسكين: متوسط {FormatWorkflowDuration(housingWorkflow.AverageDays)} " +
+                        $"| الهدف 5 أيام " +
+                        $"| الكفاءة {housingWorkflow.EfficiencyPercent:0.0}% " +
+                        $"| مكتمل {housingWorkflow.CompletedCount}");
                 }
 
 
                 if (extendWorkflow.EfficiencyPercent.HasValue)
                 {
                     procedureNotes.Add(
-                        $"الإمهال: متوسط {extendWorkflow.AverageDays:0.0} يوم " +
+                        $"الإمهال: متوسط {FormatWorkflowDuration(extendWorkflow.AverageDays)} " +
                         $"| الهدف 5 أيام " +
                         $"| الكفاءة {extendWorkflow.EfficiencyPercent:0.0}% " +
                         $"| مكتمل {extendWorkflow.CompletedCount}");
@@ -1828,7 +2419,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
                 if (exitWorkflow.EfficiencyPercent.HasValue)
                 {
                     procedureNotes.Add(
-                        $"الإخلاء: متوسط {exitWorkflow.AverageDays:0.0} يوم " +
+                        $"الإخلاء: متوسط {FormatWorkflowDuration(exitWorkflow.AverageDays)} " +
                         $"| الهدف 5 أيام " +
                         $"| الكفاءة {exitWorkflow.EfficiencyPercent:0.0}% " +
                         $"| مكتمل {exitWorkflow.CompletedCount}");
@@ -1842,7 +2433,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
                             procedureNotes)
                         : "لا توجد دورات مكتملة يمكن احتساب الكفاءة منها.";
 
-
+                var readinessKpi = GetReadinessKpi(readinessTable, idaraID);
 
                 var departmentMetrics =
                     metrics
@@ -1858,65 +2449,114 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
                                 {
                                     MetricKey = metric.Key,
 
-                                    // إجمالي الوحدات
-                                    Target = totalHousingUnits,
+                                    Actual = readinessKpi.Actual,
+                                    Target = readinessKpi.Target,
 
-                                    // الوحدات المشغولة
-                                    Actual = occupiedHousingUnits,
+                                    CompletionPercent = readinessKpi.Percent,
 
-                                    // نستخدم النسبة المحسوبة من SQL
-                                    CompletionPercent = occupancyPercent,
-
-                                    DisplayText =
-                                        $"{occupancyPercent:0.0}%",
+                                    DisplayText = readinessKpi.Percent.HasValue
+                                        ? $"{readinessKpi.Percent.Value:0.0}%"
+                                        : readinessKpi.Status,
 
                                     Tone = metric.Tone,
                                     Color = metric.Color,
-                                    
 
-                                    Note =
-                                        $"إجمالي الوحدات: {totalHousingUnits:0} | " +
-                                        $"المشغولة: {occupiedHousingUnits:0} | " +
-                                        $"غير المشغولة: {unoccupiedHousingUnits:0} | " +
-                                        $"نسبة الإشغال: {occupancyPercent:0.0}%"
+                                    Href =
+                                        $"/HousingCommandCenterDashboard/Department?id={idaraID}#t1",
+
+                                    Note = readinessKpi.Percent.HasValue
+                                        ? $"جاهزة للتسكين: {readinessKpi.Ready:N0} | " +
+                                          $"تحت التخصيص: {readinessKpi.Allocation:N0} | " +
+                                          $"إجمالي الجاهزة: {readinessKpi.Actual:N0} | " +
+                                          $"المساكن غير المشغولة: {readinessKpi.Target:N0} | " +
+                                          $"كفاءة الجاهزية: {readinessKpi.Percent.Value:0.0}%"
+                                        : readinessKpi.Status
                                 };
                             }
 
-
                             //--------------------------------------------------
                             // الكارد الثاني:
-                            // قوائم الانتظار مقابل الوحدات غير المشغولة
+                            //
                             //--------------------------------------------------
-                            if (metric.Key == "m_allocation_balance")
+                            if (metric.Key == "m_housing_occupancy")
                             {
+                                decimal? percent = totalHousingUnits > 0
+                                    ? Math.Round(
+                                        occupiedHousingUnits * 100m / totalHousingUnits,
+                                        1)
+                                    : null;
+
                                 return new HousingCommandCenterDepartmentMetric
                                 {
                                     MetricKey = metric.Key,
 
-                                    // المنتظرون
-                                    Actual = currentWaitingCount,
+                                    Actual = totalHousingUnits > 0
+                                        ? occupiedHousingUnits : (decimal?)null,
 
-                                    // المنازل الشاغرة
-                                    Target = unoccupiedHousingUnits,
+                                    Target = totalHousingUnits > 0
+                                        ? totalHousingUnits : (decimal?)null,
 
-                                    // كفاءة التخصيص هي النسبة التي تدخل في أداء الإدارة
-                                    CompletionPercent = allocationEfficiencyPercent,
+                                    CompletionPercent = percent,
 
-                                    DisplayText =
-                                        $"{allocationEfficiencyPercent:0.0}%",
+                                    DisplayText = percent.HasValue
+                                        ? $"{percent.Value:0.0}%"
+                                        : "لا توجد مساكن لدى الإدارة",
 
                                     Tone = metric.Tone,
-
                                     Color = metric.Color,
 
-                                    Note =
-                                        $"المنتظرون: {currentWaitingCount:0} | " +
-                                        $"المنازل الشاغرة: {unoccupiedHousingUnits:0} | " +
-                                        $"المنتظرون بعد التغطية: {waitingDeficit:0} | " +
-                                        $"كفاءة التخصيص: {allocationEfficiencyPercent:0.0}%"
+                                    Href =
+                                        $"/HousingCommandCenterDashboard/Department?id={idaraID}#t2",
+
+                                    Note = percent.HasValue
+                                        ? $"إجمالي المساكن: {totalHousingUnits:0} | " +
+                                          $"المشغولة: {occupiedHousingUnits:0} | " +
+                                          $"غير المشغولة: {unoccupiedHousingUnits:0} | " +
+                                          $"نسبة الإشغال: {percent.Value:0.0}%"
+                                        : "لا توجد مساكن لدى الإدارة"
                                 };
                             }
 
+
+                            //--------------------------------------------------
+                            // قوائم الانتظار — إحصاءات فقط دون نسبة كفاءة
+                            //--------------------------------------------------
+                            if (metric.Key == "m_waiting_list")
+                            {
+                                int Wait(string column) => waitingRow == null
+                                    ? 0
+                                    : DbInt(waitingRow, column) ?? 0;
+
+                                return new HousingCommandCenterDepartmentMetric
+                                {
+                                    MetricKey = metric.Key,
+
+                                    // المنتظرون فعليًا
+                                    Actual = Wait("WaitingResidents"),
+
+                                    // إجمالي سجلات قوائم الانتظار
+                                    Target = Wait("TotalWaitingRecords"),
+
+                                    // لا توجد نسبة كفاءة لهذا المؤشر
+                                    CompletionPercent = null,
+
+                                    DisplayText = "بيانات إحصائية",
+
+                                    Tone = metric.Tone,
+                                    Color = metric.Color,
+
+                                    // الانتقال إلى تبويب قوائم الانتظار
+                                    Href =
+                                        $"/HousingCommandCenterDashboard/Department?id={idaraID}#t8",
+
+                                    // بقية إحصاءات الإدارة
+                                    Note =
+                                        $"القوائم الرئيسية: {Wait("MainWaitingResidents"):N0} | " +
+                                        $"القوائم الجانبية: {Wait("SideWaitingResidents"):N0} | " +
+                                        $"في مرحلة التخصيص: {Wait("AllocationResidents"):N0} | " +
+                                        $"في مرحلة التسكين: {Wait("HousingResidents"):N0}"
+                                };
+                            }
 
                             //--------------------------------------------------
                             // كفاءة إجراءات الإسكان
@@ -1939,13 +2579,15 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
                                         housingProceduresEfficiencyPercent,
 
                                     DisplayText =
-                                        housingProceduresEfficiencyPercent.HasValue
-                                            ? $"{housingProceduresEfficiencyPercent.Value:0.0}%"
-                                            : "—",
+                                    housingProceduresEfficiencyPercent.HasValue
+                                        ? $"{housingProceduresEfficiencyPercent.Value:0.0}%"
+                                        : "لا توجد إجراءات إسكان",
 
                                     Tone = metric.Tone,
 
                                     Color = metric.Color,
+
+                                    Href =$"/HousingCommandCenterDashboard/Department?id={idaraID}#t3",
 
                                     Note =
                                         housingProceduresNote
@@ -1979,9 +2621,9 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
                                         financialEfficiencyPercent,
 
                                     DisplayText =
-                                        financialEfficiencyPercent.HasValue
-                                            ? $"{financialEfficiencyPercent.Value:0.0}%"
-                                            : "—",
+    financialEfficiencyPercent.HasValue
+        ? $"{financialEfficiencyPercent.Value:0.0}%"
+        : "لا توجد بيانات مالية",
 
                                     Tone =
                                         metric.Tone,
@@ -2077,14 +2719,21 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
            new HousingCommandCenterMetric
             {
                 Key        = "m_housing_readiness",
-                SortOrder  = 1,
+                SortOrder  = 2,
 
-                Title      = "جاهزية السكن ونسب الإشغال",
-                ShortTitle = "جاهزية السكن ونسب الإشغال",
+
+                Title = "كفاءة جاهزية المباني غير المشغولة",
+                ShortTitle = "كفاءة جاهزية المباني غير المشغولة",
 
                 Subtitle =
-                    "يقيس نسبة الوحدات السكنية المشغولة من إجمالي الوحدات السكنية",
-                FormulaText =  "تقاس النسبة من نسبة الوحدات السكنية المشغولة من إجمالي الوحدات السكنية.",
+                    "يقيس نسبة المساكن الجاهزة للتسكين أو الواقعة تحت إجراءات التخصيص من إجمالي المساكن غير المشغولة",
+
+                FormulaText =
+                    "كفاءة الجاهزية = (READY + ALLOCATION) ÷ إجمالي المساكن غير المشغولة × 100",
+
+
+
+
 
                 Target = 100,
                 Actual = 0,
@@ -2092,9 +2741,9 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
                 Unit = "%",
             
                 // معنى القيم داخل هذا الكارد
-                ActualLabel = "المشغول",
-                TargetLabel = "الإجمالي",
-                RemainingLabel = "غير المشغول",
+                ActualLabel = "الجاهزة أو تحت التخصيص",
+                TargetLabel = "غير المشغولة",
+                RemainingLabel = "غير الجاهزة",
             
                 // Actual و Target هنا أعداد وحدات وليست نسبًا مئوية
                 ShowValueUnit = false,
@@ -2105,65 +2754,100 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
                 Color = Color.Gold,
 
 
-                Hint =
-                    "نسبة الإشغال = عدد الوحدات المشغولة ÷ إجمالي الوحدات السكنية × 100"
+               Hint ="تُستبعد المساكن المشغولة، وتُعتبر المساكن تحت إجراءات التخصيص جاهزة للتسكين.",
+
             },
             new HousingCommandCenterMetric
+                            {
+                                Key = "m_housing_occupancy",
+                                SortOrder = 3,
+
+                                Title = "إشغال المباني",
+                                ShortTitle = "إشغال المباني",
+
+                                Subtitle = "يقيس نسبة المساكن المشغولة من إجمالي المساكن السكنية",
+                                FormulaText =
+         "نسبة الإشغال = المساكن المشغولة ÷ إجمالي المساكن × 100",
+
+                                Actual = null,
+                                Target = null,
+                                CompletionPercent = null,
+
+                                Unit = "%",
+                                ActualLabel = "المشغولة",
+                                TargetLabel = "إجمالي المساكن",
+                                RemainingLabel = "غير المشغولة",
+                                ShowValueUnit = false,
+
+                                Icon = "fa-solid fa-house-user",
+                                Emoji = "🏘️",
+                                Tone = "info",
+                                Color = Color.Teal,
+
+                                Hint = "تُحتسب نسبة الإشغال من المساكن النشطة، وتُستبعد الإدارات التي ليس لديها مساكن."
+                            },
+
+           new HousingCommandCenterMetric
             {
-                Key        = "m_allocation_balance",
-                SortOrder  = 2,
+             Key = "m_waiting_list",
+             SortOrder = 1,
 
-                Title = "كفاءة تخصيص السكن للمنتظرين",
-                ShortTitle = "كفاءة تخصيص السكن للمنتظرين",
-                Subtitle = "يوضح كفاءة الإدارة في معالجة قوائم الانتظار في ضوء وجود منازل شاغرة",
-                FormulaText =   "تبدأ الكفاءة من 100% وتنخفض بحسب نسبة وجود منتظرين بالتزامن مع وجود منازل شاغرة.",
+             Title = "قوائم الانتظار",
+             ShortTitle = "قوائم الانتظار",
 
-                Target = 0,
-                Actual = 0,
-                CompletionPercent = 0,
+             Subtitle =
+                 "بيانات إحصائية",
 
-                Unit = "%",
+             FormulaText =
+                 "لا تدخل في إجمالي كفاءة عمل الإدارة",
 
-                ActualLabel = "المنتظرون",
-                TargetLabel = "المنازل الشاغرة",
-                RemainingLabel = "المنتظرون بعد تغطية المنازل الشاغرة",
+             Actual = null,
+             Target = null,
+             CompletionPercent = null,
 
-                ShowValueUnit = false,
+             ActualLabel = "المنتظرون فعليًا",
+             TargetLabel = "إجمالي السجلات",
 
+             ShowValueUnit = false,
 
+             Icon = "fa-solid fa-list-ol",
+             Emoji = "📋",
 
+             Tone = "info",
+             Color = Color.DarkGray,
 
+             Hint = ""
+                },
 
-
-                Icon = "fa-solid fa-users-viewfinder",
-                Emoji = "👥",
-                Tone = "info",
-                Color = Color.Teal,
-
-                Hint = "يقيس المؤشر كفاءة الإدارة في تخصيص السكن للمنتظرين، وينخفض عند وجود منتظرين بالتزامن مع وجود منازل شاغرة."
-
-            },
             new HousingCommandCenterMetric
 {
     Key = "m_housing_procedures",
-    SortOrder = 3,
+    SortOrder = 4,
 
     Title = "كفاءة إجراءات الإسكان",
     ShortTitle = "كفاءة إجراءات الإسكان",
 
-    Subtitle =
-        "يقيس سرعة إنجاز التسكين والإمهال والإخلاء مقارنة بالمدد المستهدفة",
 
-    FormulaText = "تقارن متوسط مدة كل مسار بالمدة المستهدفة له بحد أقصى 100%، ثم تحسب متوسط المسارات المكتملة. المستهدف: التسكين 30 يومًا، الإمهال 5 أيام، الإخلاء 5 أيام.",
+Subtitle =
+    "يقيس سرعة إنجاز التخصيص والتسكين والإمهال والإخلاء مقارنة بالمدد المستهدفة",
+
+FormulaText =
+    "تُحسب كفاءة كل مسار مكتمل من نسبة المدة المستهدفة إلى متوسط مدة إنجازه، بحد أقصى 100%. " +
+    "ثم يُحسب متوسط كفاءة المسارات القابلة للتقييم بأوزان متساوية. " +
+    "التخصيص: 30 يومًا، والتسكين والإمهال والإخلاء: 5 أيام لكل مسار.",
+
+
+
     Target = 100,
     Actual = 0,
     CompletionPercent = null,
 
     Unit = "%",
 
-    ActualLabel = "الكفاءة",
-    TargetLabel = "الهدف",
-    RemainingLabel = "الفجوة",
+    ActualLabel = "كفاءة سرعة الإنجاز",
+TargetLabel = "الكفاءة المستهدفة",
+RemainingLabel = "الفجوة عن المستهدف",
+
 
     ShowValueUnit = true,
 
@@ -2180,7 +2864,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
            new HousingCommandCenterMetric
             {
                 Key = "m_finance_utilities",
-                SortOrder = 4,
+                SortOrder = 5,
 
                 Title = "كفاءة التحصيل والتسوية المالية",
                 ShortTitle = "الكفاءة المالية",
@@ -2742,6 +3426,12 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
                             summaryRow,
                             "AllocationCurrent")
                         ?? 0,
+
+                    HousingCurrent =
+    DbInt(
+        summaryRow,
+        "HousingCurrent")
+    ?? 0,
 
                     ExtendCurrent =
                         DbInt(
@@ -4249,6 +4939,9 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
                 "ALLOCATION" =>
                     "إجراءات التخصيص الجارية",
 
+                "HOUSING" =>
+                    "إجراءات التسكين الجارية",
+
                 "EXTEND" =>
                     "إجراءات الإمهال الجارية",
 
@@ -4549,7 +5242,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
             }
         };
 
-        
+
 
         private static DepMaintenanceDetail BuildMaintenanceDetail(string depId) => depId switch
         {
@@ -4819,6 +5512,38 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
         }
 
 
+        private static void ApplyWaitingListSummary(
+    List<HousingCommandCenterMetric> metrics,
+    DataTable? waitingTable)
+        {
+            var metric = metrics.FirstOrDefault(
+                x => x.Key == "m_waiting_list");
+
+            if (metric == null)
+                return;
+
+            int Total(string column) => waitingTable == null
+                ? 0
+                : waitingTable.AsEnumerable()
+                    .Sum(r => DbInt(r, column) ?? 0);
+
+            // إجمالي سجلات الانتظار
+            metric.Target = Total("TotalWaitingRecords");
+
+            // المنتظرون فعليًا
+            metric.Actual = Total("WaitingResidents");
+
+            // بطاقة إحصائية وليست مؤشر كفاءة
+            metric.CompletionPercent = null;
+
+            // بقية الإحصاءات
+            metric.Hint =
+            $"القوائم الرئيسية: {Total("MainWaitingResidents").ToString("N0", CultureInfo.InvariantCulture)} | " +
+            $"القوائم الجانبية: {Total("SideWaitingResidents").ToString("N0", CultureInfo.InvariantCulture)} | " +
+            $"في مرحلة التخصيص: {Total("AllocationResidents").ToString("N0", CultureInfo.InvariantCulture)} | " +
+            $"في مرحلة التسكين: {Total("HousingResidents").ToString("N0", CultureInfo.InvariantCulture)}";
+        }
+
         private static void ApplyHousingProceduresSummary(
     List<HousingCommandCenterMetric> metrics,
     DataTable? workflowPerformanceTable)
@@ -4928,7 +5653,8 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
 
 
                 notes.Add(
-                    $"{workflowName}: متوسط {globalAverageDays:0.0} يوم " +
+
+                    $"{workflowName}: متوسط {FormatWorkflowDuration(globalAverageDays)} " +
                     $"| الهدف {targetDays:0} يوم " +
                     $"| الكفاءة {efficiency.Value:0.0}% " +
                     $"| مكتمل {totalCompleted}");
@@ -4936,9 +5662,14 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
 
 
             AddWorkflow(
-                "ALLOCATION",
+    "ALLOCATION",
+    "التخصيص",
+    30m);
+
+            AddWorkflow(
+                "HOUSING",
                 "التسكين",
-                30m);
+                5m);
 
             AddWorkflow(
                 "EXTEND",
@@ -5166,9 +5897,94 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
 
 
 
+        private static void ApplyReadinessSummary(
+    List<HousingCommandCenterMetric> metrics,
+    List<HousingCommandCenterDepartment> departments)
+        {
+            var metric = metrics.FirstOrDefault(
+                x => x.Key == "m_housing_readiness");
+
+            if (metric == null)
+                return;
+
+            var valid = departments
+                .SelectMany(x => x.Metrics)
+                .Where(x =>
+                    x.MetricKey == "m_housing_readiness" &&
+                    x.CompletionPercent.HasValue &&
+                    x.Target.HasValue &&
+                    x.Target.Value > 0)
+                .ToList();
+
+            if (valid.Count == 0)
+            {
+                metric.Actual = null;
+                metric.Target = null;
+                metric.CompletionPercent = null;
+                metric.Hint = "لا يوجد مساكن غير مشغولة";
+                return;
+            }
+
+            decimal ready = valid.Sum(x => x.Actual ?? 0m);
+            decimal nonOccupied = valid.Sum(x => x.Target ?? 0m);
+
+            metric.Actual = ready;
+            metric.Target = nonOccupied;
+            metric.CompletionPercent =
+                Math.Round(ready * 100m / nonOccupied, 1);
+
+            metric.Hint =
+                $"الجاهزة أو تحت التخصيص: {ready:N0} | " +
+                $"المساكن غير المشغولة: {nonOccupied:N0} | " +
+                $"كفاءة الجاهزية: {metric.CompletionPercent.Value:0.0}%";
+        }
 
 
 
+
+        private static void ApplyOccupancySummary(
+    List<HousingCommandCenterMetric> metrics,
+    List<HousingCommandCenterDepartment> departments)
+        {
+            var metric = metrics.FirstOrDefault(
+                x => x.Key == "m_housing_occupancy");
+
+            if (metric == null)
+                return;
+
+            var valid = departments
+                .SelectMany(x => x.Metrics)
+                .Where(x =>
+                    x.MetricKey == "m_housing_occupancy" &&
+                    x.CompletionPercent.HasValue &&
+                    x.Target.HasValue &&
+                    x.Target.Value > 0)
+                .ToList();
+
+            if (valid.Count == 0)
+            {
+                metric.Actual = null;
+                metric.Target = null;
+                metric.CompletionPercent = null;
+                metric.Hint = "لا توجد مساكن لدى الإدارات المعروضة";
+                return;
+            }
+
+            decimal occupied = valid.Sum(x => x.Actual ?? 0m);
+            decimal total = valid.Sum(x => x.Target ?? 0m);
+
+            metric.Actual = occupied;
+            metric.Target = total;
+
+            metric.CompletionPercent =
+                Math.Round(occupied * 100m / total, 1);
+
+            metric.Hint =
+                $"المشغولة: {occupied:N0} | " +
+                $"إجمالي المساكن: {total:N0} | " +
+                $"غير المشغولة: {total - occupied:N0} | " +
+                $"نسبة الإشغال: {metric.CompletionPercent.Value:0.0}%";
+        }
 
 
 

@@ -1,0 +1,4756 @@
+﻿@model SmartFoundation.UI.ViewModels.SmartCharts.DepartmentDetailViewModel
+@using System.Text.Json
+@using System.Text.Encodings.Web
+@{
+    Layout = null;
+    var dep = Model.Department;
+    var housing = Model.HousingDetail;
+    var occupancyLocations = Model.OccupancyLocations;
+    var readiness = Model.HousingReadiness;
+
+    var readinessMetric = dep?.Metrics?
+    .FirstOrDefault(x => x.MetricKey == "m_housing_readiness");
+
+var readinessGroups =
+    readiness?.Groups?
+        .OrderBy(x => x.Order)
+        .ToList()
+    ?? new List<SmartFoundation.UI.ViewModels.SmartCharts.DepHousingReadinessGroup>();
+
+var readinessTotal =
+    readiness?.TotalHousingUnits ?? 0;
+
+    var alloc = Model.AllocationDetail;
+    var procedures = Model.HousingProcedures;
+
+var allocationPerformance =
+    procedures?.Performance
+        .FirstOrDefault(x =>
+            x.WorkflowKey == "ALLOCATION");
+
+var housingPerformance =
+    procedures?.Performance
+        .FirstOrDefault(x =>
+            x.WorkflowKey == "HOUSING");
+
+var extendPerformance =
+    procedures?.Performance
+        .FirstOrDefault(x =>
+            x.WorkflowKey == "EXTEND");
+
+var exitPerformance =
+    procedures?.Performance
+        .FirstOrDefault(x =>
+            x.WorkflowKey == "EXIT");
+
+
+    var fin = Model.FinanceDetail;
+    var maint = Model.MaintenanceDetail;
+    var car = Model.CarsDetail;
+
+    var depColor = dep?.Color ?? "#0f766e";
+    var depName = dep?.Name ?? "تفاصيل الإدارة";
+    var depOverall = dep?.OverallCompletionPercent?.ToString("0.0") ?? "—";
+
+    string Fmt(decimal v) => v.ToString("N0", System.Globalization.CultureInfo.InvariantCulture);
+    string FmtSar(decimal v) => v.ToString("N0", System.Globalization.CultureInfo.InvariantCulture) + " <span class=\"sar-icon\"></span>";
+
+    var jsonOpts = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+
+    decimal? occPct =
+    housing != null && housing.TotalUnits > 0
+        ? Math.Round(
+            (decimal)housing.Occupied /
+            housing.TotalUnits * 100m, 1)
+        : null;
+
+decimal? vacPct =
+    housing != null && housing.TotalUnits > 0
+        ? Math.Round(
+            (decimal)housing.Vacant /
+            housing.TotalUnits * 100m, 1)
+        : null;
+
+    var mPct = maint != null && maint.PlannedJobs > 0 ? Math.Round((decimal)maint.CompletedJobs / maint.PlannedJobs * 100, 1) : 0m;
+    
+}
+
+@functions
+{
+    private static string FmtDuration(decimal? durationDays)
+    {
+        if (!durationDays.HasValue)
+            return "—";
+
+        var totalMinutes =
+            (long)Math.Round(
+                durationDays.Value * 24m * 60m,
+                MidpointRounding.AwayFromZero);
+
+        if (totalMinutes <= 0)
+            return "أقل من دقيقة";
+
+        var days =
+            totalMinutes / 1440;
+
+        var hours =
+            (totalMinutes % 1440) / 60;
+
+        var minutes =
+            totalMinutes % 60;
+
+        var result = "";
+
+        if (days > 0)
+{
+    if (days == 1)
+    {
+        result += "يوم واحد";
+    }
+    else if (days == 2)
+    {
+        result += "يومان";
+    }
+    else if (days >= 3 && days <= 10)
+    {
+        result += $"{days} أيام";
+    }
+    else
+    {
+        result += $"{days} يوم";
+    }
+}
+
+        if (hours > 0)
+        {
+            if (!string.IsNullOrWhiteSpace(result))
+                result += " ";
+
+            result += $"{hours} ساعة";
+        }
+
+        if (minutes > 0)
+        {
+            if (!string.IsNullOrWhiteSpace(result))
+                result += " ";
+
+            result += $"{minutes} دقيقة";
+        }
+
+        return string.IsNullOrWhiteSpace(result)
+            ? "أقل من دقيقة"
+            : result;
+    }
+}
+
+
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>@depName</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='2' y='18' width='7' height='12' rx='3.5' fill='%230f766e'/><rect x='12' y='10' width='7' height='20' rx='3.5' fill='%232563eb'/><rect x='22' y='4' width='7' height='26' rx='3.5' fill='%23d97706'/></svg>" />
+    <link rel="stylesheet" href="~/css/Fontawesome6-5-0.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/fontawesome/css/all.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/statistics.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/smartcharts/smartcharts.housingcommandcenter.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/smartcharts/smartcharts.housingdepartment.css" asp-append-version="true" />
+
+    <style>
+        .dep-drill-card {
+            color: inherit;
+            text-decoration: none;
+            cursor: pointer;
+            transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+        }
+
+        .dep-drill-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(15, 23, 42, .08);
+        }
+
+        .readiness-drill-link {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            color: inherit;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .summary-item:has(.readiness-drill-link) {
+            transition: background .16s ease, transform .16s ease;
+        }
+
+        .summary-item:has(.readiness-drill-link):hover {
+            background: rgba(30, 58, 95, .035);
+            transform: translateY(-1px);
+        }
+
+        .drill-arrow {
+            margin-inline-start: 6px;
+            color: #94a3b8;
+            font-size: 9px;
+        }
+
+        .dep-drill-hint {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 10px;
+    padding: 7px 11px;
+    border: 1px solid #dbe5ef;
+    border-radius: 9px;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.dep-drill-hint i {
+    color: #2b6cb0;
+    font-size: 11px;
+}
+
+.dep-drill-hint strong {
+    color: #334155;
+}
+    </style>
+</head>
+<body>
+
+    @if (dep != null)
+    {
+        <!-- HEADER -->
+        <header class="dep-hdr">
+            <div class="dep-hdr-bg"></div>
+            <div class="dep-hdr-grid"></div>
+            <a href="/HousingCommandCenterDashboard/Index" class="dep-hdr-back">
+                <i class="fa-solid fa-arrow-right"></i> العودة
+            </a>
+            <div class="dep-hdr-body">
+                <div class="dep-hdr-main">
+                    <div class="dep-hdr-icon">
+                        @if (!string.IsNullOrWhiteSpace(dep.Emoji))
+                        {
+                            <span>@dep.Emoji</span>
+                        }
+                        else
+                        {
+                            <i class="@(dep.Icon ?? "fa-solid fa-building")"></i>
+                        }
+                    </div>
+                    <div class="dep-hdr-copy">
+                        <div class="dep-hdr-label"><span class="dep-hdr-dot"></span>تقرير الأداء التشغيلي</div>
+                        <div class="dep-hdr-name">@depName</div>
+                    </div>
+                </div>
+                <div class="dep-hdr-stats">
+                    <div class="dep-hdr-stat"><span class="dep-hdr-stat-val">@depOverall%</span><span class="dep-hdr-stat-lbl">الأداء</span></div>
+                    @* <div class="dep-hdr-stat"><span class="dep-hdr-stat-val">7</span><span class="dep-hdr-stat-lbl">معايير</span></div> *@
+                    <div class="dep-hdr-stat"><span class="dep-hdr-stat-val">@DateTime.Now.ToString("yyyy-MM-dd")</span><span class="dep-hdr-stat-lbl">@DateTime.Now.ToString("dddd", new System.Globalization.CultureInfo("ar-SA"))</span></div>
+                </div>
+            </div>
+            <div class="dep-hdr-bar"><div class="dep-hdr-bar-fill" style="width:@depOverall%"></div></div>
+        </header>
+
+        <!-- TABS NAV -->
+        <div class="dep-wrap">
+            <nav class="dep-tabs">
+
+                <button type="button" class="dep-tab" data-tab="t8">
+    <i class="fa-solid fa-list-ol"></i>
+    <span>قوائم الانتظار</span>
+</button>
+
+                <button class="dep-tab is-active" data-tab="t1">
+    <i class="fa-solid fa-house-circle-check"></i>
+                    <span>كفاءة جاهزية المباني غير المشغولة</span>
+</button>
+
+<button class="dep-tab" data-tab="t2">
+    <i class="fa-solid fa-people-roof"></i>
+    <span>إشغال المباني</span>
+</button>
+
+
+
+
+                <button class="dep-tab" data-tab="t3"><i class="fa-solid fa-stopwatch"></i><span>اجراءات الاسكان</span></button>
+                <button class="dep-tab" data-tab="t4"><i class="fa-solid fa-money-bill-wave"></i><span>الكفاءة المالية</span></button>
+               @*  <button class="dep-tab" data-tab="t5"><i class="fa-solid fa-screwdriver-wrench"></i><span>الصيانة</span></button>
+                <button class="dep-tab" data-tab="t6"><i class="fa-solid fa-car"></i><span>صيانة العربات</span></button>
+                <button class="dep-tab" data-tab="t7"><i class="fa-solid fa-screwdriver-wrench"></i><span>برنامج طلبات الصيانة</span></button>
+            *@
+            </nav>
+
+
+
+            <!-- TAB 1 — جاهزية السكن -->
+<div class="dep-panel" id="t1">
+
+    <div class="dep-drill-hint">
+        <i class="fa-solid fa-hand-pointer"></i>
+
+        <span>
+            لاستعراض التفاصيل،
+                        <strong>اضغط على أي حالة من حالات كفاءة جاهزية المباني غير المشغولة</strong>
+            أدناه.
+        </span>
+    </div>
+
+    @if (readiness != null && readiness.Groups.Any())
+    {
+                    <div class="ccard" style="margin-bottom:16px">
+                        <div class="ccard-hdr">
+                            <div class="ccard-title">
+                                <i class="fa-solid fa-house-circle-check"></i>
+                                كفاءة جاهزية المباني غير المشغولة
+                            </div>
+
+                            <span class="ccard-badge">
+                                @(readinessMetric?.DisplayText ?? "بيانات الجاهزية غير متاحة")
+                            </span>
+                        </div>
+
+                        @if (readinessMetric?.CompletionPercent.HasValue == true)
+                        {
+                            <div style="padding:12px 16px">
+                                الجاهزة للتسكين أو تحت التخصيص:
+                                <strong>@Fmt(readinessMetric.Actual ?? 0m)</strong>
+
+                                من إجمالي المساكن غير المشغولة:
+                                <strong>@Fmt(readinessMetric.Target ?? 0m)</strong>
+                            </div>
+                        }
+                    </div>
+
+        <!-- Row 1: Housing Readiness Chart + Summary -->
+
+
+         <!-- Summary -->
+    <div class="summary-card">
+
+        <div class="summary-title"
+     style="
+        display:flex;
+        align-items:center;
+        justify-content:space-between">
+
+    <span>
+        <i class="fa-solid fa-list-check"></i>
+        كفاءة جاهزية المباني غير المشغولة — اضغط للتفاصيل
+    </span>
+
+    <span class="ccard-badge">
+        إجمالي الوحدات:
+        @Fmt(readinessTotal)
+    </span>
+
+</div>
+
+        <ul class="summary-list"
+    style="
+        display:grid;
+        grid-template-columns:repeat(3,minmax(0,1fr));
+        column-gap:24px;
+        row-gap:0">
+
+           
+
+
+            @foreach (var group in readinessGroups)
+            {
+                var itemColor =
+                    group.Key == "OCCUPIED" ? "#276749" :
+                    group.Key == "READY" ? "#0f766e" :
+                    group.Key == "ALLOCATION" ? "#2b6cb0" :
+                    group.Key == "MAINTENANCE" ? "#c05621" :
+                    group.Key == "QUALITY" ? "#553c9a" :
+                    group.Key == "GENERAL_SERVICES" ? "#086f83" :
+                    group.Key == "HOUSING_DEPARTMENT" ? "#805ad5" :
+                    group.Key == "EXECUTION" ? "#b7791f" :
+                    group.Key == "VACANT_PENDING" ? "#9b2c2c" :
+                    group.Key == "NO_ACTIVE_ACTION" ? "#718096" :
+                    "#4a5568";
+
+                var itemIcon =
+                    group.Key == "OCCUPIED" ? "fa-solid fa-house-user" :
+                    group.Key == "READY" ? "fa-solid fa-house-circle-check" :
+                    group.Key == "ALLOCATION" ? "fa-solid fa-user-check" :
+                    group.Key == "MAINTENANCE" ? "fa-solid fa-screwdriver-wrench" :
+                    group.Key == "QUALITY" ? "fa-solid fa-medal" :
+                    group.Key == "GENERAL_SERVICES" ? "fa-solid fa-broom" :
+                    group.Key == "HOUSING_DEPARTMENT" ? "fa-solid fa-building-user" :
+                    group.Key == "EXECUTION" ? "fa-solid fa-gears" :
+                    group.Key == "VACANT_PENDING" ? "fa-solid fa-house-circle-exclamation" :
+                    group.Key == "NO_ACTIVE_ACTION" ? "fa-solid fa-circle-question" :
+                    "fa-solid fa-circle-info";
+
+                <li class="summary-item">
+
+                    <a class="readiness-drill-link"
+                       title="عرض تفاصيل @group.Name"
+                       href="@Url.Action(
+                           "BuildingDetails",
+                           "HousingCommandCenterDashboard",
+                           new
+                           {
+                               id = dep.Key,
+                               section = "readiness",
+                               status = group.Key
+                           })">
+
+                        <span class="summary-label">
+
+                            <i style="
+                                background:rgba(74,85,104,.08);
+                                color:@itemColor"
+                               class="@itemIcon">
+                            </i>
+
+                            @group.Name
+
+                            <i class="fa-solid fa-chevron-left drill-arrow"></i>
+
+                        </span>
+
+                        <span class="summary-value"
+                              style="color:@itemColor">
+
+                            @Fmt(group.HousingUnitsCount)
+
+                            <small style="
+                                display:block;
+                                font-size:10px;
+                                color:#718096;
+                                font-weight:600">
+
+                                @group.Percent.ToString("0.0")%
+
+                            </small>
+
+                        </span>
+
+                    </a>
+
+                </li>
+            }
+
+        </ul>
+
+    </div>
+
+
+<div class="ccard"
+     style="margin-top:16px;margin-bottom:16px">
+
+    <div class="ccard-hdr">
+
+        <div class="ccard-title">
+            <i class="fa-solid fa-chart-column"></i>
+            حالة جاهزية الوحدات السكنية
+        </div>
+
+        <span class="ccard-badge">
+            @readinessGroups.Count حالة
+        </span>
+
+    </div>
+
+    <div class="ch-wrap"
+         style="height:300px">
+
+        <canvas id="c-readiness-status"></canvas>
+
+    </div>
+
+</div>
+
+
+
+
+
+   
+
+    }
+    else
+    {
+        <div class="ccard">
+            <div style="
+                min-height:300px;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                color:#718096">
+
+                لا توجد بيانات للمباني الغير المشغولة لهذه الإدارة
+
+            </div>
+        </div>
+    }
+
+</div>
+
+
+
+           <!-- TAB 2 — الإشغال -->
+@if (housing != null)
+{
+    <div class="dep-panel" id="t2">
+
+       
+
+                    <div class="krow">
+
+    <div class="kc"
+     style="--ka:rgba(74,85,104,.06);--kt:#4a5568">
+
+        <i class="fa-solid fa-building"></i>
+
+        <div>
+            <strong>@Fmt(housing.TotalUnits)</strong>
+            <span>إجمالي الوحدات</span>
+        </div>
+    </div>
+
+    <a class="kc dep-drill-card"
+       title="عرض الوحدات السكنية المشغولة"
+       href="@Url.Action(
+           "BuildingDetails",
+           "HousingCommandCenterDashboard",
+           new
+           {
+               id = dep.Key,
+               section = "occupancy",
+               status = "OCCUPIED"
+           })"
+       style="--ka:rgba(39,103,73,.06);--kt:#276749">
+
+        <i class="fa-solid fa-check-circle"></i>
+
+        <div>
+            <strong>@Fmt(housing.Occupied)</strong>
+
+            <span>
+                مشغولة
+                <em>@(occPct.HasValue ? $"{occPct.Value:0.0}%" : "—")</em>
+            </span>
+        </div>
+    </a>
+
+    <a class="kc dep-drill-card"
+       title="عرض الوحدات السكنية الشاغرة"
+       href="@Url.Action(
+           "BuildingDetails",
+           "HousingCommandCenterDashboard",
+           new
+           {
+               id = dep.Key,
+               section = "occupancy",
+               status = "VACANT"
+           })"
+       style="--ka:rgba(155,44,44,.06);--kt:#9b2c2c">
+
+        <i class="fa-solid fa-door-open"></i>
+
+        <div>
+            <strong>@Fmt(housing.Vacant)</strong>
+
+            <span>
+                شاغرة
+               <em>@(vacPct.HasValue ? $"{vacPct.Value:0.0}%" : "—")</em>
+            </span>
+        </div>
+
+    </a>
+
+    <div class="kc"
+     style="--ka:rgba(85,60,154,.06);--kt:#553c9a">
+
+    <i class="fa-solid fa-map-location-dot"></i>
+
+    <div>
+        <strong>@occupancyLocations.Count</strong>
+        <span>المواقع السكنية</span>
+    </div>
+</div>
+
+</div>
+
+ <div class="dep-drill-hint">
+    <i class="fa-solid fa-hand-pointer"></i>
+
+    <span>
+        لاستعراض التفاصيل،
+        <strong>اضغط على بطاقة مشغولة أو شاغرة</strong>
+        أعلاه.
+    </span>
+</div>
+
+                    <!-- حالة الإشغال — الكروت بالأعلى هي الـ Drill-down -->
+                    <div class="ccard" style="margin-bottom:16px">
+                        <div class="ccard-hdr">
+                            <div class="ccard-title">
+                                <i class="fa-solid fa-chart-pie"></i>
+                                حالة الوحدات السكنية
+                            </div>
+
+                            @if (occPct.HasValue)
+{
+    <span class="ccard-badge success">
+        <i class="fa-solid fa-arrow-up"></i>
+        @occPct.Value.ToString("0.0")% إشغال
+    </span>
+}
+else
+{
+    <span class="ccard-badge">
+        لا توجد مساكن لدى الإدارة
+    </span>
+}
+                        </div>
+
+                        @if (occPct.HasValue)
+                        {
+                            <div class="ch-wrap ch250">
+                                <canvas id="c-unit-status"></canvas>
+
+                                <div class="ch-center" style="color:#1e3a5f">
+                                    <strong>@occPct.Value.ToString("0.0")%</strong>
+                                    <small>نسبة الإشغال</small>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="ch-wrap ch250"
+                                 style="display:flex;align-items:center;justify-content:center;color:#718096">
+                                لا توجد مساكن لدى الإدارة
+                            </div>
+                        }
+                    </div>
+
+                    @if (occupancyLocations.Any())
+{
+    <div class="ccard" style="margin-bottom:16px">
+        <div class="ccard-hdr">
+            <div class="ccard-title">
+                <i class="fa-solid fa-chart-column"></i>
+                الإشغال حسب الموقع السكني
+            </div>
+
+            <span class="ccard-badge" id="occupancy-location-page">
+                1 / @Math.Ceiling(occupancyLocations.Count / 5m)
+            </span>
+        </div>
+
+        <div class="ch-wrap" style="height:280px">
+            <canvas id="c-occupancy-locations"></canvas>
+        </div>
+    </div>
+}
+
+
+                    <!-- Row 2: Distribution charts -->
+          @*           <div class="cgrid cgrid-2">
+                        <div class="ccard">
+                            <div class="ccard-hdr">
+                                <div class="ccard-title"><i class="fa-solid fa-ruler-combined"></i> توزيع المساحات (م²)</div>
+                                <span class="ccard-badge">@housing.AreaDistribution.Count() فئة</span>
+                            </div>
+                            <div class="ch-wrap ch220"><canvas id="c-areas"></canvas></div>
+                        </div>
+                        <div class="ccard">
+                            <div class="ccard-hdr">
+                                <div class="ccard-title"><i class="fa-solid fa-bed"></i> توزيع الغرف</div>
+                                <span class="ccard-badge">@housing.RoomDistribution.Count() نوع</span>
+                            </div>
+                            <div class="ch-wrap ch220"><canvas id="c-rooms"></canvas></div>
+                        </div>
+                    </div> *@
+                </div>
+            }
+
+            <!-- TAB 2 — الإشغال -->
+           @*  @if (alloc != null)
+            {
+                var totalResidents = alloc.Categories.Sum(c => c.Residents);
+                var totalWaiting = alloc.Categories.Sum(c => c.Waiting);
+                <div class="dep-panel" id="t2">
+                    <div class="krow">
+                        <div class="kc" style="--ka:rgba(43,108,176,.06);--kt:#2b6cb0"><i class="fa-solid fa-users"></i><div><strong>@Fmt(totalResidents)</strong><span>إجمالي الساكنين</span></div></div>
+                        <div class="kc" style="--ka:rgba(155,44,44,.06);--kt:#9b2c2c"><i class="fa-solid fa-clock"></i><div><strong>@Fmt(totalWaiting)</strong><span>قائمة الانتظار</span></div></div>
+                        <div class="kc" style="--ka:rgba(30,58,95,.06);--kt:#1e3a5f"><i class="fa-solid fa-map-location-dot"></i><div><strong>@alloc.Districts.Count()</strong><span>عدد الأحياء</span></div></div>
+                        @* <div class="kc" style="--ka:rgba(192,86,33,.06);--kt:#c05621"><i class="fa-solid fa-layer-group"></i><div><strong>@alloc.Categories.Count()</strong><span>فئات التخصيص</span></div></div> *@
+                    @* </div> *@
+
+                    <!-- Categories Chart - Full Width -->
+                    @* <div class="cgrid" style="margin-bottom:16px">
+                        <div class="ccard">
+                            <div class="ccard-hdr">
+                                <div class="ccard-title"><i class="fa-solid fa-users-viewfinder"></i> توزيع الفئات — الساكنين مقابل قائمة الانتظار</div>
+                                <span class="ccard-badge">@alloc.Categories.Count() فئة</span>
+                            </div>
+                            <div class="ch-wrap ch280"><canvas id="c-categories"></canvas></div>
+                        </div>
+                    </div> *@
+
+                    <!-- Districts Chart + Summary -->
+                   @*  <div class="cgrid cgrid-2">
+                        <div class="ccard">
+                            <div class="ccard-hdr">
+                                <div class="ccard-title"><i class="fa-solid fa-map"></i> توزيع السكان على الأحياء</div>
+                            </div>
+                            <div class="ch-wrap ch250"><canvas id="c-districts"></canvas></div>
+                        </div>
+                        <div class="ccard">
+                            <div class="ccard-hdr">
+                                <div class="ccard-title"><i class="fa-solid fa-chart-simple"></i> إحصائيات سريعة</div>
+                            </div>
+                            <div class="mini-stats" style="margin-bottom:16px">
+                                <div class="mini-stat">
+                                    <span class="mini-stat-val" style="color:#2b6cb0">@Fmt(totalResidents)</span>
+                                    <span class="mini-stat-lbl">ساكن حالي</span>
+                                </div>
+                                <div class="mini-stat">
+                                    <span class="mini-stat-val" style="color:#9b2c2c">@Fmt(totalWaiting)</span>
+                                    <span class="mini-stat-lbl">بالانتظار</span>
+                                </div>
+                                <div class="mini-stat">
+                                    <span class="mini-stat-val" style="color:#1e3a5f">@(totalResidents > 0 ? Math.Round((decimal)totalWaiting / totalResidents * 100, 1) : 0)%</span>
+                                    <span class="mini-stat-lbl">نسبة الانتظار</span>
+                                </div>
+                            </div>
+                            <div class="progress-list">
+                                @foreach (var cat in alloc.Categories.Take(5))
+                                {
+                                    var catTotal = cat.Residents + cat.Waiting;
+                                    var catPct = catTotal > 0 ? Math.Round((decimal)cat.Residents / catTotal * 100, 0) : 0;
+                                    <div class="progress-item">
+                                        <div class="progress-header">
+                                            <span class="progress-label">@cat.Label</span>
+                                            <span class="progress-value">@cat.Residents / @catTotal</span>
+                                        </div>
+                                        <div class="progress-bar">
+                                            <div class="progress-fill" style="width:@catPct%;background:linear-gradient(90deg,#2b6cb0,#4299e1)"></div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            } *@ 
+
+
+            
+            <!-- TAB 8 — قوائم الانتظار -->
+            <div class="dep-panel  is-active" id="t8"
+                 data-url="@Url.Action("WaitingListData", "HousingCommandCenterDashboard", new { id = dep.Key })">
+
+                <div class="dep-drill-hint">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span>
+                        يُحسب تسجيل المستفيد في كل فئة انتظار مختلفة كسجل مستقل،
+                        ولا يُكرر احتسابه داخل الفئة نفسها.
+                    </span>
+                </div>
+
+                <div id="wl-status" class="ccard" role="status"
+                     style="text-align:center;padding:24px">
+                    سيتم تحميل قوائم الانتظار عند فتح التبويب.
+                </div>
+
+                <div id="wl-content" hidden>
+
+                    <!-- بطاقات المؤشرات -->
+                    <div class="krow" id="wl-kpis"></div>
+
+                    <!-- المنتظرون في الفئات الرئيسية -->
+                    <div class="ccard" style="margin-bottom:14px">
+                        <div class="ccard-hdr">
+                            <div class="ccard-title">
+                                <i class="fa-solid fa-list-ol"></i>
+                                المنتظرون في قوائم الانتظار الرئيسية
+                            </div>
+                            <span class="ccard-badge">الانتظار فقط</span>
+                        </div>
+
+                        <div class="krow" id="wl-main-waiting-cards"
+                             style="margin-bottom:0"></div>
+                    </div>
+
+                    <!-- المنتظرون في الفئات الجانبية -->
+                    <div class="ccard" style="margin-bottom:14px">
+                        <div class="ccard-hdr">
+                            <div class="ccard-title">
+                                <i class="fa-solid fa-layer-group"></i>
+                                المنتظرون في قوائم الانتظار الجانبية
+                            </div>
+                            <span class="ccard-badge">الانتظار فقط</span>
+                        </div>
+
+                        <div class="krow" id="wl-side-waiting-cards"
+                             style="margin-bottom:0"></div>
+                    </div>
+
+                    <!-- الرسوم البيانية للقوائم الرئيسية والجانبية -->
+                    <div class="cgrid cgrid-2">
+
+                        <div class="ccard">
+
+                            <div class="ccard-hdr">
+                                <div class="ccard-title">
+                                    <i class="fa-solid fa-chart-bar"></i>
+                                    قوائم الانتظار الرئيسية
+                                </div>
+
+                                <span class="ccard-badge" id="wl-main-count"></span>
+                            </div>
+
+                            <div class="ch-wrap" style="height:270px">
+                                <canvas id="c-wl-main"></canvas>
+                            </div>
+
+                        </div>
+
+                        <div class="ccard">
+
+                            <div class="ccard-hdr">
+                                <div class="ccard-title">
+                                    <i class="fa-solid fa-chart-bar"></i>
+                                    قوائم الانتظار الجانبية
+                                </div>
+
+                                <span class="ccard-badge" id="wl-side-count"></span>
+                            </div>
+
+                            <div class="ch-wrap" style="height:270px">
+                                <canvas id="c-wl-side"></canvas>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    
+
+                </div>
+            </div>
+
+<!-- TAB 3 — إجراءات الإسكان -->
+<div class="dep-panel" id="t3">
+
+    @if (procedures == null)
+    {
+        <div class="ccard">
+            <div class="ccard-hdr">
+                <div class="ccard-title">
+                    <i class="fa-solid fa-house-circle-exclamation"></i>
+                    إجراءات الإسكان
+                </div>
+            </div>
+
+            <div style="
+                padding:28px;
+                text-align:center;
+                color:#64748b;
+                font-size:13px;
+                font-weight:700">
+                لا توجد بيانات تشغيلية متاحة لهذه الإدارة.
+            </div>
+        </div>
+    }
+    else
+    {
+        var totalProcedures =
+            procedures.TotalCurrentProcedures;
+
+        var maxStageCases =
+            procedures.Stages.Any()
+                ? procedures.Stages.Max(x => x.CurrentCases)
+                : 0;
+
+        var oldestRows =
+            procedures.OldestCurrent
+                .Take(5)
+                .ToList();
+
+
+        <!-- =====================================================
+             Row 1 — Current Operational Workload
+             ===================================================== -->
+
+      <div class="krow">
+
+
+    <!-- ALL -->
+    <a class="kc dep-drill-card"
+       title="عرض جميع إجراءات الإسكان الجارية"
+       href="@Url.Action(
+           "ProcedureDetails",
+           "HousingCommandCenterDashboard",
+           new
+           {
+               id = dep.Key,
+               workflow = "ALL"
+           })"
+       style="--ka:rgba(30,58,95,.06);--kt:#1e3a5f">
+
+        <i class="fa-solid fa-list-check"></i>
+
+        <div>
+
+            <strong>
+                @procedures.TotalCurrentProcedures
+            </strong>
+
+            <span>
+                إجمالي الإجراءات الجارية
+            </span>
+
+        </div>
+
+    </a>
+
+
+    <!-- ALLOCATION -->
+    <a class="kc dep-drill-card"
+       title="عرض إجراءات التخصيص الجارية"
+       href="@Url.Action(
+           "ProcedureDetails",
+           "HousingCommandCenterDashboard",
+           new
+           {
+               id = dep.Key,
+               workflow = "ALLOCATION"
+           })"
+       style="--ka:rgba(43,108,176,.06);--kt:#2b6cb0">
+
+        <i class="fa-solid fa-house-circle-check"></i>
+
+        <div>
+
+            <strong>
+                @procedures.AllocationCurrent
+            </strong>
+
+            <span>
+                إجراءات التخصيص
+            </span>
+
+        </div>
+
+    </a>
+
+
+
+    <!-- HOUSING -->
+<a class="kc dep-drill-card"
+   title="عرض إجراءات التسكين الجارية"
+   href="@Url.Action(
+       "ProcedureDetails",
+       "HousingCommandCenterDashboard",
+       new
+       {
+           id = dep.Key,
+           workflow = "HOUSING"
+       })"
+   style="--ka:rgba(15,118,110,.06);--kt:#0f766e">
+
+    <i class="fa-solid fa-house-user"></i>
+
+    <div>
+        <strong>
+            @procedures.HousingCurrent
+        </strong>
+
+        <span>
+            في مرحلة التسكين
+        </span>
+    </div>
+</a>
+
+
+    <!-- EXTEND -->
+    <a class="kc dep-drill-card"
+       title="عرض إجراءات الإمهال الجارية"
+       href="@Url.Action(
+           "ProcedureDetails",
+           "HousingCommandCenterDashboard",
+           new
+           {
+               id = dep.Key,
+               workflow = "EXTEND"
+           })"
+       style="--ka:rgba(128,90,213,.06);--kt:#805ad5">
+
+        <i class="fa-solid fa-clock-rotate-left"></i>
+
+        <div>
+
+            <strong>
+                @procedures.ExtendCurrent
+            </strong>
+
+            <span>
+                إجراءات الإمهال
+            </span>
+
+        </div>
+
+    </a>
+
+
+    <!-- EXIT -->
+    <a class="kc dep-drill-card"
+       title="عرض إجراءات الإخلاء الجارية"
+       href="@Url.Action(
+           "ProcedureDetails",
+           "HousingCommandCenterDashboard",
+           new
+           {
+               id = dep.Key,
+               workflow = "EXIT"
+           })"
+       style="--ka:rgba(192,86,33,.06);--kt:#c05621">
+
+        <i class="fa-solid fa-door-open"></i>
+
+        <div>
+
+            <strong>
+                @procedures.ExitCurrent
+            </strong>
+
+            <span>
+                إجراءات الإخلاء
+            </span>
+
+        </div>
+
+    </a>
+
+
+</div>
+
+        <!-- =====================================================
+             Row 2
+             Current Stages + Workflow Performance
+             ===================================================== -->
+
+        <div class="cgrid cgrid-2"
+             style="margin-bottom:14px">
+
+
+            <!-- Current Stage Distribution -->
+            <div class="ccard">
+
+                <div class="ccard-hdr">
+
+                    <div class="ccard-title">
+                        <i class="fa-solid fa-bars-progress"></i>
+                        توزيع الإجراءات الجارية حسب المرحلة
+                    </div>
+
+                    <span class="ccard-badge">
+                        @Fmt(totalProcedures) إجراء
+                    </span>
+
+                </div>
+
+
+                @if (procedures.Stages.Any())
+                {
+                    <div class="progress-list">
+
+                        @foreach (var stage in procedures.Stages)
+                        {
+                            var pct =
+                                totalProcedures > 0
+                                    ? Math.Round(
+                                        stage.CurrentCases * 100m /
+                                        totalProcedures,
+                                        1)
+                                    : 0m;
+
+                            var stageColor =
+                                stage.ProcedureGroupKey switch
+                                {
+                                    "ALLOCATION" => "#2b6cb0",
+                                    "EXTEND" => "#553c9a",
+                                    "EXIT" => "#c05621",
+                                    _ => "#64748b"
+                                };
+
+                            <div class="progress-item">
+
+                                <div class="progress-header">
+
+                                    <span class="progress-label">
+                                        @stage.ActionTypeName
+                                    </span>
+
+                                    <span class="progress-value"
+                                          style="color:@stageColor">
+
+                                        @Fmt(stage.CurrentCases)
+
+                                        <span style="
+                                            color:#94a3b8;
+                                            font-size:10px;
+                                            margin-right:4px">
+                                            (@pct.ToString("0.0")%)
+                                        </span>
+
+                                    </span>
+
+                                </div>
+
+
+                                <div class="progress-bar">
+
+                                    <div class="progress-fill"
+                                         style="
+                                            width:@pct%;
+                                            background:@stageColor">
+                                    </div>
+
+                                </div>
+
+                            </div>
+                        }
+
+                    </div>
+                }
+                else
+                {
+                    <div style="
+                        padding:24px;
+                        text-align:center;
+                        color:#64748b;
+                        font-size:12px;
+                        font-weight:700">
+                        لا توجد إجراءات جارية حاليًا.
+                    </div>
+                }
+
+            </div>
+
+
+            <!-- Workflow Performance -->
+            <div class="ccard">
+
+                <div class="ccard-hdr">
+
+                    <div class="ccard-title">
+                        <i class="fa-solid fa-stopwatch"></i>
+                        كفاءة دورات إجراءات الإسكان
+                    </div>
+
+                    
+@{
+    var completedWorkflows = procedures.Performance
+        .Where(x => x.CompletedCount > 0 &&
+                    x.AverageDays.HasValue)
+        .ToList();
+
+    var totalCompletedCycles = completedWorkflows
+        .Sum(x => x.CompletedCount);
+
+    decimal? overallAverageDays = totalCompletedCycles > 0
+        ? completedWorkflows.Sum(x =>
+            x.AverageDays.Value * x.CompletedCount)
+            / totalCompletedCycles
+        : null;
+}
+
+
+<span class="ccard-badge">
+    كفاءة إجراءات الإسكان:
+    @(dep.Metrics?
+        .FirstOrDefault(x =>
+            x.MetricKey == "m_housing_procedures")?
+        .DisplayText ?? "—")
+</span>
+
+
+
+                </div>
+
+
+                
+@{
+    var workflowCards = new[]
+    {
+        new {
+            Title = "متوسط التخصيص",
+            Color = "#2b6cb0",
+            TargetDays = 30m,
+            Performance = procedures?.Performance
+                .FirstOrDefault(x => x.WorkflowKey == "ALLOCATION")
+        },
+        new {
+            Title = "متوسط التسكين",
+            Color = "#0694a2",
+            TargetDays = 5m,
+            Performance = procedures?.Performance
+                .FirstOrDefault(x => x.WorkflowKey == "HOUSING")
+        },
+        new {
+            Title = "متوسط الإمهال",
+            Color = "#553c9a",
+            TargetDays = 5m,
+            Performance = procedures?.Performance
+                .FirstOrDefault(x => x.WorkflowKey == "EXTEND")
+        },
+        new {
+            Title = "متوسط الإخلاء",
+            Color = "#c05621",
+            TargetDays = 5m,
+            Performance = procedures?.Performance
+                .FirstOrDefault(x => x.WorkflowKey == "EXIT")
+        }
+    };
+}
+
+<div class="mini-stats">
+    @foreach (var card in workflowCards)
+    {
+        decimal? efficiency = null;
+
+        if (card.Performance?.CompletedCount > 0 &&
+            card.Performance.AverageDays.HasValue)
+        {
+            var avg = card.Performance.AverageDays.Value;
+
+            efficiency = avg <= 0m
+                ? 100m
+                : Math.Round(
+                    Math.Min(
+                        100m,
+                        card.TargetDays / avg * 100m),
+                    1);
+        }
+
+        <div class="mini-stat" style="text-align:center">
+
+            <span class="mini-stat-lbl"
+                  style="display:block;font-weight:800;margin-bottom:8px">
+                @card.Title
+            </span>
+
+            <span class="mini-stat-val"
+                  style="display:block;color:@card.Color;margin-bottom:8px">
+                @(efficiency.HasValue
+                    ? FmtDuration(card.Performance!.AverageDays)
+                    : "—")
+            </span>
+
+            <span style="display:block;font-size:11px;
+                         color:#475569;margin-bottom:6px">
+                الكفاءة:
+                <strong style="color:@card.Color">
+                    @(efficiency.HasValue
+                        ? $"{efficiency.Value:0.0}%"
+                        : "—")
+                </strong>
+            </span>
+
+            <span style="display:block;font-size:10px;color:#64748b">
+                الدورات المكتملة:
+                <strong>
+                    @(card.Performance?.CompletedCount ?? 0)
+                </strong>
+            </span>
+
+        </div>
+    }
+</div>
+
+        
+
+                <div style="
+                    margin-top:12px;
+                    padding:9px 11px;
+                    border:1px solid #e2e8f0;
+                    border-radius:8px;
+                    background:#f8fafc;
+                    color:#64748b;
+                    font-size:10px;
+                    line-height:1.8">
+
+                    <i class="fa-solid fa-circle-info"
+                       style="color:#2b6cb0;margin-left:4px"></i>
+
+                    مؤشرات المدة ستُحسب من معدل وقت انجاز دورات العمل المكتملة
+                    في النظام علما أن التأخير في بعض المعاملات يكون بسبب أن المستفيد لم يراجع مثل الاخلاء لم يحضر للسداد او لازالت اجراءاته منظورة.
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- =====================================================
+             Row 3 — Oldest Current Procedures
+             ===================================================== -->
+
+        <div class="ccard">
+
+            <div class="ccard-hdr">
+
+                <div class="ccard-title">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    أعلى خمس إجراءات نشطه متأخرة
+                </div>
+
+                <span class="ccard-badge">
+                    أعلى @oldestRows.Count
+                </span>
+
+            </div>
+
+
+            @if (oldestRows.Any())
+            {
+                <div style="
+                    display:grid;
+                    grid-template-columns:
+                        58px
+                        minmax(90px,.8fr)
+                        minmax(130px,1.6fr)
+                        minmax(90px,.8fr)
+                        80px;
+                    gap:8px;
+                    padding:7px 10px;
+                    border-bottom:1px solid #e2e8f0;
+                    color:#64748b;
+                    font-size:9px;
+                    font-weight:800">
+
+                    <span>المبنى</span>
+                    <span>الدورة</span>
+                    <span>الحالة الحالية</span>
+                    <span>منذ</span>
+                    <span>المدة</span>
+
+                </div>
+
+
+                @foreach (var row in oldestRows)
+                {
+                    var groupColor =
+                        row.ProcedureGroupKey switch
+                        {
+                            "ALLOCATION" => "#2b6cb0",
+                            "EXTEND" => "#553c9a",
+                            "EXIT" => "#c05621",
+                            _ => "#64748b"
+                        };
+
+                    <div style="
+                        display:grid;
+                        grid-template-columns:
+                            58px
+                            minmax(90px,.8fr)
+                            minmax(130px,1.6fr)
+                            minmax(90px,.8fr)
+                            80px;
+                        align-items:center;
+                        gap:8px;
+                        padding:8px 10px;
+                        border-bottom:1px solid #f1f5f9;
+                        font-size:10px">
+
+                        <strong style="color:#334155">
+                            @row.BuildingDetailsNo
+                        </strong>
+
+
+                        <span style="
+                            color:@groupColor;
+                            font-weight:800">
+                            @row.ProcedureGroupName
+                        </span>
+
+
+                        <span style="
+                            color:#475569;
+                            font-weight:700">
+                            @row.ActionTypeName
+                        </span>
+
+
+                        <span style="color:#64748b">
+
+                            @(row.CurrentStatusSince.HasValue
+                                ? row.CurrentStatusSince.Value
+                                    .ToString("yyyy/MM/dd")
+                                : "—")
+
+                        </span>
+
+
+                        <span style="
+                            color:@groupColor;
+                            font-weight:900">
+
+                            @(row.DaysInCurrentStatus.HasValue
+                                ? $"{row.DaysInCurrentStatus:N0} يوم"
+                                : "—")
+
+                            
+
+                        </span>
+
+                    </div>
+                }
+
+
+                @* @if (oldestRows.Any(x => x.IsMoveDataGenerated))
+                {
+                    <div style="
+                        padding:7px 10px;
+                        color:#94a3b8;
+                        font-size:9px;
+                        font-weight:700">
+
+                        <i class="fa-solid fa-circle-info"></i>
+
+                        ظهور «بيانات مرحّلة» يعني أن تاريخ الحالة ناتج عن
+                        بيانات الانتقال من النظام السابق، ولا يمثل بحد ذاته
+                        تأخرًا أو تجاوزًا لمستوى خدمة.
+
+                    </div>
+                } *@
+
+            }
+            else
+            {
+                <div style="
+                    padding:24px;
+                    text-align:center;
+                    color:#64748b;
+                    font-size:12px;
+                    font-weight:700">
+                    لا توجد إجراءات جارية حاليًا.
+                </div>
+            }
+
+        </div>
+
+    }
+
+</div>
+
+           
+
+
+
+
+
+            <!-- TAB 4 — الكفاءة المالية -->
+@if (fin != null)
+{
+    var efficiencyText =
+        fin.FinancialEfficiencyPercent.HasValue
+            ? $"{fin.FinancialEfficiencyPercent.Value:0.0}%"
+            : "—";
+
+    var balancedPercentText =
+        fin.BalancedBeneficiariesPercent.HasValue
+            ? $"{fin.BalancedBeneficiariesPercent.Value:0.0}%"
+            : "—";
+
+
+    var netAmount =
+        Math.Abs(
+            fin.NetFinancialPosition);
+
+
+    var netLabel =
+        fin.NetFinancialPosition < 0
+            ? "صافي العجز المالي"
+            : fin.NetFinancialPosition > 0
+                ? "صافي الفائض المالي"
+                : "المركز المالي متوازن";
+
+
+    var netIcon =
+        fin.NetFinancialPosition < 0
+            ? "fa-solid fa-arrow-trend-down"
+            : fin.NetFinancialPosition > 0
+                ? "fa-solid fa-arrow-trend-up"
+                : "fa-solid fa-scale-balanced";
+
+
+    var netColor =
+        fin.NetFinancialPosition < 0
+            ? "#9b2c2c"
+            : fin.NetFinancialPosition > 0
+                ? "#276749"
+                : "#1e3a5f";
+
+
+    <div class="dep-panel" id="t4">
+
+<div class="dep-drill-hint">
+
+    <i class="fa-solid fa-hand-pointer"></i>
+
+    <span>
+        لاستعراض التفاصيل،
+        <strong>
+            اضغط على بطاقات المطالبات أو السدادات أو حالة المستفيد المالية
+        </strong>
+        أدناه.
+    </span>
+
+</div>
+
+        <!-- ======================================================
+             الصف الأول — الصورة المالية الرئيسية
+             ====================================================== -->
+        <div class="krow">
+
+            <div class="kc"
+                 style="--ka:rgba(5,122,85,.06);--kt:#057a55">
+
+                <i class="fa-solid fa-chart-line"></i>
+
+                <div>
+                    <strong>@efficiencyText</strong>
+                    <span>الكفاءة المالية</span>
+                </div>
+
+            </div>
+
+
+            <a class="kc dep-drill-card"
+   title="عرض تفاصيل المطالبات المالية"
+   href="@Url.Action(
+       "FinancialDetails",
+       "HousingCommandCenterDashboard",
+       new
+       {
+           id = dep.Key,
+           mode = "CLAIMS"
+       })"
+   style="--ka:rgba(43,108,176,.06);--kt:#2b6cb0">
+
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+
+                <div>
+                    <strong>
+                        @Html.Raw(
+                            FmtSar(
+                                fin.TotalClaims))
+                    </strong>
+
+                    <span>إجمالي المطالبات</span>
+                </div>
+
+            </a>
+
+
+            <a class="kc dep-drill-card"
+   title="عرض تفاصيل السدادات المالية"
+   href="@Url.Action(
+       "FinancialDetails",
+       "HousingCommandCenterDashboard",
+       new
+       {
+           id = dep.Key,
+           mode = "PAYMENTS"
+       })"
+   style="--ka:rgba(39,103,73,.06);--kt:#276749">
+
+                <i class="fa-solid fa-money-bill-transfer"></i>
+
+                <div>
+                    <strong>
+                        @Html.Raw(
+                            FmtSar(
+                                fin.TotalPayments))
+                    </strong>
+
+                    <span>إجمالي السدادات</span>
+                </div>
+
+            </a>
+
+
+            <div class="kc"
+                 style="--ka:rgba(30,58,95,.06);--kt:@netColor">
+
+                <i class="@netIcon"></i>
+
+                <div>
+                    <strong>
+                        @Html.Raw(
+                            FmtSar(
+                                netAmount))
+                    </strong>
+
+                    <span>@netLabel</span>
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ======================================================
+             الصف الثاني — حالة المستفيدين والتسويات المطلوبة
+             ====================================================== -->
+        <div class="krow">
+
+            <a class="kc dep-drill-card"
+   title="عرض المستفيدين المتوازنين ماليًا"
+   href="@Url.Action(
+       "FinancialDetails",
+       "HousingCommandCenterDashboard",
+       new
+       {
+           id = dep.Key,
+           mode = "BALANCED"
+       })"
+   style="--ka:rgba(39,103,73,.06);--kt:#276749">
+
+                <i class="fa-solid fa-circle-check"></i>
+
+                <div>
+                    <strong>
+                        @fin.BalancedBeneficiariesCount.ToString("N0")
+                    </strong>
+
+                    <span>
+                        مستفيدون متوازنون
+                        <em>@balancedPercentText</em>
+                    </span>
+                </div>
+
+            </a>
+
+
+            <a class="kc dep-drill-card"
+   title="عرض المستفيدين ذوي العجز المالي"
+   href="@Url.Action(
+       "FinancialDetails",
+       "HousingCommandCenterDashboard",
+       new
+       {
+           id = dep.Key,
+           mode = "DEFICIT"
+       })"
+   style="--ka:rgba(155,44,44,.06);--kt:#9b2c2c">
+
+                <i class="fa-solid fa-user-minus"></i>
+
+                <div>
+                    <strong>
+                        @fin.DeficitBeneficiariesCount.ToString("N0")
+                    </strong>
+
+                    <span>مستفيدون بعجز</span>
+                </div>
+
+            </a>
+
+
+            <a class="kc dep-drill-card"
+   title="عرض المستفيدين ذوي الفائض المالي"
+   href="@Url.Action(
+       "FinancialDetails",
+       "HousingCommandCenterDashboard",
+       new
+       {
+           id = dep.Key,
+           mode = "SURPLUS"
+       })"
+   style="--ka:rgba(43,108,176,.06);--kt:#2b6cb0">
+
+                <i class="fa-solid fa-user-plus"></i>
+
+                <div>
+                    <strong>
+                        @fin.SurplusBeneficiariesCount.ToString("N0")
+                    </strong>
+
+                    <span>مستفيدون بفائض</span>
+                </div>
+
+            </a>
+
+
+            <a class="kc dep-drill-card"
+   title="عرض تفاصيل المبالغ المطلوب تحصيلها"
+   href="@Url.Action(
+       "FinancialDetails",
+       "HousingCommandCenterDashboard",
+       new
+       {
+           id = dep.Key,
+           mode = "DEFICIT"
+       })"
+   style="--ka:rgba(155,44,44,.06);--kt:#9b2c2c">
+
+                <i class="fa-solid fa-hand-holding-dollar"></i>
+
+                <div>
+                    <strong>
+                        @Html.Raw(
+                            FmtSar(
+                                fin.AmountToCollect))
+                    </strong>
+
+                    <span>مطلوب تحصيله</span>
+                </div>
+
+            </a>
+
+
+            <a class="kc dep-drill-card"
+   title="عرض تفاصيل المبالغ المطلوب إعادتها"
+   href="@Url.Action(
+       "FinancialDetails",
+       "HousingCommandCenterDashboard",
+       new
+       {
+           id = dep.Key,
+           mode = "SURPLUS"
+       })"
+   style="--ka:rgba(85,60,154,.06);--kt:#553c9a">
+
+                <i class="fa-solid fa-money-bill-wave"></i>
+
+                <div>
+                    <strong>
+                        @Html.Raw(
+                            FmtSar(
+                                fin.AmountToRefund))
+                    </strong>
+
+                    <span>مطلوب إعادته</span>
+                </div>
+
+            </a>
+
+        </div>
+
+
+        <!-- ======================================================
+     الرسوم
+     ====================================================== -->
+<div style="
+    display:grid;
+    grid-template-columns:1fr;
+    gap:14px;">
+
+
+    <!-- ==================================================
+         تحليل المطالبات والسدادات حسب النوع
+         ================================================== -->
+    <div class="ccard">
+
+        <div class="ccard-hdr">
+
+            <div class="ccard-title">
+
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+
+                تحليل المطالبات والسدادات حسب النوع
+
+            </div>
+
+
+            <span class="ccard-badge">
+
+                @fin.ClaimsByType.Count نوع
+
+            </span>
+
+        </div>
+
+
+        @if (fin.ClaimsByType.Any())
+        {
+            <div class="ch-wrap"
+                 style="height:250px;">
+
+                <canvas id="c-finance-claims-type">
+                </canvas>
+
+            </div>
+        }
+        else
+        {
+            <div style="
+                min-height:360px;
+                display:flex;
+                align-items:center;
+                justify-content:center;
+                color:#94a3b8;
+                font-size:12px;
+                font-weight:700">
+
+                لا توجد بيانات مالية حسب النوع لهذه الإدارة
+
+            </div>
+        }
+
+    </div>
+
+
+    <!-- ==================================================
+         توزيع الحالة المالية للمستفيدين
+         ================================================== -->
+    <div class="ccard">
+
+        <div class="ccard-hdr">
+
+            <div class="ccard-title">
+
+                <i class="fa-solid fa-users"></i>
+
+                توزيع الحالة المالية للمستفيدين
+
+            </div>
+
+
+            <span class="ccard-badge">
+
+                @fin.FinancialBeneficiariesCount.ToString("N0")
+                مستفيد
+
+            </span>
+
+        </div>
+
+
+        @if (fin.FinancialBeneficiariesCount > 0)
+{
+    <div style="
+        margin:6px 12px 0;
+        color:#64748b;
+        font-size:10px;
+        font-weight:600;
+        line-height:1.7;
+        text-align:right">
+
+        <i class="fa-solid fa-circle-info"
+           style="
+                color:#2b6cb0;
+                margin-left:4px">
+        </i>
+
+        المتوازن: المطالبات تساوي السدادات،
+        العجز: المطالبات أعلى من السدادات،
+        الفائض: السدادات أعلى من المطالبات.
+
+    </div>
+
+    <div class="ch-wrap"
+         style="height:190px;">
+
+        <canvas id="c-finance-beneficiaries">
+        </canvas>
+
+    </div>
+}
+else
+{
+    <div style="
+        min-height:190px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        text-align:center;
+        color:#94a3b8;
+        font-size:12px;
+        font-weight:700;
+        padding:20px;">
+
+        لا توجد بيانات مالية للمستفيدين في هذه الإدارة
+
+    </div>
+}
+
+    </div>
+
+</div>
+<!-- نهاية الرسوم -->
+
+    </div>
+    <!-- نهاية dep-panel t4 -->
+
+}
+
+
+            <!-- TAB 5 — الصيانة -->
+            @if (maint != null)
+            {
+                var remainingJobs = maint.PlannedJobs - maint.CompletedJobs;
+                <div class="dep-panel" id="t5">
+                    <div class="krow">
+                        <div class="kc" style="--ka:rgba(85,60,154,.06);--kt:#553c9a"><i class="fa-solid fa-gears"></i><div><strong>@maint.CompletedJobs / @maint.PlannedJobs</strong><span>أعمال منجزة <em>@mPct.ToString("0.0")%</em></span></div></div>
+                        @* <div class="kc" style="--ka:rgba(85,60,154,.04);--kt:#553c9a"><i class="fa-solid fa-car-side"></i><div><strong>@maint.FleetReadiness%</strong><span>معدل الوقت للانجاز</span></div></div> *@
+                        <div class="kc" style="--ka:rgba(85,60,154,.04);--kt:#553c9a"><i class="fa-solid fa-car-side"></i><div><strong>13 يوم</strong><span>معدل الوقت للانجاز</span></div></div>
+                        <div class="kc" style="--ka:rgba(192,86,33,.06);--kt:#c05621"><i class="fa-solid fa-star-half-stroke"></i><div><strong>@maint.QualityRefs</strong><span>إحالات الجودة</span></div></div>
+                        <div class="kc" style="--ka:rgba(8,111,131,.06);--kt:#086f83"><i class="fa-solid fa-tools"></i><div><strong>@maint.ServicesRefs</strong><span>إحالات الخدمات</span></div></div>
+                    </div>
+
+                    <div class="cgrid cgrid-2" style="margin-bottom:16px">
+                        <div class="ccard">
+                            <div class="ccard-hdr">
+                                <div class="ccard-title"><i class="fa-solid fa-chart-pie"></i> الصيانة الوقائية</div>
+                                <span class="ccard-badge" style="background:rgba(85,60,154,.08);color:#553c9a;border-color:rgba(85,60,154,.2)">@mPct.ToString("0.0")% منجز</span>
+                            </div>
+                            <div class="ch-wrap ch280">
+                                <canvas id="c-maintenance"></canvas>
+                                <div class="ch-center" style="color:#553c9a"><strong>@mPct.ToString("0.0")%</strong><small>نسبة الإنجاز</small></div>
+                            </div>
+                        </div>
+                        <div class="ccard">
+                            <div class="ccard-hdr">
+                                <div class="ccard-title"><i class="fa-solid fa-building-circle-check"></i> جاهزية المرافق الرئيسية</div>
+                            </div>
+                            <div class="ch-wrap ch280"><canvas id="c-facility"></canvas></div>
+                        </div>
+                    </div>
+
+                    <!-- Maintenance Summary -->
+                    <div class="cgrid cgrid-2">
+                        <div class="ccard">
+                            <div class="ccard-hdr">
+                                <div class="ccard-title"><i class="fa-solid fa-clipboard-list"></i> ملخص أعمال الصيانة</div>
+                            </div>
+                            <div class="mini-stats">
+                                <div class="mini-stat">
+                                    <span class="mini-stat-val" style="color:#553c9a">@maint.PlannedJobs</span>
+                                    <span class="mini-stat-lbl">الاجمالي</span>
+                                </div>
+                                <div class="mini-stat">
+                                    <span class="mini-stat-val" style="color:#276749">@maint.CompletedJobs</span>
+                                    <span class="mini-stat-lbl">منجزة</span>
+                                </div>
+                                <div class="mini-stat">
+                                    <span class="mini-stat-val" style="color:#c05621">@remainingJobs</span>
+                                    <span class="mini-stat-lbl">متبقية</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ccard">
+                            <div class="ccard-hdr">
+                                <div class="ccard-title"><i class="fa-solid fa-arrow-right-arrow-left"></i> الإحالات</div>
+                            </div>
+                            <div class="progress-list">
+                                <div class="progress-item">
+                                    <div class="progress-header">
+                                        <span class="progress-label">إحالات الجودة</span>
+                                        <span class="progress-value">@maint.QualityRefs</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width:@(maint.QualityRefs > 0 ? Math.Min(100, maint.QualityRefs * 10) : 0)%;background:linear-gradient(90deg,#c05621,#dd6b20)"></div>
+                                    </div>
+                                </div>
+                                <div class="progress-item">
+                                    <div class="progress-header">
+                                        <span class="progress-label">إحالات الخدمات</span>
+                                        <span class="progress-value">@maint.ServicesRefs</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width:@(maint.ServicesRefs > 0 ? Math.Min(100, maint.ServicesRefs * 10) : 0)%;background:linear-gradient(90deg,#086f83,#0987a0)"></div>
+                                    </div>
+                                </div>
+                                <div class="progress-item">
+                                    <div class="progress-header">
+                                        <span class="progress-label">معدل الإنجاز</span>
+                                        <span class="progress-value">@maint.FleetReadiness%</span>
+                                    </div>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width:@maint.FleetReadiness%;background:linear-gradient(90deg,#553c9a,#6b46c1)"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+
+            <!-- TAB 6 — صيانة العربات -->
+           @*  <div class="dep-panel" id="t6">
+                <div class="krow">
+                    <div class="kc" style="--ka:rgba(30,58,95,.06);--kt:#1e3a5f">
+                        <i class="fa-solid fa-car-side"></i>
+                        <div><strong>822</strong><span>إجمالي العربات</span></div>
+                    </div>
+
+                    <div class="kc" style="--ka:rgba(39,103,73,.06);--kt:#276749">
+                        <i class="fa-solid fa-check-circle"></i>
+                        <div><strong>655</strong><span>العربات المسلمة <em>81.87%</em></span></div>
+                    </div>
+
+                    <div class="kc" style="--ka:rgba(192,86,33,.06);--kt:#c05621">
+                        <i class="fa-solid fa-screwdriver-wrench"></i>
+                        <div><strong>22</strong><span>تحت الصيانة <em>2.67%</em></span></div>
+                    </div>
+
+                    <div class="kc" style="--ka:rgba(155,44,44,.06);--kt:#9b2c2c">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <div><strong>41</strong><span>بانتظار قطع <em>4.98%</em></span></div>
+                    </div>
+
+                    <div class="kc" style="--ka:rgba(85,60,154,.06);--kt:#553c9a">
+                        <i class="fa-solid fa-medal"></i>
+                        <div><strong>9</strong><span>محالة للجودة <em>1.09%</em></span></div>
+                    </div>
+
+                    <div class="kc" style="--ka:rgba(8,111,131,.06);--kt:#086f83">
+                        <i class="fa-solid fa-key"></i>
+                        <div><strong>85</strong><span>جاهزة للتسليم <em>10.34%</em></span></div>
+                    </div>
+                </div>
+
+                <!-- Row 1 -->
+                <div class="cgrid cgrid-2-1" style="margin-bottom:16px">
+                    <div class="ccard">
+                        <div class="ccard-hdr">
+                            <div class="ccard-title"><i class="fa-solid fa-chart-pie"></i> حالة العربات</div>
+                            <span class="ccard-badge success"><i class="fa-solid fa-arrow-up"></i> 81.87% العربات المسلمة</span>
+                        </div>
+                        <div class="ch-wrap ch250">
+                            <canvas id="c-car-status"></canvas>
+                            <div class="ch-center" style="color:#1e3a5f">
+                                <strong>81.87%</strong>
+                                <small>نسبة العربات المسلمة</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="summary-card">
+                        <div class="summary-title">
+                            <i class="fa-solid fa-screwdriver-wrench"></i> توزيع العربات تحت الصيانة حسب الورش
+                        </div>
+
+                        <ul class="summary-list">
+
+                            <!-- 🛢️ ورشة الزيت -->
+                            <li class="summary-item">
+                                <span class="summary-label">
+                                    <i style="background:rgba(202,138,4,.08);color:#ca8a04" class="fa-solid fa-oil-can"></i>
+                                    ورشة الزيت
+                                </span>
+                                <span class="summary-value">9</span>
+                            </li>
+
+                            <!-- ⚡ ورشة الكهرباء -->
+                            <li class="summary-item">
+                                <span class="summary-label">
+                                    <i style="background:rgba(245,158,11,.08);color:#f59e0b" class="fa-solid fa-bolt"></i>
+                                    ورشة الكهرباء
+                                </span>
+                                <span class="summary-value">3</span>
+                            </li>
+
+                            <!-- 🔧 ورشة الميكانيكا -->
+                            <li class="summary-item">
+                                <span class="summary-label">
+                                    <i style="background:rgba(39,103,73,.08);color:#276749" class="fa-solid fa-gear"></i>
+                                    ورشة الميكانيكا
+                                </span>
+                                <span class="summary-value">5</span>
+                            </li>
+
+                            <!-- 🧰 ورشة التوظيب -->
+                            <li class="summary-item">
+                                <span class="summary-label">
+                                    <i style="background:rgba(85,60,154,.08);color:#553c9a" class="fa-solid fa-toolbox"></i>
+                                    ورشة التوظيب
+                                </span>
+                                <span class="summary-value">2</span>
+                            </li>
+
+                            <!-- 🔄 الصيانة الوقائية -->
+                            <li class="summary-item">
+                                <span class="summary-label">
+                                    <i style="background:rgba(8,111,131,.08);color:#086f83" class="fa-solid fa-arrows-rotate"></i>
+                                    ورشة الصيانة الوقائية
+                                </span>
+                                <span class="summary-value">3</span>
+                            </li>
+
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Row 2 -->
+                <div class="cgrid cgrid-2">
+                    <div class="ccard">
+                        <div class="ccard-hdr">
+                            <div class="ccard-title"><i class="fa-solid fa-car-side"></i> توزيع أنواع العربات</div>
+                            <span class="ccard-badge">5 أنواع</span>
+                        </div>
+                        <div class="ch-wrap ch220">
+                            <canvas id="c-cars"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="ccard">
+                        <div class="ccard-hdr">
+                            <div class="ccard-title"><i class="fa-solid fa-users"></i> الفئات المستلمة للعربات</div>
+                            <span class="ccard-badge">3 فئات</span>
+                        </div>
+                        <div class="ch-wrap ch220">
+                            <canvas id="c-car-operational"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div> *@
+
+
+
+            <!-- TAB 7 — برنامج طلبات الصيانة -->
+            <div class="dep-panel" id="t7">
+                <div class="krow">
+                    <div class="kc" style="--ka:rgba(155,44,44,.06);--kt:#9b2c2c">
+                        <i class="fa-solid fa-bell"></i>
+                        <div><strong>38</strong><span>بلاغات طارئة</span></div>
+                    </div>
+
+                    <div class="kc" style="--ka:rgba(43,108,176,.06);--kt:#2b6cb0">
+                        <i class="fa-solid fa-clipboard-list"></i>
+                        <div><strong>124</strong><span>بلاغات عادية</span></div>
+                    </div>
+
+                    <div class="kc" style="--ka:rgba(39,103,73,.06);--kt:#276749">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <div><strong>109</strong><span>منجز</span></div>
+                    </div>
+
+                    <div class="kc" style="--ka:rgba(192,86,33,.06);--kt:#c05621">
+                        <i class="fa-solid fa-hourglass-half"></i>
+                        <div><strong>53</strong><span>متبقي</span></div>
+                    </div>
+
+                    <div class="kc" style="--ka:rgba(85,60,154,.06);--kt:#553c9a">
+                        <i class="fa-solid fa-percent"></i>
+                        <div><strong>67.3%</strong><span>نسبة الإنجاز</span></div>
+                    </div>
+                </div>
+
+                <div class="cgrid cgrid-2-1" style="margin-bottom:16px">
+                    <div class="ccard">
+                        <div class="ccard-hdr">
+                            <div class="ccard-title"><i class="fa-solid fa-chart-pie"></i> توزيع البلاغات حسب الأولوية</div>
+                            <span class="ccard-badge warning">162 بلاغ</span>
+                        </div>
+                        <div class="ch-wrap ch250">
+                            <canvas id="c-maint-requests-priority"></canvas>
+                            <div class="ch-center" style="color:#1e3a5f">
+                                <strong>162</strong>
+                                <small>إجمالي البلاغات</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="summary-card">
+                        <div class="summary-title"><i class="fa-solid fa-list-check"></i> أكثر أنواع البلاغات</div>
+                        <ul class="summary-list">
+                            <li class="summary-item">
+                                <span class="summary-label">
+                                    <i style="background:rgba(245,158,11,.08);color:#f59e0b" class="fa-solid fa-bolt"></i>
+                                    كهرباء
+                                </span>
+                                <span class="summary-value">42</span>
+                            </li>
+                            <li class="summary-item">
+                                <span class="summary-label">
+                                    <i style="background:rgba(8,111,131,.08);color:#086f83" class="fa-solid fa-faucet-drip"></i>
+                                    سباكة
+                                </span>
+                                <span class="summary-value">31</span>
+                            </li>
+                            <li class="summary-item">
+                                <span class="summary-label">
+                                    <i style="background:rgba(192,86,33,.08);color:#c05621" class="fa-solid fa-hammer"></i>
+                                    نجارة
+                                </span>
+                                <span class="summary-value">18</span>
+                            </li>
+                            <li class="summary-item">
+                                <span class="summary-label">
+                                    <i style="background:rgba(85,60,154,.08);color:#553c9a" class="fa-solid fa-wind"></i>
+                                    تكييف
+                                </span>
+                                <span class="summary-value">27</span>
+                            </li>
+                            <li class="summary-item">
+                                <span class="summary-label">
+                                    <i style="background:rgba(74,85,104,.08);color:#4a5568" class="fa-solid fa-ellipsis"></i>
+                                    أخرى
+                                </span>
+                                <span class="summary-value">44</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="cgrid cgrid-2">
+                    <div class="ccard">
+                        <div class="ccard-hdr">
+                            <div class="ccard-title"><i class="fa-solid fa-layer-group"></i> أنواع البلاغات</div>
+                            <span class="ccard-badge">5 أنواع</span>
+                        </div>
+                        <div class="ch-wrap ch220">
+                            <canvas id="c-maint-requests-types"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="ccard">
+                        <div class="ccard-hdr">
+                            <div class="ccard-title"><i class="fa-solid fa-chart-simple"></i> حالة التنفيذ</div>
+                            <span class="ccard-badge success">67.3% منجز</span>
+                        </div>
+
+                        <div class="mini-stats" style="margin-bottom:16px">
+                            <div class="mini-stat">
+                                <span class="mini-stat-val" style="color:#276749">109</span>
+                                <span class="mini-stat-lbl">منجز</span>
+                            </div>
+                            <div class="mini-stat">
+                                <span class="mini-stat-val" style="color:#c05621">53</span>
+                                <span class="mini-stat-lbl">متبقي</span>
+                            </div>
+                            <div class="mini-stat">
+                                <span class="mini-stat-val" style="color:#9b2c2c">38</span>
+                                <span class="mini-stat-lbl">طارئ</span>
+                            </div>
+                        </div>
+
+                        <div class="progress-list">
+                            <div class="progress-item">
+                                <div class="progress-header">
+                                    <span class="progress-label">معدل الإنجاز العام</span>
+                                    <span class="progress-value">109 / 162</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width:67.3%;background:linear-gradient(90deg,#276749,#38a169)"></div>
+                                </div>
+                            </div>
+
+                            <div class="progress-item">
+                                <div class="progress-header">
+                                    <span class="progress-label">البلاغات الطارئة</span>
+                                    <span class="progress-value">38</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width:23.5%;background:linear-gradient(90deg,#9b2c2c,#c53030)"></div>
+                                </div>
+                            </div>
+
+                            <div class="progress-item">
+                                <div class="progress-header">
+                                    <span class="progress-label">البلاغات العادية</span>
+                                    <span class="progress-value">124</span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width:76.5%;background:linear-gradient(90deg,#2b6cb0,#4299e1)"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- /dep-wrap -->
+    }
+
+    <footer class="dep-footer">
+        إدارة مدينة الملك فيصل العسكرية للتشغيل والصيانة — قسم الحاسب الآلي © 2026
+    </footer>
+
+    <!-- Data islands -->
+
+   @if (readinessGroups.Any())
+{
+    <script id="d-readiness-status"
+            type="application/json">
+
+        @Html.Raw(
+            JsonSerializer.Serialize(
+                new
+                {
+                    labels = readinessGroups
+                        .Select(x => x.Name)
+                        .ToArray(),
+
+                    values = readinessGroups
+                        .Select(x => x.HousingUnitsCount)
+                        .ToArray(),
+
+                    keys = readinessGroups
+                        .Select(x => x.Key)
+                        .ToArray()
+                },
+                jsonOpts
+            )
+        )
+
+    </script>
+}
+
+    @if (housing != null)
+    {
+        var jsonOpts2 = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+<script id="d-unit-status"
+        type="application/json">
+    @Html.Raw(
+        JsonSerializer.Serialize(
+            new
+            {
+                labels = new[]
+                {
+                    "مشغولة",
+                    "شاغرة"
+                },
+
+                values = new[]
+                {
+                    housing.Occupied,
+                    housing.Vacant
+                }
+            },
+            jsonOpts2))
+</script>        <script id="d-areas" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = housing.AreaDistribution.Select(s => s.Label).ToArray(), values = housing.AreaDistribution.Select(s => (double)s.Value).ToArray() }, jsonOpts2))</script>
+        <script id="d-rooms" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = housing.RoomDistribution.Select(s => s.Label).ToArray(), values = housing.RoomDistribution.Select(s => (double)s.Value).ToArray() }, jsonOpts2))</script>
+
+        <script id="d-cars" type="application/json">
+            @Html.Raw(JsonSerializer.Serialize(new
+            {
+                    labels = new[] { "الشاحنات", "العربات الثقيلة", "العربات الخفيفة", "عربات النقل", "العربات الخدمية" },
+                        values = new[] { 72, 152, 412, 89, 97 }
+                }, jsonOpts2))
+    </script>
+
+    <script id="d-car-status" type="application/json">
+        @Html.Raw(JsonSerializer.Serialize(new
+                {
+                    labels = new[] { "مسلمة", "تحت الصيانة", "بانتظار قطع", "محالة للجودة", "جاهزة للتسليم" },
+                        values = new[] { 655, 22, 41, 9, 85 }
+                }, jsonOpts2))
+    </script>
+
+    <script id="d-car-operational" type="application/json">
+        @Html.Raw(JsonSerializer.Serialize(new
+                {
+                    labels = new[] { "ضباط", "أفراد", "أخرى" },
+                        values = new[] { 382, 72, 201 }
+                }, jsonOpts2))
+    </script>
+
+
+
+    <script id="d-maint-requests-priority" type="application/json">
+        @Html.Raw(JsonSerializer.Serialize(new
+                {
+                    labels = new[] { "طارئة", "عادية" },
+                        values = new[] { 38, 124 }
+                }, jsonOpts2))
+    </script>
+
+    <script id="d-maint-requests-types" type="application/json">
+        @Html.Raw(JsonSerializer.Serialize(new
+                {
+                    labels = new[] { "كهرباء", "سباكة", "نجارة", "تكييف", "أخرى" },
+                        values = new[] { 42, 31, 18, 27, 44 }
+                }, jsonOpts2))
+    </script>
+
+    }
+
+
+
+
+    @if (occupancyLocations.Any())
+{
+    <script id="d-occupancy-locations"
+            type="application/json">
+        @Html.Raw(
+            JsonSerializer.Serialize(
+                new
+                {
+                    items = occupancyLocations.Select(x => new
+                    {
+                        name = x.MilitaryLocationName,
+                        total = x.TotalHousingUnits,
+                        occupied = x.OccupiedHousingUnits,
+                        vacant = x.UnoccupiedHousingUnits,
+                        percent = x.OccupancyPercent
+                    }).ToArray()
+                },
+                jsonOpts))
+    </script>
+}
+
+
+
+    @if (alloc != null)
+    {
+        var jsonOpts2 = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+        <script id="d-categories" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = alloc.Categories.Select(c => c.Label).ToArray(), residents = alloc.Categories.Select(c => c.Residents).ToArray(), waiting = alloc.Categories.Select(c => c.Waiting).ToArray() }, jsonOpts2))</script>
+        <script id="d-districts" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = alloc.Districts.Select(d => d.Label).ToArray(), values = alloc.Districts.Select(d => (double)d.Value).ToArray() }, jsonOpts2))</script>
+    }
+    
+
+
+
+
+    @if (fin != null)
+{
+    var jsonOpts2 =
+        new JsonSerializerOptions
+        {
+            Encoder =
+                JavaScriptEncoder
+                    .UnsafeRelaxedJsonEscaping
+        };
+
+
+    <script id="d-finance-beneficiaries"
+            type="application/json">
+        @Html.Raw(
+            JsonSerializer.Serialize(
+                new
+                {
+                    labels = new[]
+                    {
+                        "متوازن",
+                        "عجز",
+                        "فائض"
+                    },
+
+                    values = new[]
+                    {
+                        fin.BalancedBeneficiariesCount,
+                        fin.DeficitBeneficiariesCount,
+                        fin.SurplusBeneficiariesCount
+                    },
+
+                    colors = new[]
+                    {
+                        "#276749",
+                        "#9b2c2c",
+                        "#2b6cb0"
+                    },
+
+                    total =
+                        fin.FinancialBeneficiariesCount
+                },
+                jsonOpts2))
+    </script>
+
+
+   <script id="d-finance-claims-type"
+        type="application/json">
+
+    @Html.Raw(
+        JsonSerializer.Serialize(
+            new
+            {
+                labels =
+                    fin.ClaimsByType
+                        .Select(
+                            x =>
+                                x.BillChargeTypeName)
+                        .ToArray(),
+
+                claims =
+                    fin.ClaimsByType
+                        .Select(
+                            x =>
+                                (double)x.TotalClaims)
+                        .ToArray(),
+
+                payments =
+                    fin.ClaimsByType
+                        .Select(
+                            x =>
+                                (double)x.TotalPayments)
+                        .ToArray(),
+
+                deficits =
+                    fin.ClaimsByType
+                        .Select(
+                            x =>
+                                (double)x.DeficitByType)
+                        .ToArray(),
+
+                surpluses =
+                    fin.ClaimsByType
+                        .Select(
+                            x =>
+                                (double)x.SurplusByType)
+                        .ToArray(),
+
+                net =
+                    fin.ClaimsByType
+                        .Select(
+                            x =>
+                                (double)x.NetByType)
+                        .ToArray(),
+
+                percents =
+                    fin.ClaimsByType
+                        .Select(
+                            x =>
+                                (double)x.ClaimsPercent)
+                        .ToArray(),
+
+                bills =
+                    fin.ClaimsByType
+                        .Select(
+                            x =>
+                                x.BillsCount)
+                        .ToArray(),
+
+                beneficiaries =
+                    fin.ClaimsByType
+                        .Select(
+                            x =>
+                                x.BeneficiariesCount)
+                        .ToArray(),
+
+                financialBeneficiaries =
+                    fin.ClaimsByType
+                        .Select(
+                            x =>
+                                x.FinancialBeneficiariesCount)
+                        .ToArray()
+            },
+            jsonOpts2))
+
+</script>
+}
+    
+
+
+
+    @if (maint != null)
+    {
+        var jsonOpts2 = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
+        var mp = maint.PlannedJobs > 0 ? Math.Round((decimal)maint.CompletedJobs / maint.PlannedJobs * 100, 1) : 0m;
+        <script id="d-maintenance" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { completed = maint.CompletedJobs, remaining = maint.PlannedJobs - maint.CompletedJobs, pct = mp }, jsonOpts2))</script>
+        <script id="d-facility" type="application/json">@Html.Raw(JsonSerializer.Serialize(new { labels = maint.FacilityStatus.Select(f => f.Label).ToArray(), values = maint.FacilityStatus.Select(f => (double)f.Value).ToArray(), colors = maint.FacilityStatus.Select(f => f.Color ?? "#7c3aed").ToArray() }, jsonOpts2))</script>
+    }
+
+
+
+    <script src="~/lib/chartjs/chart.umd.js" asp-append-version="true"></script>
+    <script src="~/lib/chartjs/chartjs-plugin-datalabels.min.js" asp-append-version="true"></script>
+    <script>
+        (function(){
+        'use strict';
+
+        /* ── Global Chart Settings — Official Style ── */
+        var F = "'Segoe UI', 'Cairo', Tahoma, Arial, sans-serif";
+        Chart.defaults.font.family = F;
+        Chart.defaults.font.size = 12;
+        Chart.defaults.animation.duration = 600;
+        Chart.defaults.animation.easing = 'easeOutQuart';
+        Chart.defaults.plugins.legend.labels.usePointStyle = true;
+        Chart.defaults.plugins.legend.labels.pointStyle = 'circle';
+        Chart.defaults.plugins.legend.labels.boxWidth = 8;
+        Chart.defaults.plugins.legend.labels.boxHeight = 8;
+        Chart.defaults.plugins.legend.labels.padding = 14;
+        Chart.defaults.plugins.legend.labels.font = { size: 11, weight: '600' };
+        Chart.defaults.plugins.legend.labels.color = '#414148';
+
+        /* ── Official Government Color Palette ── */
+        var COLORS = {
+            primary: '#1e3a5f',
+            primaryLight: '#2c5282',
+            accent: '#c9a227',
+            success: '#276749',
+            successLight: '#38a169',
+            info: '#2b6cb0',
+            infoLight: '#4299e1',
+            warning: '#c05621',
+            warningLight: '#dd6b20',
+            danger: '#9b2c2c',
+            dangerLight: '#c53030',
+            purple: '#553c9a',
+            purpleLight: '#6b46c1',
+            cyan: '#086f83',
+            cyanLight: '#0987a0',
+            gray: '#4a5568',
+            grayLight: '#a0aec0'
+        };
+
+        var PAL = [COLORS.primary, COLORS.info, COLORS.warning, COLORS.danger, COLORS.purple, COLORS.cyan, COLORS.success, COLORS.accent];
+
+        /* ── Helpers ── */
+        function get(id) {
+            var e = document.getElementById(id);
+            if (!e) return null;
+            try { return JSON.parse(e.textContent); } catch(x) { return null; }
+        }
+
+        function mk(id, cfg) {
+            var c = document.getElementById(id);
+            if (!c) return;
+            cfg.options = cfg.options || {};
+            cfg.options.responsive = true;
+            cfg.options.maintainAspectRatio = false;
+            new Chart(c, cfg);
+        }
+
+        /* ── Doughnut Chart — Official Style ── */
+        function donut(labels, data, colors, cut) {
+            var tot = data.reduce(function(a,b){ return a+b; }, 0);
+            return {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: '#fff',
+                        hoverOffset: 6,
+                        hoverBorderWidth: 3,
+                        hoverBorderColor: '#fff'
+                    }]
+                },
+                options: {
+                    cutout: cut || '65%',
+                    spacing: 1,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { font: { size: 11 }, padding: 16 }
+                        },
+                        datalabels: { display: false },
+                        tooltip: {
+                            backgroundColor: '#1a1a2e',
+                            titleFont: { size: 13, weight: '700' },
+                            bodyFont: { size: 12 },
+                            padding: 12,
+                            cornerRadius: 6,
+                            callbacks: {
+                                label: function(c) {
+                                    var p = tot > 0 ? Math.round(c.parsed/tot*100) : 0;
+                                    return ' ' + c.label + ': ' + c.parsed.toLocaleString('en-US') + ' (' + p + '%)';
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+        }
+
+        /* ── Horizontal Bar Chart — Official Style ── */
+        function hbar(labels, data, colors) {
+            return {
+                type: 'bar',
+                plugins: [ChartDataLabels],
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors || PAL,
+                        borderRadius: 4,
+                        borderSkipped: false,
+                        barThickness: 18,
+                        maxBarThickness: 22
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: { display: false },
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'start',
+                            offset: 8,
+                            color: '#ffffff',
+                            font: { weight: '700', size: 11 },
+                            formatter: function(v) { return v.toLocaleString('en-US'); }
+                        },
+                        tooltip: {
+                            backgroundColor: '#1a1a2e',
+                            padding: 12,
+                            cornerRadius: 6,
+                            callbacks: {
+                                label: function(c) { return ' ' + c.parsed.x.toLocaleString('en-US'); }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(0,0,0,.04)', drawBorder: false },
+                            ticks: { font: { size: 11 }, color: '#718096' }
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: { font: { size: 12, weight: '600' }, color: '#2d3748' }
+                        }
+                    }
+                }
+            };
+        }
+
+        /* ══ 1 — حالة الوحدات ══ */
+        var d1 = get('d-unit-status');
+        if (d1) mk('c-unit-status', donut(d1.labels, d1.values, [COLORS.success, COLORS.danger, COLORS.warning, COLORS.danger, COLORS.purple, COLORS.cyan]));
+
+
+  /* ══════════════════════════════════════════════════════
+   جاهزية الوحدات السكنية — All Current Statuses
+   ══════════════════════════════════════════════════════ */
+
+var dReadiness =
+    get('d-readiness-status');
+
+if (
+    dReadiness &&
+    Array.isArray(dReadiness.labels) &&
+    dReadiness.labels.length > 0
+) {
+
+    var readinessItems =
+        dReadiness.labels.map(
+            function (label, index) {
+
+                return {
+                    label: label,
+                    value: dReadiness.values[index],
+                    key: dReadiness.keys[index]
+                };
+
+            });
+
+
+    var readinessCanvas =
+        document.getElementById(
+            'c-readiness-status'
+        );
+
+
+    var readinessColorMap = {
+
+        OCCUPIED:
+            COLORS.success,
+
+        READY:
+            '#0f766e',
+
+        ALLOCATION:
+            COLORS.info,
+
+        MAINTENANCE:
+            COLORS.warning,
+
+        QUALITY:
+            COLORS.purple,
+
+        GENERAL_SERVICES:
+            COLORS.cyan,
+
+        HOUSING_DEPARTMENT:
+            '#805ad5',
+
+        EXECUTION:
+            '#b7791f',
+
+        VACANT_PENDING:
+            COLORS.danger,
+
+        NO_ACTIVE_ACTION:
+            COLORS.gray,
+
+        OTHER:
+            COLORS.grayLight
+    };
+
+
+    new Chart(
+        readinessCanvas,
+        {
+            type: 'bar',
+
+            plugins: [
+                ChartDataLabels
+            ],
+
+            data: {
+
+                labels:
+                    readinessItems.map(
+                        function (x) {
+                            return x.label;
+                        }),
+
+                datasets: [
+                    {
+                        label: 'عدد الوحدات',
+
+                        data:
+                            readinessItems.map(
+                                function (x) {
+                                    return x.value;
+                                }),
+
+                        backgroundColor:
+                            readinessItems.map(
+                                function (x) {
+                                    return readinessColorMap[x.key]
+                                        || COLORS.gray;
+                                }),
+
+                        borderRadius: 5,
+                        borderSkipped: false,
+
+                        maxBarThickness: 50
+                    }
+                ]
+            },
+
+            options: {
+
+                responsive: true,
+                maintainAspectRatio: false,
+
+                animation: {
+                    duration: 600,
+                    easing: 'easeOutQuart'
+                },
+
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+
+                plugins: {
+
+                    legend: {
+                        display: false
+                    },
+
+                    datalabels: {
+
+                        anchor: 'end',
+                        align: 'top',
+                        offset: 2,
+
+                        color: '#2d3748',
+
+                        font: {
+                            size: 10,
+                            weight: '700'
+                        },
+
+                        formatter:
+                            function (value) {
+
+                                return value > 0
+                                    ? value.toLocaleString('en-US')
+                                    : '';
+
+                            }
+                    },
+
+                    tooltip: {
+
+                        backgroundColor: '#1a1a2e',
+                        padding: 12,
+                        cornerRadius: 6,
+
+                        callbacks: {
+
+                            label:
+                                function (context) {
+
+                                    return ' ' +
+                                        context.parsed.y
+                                            .toLocaleString('en-US') +
+                                        ' وحدة';
+
+                                }
+                        }
+                    }
+                },
+
+                scales: {
+
+                    x: {
+
+                        grid: {
+                            display: false
+                        },
+
+                        ticks: {
+
+                            autoSkip: false,
+
+                            color: '#2d3748',
+
+                            font: {
+                                size: 10,
+                                weight: '600'
+                            },
+
+                            maxRotation: 0,
+                            minRotation: 0
+                        }
+                    },
+
+                    y: {
+
+                        beginAtZero: true,
+                        grace: '10%',
+
+                        grid: {
+                            color: 'rgba(0,0,0,.04)',
+                            drawBorder: false
+                        },
+
+                        ticks: {
+
+                            color: '#718096',
+
+                            font: {
+                                size: 11
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    );
+}
+
+
+
+        /* ══════════════════════════════════════════════════════
+   الإشغال حسب الموقع السكني — Auto Rotation
+   ══════════════════════════════════════════════════════ */
+
+var dOccLocations = get('d-occupancy-locations');
+
+if (
+    dOccLocations &&
+    Array.isArray(dOccLocations.items) &&
+    dOccLocations.items.length > 0
+) {
+    var occupancyItems = dOccLocations.items;
+
+    // عدد المواقع المعروضة في كل شاشة
+    var occupancyPageSize = 5;
+
+    var occupancyPageIndex = 0;
+
+    var occupancyTotalPages =
+        Math.ceil(
+            occupancyItems.length /
+            occupancyPageSize
+        );
+
+    var occupancyCanvas =
+        document.getElementById(
+            'c-occupancy-locations'
+        );
+
+    var occupancyPageBadge =
+        document.getElementById(
+            'occupancy-location-page'
+        );
+
+    function getOccupancyPage() {
+
+        var start =
+            occupancyPageIndex *
+            occupancyPageSize;
+
+        return occupancyItems.slice(
+            start,
+            start + occupancyPageSize
+        );
+    }
+
+    function updateOccupancyPageBadge() {
+
+        if (!occupancyPageBadge)
+            return;
+
+        occupancyPageBadge.textContent =
+            (occupancyPageIndex + 1) +
+            ' / ' +
+            occupancyTotalPages;
+    }
+
+    var firstOccupancyPage =
+        getOccupancyPage();
+
+    var occupancyLocationsChart =
+        new Chart(
+            occupancyCanvas,
+            {
+                type: 'bar',
+
+                plugins: [
+                    ChartDataLabels
+                ],
+
+                data: {
+                    labels:
+                        firstOccupancyPage.map(
+                            function (x) {
+                                return x.name;
+                            }),
+
+                    datasets: [
+                        {
+                            label: 'الإجمالي',
+                            data:
+                                firstOccupancyPage.map(
+                                    function (x) {
+                                        return x.total;
+                                    }),
+
+                            backgroundColor:
+                                COLORS.grayLight,
+
+                            borderRadius: 4,
+                            borderSkipped: false
+                        },
+
+                        {
+                            label: 'المشغول',
+                            data:
+                                firstOccupancyPage.map(
+                                    function (x) {
+                                        return x.occupied;
+                                    }),
+
+                            backgroundColor:
+                                COLORS.success,
+
+                            borderRadius: 4,
+                            borderSkipped: false
+                        },
+
+                        {
+                            label: 'الشاغر',
+                            data:
+                                firstOccupancyPage.map(
+                                    function (x) {
+                                        return x.vacant;
+                                    }),
+
+                            backgroundColor:
+                                COLORS.danger,
+
+                            borderRadius: 4,
+                            borderSkipped: false
+                        }
+                    ]
+                },
+
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+
+                    animation: {
+                        duration: 600,
+                        easing: 'easeOutQuart'
+                    },
+
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+
+                    plugins: {
+
+                        legend: {
+                            position: 'top',
+
+                            labels: {
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                padding: 18,
+                                font: {
+                                    size: 11,
+                                    weight: '600'
+                                }
+                            }
+                        },
+
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'top',
+                            offset: 2,
+
+                            color: '#2d3748',
+
+                            font: {
+                                size: 10,
+                                weight: '700'
+                            },
+
+                            formatter: function (value) {
+                                return value > 0
+                                    ? value.toLocaleString('en-US')
+                                    : '';
+                            }
+                        },
+
+                        tooltip: {
+                            backgroundColor: '#1a1a2e',
+                            padding: 12,
+                            cornerRadius: 6,
+
+                            callbacks: {
+
+                                afterBody: function (items) {
+
+                                    if (!items ||
+                                        items.length === 0)
+                                        return '';
+
+                                    var index =
+                                        items[0].dataIndex;
+
+                                    var page =
+                                        getOccupancyPage();
+
+                                    var item =
+                                        page[index];
+
+                                    if (!item)
+                                        return '';
+
+                                    return [
+                                        '',
+                                        'نسبة الإشغال: ' +
+                                        Number(
+                                            item.percent
+                                        ).toFixed(2) +
+                                        '%'
+                                    ];
+                                }
+                            }
+                        }
+                    },
+
+                    scales: {
+
+                        x: {
+                            stacked: false,
+
+                            grid: {
+                                display: false
+                            },
+
+                            ticks: {
+                                autoSkip: false,
+                                maxRotation: 0,
+                                minRotation: 0,
+
+                                font: {
+                                    size: 10,
+                                    weight: '600'
+                                },
+
+                                color: '#2d3748'
+                            }
+                        },
+
+                        y: {
+                            beginAtZero: true,
+
+                            grid: {
+                                color:
+                                    'rgba(0,0,0,.05)'
+                            },
+
+                            ticks: {
+                                precision: 0,
+
+                                font: {
+                                    size: 10
+                                },
+
+                                color: '#718096'
+                            }
+                        }
+                    }
+                }
+            });
+
+    updateOccupancyPageBadge();
+
+    function showNextOccupancyPage() {
+
+        if (occupancyTotalPages <= 1)
+            return;
+
+        occupancyPageIndex =
+            (
+                occupancyPageIndex + 1
+            ) %
+            occupancyTotalPages;
+
+        var page =
+            getOccupancyPage();
+
+        occupancyLocationsChart.data.labels =
+            page.map(
+                function (x) {
+                    return x.name;
+                });
+
+        occupancyLocationsChart
+            .data
+            .datasets[0]
+            .data =
+            page.map(
+                function (x) {
+                    return x.total;
+                });
+
+        occupancyLocationsChart
+            .data
+            .datasets[1]
+            .data =
+            page.map(
+                function (x) {
+                    return x.occupied;
+                });
+
+        occupancyLocationsChart
+            .data
+            .datasets[2]
+            .data =
+            page.map(
+                function (x) {
+                    return x.vacant;
+                });
+
+        occupancyLocationsChart.update();
+
+        updateOccupancyPageBadge();
+    }
+
+    // الانتقال إلى 5 مواقع جديدة كل 8 ثوانٍ
+    var occupancyRotationTimer =
+        setInterval(
+            showNextOccupancyPage,
+            8000
+        );
+
+    // إيقاف التدوير أثناء وضع المؤشر على الرسم
+    occupancyCanvas.addEventListener(
+        'mouseenter',
+        function () {
+
+            clearInterval(
+                occupancyRotationTimer
+            );
+        });
+
+    // استكمال التدوير بعد إبعاد المؤشر
+    occupancyCanvas.addEventListener(
+        'mouseleave',
+        function () {
+
+            clearInterval(
+                occupancyRotationTimer
+            );
+
+            occupancyRotationTimer =
+                setInterval(
+                    showNextOccupancyPage,
+                    8000
+                );
+        });
+}
+
+
+
+
+
+        /* ══ 1b — مساحات ══ */
+        var dA = get('d-areas');
+        if (dA) mk('c-areas', hbar(dA.labels, dA.values, [COLORS.primary, COLORS.info, COLORS.warning, COLORS.purple, COLORS.danger]));
+
+        /* ══ 1c — غرف ══ */
+        var dR = get('d-rooms');
+        if (dR) mk('c-rooms', hbar(dR.labels, dR.values, [COLORS.info, COLORS.primary, COLORS.warning, COLORS.purple, COLORS.danger, COLORS.cyan]));
+
+
+         /* ══ 1b — العربات ══ */
+                var dCarMain = get('d-car-status');
+        if (dCarMain) {
+            mk('c-car-status',
+                donut(
+                    dCarMain.labels,
+                    dCarMain.values,
+                    [COLORS.success, COLORS.warning, COLORS.danger, COLORS.purple, COLORS.cyan]
+                )
+            );
+        }
+
+        var dCars = get('d-cars');
+        if (dCars) {
+            mk('c-cars',
+                hbar(
+                    dCars.labels,
+                    dCars.values,
+                    [COLORS.primary, COLORS.info, COLORS.warning, COLORS.purple, COLORS.danger]
+                )
+            );
+        }
+
+        var dCarOp = get('d-car-operational');
+        if (dCarOp) {
+            mk('c-car-operational',
+                hbar(
+                    dCarOp.labels,
+                    dCarOp.values,
+                    [COLORS.success, COLORS.warning, COLORS.danger, COLORS.purple, COLORS.cyan]
+                )
+            );
+        }
+
+
+                /* ══ 7 — برنامج طلبات الصيانة ══ */
+        var dMrp = get('d-maint-requests-priority');
+        if (dMrp) {
+            mk('c-maint-requests-priority',
+                donut(
+                    dMrp.labels,
+                    dMrp.values,
+                    [COLORS.danger, COLORS.info]
+                )
+            );
+        }
+
+        var dMrt = get('d-maint-requests-types');
+        if (dMrt) {
+            mk('c-maint-requests-types',
+                hbar(
+                    dMrt.labels,
+                    dMrt.values,
+                    [COLORS.warning, COLORS.cyan, COLORS.accent, COLORS.purple, COLORS.gray]
+                )
+            );
+        }
+
+        /* ══ 2 — فئات ══ */
+        var d2 = get('d-categories');
+        if (d2) mk('c-categories', {
+            type: 'bar',
+            plugins: [ChartDataLabels],
+            data: {
+                labels: d2.labels,
+                datasets: [
+                    {
+                        label: 'ساكنين',
+                        data: d2.residents,
+                        backgroundColor: COLORS.info,
+                        borderRadius: 4,
+                        borderSkipped: false,
+                        barThickness: 16
+                    },
+                    {
+                        label: 'انتظار',
+                        data: d2.waiting,
+                        backgroundColor: COLORS.danger,
+                        borderRadius: 4,
+                        borderSkipped: false,
+                        barThickness: 16
+                    }
+                ]
+            },
+            options: {
+                plugins: {
+                    legend: { position: 'top', labels: { font: { size: 12, weight: '600' } } },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'top',
+                        offset: 2,
+                        color: '#2d3748',
+                        font: { weight: '700', size: 10 },
+                        formatter: function(v) { return v > 0 ? v.toLocaleString('en-US') : ''; }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1a1a2e',
+                        padding: 12,
+                        cornerRadius: 6
+                    }
+                },
+                scales: {
+                    x: { ticks: { font: { size: 11 } }, grid: { display: false } },
+                    y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,.04)' }, ticks: { font: { size: 11 } } }
+                }
+            }
+        });
+
+        /* ══ 2b — أحياء ══ */
+        var dD = get('d-districts');
+        if (dD) mk('c-districts', hbar(dD.labels, dD.values, PAL));
+
+        /* ══ 3 — طلبات ══ */
+        var d3 = get('d-open-req');
+        if (d3) mk('c-open-req', donut(d3.labels, d3.values, d3.colors.map(function(c) {
+            return c === '#d97706' ? COLORS.warning : c;
+        }), '62%'));
+
+        /* ══ 3b — SLA ══ */
+        var dS = get('d-sla');
+        if (dS) mk('c-sla', {
+            type: 'bar',
+            plugins: [ChartDataLabels],
+            data: {
+                labels: dS.labels,
+                datasets: [
+                    {
+                        label: 'فعلي',
+                        data: dS.actual,
+                        backgroundColor: dS.actual.map(function(v, i) {
+                            return v > dS.target[i] ? COLORS.danger : COLORS.success;
+                        }),
+                        borderRadius: 4,
+                        borderSkipped: false,
+                        barThickness: 16
+                    },
+                    {
+                        label: 'هدف',
+                        data: dS.target,
+                        backgroundColor: 'rgba(43,108,176,.25)',
+                        borderRadius: 4,
+                        borderSkipped: false,
+                        barThickness: 16
+                    }
+                ]
+            },
+            options: {
+                plugins: {
+                    legend: { position: 'top', labels: { font: { size: 12, weight: '600' } } },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'top',
+                        offset: 2,
+                        color: '#2d3748',
+                        font: { weight: '700', size: 10 },
+                        formatter: function(v) { return v.toFixed(1); }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1a1a2e',
+                        padding: 12,
+                        cornerRadius: 6,
+                        callbacks: {
+                            label: function(c) { return ' ' + c.dataset.label + ': ' + c.parsed.y.toFixed(1) + ' يوم'; }
+                        }
+                    }
+                },
+                scales: {
+                    x: { ticks: { font: { size: 11 } }, grid: { display: false } },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0,0,0,.04)' },
+                        ticks: { font: { size: 11 }, callback: function(v) { return v + 'د'; } }
+                    }
+                }
+            }
+        });
+
+       /* ══════════════════════════════════════════════════════
+   4 — الكفاءة المالية
+   ══════════════════════════════════════════════════════ */
+
+
+/* ------------------------------------------------------
+   توزيع الحالة المالية للمستفيدين - عمودي
+------------------------------------------------------ */
+
+var dFinanceBeneficiaries =
+    get(
+        'd-finance-beneficiaries'
+    );
+
+if (dFinanceBeneficiaries) {
+
+    const financeTotal =
+        Number(
+            dFinanceBeneficiaries.total || 0
+        );
+
+    function getFinanceStatusMeaning(label) {
+
+        switch ((label || '').trim()) {
+
+            case 'متوازن':
+                return 'المتوازن: عدد المستفيدون الي إجمالي مطالباتهم يساوي إجمالي سداداتـهم، ولا يوجد عليه عجز ولا له فائض.';
+
+            case 'عجز':
+                return 'العجز: عدد المستفيدون الي إجمالي مطالباتهم أعلى من إجمالي سداداتـهم، ويوجد مبلغ مطلوب تحصيله منه.';
+
+            case 'فائض':
+                return 'الفائض: عدد المستفيدون الي إجمالي سداداتـهم أعلى من إجمالي مطالباتهم، ويوجد مبلغ مستحق إعادته له.';
+
+            default:
+                return 'يوضح الشارت توزيع المستفيدين حسب حالتهم المالية.';
+        }
+    }
+
+    mk(
+        'c-finance-beneficiaries',
+        {
+            type: 'bar',
+
+            plugins: [
+                ChartDataLabels
+            ],
+
+            data: {
+                labels:
+                    dFinanceBeneficiaries.labels,
+
+                datasets: [
+                    {
+                        data:
+                            dFinanceBeneficiaries.values,
+
+                        backgroundColor:
+                            dFinanceBeneficiaries.colors,
+
+                        borderRadius: 8,
+
+                        borderSkipped: false,
+
+                        maxBarThickness: 72,
+
+                        minBarLength: 6
+                    }
+                ]
+            },
+
+            options: {
+
+                maintainAspectRatio: false,
+
+                layout: {
+                    padding: {
+                        top: 24,
+                        right: 12,
+                        left: 12,
+                        bottom: 8
+                    }
+                },
+
+                plugins: {
+
+                    legend: {
+                        display: false
+                    },
+
+                    datalabels: {
+
+                        anchor: 'end',
+                        align: 'end',
+                        offset: 2,
+                        clamp: true,
+                        clip: false,
+
+                        color: '#334155',
+
+                        font: {
+                            size: 11,
+                            weight: '800'
+                        },
+
+                        formatter:
+                            function (value) {
+
+                                const count =
+                                    Number(value || 0);
+
+                                const pct =
+                                    financeTotal > 0
+                                        ? (count * 100 / financeTotal)
+                                        : 0;
+
+                                return (
+                                    count.toLocaleString('en-US') +
+                                    '\n' +
+                                    '(' + pct.toFixed(1) + '%)'
+                                );
+                            }
+                    },
+
+                    tooltip: {
+
+                        backgroundColor: '#1a1a2e',
+                        titleColor: '#ffffff',
+                        bodyColor: '#e5e7eb',
+                        footerColor: '#cbd5e1',
+                        padding: 12,
+                        cornerRadius: 8,
+                        displayColors: true,
+
+                        callbacks: {
+
+                            title:
+                                function (items) {
+
+                                    if (!items || !items.length)
+                                        return '';
+
+                                    return 'الحالة: ' + items[0].label;
+                                },
+
+                            label:
+                                function (context) {
+
+                                    const count =
+                                        Number(
+                                            context.parsed.y || 0
+                                        );
+
+                                    const pct =
+                                        financeTotal > 0
+                                            ? (count * 100 / financeTotal)
+                                            : 0;
+
+                                    return [
+                                        'العدد: ' + count.toLocaleString('en-US'),
+                                        'النسبة: ' + pct.toFixed(2) + '%'
+                                    ];
+                                },
+
+                            afterBody:
+                                function (items) {
+
+                                    if (!items || !items.length)
+                                        return [];
+
+                                    const label =
+                                        items[0].label || '';
+
+                                    return [
+                                        ' ',
+                                        getFinanceStatusMeaning(label)
+                                    ];
+                                },
+
+                            footer:
+                                function () {
+
+                                    return 'يعتمد التصنيف على مقارنة إجمالي المطالبات بإجمالي السدادات لكل مستفيد.';
+                                }
+                        }
+                    }
+                },
+
+                scales: {
+
+                    x: {
+
+                        grid: {
+                            display: false
+                        },
+
+                        ticks: {
+                            color: '#334155',
+                            font: {
+                                size: 12,
+                                weight: '700'
+                            }
+                        }
+                    },
+
+                    y: {
+
+                        beginAtZero: true,
+
+                        grid: {
+                            color: 'rgba(0,0,0,.05)'
+                        },
+
+                        ticks: {
+
+                            color: '#64748b',
+
+                            font: {
+                                size: 10
+                            },
+
+                            callback:
+                                function (value) {
+                                    return Number(value).toLocaleString('en-US');
+                                }
+                        }
+                    }
+                }
+            }
+        }
+    );
+
+}
+
+
+
+/* ------------------------------------------------------
+   مقارنة القيم المالية
+------------------------------------------------------ */
+
+/* ------------------------------------------------------
+   تحليل المطالبات والسدادات حسب النوع
+------------------------------------------------------ */
+
+var dFinanceClaimsType =
+    get(
+        'd-finance-claims-type'
+    );
+
+
+if (dFinanceClaimsType) {
+
+    mk(
+        'c-finance-claims-type',
+        {
+            type: 'bar',
+
+            plugins: [
+                ChartDataLabels
+            ],
+
+            data: {
+
+                labels:
+                    dFinanceClaimsType.labels,
+
+                datasets: [
+                    {
+                        label:
+                            'المطالبات',
+
+                        data:
+                            dFinanceClaimsType.claims,
+
+                        backgroundColor:
+                            '#2b6cb0',
+
+                        borderRadius: 5,
+
+                        borderSkipped: false
+                    },
+
+                    {
+                        label:
+                            'السدادات',
+
+                        data:
+                            dFinanceClaimsType.payments,
+
+                        backgroundColor:
+                            '#276749',
+
+                        borderRadius: 5,
+
+                        borderSkipped: false
+                    },
+
+                    {
+                        label:
+                            'العجز',
+
+                        data:
+                            dFinanceClaimsType.deficits,
+
+                        backgroundColor:
+                            '#9b2c2c',
+
+                        borderRadius: 5,
+
+                        borderSkipped: false
+                    },
+
+                    {
+                        label:
+                            'الفائض',
+
+                        data:
+                            dFinanceClaimsType.surpluses,
+
+                        backgroundColor:
+                            '#553c9a',
+
+                        borderRadius: 5,
+
+                        borderSkipped: false
+                    }
+                ]
+            },
+
+            options: {
+
+                maintainAspectRatio: false,
+
+                responsive: true,
+                layout: {
+    padding: {
+        top: 28
+    }
+},
+
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+
+                plugins: {
+
+                    legend: {
+
+                        display: true,
+
+                        position: 'top',
+
+                        labels: {
+
+                            usePointStyle: true,
+
+                            pointStyle: 'circle',
+
+                            padding: 18,
+
+                            font: {
+                                size: 11,
+                                weight: '700'
+                            }
+                        }
+                    },
+
+
+                    datalabels: {
+
+    display:
+        function (context) {
+
+            const value =
+                Number(
+                    context.dataset.data[
+                        context.dataIndex
+                    ] || 0
+                );
+
+            return value > 0;
+        },
+
+    anchor: 'end',
+
+    align: 'top',
+
+    //--------------------------------------------------
+    // إزاحة مختلفة لكل Series
+    // لمنع تداخل القيم الصغيرة قرب خط الصفر
+    //--------------------------------------------------
+    offset:
+        function (context) {
+
+            return 3 +
+                (
+                    context.datasetIndex *
+                    5
+                );
+        },
+
+    clamp: true,
+
+    clip: false,
+
+    color: '#334155',
+
+    font: {
+        size: 9,
+        weight: '700'
+    },
+
+    formatter:
+        function (value) {
+
+            const amount =
+                Number(
+                    value || 0
+                );
+
+
+            if (amount <= 0)
+                return '';
+
+
+            //--------------------------------------------------
+            // مليون
+            //--------------------------------------------------
+            if (amount >= 1000000) {
+
+                return (
+                    amount /
+                    1000000
+                )
+                .toLocaleString(
+                    'en-US',
+                    {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 2
+                    }
+                ) +
+                ' مليون';
+            }
+
+
+            //--------------------------------------------------
+            // ألف
+            //--------------------------------------------------
+            if (amount >= 1000) {
+
+                return (
+                    amount /
+                    1000
+                )
+                .toLocaleString(
+                    'en-US',
+                    {
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 1
+                    }
+                ) +
+                ' ألف';
+            }
+
+
+            //--------------------------------------------------
+            // أقل من ألف
+            //--------------------------------------------------
+            return amount
+                .toLocaleString(
+                    'en-US',
+                    {
+                        minimumFractionDigits:
+                            amount % 1 === 0
+                                ? 0
+                                : 2,
+
+                        maximumFractionDigits: 2
+                    }
+                ) +
+                ' ريال';
+        }
+},
+
+
+                    tooltip: {
+
+                        backgroundColor:
+                            '#1a1a2e',
+
+                        padding: 12,
+
+                        cornerRadius: 6,
+
+                        callbacks: {
+
+                            title:
+                                function (items) {
+
+                                    if (
+                                        !items ||
+                                        !items.length
+                                    ) {
+                                        return '';
+                                    }
+
+
+                                    return items[0]
+                                        .label;
+                                },
+
+
+                            label:
+                                function (c) {
+
+                                    const amount =
+                                        Number(
+                                            c.parsed.y || 0
+                                        );
+
+
+                                    return (
+                                        ' ' +
+                                        c.dataset.label +
+                                        ': ' +
+                                        amount
+                                            .toLocaleString(
+                                                'en-US',
+                                                {
+                                                    minimumFractionDigits: 2,
+                                                    maximumFractionDigits: 2
+                                                }
+                                            ) +
+                                        ' ريال'
+                                    );
+                                },
+
+
+                            afterBody:
+    function () {
+        return [];
+    }
+                        }
+                    }
+                },
+
+
+                scales: {
+
+                    x: {
+
+                        stacked: false,
+
+                        grid: {
+                            display: false
+                        },
+
+                        ticks: {
+
+                            color:
+                                '#334155',
+
+                            font: {
+                                size: 11,
+                                weight: '700'
+                            }
+                        }
+                    },
+
+
+                    y: {
+
+                        stacked: false,
+
+                        beginAtZero: true,
+
+                        grid: {
+                            color:
+                                'rgba(0,0,0,.04)'
+                        },
+
+                        ticks: {
+
+                            color:
+                                '#64748b',
+
+                            font: {
+                                size: 10
+                            },
+
+                            callback:
+                                function (value) {
+
+                                    const n =
+                                        Number(value);
+
+
+                                    if (
+                                        Math.abs(n) >=
+                                        1000000
+                                    ) {
+
+                                        const millions =
+                                            n /
+                                            1000000;
+
+
+                                        return (
+                                            Number.isInteger(
+                                                millions
+                                            )
+                                                ? millions
+                                                    .toFixed(0)
+                                                : millions
+                                                    .toFixed(1)
+                                        ) +
+                                        ' مليون ريال';
+                                    }
+
+
+                                    if (
+                                        Math.abs(n) >=
+                                        1000
+                                    ) {
+
+                                        const thousands =
+                                            n /
+                                            1000;
+
+
+                                        return (
+                                            Number.isInteger(
+                                                thousands
+                                            )
+                                                ? thousands
+                                                    .toFixed(0)
+                                                : thousands
+                                                    .toFixed(1)
+                                        ) +
+                                        ' ألف ريال';
+                                    }
+
+
+                                    return (
+                                        n
+                                            .toLocaleString(
+                                                'en-US'
+                                            ) +
+                                        ' ريال'
+                                    );
+                                }
+                        }
+                    }
+                }
+            }
+        }
+    );
+}
+
+
+
+
+        /* ══ 4b — مرافق ══ */
+        var dU = get('d-utility');
+        if (dU) mk('c-utility', {
+            type: 'bar',
+            plugins: [ChartDataLabels],
+            data: {
+                labels: dU.labels,
+                datasets: [{
+                    data: dU.values,
+                    backgroundColor: dU.colors.map(function(c) {
+                        return c === '#0f766e' ? COLORS.primary : c;
+                    }),
+                    borderRadius: 4,
+                    borderSkipped: false,
+                    barThickness: 18
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'start',
+                        offset: 8,
+                        color: '#ffffff',
+                        font: { weight: '700', size: 11 },
+                        formatter: function(v) { return v.toFixed(0) + '%'; }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1a1a2e',
+                        padding: 12,
+                        cornerRadius: 6,
+                        callbacks: {
+                            label: function(c) { return ' ' + c.parsed.x.toFixed(1) + '%'; }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        min: 0,
+                        max: 100,
+                        grid: { color: 'rgba(0,0,0,.04)' },
+                        ticks: { font: { size: 11 }, callback: function(v) { return v + '%'; } }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { font: { size: 12, weight: '600' }, color: '#2d3748' }
+                    }
+                }
+            }
+        });
+
+        /* ══ 5 — صيانة ══ */
+        var d5 = get('d-maintenance');
+        if (d5) mk('c-maintenance', donut(['منجزة', 'متبقية'], [d5.completed, d5.remaining], [COLORS.purple, '#e2e8f0'], '65%'));
+
+        /* ══ 5b — مرافق ══ */
+        var dF = get('d-facility');
+        if (dF) mk('c-facility', hbar(dF.labels, dF.values, dF.colors.map(function(c) {
+            return c === '#7c3aed' ? COLORS.purple : c;
+        })));
+
+
+
+        
+                       /* ═══════════════════════════════════════════════
+               WAITING LIST DASHBOARD
+               ═══════════════════════════════════════════════ */
+
+            var waitingLoaded = false;
+            var waitingLoading = false;
+
+            function wlNumber(value) {
+                return Number(value || 0).toLocaleString('en-US');
+            }
+
+            function wlElement(tag, className, textValue) {
+                var el = document.createElement(tag);
+
+                if (className)
+                    el.className = className;
+
+                if (textValue !== undefined)
+                    el.textContent = textValue;
+
+                return el;
+            }
+
+
+            /* ═══════════════════════════════════════════════
+               KPI CARDS
+               ═══════════════════════════════════════════════ */
+
+               function wlDetailsUrl(mode, waitingClassID) {
+
+    var url = new URL(
+        '@Url.Action("WaitingListDetails", "HousingCommandCenterDashboard", new { id = dep.Key })',
+        window.location.origin
+    );
+
+    url.searchParams.set('mode', mode);
+
+    if (waitingClassID !== undefined &&
+        waitingClassID !== null) {
+
+        url.searchParams.set(
+            'waitingClassID',
+            String(waitingClassID)
+        );
+    }
+
+    return url.pathname + url.search;
+}
+
+
+
+
+            function wlKpi(parent, label, value, icon, color, mode, waitingClassID) {
+
+    var clickable = !!mode;
+
+    var card = wlElement(
+        clickable ? 'a' : 'div',
+        clickable ? 'kc dep-drill-card' : 'kc'
+    );
+
+    card.style.setProperty('--kt', color);
+    card.style.setProperty('--ka', color + '10');
+
+    if (clickable) {
+
+        card.href = wlDetailsUrl(
+            mode,
+            waitingClassID
+        );
+
+        card.title = 'عرض تفاصيل ' + label;
+
+        card.setAttribute(
+            'aria-label',
+            'عرض تفاصيل ' + label
+        );
+    }
+
+    card.appendChild(
+        wlElement('i', 'fa-solid ' + icon)
+    );
+
+    var body = wlElement('div');
+
+    body.appendChild(
+        wlElement('strong', '', wlNumber(value))
+    );
+
+    body.appendChild(
+        wlElement('span', '', label)
+    );
+
+    card.appendChild(body);
+
+    parent.appendChild(card);
+}
+
+
+            /* ═══════════════════════════════════════════════
+               WAITING CLASS CHARTS
+               ═══════════════════════════════════════════════ */
+
+                       function wlClassesChart(canvasId, classes, isMain) {
+
+                var labels = classes.map(function(x) {
+                    return x.waitingClassName;
+                });
+
+                var datasets = [
+                    {
+                        label: 'الانتظار',
+                        data: classes.map(function(x) {
+                            return Number(x.waitingResidents || 0);
+                        }),
+                        backgroundColor: COLORS.info,
+                        borderRadius: 4,
+                        borderSkipped: false,
+                        maxBarThickness: 12
+                    }
+                ];
+
+                // التخصيص للقوائم الرئيسية فقط
+                if (isMain) {
+                    datasets.push({
+                        label: 'التخصيص',
+                        data: classes.map(function(x) {
+                            return Number(x.allocationResidents || 0);
+                        }),
+                        backgroundColor: COLORS.warning,
+                        borderRadius: 4,
+                        borderSkipped: false,
+                        maxBarThickness: 12
+                    });
+                }
+
+                // التسكين للقوائم الرئيسية والجانبية
+                datasets.push({
+                    label: 'التسكين',
+                    data: classes.map(function(x) {
+                        return Number(x.housingProcedureResidents || 0);
+                    }),
+                    backgroundColor: COLORS.success,
+                    borderRadius: 4,
+                    borderSkipped: false,
+                    maxBarThickness: 12
+                });
+
+                mk(canvasId, {
+                    type: 'bar',
+                    plugins: [ChartDataLabels],
+
+                    data: {
+                        labels: labels,
+                        datasets: datasets
+                    },
+
+                    options: {
+                        indexAxis: 'y',
+                        maintainAspectRatio: false,
+
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'bottom'
+                            },
+
+                            datalabels: {
+                                display: false
+                            },
+
+                            tooltip: {
+                                backgroundColor: '#1a1a2e',
+                                padding: 12,
+                                cornerRadius: 6,
+
+                                callbacks: {
+                                    label: function(ctx) {
+                                        return ' ' +
+                                            ctx.dataset.label +
+                                            ': ' +
+                                            Number(ctx.parsed.x || 0)
+                                                .toLocaleString('en-US');
+                                    }
+                                }
+                            }
+                        },
+
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+
+                                grid: {
+                                    color: 'rgba(0,0,0,.04)'
+                                },
+
+                                ticks: {
+                                    font: { size: 10 },
+                                    color: '#718096',
+                                    precision: 0
+                                }
+                            },
+
+                            y: {
+                                grid: {
+                                    display: false
+                                },
+
+                                ticks: {
+                                    autoSkip: false,
+                                    font: {
+                                        size: 10,
+                                        weight: '600'
+                                    },
+                                    color: '#2d3748'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            
+
+            /* ═══════════════════════════════════════════════
+               RENDER WAITING LIST
+               ═══════════════════════════════════════════════ */
+                           function wlRenderWaitingClassCards(containerId, classes, color) {
+
+                var container = document.getElementById(containerId);
+
+                if (!container) return;
+
+                container.replaceChildren();
+
+                classes.forEach(function(item) {
+
+                    wlKpi(
+                        container,
+                        item.waitingClassName,
+                        item.waitingResidents,
+                        'fa-users',
+                        color,
+                        'DETAIL_WAITING',
+                        item.waitingClassID
+                    );
+
+                });
+            }
+
+
+
+
+
+
+            function wlRender(data) {
+
+                var kpis =
+                    document.getElementById('wl-kpis');
+
+                kpis.replaceChildren();
+
+                [
+    [
+        'إجمالي سجلات قوائم الانتظار',
+        data.totalWaitingRecords,
+        'fa-list-check',
+        COLORS.primary,
+        'DETAIL_ALL'
+    ],
+    [
+        'إجمالي المنتظرين',
+        data.waitingResidents,
+        'fa-clock',
+        COLORS.info,
+        'DETAIL_WAITING'
+    ],
+    [
+        'في مراحل التخصيص',
+        data.allocationResidents,
+        'fa-house-circle-check',
+        COLORS.warning,
+        'DETAIL_ALLOCATION'
+    ],
+    [
+        'في مراحل التسكين',
+        data.housingProcedureResidents,
+        'fa-key',
+        COLORS.success,
+        'DETAIL_HOUSING'
+    ],
+    [
+        'قوائم الانتظار الرئيسية',
+        data.mainWaitingResidents,
+        'fa-list-ol',
+        COLORS.purple,
+        'DETAIL_MAIN_WAITING'
+    ],
+    [
+        'قوائم الانتظار الجانبية',
+        data.sideWaitingResidents,
+        'fa-layer-group',
+        COLORS.cyan,
+        'DETAIL_SIDE_WAITING'
+    ]
+
+].forEach(function(item) {
+
+    wlKpi(
+        kpis,
+        item[0],
+        item[1],
+        item[2],
+        item[3],
+        item[4]
+    );
+
+});
+
+
+                /* Waiting Classes */
+
+                var classes =
+                    Array.isArray(data.classes)
+                        ? data.classes
+                        : [];
+
+                var main = classes.filter(function(x) {
+                    return x.classType === 'MAIN';
+                });
+
+                var side = classes.filter(function(x) {
+                    return x.classType === 'SIDE';
+                });
+
+
+                            wlRenderWaitingClassCards(
+                'wl-main-waiting-cards',
+                main,
+                COLORS.purple
+            );
+
+            wlRenderWaitingClassCards(
+                'wl-side-waiting-cards',
+                side,
+                COLORS.cyan
+            );
+
+                document.getElementById('wl-main-count')
+                    .textContent = wlNumber(main.length) + ' فئة';
+
+                document.getElementById('wl-side-count')
+                    .textContent = wlNumber(side.length) + ' فئة';
+
+
+                wlClassesChart('c-wl-main', main, true);
+
+                wlClassesChart('c-wl-side', side, false);
+
+
+
+               
+
+            }
+
+
+            /* ═══════════════════════════════════════════════
+               LAZY LOADING
+               ═══════════════════════════════════════════════ */
+
+            function loadWaitingList() {
+
+                if (waitingLoaded || waitingLoading)
+                    return;
+
+                var panel =
+                    document.getElementById('t8');
+
+                var status =
+                    document.getElementById('wl-status');
+
+                var content =
+                    document.getElementById('wl-content');
+
+                if (!panel || !status || !content)
+                    return;
+
+                waitingLoading = true;
+
+                status.hidden = false;
+
+                status.textContent =
+                    'جاري تحميل بيانات قوائم الانتظار...';
+
+                fetch(panel.dataset.url, {
+
+                    credentials: 'same-origin',
+
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+
+                })
+                .then(function(response) {
+
+                    if (!response.ok) {
+
+                        throw new Error(
+                            response.status === 403
+                                ? 'FORBIDDEN'
+                                : 'LOAD_ERROR'
+                        );
+
+                    }
+
+                    return response.json();
+                })
+                .then(function(data) {
+
+    const totalRecords =
+        Number(data?.totalWaitingRecords);
+
+    // التحميل نجح، ولكن الإدارة لا تملك
+    // أي سجلات في قوائم الانتظار
+    if (
+        Number.isFinite(totalRecords) &&
+        totalRecords === 0
+    ) {
+        content.hidden = true;
+        status.hidden = false;
+
+        status.textContent =
+            'لا توجد بيانات لقوائم الانتظار لهذه الإدارة.';
+
+        waitingLoaded = true;
+        return;
+    }
+
+    // توجد بيانات: عرض المؤشرات والرسوم
+    content.hidden = false;
+    status.hidden = true;
+
+    wlRender(data);
+
+    waitingLoaded = true;
+
+})
+                .catch(function(error) {
+
+                    content.hidden = true;
+                    status.hidden = false;
+
+                    status.textContent =
+                        error.message === 'FORBIDDEN'
+                            ? 'غير مصرح بعرض قوائم انتظار هذه الإدارة.'
+                            : 'تعذر تحميل قوائم الانتظار. أعد فتح التبويب للمحاولة.';
+
+                })
+                .finally(function() {
+
+                    waitingLoading = false;
+
+                });
+
+            }
+
+        /* ── TABS ── */
+        function activateDepartmentTab(tabId, updateHash) {
+            if (!/^t[1-8]$/.test(tabId || '')) return;
+
+            var btn =
+                document.querySelector(
+                    '.dep-tab[data-tab="' + tabId + '"]'
+                );
+
+            var panel =
+                document.getElementById(tabId);
+
+            if (!btn || !panel) return;
+
+            document
+                .querySelectorAll('.dep-tab')
+                .forEach(function(b) {
+                    b.classList.remove('is-active');
+                });
+
+            document
+                .querySelectorAll('.dep-panel')
+                .forEach(function(p) {
+                    p.classList.remove('is-active');
+                });
+
+            btn.classList.add('is-active');
+            panel.classList.add('is-active');
+            
+            if (tabId === 't8') {
+                loadWaitingList();
+            }
+
+            if (updateHash &&
+                window.history &&
+                window.history.replaceState) {
+
+                window.history.replaceState(
+                    null,
+                    '',
+                    window.location.pathname +
+                    window.location.search +
+                    '#' +
+                    tabId
+                );
+            }
+
+            window.requestAnimationFrame(function() {
+                window.dispatchEvent(new Event('resize'));
+            });
+        }
+
+        document
+            .querySelectorAll('.dep-tab')
+            .forEach(function(btn) {
+
+                btn.addEventListener(
+                    'click',
+                    function() {
+                        activateDepartmentTab(
+                            btn.dataset.tab,
+                            true
+                        );
+                    }
+                );
+            });
+
+        var requestedTab =
+    (window.location.hash || '')
+        .replace('#', '');
+
+if (/^t[1-8]$/.test(requestedTab)) {
+    activateDepartmentTab(requestedTab, false);
+} else {
+    activateDepartmentTab('t8', false);
+}
+
+        })();
+    </script>
+</body>
+</html>

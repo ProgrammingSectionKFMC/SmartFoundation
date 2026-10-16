@@ -487,6 +487,47 @@
         }
 
 
+        .rf-service-filter {
+            margin-inline-start: auto;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            color: #475569;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .rf-service-filter select {
+            min-width: 165px;
+            height: 35px;
+            padding: 0 10px;
+            border: 1px solid #dbe3ed;
+            border-radius: 9px;
+            background: #fff;
+            color: #334155;
+            font: inherit;
+        }
+
+        .rf-service-filter select:focus-visible {
+            outline: 2px solid var(--rf-accent);
+            outline-offset: 2px;
+        }
+
+        #rf-filter-count {
+            color: #64748b;
+            font-size: 10px;
+            white-space: nowrap;
+        }
+
+        .rf-filter-empty {
+            min-height: 160px;
+        }
+
+        .rf-filter-empty[hidden] {
+            display: none !important;
+        }
+
         .rf-tab-btn {
             border: 1px solid #dbe3ed;
             background: #fff;
@@ -653,6 +694,20 @@
 
         @@media (max-width: 700px) {
 
+            .rf-tabs {
+                flex-wrap: wrap;
+            }
+
+            .rf-service-filter {
+                width: 100%;
+                margin-inline-start: 0;
+            }
+
+            .rf-service-filter select {
+                flex: 1;
+                min-width: 0;
+            }
+
             .rf-stats {
                 grid-template-columns: 1fr;
             }
@@ -728,6 +783,13 @@
 
         العودة
 
+    </a>
+    <a href="@Url.Action("Index", "HousingCommandCenterDashboard")"
+       class="dep-hdr-back hcc-home-link"
+       data-hcc-home="true"
+       style="right:145px;left:auto"
+       title="العودة إلى لوحة القيادة الرئيسية">
+        <i class="fa-solid fa-house"></i> الرئيسية
     </a>
 
 
@@ -1210,6 +1272,26 @@
 
             </button>
 
+            <div class="rf-service-filter">
+                <label for="rf-charge-type">نوع الخدمة</label>
+
+                <select id="rf-charge-type"
+                        aria-label="تصفية الحركات حسب نوع الخدمة">
+                    <option value="">جميع الخدمات</option>
+
+                    @foreach (var type in chargeTypes.OrderBy(
+                        x => x.BillChargeTypeName))
+                    {
+                        <option value="@(type.BillChargeTypeID?.ToString() ?? "__NONE__")">
+                            @Display(type.BillChargeTypeName)
+                        </option>
+                    }
+                </select>
+
+                <span id="rf-filter-count"
+                      aria-live="polite"></span>
+            </div>
+
         </div>
 
 
@@ -1286,7 +1368,7 @@
                             var row =
                                 claims[i];
 
-                            <tr>
+                            <tr data-charge-type="@(row.BillChargeTypeID?.ToString() ?? "__NONE__")">
 
                                 <td>
                                     @(i + 1)
@@ -1348,6 +1430,11 @@
 
                     </table>
 
+                </div>
+
+                <div class="rf-empty rf-filter-empty" hidden>
+                    <i class="fa-solid fa-filter-circle-xmark"></i>
+                    <strong>لا توجد مطالبات لنوع الخدمة المحدد</strong>
                 </div>
             }
             else
@@ -1440,7 +1527,7 @@
                             var row =
                                 payments[i];
 
-                            <tr>
+                            <tr data-charge-type="@(row.BillChargeTypeID?.ToString() ?? "__NONE__")">
 
                                 <td>
                                     @(i + 1)
@@ -1504,6 +1591,11 @@
                     </table>
 
                 </div>
+
+                <div class="rf-empty rf-filter-empty" hidden>
+                    <i class="fa-solid fa-filter-circle-xmark"></i>
+                    <strong>لا توجد سدادات لنوع الخدمة المحدد</strong>
+                </div>
             }
             else
             {
@@ -1529,76 +1621,76 @@
 
 
 <script>
+(function () {
+    'use strict';
 
-    (function () {
+    var buttons = document.querySelectorAll('.rf-tab-btn');
+    var panes = document.querySelectorAll('.rf-tab-pane');
+    var serviceFilter = document.getElementById('rf-charge-type');
+    var filterCount = document.getElementById('rf-filter-count');
 
-        'use strict';
+    function applyServiceFilter() {
+        var pane = document.querySelector('.rf-tab-pane.active');
+        if (!pane) return;
 
+        var selected = serviceFilter ? serviceFilter.value : '';
+        var rows = pane.querySelectorAll('tbody tr[data-charge-type]');
+        var visible = 0;
 
-        var buttons =
-            document.querySelectorAll(
-                '.rf-tab-btn');
+        rows.forEach(function (row) {
+            var show = selected === '' ||
+                row.getAttribute('data-charge-type') === selected;
 
+            row.style.display = show ? '' : 'none';
+            if (show) {
+                visible++;
+                // Renumber visible rows only; original order and data are untouched.
+                var numberCell = row.querySelector('td:first-child');
+                if (numberCell) numberCell.textContent = String(visible);
+            }
+        });
 
-        var panes =
-            document.querySelectorAll(
-                '.rf-tab-pane');
+        var filteredEmpty = pane.querySelector('.rf-filter-empty');
+        var tableScroll = pane.querySelector('.rf-table-scroll');
+        var noMatches = selected !== '' && visible === 0 && rows.length > 0;
 
+        if (filteredEmpty) filteredEmpty.hidden = !noMatches;
+        if (tableScroll) tableScroll.style.display = noMatches ? 'none' : '';
 
-        buttons.forEach(
-            function (button) {
+        if (filterCount) {
+            filterCount.textContent = selected === ''
+                ? ''
+                : 'عرض ' + visible + ' من ' + rows.length;
+        }
+    }
 
-                button.addEventListener(
-                    'click',
-                    function () {
+    buttons.forEach(function (button) {
+        button.addEventListener('click', function () {
+            var tab = button.getAttribute('data-tab');
 
-                        var tab =
-                            button.getAttribute(
-                                'data-tab');
-
-
-                        buttons.forEach(
-                            function (item) {
-
-                                item.classList.remove(
-                                    'active');
-
-                            });
-
-
-                        panes.forEach(
-                            function (pane) {
-
-                                pane.classList.remove(
-                                    'active');
-
-                            });
-
-
-                        button.classList.add(
-                            'active');
-
-
-                        var target =
-                            document.querySelector(
-                                '.rf-tab-pane[data-pane="' +
-                                tab +
-                                '"]');
-
-
-                        if (target) {
-
-                            target.classList.add(
-                                'active');
-
-                        }
-
-                    });
-
+            buttons.forEach(function (item) {
+                item.classList.remove('active');
+            });
+            panes.forEach(function (pane) {
+                pane.classList.remove('active');
             });
 
-    })();
+            button.classList.add('active');
+            var target = document.querySelector(
+                '.rf-tab-pane[data-pane="' + tab + '"]'
+            );
+            if (target) target.classList.add('active');
 
+            applyServiceFilter();
+        });
+    });
+
+    if (serviceFilter) {
+        serviceFilter.addEventListener('change', applyServiceFilter);
+    }
+
+    applyServiceFilter();
+})();
 </script>
 
 

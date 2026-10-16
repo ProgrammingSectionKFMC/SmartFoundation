@@ -1,0 +1,1692 @@
+@model SmartFoundation.UI.ViewModels.SmartCharts.DepResidentFinancialDetailsViewModel
+@using System.Globalization
+@using SmartFoundation.UI.ViewModels.SmartCharts
+
+@{
+    Layout = null;
+
+    var chargeTypes =
+        Model.ChargeTypes
+        ?? new List<DepResidentFinancialTypeSummary>();
+
+    var claims =
+        Model.Claims
+        ?? new List<DepResidentFinancialClaimRow>();
+
+    var payments =
+        Model.Payments
+        ?? new List<DepResidentFinancialPaymentRow>();
+
+
+    var accent =
+        Model.FinancialStatus == "عجز"
+            ? "#9b2c2c"
+            : Model.FinancialStatus == "فائض"
+                ? "#553c9a"
+                : "#057a55";
+
+
+    var statusIcon =
+        Model.FinancialStatus == "عجز"
+            ? "fa-solid fa-triangle-exclamation"
+            : Model.FinancialStatus == "فائض"
+                ? "fa-solid fa-circle-plus"
+                : "fa-solid fa-scale-balanced";
+
+
+    string FmtNumber(long value)
+    {
+        return value.ToString(
+            "N0",
+            CultureInfo.InvariantCulture);
+    }
+
+
+    string FmtAmount(decimal value)
+    {
+        return value.ToString(
+            "N2",
+            CultureInfo.InvariantCulture);
+    }
+
+
+    string FmtSar(decimal value)
+    {
+        return
+            value.ToString(
+                "N2",
+                CultureInfo.InvariantCulture)
+            + " <span class=\"sar-icon\"></span>";
+    }
+
+
+    string FmtDate(DateTime? value)
+    {
+        return value.HasValue
+            ? value.Value.ToString(
+                "yyyy/MM/dd",
+                CultureInfo.InvariantCulture)
+            : "—";
+    }
+
+
+    string FmtDateTime(DateTime? value)
+    {
+        return value.HasValue
+            ? value.Value.ToString(
+                "yyyy/MM/dd HH:mm",
+                CultureInfo.InvariantCulture)
+            : "—";
+    }
+
+
+    string Display(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? "—"
+            : value.Trim();
+    }
+
+
+    string FmtPeriod(
+        int? month,
+        int? year)
+    {
+        if (!month.HasValue ||
+            !year.HasValue)
+        {
+            return "—";
+        }
+
+        return
+            year.Value.ToString(
+                "0000",
+                CultureInfo.InvariantCulture)
+            + "/"
+            + month.Value.ToString(
+                "00",
+                CultureInfo.InvariantCulture);
+    }
+
+
+    string statusTitle =
+        Model.FinancialStatus == "عجز"
+            ? "مطلوب تحصيله"
+            : Model.FinancialStatus == "فائض"
+                ? "مطلوب إعادته"
+                : "الرصيد المتوازن";
+}
+
+<!doctype html>
+
+<html lang="ar" dir="rtl">
+
+<head>
+
+    <meta charset="utf-8" />
+
+    <meta name="viewport"
+          content="width=device-width,initial-scale=1" />
+
+    <title>
+        التفاصيل المالية — @Model.FullName
+    </title>
+
+
+    <link rel="icon"
+          type="image/svg+xml"
+          href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='2' y='18' width='7' height='12' rx='3.5' fill='%230f766e'/><rect x='12' y='10' width='7' height='20' rx='3.5' fill='%232563eb'/><rect x='22' y='4' width='7' height='26' rx='3.5' fill='%23d97706'/></svg>" />
+
+    <link rel="stylesheet"
+          href="~/css/Fontawesome6-5-0.min.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/lib/fontawesome/css/all.min.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/css/site.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/css/statistics.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/css/smartcharts/smartcharts.housingcommandcenter.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/css/smartcharts/smartcharts.housingdepartment.css"
+          asp-append-version="true" />
+
+
+    <style>
+
+        :root {
+            --rf-accent: @accent;
+            --rf-border: #e2e8f0;
+            --rf-muted: #718096;
+            --rf-text: #1e293b;
+            --rf-bg: #f6f8fb;
+        }
+
+
+        * {
+            box-sizing: border-box;
+        }
+
+
+        body {
+            margin: 0;
+            background: var(--rf-bg);
+            color: var(--rf-text);
+        }
+
+
+        .rf-wrap {
+            width: min(1900px, calc(100% - 28px));
+            margin: 18px auto;
+        }
+
+
+        /* ============================================
+           Beneficiary
+           ============================================ */
+
+        .rf-person {
+            background: #fff;
+            border: 1px solid var(--rf-border);
+            border-radius: 14px;
+            padding: 14px 16px;
+            margin-bottom: 14px;
+
+            display: grid;
+            grid-template-columns:
+                minmax(260px, 1.4fr)
+                repeat(4, minmax(130px, .65fr));
+
+            gap: 12px;
+            align-items: center;
+        }
+
+
+        .rf-person-main {
+            min-width: 0;
+        }
+
+
+        .rf-person-name {
+            color: #0f172a;
+            font-size: 17px;
+            font-weight: 950;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+
+        .rf-person-unit {
+            margin-top: 4px;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 700;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+
+        .rf-info {
+            min-width: 0;
+        }
+
+
+        .rf-info span {
+            display: block;
+            color: #94a3b8;
+            font-size: 9px;
+            font-weight: 900;
+            margin-bottom: 4px;
+        }
+
+
+        .rf-info strong {
+            display: block;
+            color: #334155;
+            font-size: 12px;
+            font-weight: 900;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+
+        /* ============================================
+           Statistics
+           ============================================ */
+
+        .rf-stats {
+            display: grid;
+            grid-template-columns:
+                repeat(5, minmax(0,1fr));
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+
+        .rf-stat {
+            background: #fff;
+            border: 1px solid var(--rf-border);
+            border-radius: 13px;
+            min-height: 84px;
+            padding: 13px 15px;
+
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+
+        .rf-stat > i {
+            width: 38px;
+            height: 38px;
+            border-radius: 11px;
+
+            display: grid;
+            place-items: center;
+
+            background:
+                color-mix(
+                    in srgb,
+                    var(--rf-accent) 10%,
+                    white);
+
+            color: var(--rf-accent);
+            font-size: 17px;
+            flex: 0 0 auto;
+        }
+
+
+        .rf-stat strong {
+            display: block;
+            color: #0f172a;
+            font-size: 18px;
+            line-height: 1.2;
+            font-weight: 900;
+            white-space: nowrap;
+        }
+
+
+        .rf-stat span {
+            display: block;
+            margin-top: 5px;
+            color: #64748b;
+            font-size: 10px;
+            font-weight: 800;
+        }
+
+
+        .rf-stat.balance {
+            border-color:
+                color-mix(
+                    in srgb,
+                    var(--rf-accent) 30%,
+                    white);
+        }
+
+
+        .rf-stat.balance strong,
+        .rf-stat.balance i {
+            color: var(--rf-accent);
+        }
+
+
+        /* ============================================
+           Panel
+           ============================================ */
+
+        .rf-panel {
+            background: #fff;
+            border: 1px solid var(--rf-border);
+            border-radius: 14px;
+            overflow: hidden;
+            margin-bottom: 14px;
+        }
+
+
+        .rf-panel-head {
+            min-height: 49px;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--rf-border);
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+
+        .rf-panel-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            color: #334155;
+            font-size: 13px;
+            font-weight: 950;
+        }
+
+
+        .rf-panel-title i {
+            color: var(--rf-accent);
+        }
+
+
+        .rf-panel-note {
+            color: #94a3b8;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+
+        /* ============================================
+           Type Summary
+           ============================================ */
+
+        .rf-type-scroll {
+            width: 100%;
+            overflow: auto;
+        }
+
+
+        .rf-type-table {
+            width: 100%;
+            min-width: 950px;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 11px;
+        }
+
+
+        .rf-type-table th {
+            padding: 10px 9px;
+            background: #f8fafc;
+            border-bottom: 1px solid #dbe3ed;
+            color: #475569;
+            text-align: right;
+            white-space: nowrap;
+            font-weight: 900;
+        }
+
+
+        .rf-type-table td {
+            padding: 10px 9px;
+            border-bottom: 1px solid #edf2f7;
+            color: #334155;
+            white-space: nowrap;
+        }
+
+
+        .rf-type-table tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+
+        .rf-money {
+            direction: ltr;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            font-weight: 800;
+        }
+
+
+        .rf-status {
+            display: inline-flex;
+            align-items: center;
+            min-height: 25px;
+            padding: 4px 9px;
+            border-radius: 999px;
+            font-size: 10px;
+            font-weight: 900;
+        }
+
+
+        .rf-status.deficit {
+            background: #fff5f5;
+            border: 1px solid #fed7d7;
+            color: #9b2c2c;
+        }
+
+
+        .rf-status.surplus {
+            background: #faf5ff;
+            border: 1px solid #e9d8fd;
+            color: #553c9a;
+        }
+
+
+        .rf-status.balanced {
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            color: #057a55;
+        }
+
+
+        /* ============================================
+           Tabs
+           ============================================ */
+
+        .rf-tabs {
+            padding: 10px 12px;
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid var(--rf-border);
+            background: #fbfcfe;
+        }
+
+
+        .rf-service-filter {
+            margin-inline-start: auto;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            color: #475569;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .rf-service-filter select {
+            min-width: 165px;
+            height: 35px;
+            padding: 0 10px;
+            border: 1px solid #dbe3ed;
+            border-radius: 9px;
+            background: #fff;
+            color: #334155;
+            font: inherit;
+        }
+
+        .rf-service-filter select:focus-visible {
+            outline: 2px solid var(--rf-accent);
+            outline-offset: 2px;
+        }
+
+        #rf-filter-count {
+            color: #64748b;
+            font-size: 10px;
+            white-space: nowrap;
+        }
+
+        .rf-filter-empty {
+            min-height: 160px;
+        }
+
+        .rf-filter-empty[hidden] {
+            display: none !important;
+        }
+
+        .rf-tab-btn {
+            border: 1px solid #dbe3ed;
+            background: #fff;
+            color: #64748b;
+            min-height: 35px;
+            padding: 0 14px;
+            border-radius: 9px;
+
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+
+            font-size: 11px;
+            font-weight: 900;
+            cursor: pointer;
+        }
+
+
+        .rf-tab-btn.active {
+            background: var(--rf-accent);
+            border-color: var(--rf-accent);
+            color: #fff;
+        }
+
+
+        .rf-tab-count {
+            min-width: 22px;
+            height: 20px;
+            padding: 0 6px;
+            border-radius: 999px;
+
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+
+            background: rgba(148,163,184,.14);
+            font-size: 9px;
+        }
+
+
+        .rf-tab-btn.active .rf-tab-count {
+            background: rgba(255,255,255,.18);
+        }
+
+
+        .rf-tab-pane {
+            display: none;
+        }
+
+
+        .rf-tab-pane.active {
+            display: block;
+        }
+
+
+        /* ============================================
+           Transactions
+           ============================================ */
+
+        .rf-table-scroll {
+            width: 100%;
+            overflow: auto;
+            max-height: calc(100vh - 360px);
+            min-height: 300px;
+        }
+
+
+        .rf-table {
+            width: 100%;
+            min-width: 1450px;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 10.5px;
+        }
+
+
+        .rf-table th {
+            position: sticky;
+            top: 0;
+            z-index: 3;
+
+            padding: 10px 8px;
+            background: #f8fafc;
+            border-bottom: 1px solid #dbe3ed;
+            color: #475569;
+
+            text-align: right;
+            white-space: nowrap;
+            font-weight: 900;
+        }
+
+
+        .rf-table td {
+            padding: 9px 8px;
+            border-bottom: 1px solid #edf2f7;
+            color: #334155;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+
+        .rf-table tbody tr:hover {
+            background: #f8fbff;
+        }
+
+
+        .rf-date {
+            direction: ltr;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+
+        .rf-desc {
+            max-width: 340px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+
+        .rf-empty {
+            min-height: 280px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+
+            gap: 8px;
+            color: #94a3b8;
+        }
+
+
+        .rf-empty i {
+            font-size: 30px;
+        }
+
+
+        /* ============================================
+           Responsive
+           ============================================ */
+
+        @@media (max-width: 1200px) {
+
+            .rf-stats {
+                grid-template-columns:
+                    repeat(3, minmax(0,1fr));
+            }
+
+            .rf-person {
+                grid-template-columns:
+                    repeat(2, minmax(0,1fr));
+            }
+
+            .rf-person-main {
+                grid-column: 1 / -1;
+            }
+
+            .rf-table-scroll {
+                max-height: none;
+            }
+        }
+
+
+        @@media (max-width: 700px) {
+
+            .rf-tabs {
+                flex-wrap: wrap;
+            }
+
+            .rf-service-filter {
+                width: 100%;
+                margin-inline-start: 0;
+            }
+
+            .rf-service-filter select {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .rf-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .rf-person {
+                grid-template-columns: 1fr;
+            }
+
+            .rf-person-main {
+                grid-column: auto;
+            }
+
+            .rf-panel-head {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+        }
+
+
+        @@media print {
+
+            .dep-hdr-back,
+            .rf-tabs {
+                display: none !important;
+            }
+
+            .rf-wrap {
+                width: 100%;
+                margin: 0;
+            }
+
+            .rf-tab-pane {
+                display: block !important;
+            }
+
+            .rf-table-scroll {
+                overflow: visible;
+                max-height: none;
+            }
+
+            .rf-table {
+                min-width: 0;
+                font-size: 8px;
+            }
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<header class="dep-hdr">
+
+    <div class="dep-hdr-bg"></div>
+
+    <div class="dep-hdr-grid"></div>
+
+
+    <a href="@Url.Action(
+            "FinancialDetails",
+            "HousingCommandCenterDashboard",
+            new
+            {
+                id = Model.DepartmentId,
+                mode = Model.ReturnMode
+            })"
+       class="dep-hdr-back">
+
+        <i class="fa-solid fa-arrow-right"></i>
+
+        العودة
+
+    </a>
+
+
+    <div class="dep-hdr-body">
+
+        <div class="dep-hdr-main">
+
+            <div class="dep-hdr-icon">
+
+                <i class="fa-solid fa-user-shield"></i>
+
+            </div>
+
+
+            <div class="dep-hdr-copy">
+
+                <div class="dep-hdr-label">
+
+                    <span class="dep-hdr-dot"></span>
+
+                    الكفاءة المالية — ملف المستفيد
+
+                </div>
+
+
+                <div class="dep-hdr-name">
+
+                    @Display(Model.FullName)
+
+                </div>
+
+
+                <div style="
+                    margin-top:5px;
+                    color:rgba(255,255,255,.72);
+                    font-size:11px;
+                    font-weight:700">
+
+                    @Display(Model.IdaraName)
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="dep-hdr-stats">
+
+            <div class="dep-hdr-stat">
+
+                <span class="dep-hdr-stat-val">
+
+                    @Display(Model.GeneralNo)
+
+                </span>
+
+                <span class="dep-hdr-stat-lbl">
+
+                    الرقم العام
+
+                </span>
+
+            </div>
+
+
+            <div class="dep-hdr-stat">
+
+                <span class="dep-hdr-stat-val">
+
+                    @Display(Model.FinancialStatus)
+
+                </span>
+
+                <span class="dep-hdr-stat-lbl">
+
+                    الحالة المالية
+
+                </span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="dep-hdr-bar">
+
+        <div class="dep-hdr-bar-fill"
+             style="width:100%;background:@accent">
+        </div>
+
+    </div>
+
+</header>
+
+
+<main class="rf-wrap">
+
+
+    <!-- ======================================================
+         Beneficiary
+         ====================================================== -->
+
+    <section class="rf-person">
+
+        <div class="rf-person-main">
+
+            <div class="rf-person-name">
+
+                @Display(Model.RankName)
+                /
+                @Display(Model.FullName)
+
+            </div>
+
+            <div class="rf-person-unit">
+
+                @Display(Model.MilitaryUnitName)
+
+            </div>
+
+        </div>
+
+
+        <div class="rf-info">
+
+            <span>
+                الرقم العام
+            </span>
+
+            <strong>
+                @Display(Model.GeneralNo)
+            </strong>
+
+        </div>
+
+
+        <div class="rf-info">
+
+            <span>
+                حالة السكن
+            </span>
+
+            <strong>
+                @Display(Model.HousingStatus)
+            </strong>
+
+        </div>
+
+
+        <div class="rf-info">
+
+            <span>
+                المبنى
+            </span>
+
+            <strong>
+                @Display(Model.LastActionBuildingNo)
+            </strong>
+
+        </div>
+
+
+        <div class="rf-info">
+
+            <span>
+                تاريخ آخر إجراء سكني
+            </span>
+
+            <strong>
+                @FmtDate(Model.LastActionDate)
+            </strong>
+
+        </div>
+
+    </section>
+
+
+    <!-- ======================================================
+         Main financial cards
+         ====================================================== -->
+
+    <section class="rf-stats">
+
+
+        <div class="rf-stat">
+
+            <i class="fa-solid fa-file-invoice-dollar"></i>
+
+            <div>
+
+                <strong>
+                    @Html.Raw(
+                        FmtSar(
+                            Model.TotalClaims))
+                </strong>
+
+                <span>
+                    إجمالي المطالبات
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <div class="rf-stat">
+
+            <i class="fa-solid fa-money-bill-transfer"></i>
+
+            <div>
+
+                <strong>
+                    @Html.Raw(
+                        FmtSar(
+                            Model.TotalPayments))
+                </strong>
+
+                <span>
+                    إجمالي السدادات
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <div class="rf-stat balance">
+
+            <i class="@statusIcon"></i>
+
+            <div>
+
+                <strong>
+                    @Html.Raw(
+                        FmtSar(
+                            Model.BalanceAmount))
+                </strong>
+
+                <span>
+                    @statusTitle
+                    —
+                    @Display(Model.FinancialStatus)
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <div class="rf-stat">
+
+            <i class="fa-solid fa-file-circle-check"></i>
+
+            <div>
+
+                <strong>
+                    @FmtNumber(Model.ClaimsCount)
+                </strong>
+
+                <span>
+                    عدد المطالبات
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <div class="rf-stat">
+
+            <i class="fa-solid fa-receipt"></i>
+
+            <div>
+
+                <strong>
+                    @FmtNumber(Model.PaymentsCount)
+                </strong>
+
+                <span>
+                    عدد السدادات
+                </span>
+
+            </div>
+
+        </div>
+
+
+    </section>
+
+
+    <!-- ======================================================
+         Charge Types
+         ====================================================== -->
+
+    <section class="rf-panel">
+
+        <div class="rf-panel-head">
+
+            <div class="rf-panel-title">
+
+                <i class="fa-solid fa-chart-column"></i>
+
+                الملخص المالي حسب نوع الاستحقاق
+
+            </div>
+
+            <div class="rf-panel-note">
+
+                التحليل حسب النوع مستقل عن التصنيف المالي النهائي للمستفيد
+
+            </div>
+
+        </div>
+
+
+        @if (chargeTypes.Any())
+        {
+            <div class="rf-type-scroll">
+
+                <table class="rf-type-table">
+
+                    <thead>
+
+                    <tr>
+
+                        <th>
+                            النوع
+                        </th>
+
+                        <th>
+                            عدد المطالبات
+                        </th>
+
+                        <th>
+                            عدد السدادات
+                        </th>
+
+                        <th>
+                            المطالبات
+                        </th>
+
+                        <th>
+                            السدادات
+                        </th>
+
+                        <th>
+                            الفرق
+                        </th>
+
+                        <th>
+                            الحالة
+                        </th>
+
+                    </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                    @foreach (
+                        var item
+                        in chargeTypes)
+                    {
+                        var statusClass =
+                            item.StatusByType == "عجز"
+                                ? "deficit"
+                                : item.StatusByType == "فائض"
+                                    ? "surplus"
+                                    : "balanced";
+
+                        <tr>
+
+                            <td>
+                                <strong>
+                                    @Display(
+                                        item.BillChargeTypeName)
+                                </strong>
+                            </td>
+
+                            <td>
+                                @FmtNumber(
+                                    item.ClaimsCount)
+                            </td>
+
+                            <td>
+                                @FmtNumber(
+                                    item.PaymentsCount)
+                            </td>
+
+                            <td class="rf-money">
+                                @FmtAmount(
+                                    item.TotalClaims)
+                            </td>
+
+                            <td class="rf-money">
+                                @FmtAmount(
+                                    item.TotalPayments)
+                            </td>
+
+                            <td class="rf-money">
+                                @FmtAmount(
+                                    item.Difference)
+                            </td>
+
+                            <td>
+
+                                <span class="rf-status @statusClass">
+
+                                    @Display(
+                                        item.StatusByType)
+
+                                </span>
+
+                            </td>
+
+                        </tr>
+                    }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+        }
+        else
+        {
+            <div class="rf-empty">
+
+                <i class="fa-solid fa-chart-column"></i>
+
+                <strong>
+                    لا توجد بيانات حسب نوع الاستحقاق
+                </strong>
+
+            </div>
+        }
+
+    </section>
+
+
+    <!-- ======================================================
+         Transactions
+         ====================================================== -->
+
+    <section class="rf-panel">
+
+
+        <div class="rf-tabs">
+
+            <button type="button"
+                    class="rf-tab-btn active"
+                    data-tab="claims">
+
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+
+                المطالبات
+
+                <span class="rf-tab-count">
+                    @FmtNumber(Model.ClaimsCount)
+                </span>
+
+            </button>
+
+
+            <button type="button"
+                    class="rf-tab-btn"
+                    data-tab="payments">
+
+                <i class="fa-solid fa-money-bill-transfer"></i>
+
+                السدادات
+
+                <span class="rf-tab-count">
+                    @FmtNumber(Model.PaymentsCount)
+                </span>
+
+            </button>
+
+            <div class="rf-service-filter">
+                <label for="rf-charge-type">نوع الخدمة</label>
+
+                <select id="rf-charge-type"
+                        aria-label="تصفية الحركات حسب نوع الخدمة">
+                    <option value="">جميع الخدمات</option>
+
+                    @foreach (var type in chargeTypes.OrderBy(
+                        x => x.BillChargeTypeName))
+                    {
+                        <option value="@(type.BillChargeTypeID?.ToString() ?? "__NONE__")">
+                            @Display(type.BillChargeTypeName)
+                        </option>
+                    }
+                </select>
+
+                <span id="rf-filter-count"
+                      aria-live="polite"></span>
+            </div>
+
+        </div>
+
+
+        <!-- ==================================================
+             Claims Tab
+             ================================================== -->
+
+        <div class="rf-tab-pane active"
+             data-pane="claims">
+
+
+            @if (claims.Any())
+            {
+                <div class="rf-table-scroll">
+
+                    <table class="rf-table">
+
+                        <thead>
+
+                        <tr>
+
+                            <th>
+                                #
+                            </th>
+
+                            <th>
+                                رقم الفاتورة
+                            </th>
+
+                            <th>
+                                النوع
+                            </th>
+
+                            <th>
+                                المبلغ
+                            </th>
+
+                            <th>
+                                الفترة
+                            </th>
+
+                            <th>
+                                من تاريخ
+                            </th>
+
+                            <th>
+                                إلى تاريخ
+                            </th>
+
+                            <th>
+                                المبنى
+                            </th>
+
+                            <th>
+                                سبب الغرامة
+                            </th>
+
+                            <th>
+                                تاريخ تسجيل المطالبة
+                            </th>
+
+                        </tr>
+
+                        </thead>
+
+
+                        <tbody>
+
+                        @for (
+                            int i = 0;
+                            i < claims.Count;
+                            i++)
+                        {
+                            var row =
+                                claims[i];
+
+                            <tr data-charge-type="@(row.BillChargeTypeID?.ToString() ?? "__NONE__")">
+
+                                <td>
+                                    @(i + 1)
+                                </td>
+
+                                <td>
+                                    @Display(
+                                        row.BillNumber)
+                                </td>
+
+                                <td>
+                                    @Display(
+                                        row.BillChargeTypeName)
+                                </td>
+
+                                <td class="rf-money">
+                                    @FmtAmount(
+                                        row.Amount)
+                                </td>
+
+                                <td class="rf-date">
+                                    @FmtPeriod(
+                                        row.PeriodMonth,
+                                        row.PeriodYear)
+                                </td>
+
+                                <td class="rf-date">
+                                    @FmtDate(
+                                        row.BillsFromDate)
+                                </td>
+
+                                <td class="rf-date">
+                                    @FmtDate(
+                                        row.BillsToDate)
+                                </td>
+
+                                <td>
+                                    @Display(
+                                        row.BuildingDetailsNo)
+                                </td>
+
+                                <td class="rf-desc"
+                                    title="@row.PenaltyReason">
+
+                                    @Display(
+                                        row.PenaltyReason)
+
+                                </td>
+
+                                <td class="rf-date">
+                                    @FmtDateTime(
+                                        row.ClaimEntryDate)
+                                </td>
+
+                            </tr>
+                        }
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+                <div class="rf-empty rf-filter-empty" hidden>
+                    <i class="fa-solid fa-filter-circle-xmark"></i>
+                    <strong>لا توجد مطالبات لنوع الخدمة المحدد</strong>
+                </div>
+            }
+            else
+            {
+                <div class="rf-empty">
+
+                    <i class="fa-solid fa-file-circle-xmark"></i>
+
+                    <strong>
+                        لا توجد مطالبات مالية
+                    </strong>
+
+                </div>
+            }
+
+
+        </div>
+
+
+        <!-- ==================================================
+             Payments Tab
+             ================================================== -->
+
+        <div class="rf-tab-pane"
+             data-pane="payments">
+
+
+            @if (payments.Any())
+            {
+                <div class="rf-table-scroll">
+
+                    <table class="rf-table">
+
+                        <thead>
+
+                        <tr>
+
+                            <th>
+                                #
+                            </th>
+
+                            <th>
+                                رقم العملية
+                            </th>
+
+                            <th>
+                                النوع
+                            </th>
+
+                            <th>
+                                المبلغ
+                            </th>
+
+                            <th>
+                                تاريخ السداد
+                            </th>
+
+                            <th>
+                                رقم السداد
+                            </th>
+
+                            <th>
+                                بيان السداد
+                            </th>
+
+                            <th>
+                                الوصف
+                            </th>
+
+                            <th>
+                                المبنى
+                            </th>
+
+                            <th>
+                                تاريخ الإدخال
+                            </th>
+
+                        </tr>
+
+                        </thead>
+
+
+                        <tbody>
+
+                        @for (
+                            int i = 0;
+                            i < payments.Count;
+                            i++)
+                        {
+                            var row =
+                                payments[i];
+
+                            <tr data-charge-type="@(row.BillChargeTypeID?.ToString() ?? "__NONE__")">
+
+                                <td>
+                                    @(i + 1)
+                                </td>
+
+                                <td>
+                                    @row.PaymentID
+                                </td>
+
+                                <td>
+                                    @Display(
+                                        row.BillChargeTypeName)
+                                </td>
+
+                                <td class="rf-money">
+                                    @FmtAmount(
+                                        row.Amount)
+                                </td>
+
+                                <td class="rf-date">
+                                    @FmtDate(
+                                        row.PaymentDate)
+                                </td>
+
+                                <td>
+                                    @Display(
+                                        row.PaymentNo)
+                                </td>
+
+                                <td class="rf-desc"
+                                    title="@row.DeductName">
+
+                                    @Display(
+                                        row.DeductName)
+
+                                </td>
+
+                                <td class="rf-desc"
+                                    title="@row.PaymentDescription">
+
+                                    @Display(
+                                        row.PaymentDescription)
+
+                                </td>
+
+                                <td>
+                                    @Display(
+                                        row.BuildingDetailsNo)
+                                </td>
+
+                                <td class="rf-date">
+                                    @FmtDateTime(
+                                        row.PaymentEntryDate)
+                                </td>
+
+                            </tr>
+                        }
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+                <div class="rf-empty rf-filter-empty" hidden>
+                    <i class="fa-solid fa-filter-circle-xmark"></i>
+                    <strong>لا توجد سدادات لنوع الخدمة المحدد</strong>
+                </div>
+            }
+            else
+            {
+                <div class="rf-empty">
+
+                    <i class="fa-solid fa-money-bill-wave"></i>
+
+                    <strong>
+                        لا توجد سدادات مالية
+                    </strong>
+
+                </div>
+            }
+
+
+        </div>
+
+
+    </section>
+
+
+</main>
+
+
+<script>
+(function () {
+    'use strict';
+
+    var buttons = document.querySelectorAll('.rf-tab-btn');
+    var panes = document.querySelectorAll('.rf-tab-pane');
+    var serviceFilter = document.getElementById('rf-charge-type');
+    var filterCount = document.getElementById('rf-filter-count');
+
+    function applyServiceFilter() {
+        var pane = document.querySelector('.rf-tab-pane.active');
+        if (!pane) return;
+
+        var selected = serviceFilter ? serviceFilter.value : '';
+        var rows = pane.querySelectorAll('tbody tr[data-charge-type]');
+        var visible = 0;
+
+        rows.forEach(function (row) {
+            var show = selected === '' ||
+                row.getAttribute('data-charge-type') === selected;
+
+            row.style.display = show ? '' : 'none';
+            if (show) {
+                visible++;
+                // Renumber visible rows only; original order and data are untouched.
+                var numberCell = row.querySelector('td:first-child');
+                if (numberCell) numberCell.textContent = String(visible);
+            }
+        });
+
+        var filteredEmpty = pane.querySelector('.rf-filter-empty');
+        var tableScroll = pane.querySelector('.rf-table-scroll');
+        var noMatches = selected !== '' && visible === 0 && rows.length > 0;
+
+        if (filteredEmpty) filteredEmpty.hidden = !noMatches;
+        if (tableScroll) tableScroll.style.display = noMatches ? 'none' : '';
+
+        if (filterCount) {
+            filterCount.textContent = selected === ''
+                ? ''
+                : 'عرض ' + visible + ' من ' + rows.length;
+        }
+    }
+
+    buttons.forEach(function (button) {
+        button.addEventListener('click', function () {
+            var tab = button.getAttribute('data-tab');
+
+            buttons.forEach(function (item) {
+                item.classList.remove('active');
+            });
+            panes.forEach(function (pane) {
+                pane.classList.remove('active');
+            });
+
+            button.classList.add('active');
+            var target = document.querySelector(
+                '.rf-tab-pane[data-pane="' + tab + '"]'
+            );
+            if (target) target.classList.add('active');
+
+            applyServiceFilter();
+        });
+    });
+
+    if (serviceFilter) {
+        serviceFilter.addEventListener('change', applyServiceFilter);
+    }
+
+    applyServiceFilter();
+})();
+</script>
+
+
+</body>
+
+</html>

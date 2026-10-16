@@ -149,22 +149,54 @@
         return dep.metrics.find(x => String(x.metricKey || '') === String(metricKey || '')) || null;
     }
 
+
+    function hasExplicitPercent(item) {
+    const value = item?.completionPercent;
+
+    return value !== null &&
+        value !== undefined &&
+        value !== '' &&
+        Number.isFinite(Number(value));
+}
+
     function calcDepartmentOverall(dep, metricMap, opts) {
-        if (dep?.overallCompletionPercent !== null &&
-            dep?.overallCompletionPercent !== undefined &&
-            dep?.overallCompletionPercent !== '' &&
-            num(dep.overallCompletionPercent) > 0) {
-            return clamp(num(dep.overallCompletionPercent), 0, 100);
-        }
 
-        const items = (dep?.metrics || [])
-            .filter(x => has(x.metricKey) && metricMap[x.metricKey]);
+    // اعتماد النسبة المحسوبة مسبقًا في C#
+    // بما فيها الصفر الحقيقي
+    const published = dep?.overallCompletionPercent;
 
-        if (!items.length) return 0;
-
-        const total = items.reduce((s, x) => s + resolvePercent(x, opts), 0);
-        return clamp(total / items.length, 0, 100);
+    if (
+        published !== null &&
+        published !== undefined &&
+        published !== '' &&
+        Number.isFinite(Number(published))
+    ) {
+        return clamp(Number(published), 0, 100);
     }
+
+    // احتساب المؤشرات القابلة للتقييم فقط
+    const scores = (dep?.metrics || [])
+        .filter(x =>
+            x &&
+            x.metricKey !== 'm_waiting_list' &&
+            metricMap[x.metricKey] &&
+            hasExplicitPercent(x)
+        )
+        .map(x =>
+            clamp(Number(x.completionPercent), 0, 100)
+        );
+
+    if (scores.length === 0) {
+        return null;
+    }
+
+    return clamp(
+        scores.reduce((sum, value) => sum + value, 0)
+        / scores.length,
+        0,
+        100
+    );
+}
 
     function renderPercentRing(percent, accent) {
         const p = clamp(num(percent), 0, 100);
@@ -182,13 +214,94 @@
     /* =========================================================
        Top metric cards
     ========================================================= */
+
+    function buildWaitingMetricCard(metric, opts, idx) {
+
+    const s = toneStyle(
+        metric.tone,
+        metric.color,
+        idx
+    );
+
+    const details = String(metric?.hint || '')
+        .split('|')
+        .map(x => x.trim())
+        .filter(Boolean);
+
+    const detailsHtml = details
+        .map(x => `
+            <div style="margin-bottom:6px">
+                ${esc(x)}
+            </div>
+        `)
+        .join('');
+
+    return `
+<div class="sf-hccm-metric-card"
+     style="--mc-bg:${s.bg};--mc-soft:${s.soft};--mc-border:${s.border};--mc-text:${s.text};--mc-accent:${s.accent}">
+
+    <div class="sf-hccm-metric-top">
+
+        <div class="sf-hccm-metric-icon">
+            <i class="fa-solid fa-list-ol"></i>
+        </div>
+
+        <span style="font-size:11px;font-weight:700;color:${s.accent}">
+            بيانات إحصائية
+        </span>
+
+    </div>
+
+    <div class="sf-hccm-metric-title">
+        <span class="sf-hccm-title-dot"
+              style="background:${s.accent}"></span>
+        ${esc(metric.title || 'قوائم الانتظار')}
+    </div>
+
+    <div class="sf-hccm-metric-subtitle">
+        لا تدخل في إجمالي كفاءة عمل الإدارة
+    </div>
+
+    <div class="sf-hccm-metric-meta">
+
+        <span class="sf-hccm-mini-chip is-target">
+            إجمالي السجلات:
+            <strong>${esc(fmtNumber(metric.target, 0))}</strong>
+        </span>
+
+        <span class="sf-hccm-mini-chip is-actual">
+            المنتظرون فعليًا:
+            <strong>${esc(fmtNumber(metric.actual, 0))}</strong>
+        </span>
+
+    </div>
+
+    <div class="sf-hccm-metric-hint">
+        <span class="sf-hccm-metric-hint-text">
+            ${detailsHtml}
+        </span>
+    </div>
+
+</div>`;
+}
+
+
     function buildMetricCard(metric, opts, idx) {
-        const s = toneStyle(metric.tone, metric.color, idx);
-        const percent = resolvePercent(metric, opts);
+
+    // قوائم الانتظار بطاقة إحصائية وليست مؤشر أداء
+    if (metric?.key === 'm_waiting_list') {
+        return buildWaitingMetricCard(metric, opts, idx);
+    }
+
+    const s = toneStyle(metric.tone, metric.color, idx);
+    const percent = resolvePercent(metric, opts);
         const actual = metric?.actual;
         const target = metric?.target;
         const unit = metric?.unit || '';
         const displayPercent = fmtPercent(percent, 1);
+
+        const isProceduresKpi =
+    metric?.key === 'm_housing_procedures';
 
         const actualLabel = has(metric?.actualLabel)
     ? metric.actualLabel
@@ -217,7 +330,7 @@ if (opts.showMetricTargetActual) {
         actual !== null && actual !== undefined && actual !== ''
             ? `<span class="sf-hccm-mini-chip is-actual">
                    ${esc(actualLabel)}:
-                   <strong>${esc(fmtNumber(actual, 0))}${has(valueUnit) ? ' ' + esc(valueUnit) : ''}</strong>
+                   <strong>${esc(fmtNumber(actual, isProceduresKpi ? 1 : 0))}${has(valueUnit) ? ' ' + esc(valueUnit) : ''}</strong>
                </span>`
             : '';
 
@@ -229,13 +342,32 @@ if (opts.showMetricTargetActual) {
                </span>`
             : '';
 
-    metaHtml =
-        (actualHtml || targetHtml)
-            ? `<div class="sf-hccm-metric-meta">
-                   ${actualHtml}
-                   ${targetHtml}
-               </div>`
-            : '';
+            
+const gapHtml =
+    isProceduresKpi &&
+    actual !== null &&
+    actual !== undefined &&
+    target !== null &&
+    target !== undefined
+        ? `<span class="sf-hccm-mini-chip">
+               الفجوة عن المستهدف:
+               <strong>${esc(fmtNumber(
+                   Math.max(0, num(target) - num(actual)), 1
+               ))} نقطة مئوية</strong>
+           </span>`
+        : '';
+
+
+    
+metaHtml =
+    (actualHtml || targetHtml || gapHtml)
+        ? `<div class="sf-hccm-metric-meta">
+               ${actualHtml}
+               ${targetHtml}
+               ${gapHtml}
+           </div>`
+        : '';
+
 }
 
         const hrefOpen = has(metric?.href)
@@ -324,6 +456,244 @@ if (opts.showMetricTargetActual) {
 </td>`;
         }
 
+
+        // قوائم الانتظار: عرض إحصائي دون نسبة أداء
+
+
+
+if (metric?.key === 'm_waiting_list') {
+
+    const s = toneStyle(
+        depMetric.tone || metric.tone,
+        depMetric.color || metric.color,
+        idx
+    );
+
+    const details = String(depMetric.note || '')
+        .split('|')
+        .map(x => {
+            const pos = x.indexOf(':');
+
+            return {
+                label: pos >= 0
+                    ? x.slice(0, pos).trim()
+                    : x.trim(),
+
+                value: pos >= 0
+                    ? x.slice(pos + 1).trim()
+                    : ''
+            };
+        })
+        .filter(x => x.label);
+
+    function getDetail(...labels) {
+        const item = details.find(
+            x => labels.includes(x.label)
+        );
+
+        return item ? item.value : '—';
+    }
+
+    const rows = [
+        {
+            label: 'إجمالي السجلات',
+            value: fmtNumber(depMetric.target, 0)
+        },
+        {
+            label: 'المنتظرون فعليًا',
+            value: fmtNumber(depMetric.actual, 0)
+        },
+        {
+            label: 'القوائم الرئيسية',
+            value: getDetail('القوائم الرئيسية')
+        },
+        {
+            label: 'القوائم الجانبية',
+            value: getDetail('القوائم الجانبية')
+        },
+        {
+            label: 'في مرحلة التخصيص',
+            value: getDetail(
+                'في مرحلة التخصيص',
+                'في مراحل التخصيص'
+            )
+        },
+        {
+            label: 'في مرحلة التسكين',
+            value: getDetail(
+                'في مرحلة التسكين',
+                'في مراحل التسكين'
+            )
+        }
+    ];
+
+    const hrefOpen = has(depMetric.href)
+        ? `<a class="sf-hccm-tcell-link-cover"
+              href="${esc(depMetric.href)}"
+              aria-label="عرض قوائم الانتظار"></a>`
+        : '';
+
+    
+    const compactLabels = [
+        'الإجمالي',
+        'المنتظرون',
+        'الرئيسية',
+        'الجانبية',
+        'التخصيص',
+        'التسكين'
+    ];
+
+    return `
+<td class="sf-hccm-matrix-td">
+
+    <div class="sf-hccm-tcell"
+         style="
+            --tc-bg:${s.bg};
+            --tc-soft:${s.soft};
+            --tc-border:${s.border};
+            --tc-text:${s.text};
+            --tc-accent:${s.accent};
+            height:auto;
+            min-height:0;
+            box-sizing:border-box;
+            padding:9px 7px;
+         ">
+
+        ${hrefOpen}
+
+        <div style="
+            text-align:center;
+            margin-bottom:7px;
+            line-height:1.3;
+        ">
+            <div style="
+                font-size:12px;
+                font-weight:800;
+                color:${s.accent};
+            ">
+                بيانات إحصائية
+            </div>
+
+            
+        </div>
+
+        <div style="
+            display:grid;
+            grid-template-columns:repeat(2,minmax(0,1fr));
+            gap:4px 6px;
+        ">
+
+            ${rows.map((row, i) => `
+                <div title="${esc(row.label)}"
+                     style="
+                        display:flex;
+                        align-items:center;
+                        justify-content:space-between;
+                        gap:3px;
+                        min-width:0;
+                        padding:4px 3px;
+                        background:#f1f3f5;
+                        border-radius:4px;
+                    ">
+
+                    <span style="
+                        font-size:9px;
+                        color:#475569;
+                        white-space:nowrap;
+                    ">
+                        ${esc(compactLabels[i])}
+                    </span>
+
+                    <strong style="
+                        font-size:10px;
+                        color:${s.accent};
+                        white-space:nowrap;
+                    ">
+                        ${esc(row.value)}
+                    </strong>
+
+                </div>
+            
+            `).join('')}
+
+        </div>
+
+        <!-- النافذة الجانبية عند تمرير المؤشر -->
+        <div class="sf-hccm-tcell-tooltip">
+
+            <div class="sf-hccm-tooltip-title">
+                تفاصيل قوائم الانتظار
+            </div>
+
+            <div class="sf-hccm-tooltip-body">
+
+                ${rows.map(row => `
+                    <div class="sf-hccm-tooltip-row">
+                        <div class="sf-hccm-tooltip-dot"></div>
+                        <span>
+                            ${esc(row.label)}:
+                            ${esc(row.value)}
+                        </span>
+                    </div>
+                `).join('')}
+
+            </div>
+
+        </div>
+
+    </div>
+
+</td>`;
+}
+
+
+
+
+
+
+        if (
+    [
+        'm_housing_readiness',
+        'm_housing_occupancy',
+        'm_housing_procedures'
+    ].includes(metric?.key) &&
+    !hasExplicitPercent(depMetric)
+) {
+    const emptyLabel =
+        metric.key === 'm_housing_procedures'
+            ? 'لا توجد إجراءات إسكان'
+            : (depMetric.displayText || 'البيانات غير متاحة');
+
+    return `
+<td class="sf-hccm-matrix-td">
+    <div class="sf-hccm-tcell is-empty">
+        <div class="sf-hccm-tcell-empty">
+            ${esc(emptyLabel)}
+        </div>
+    </div>
+</td>`;
+}
+
+// الكفاءة المالية غير القابلة للتقييم
+if (
+    metric?.key === 'm_finance_utilities' &&
+    (
+        depMetric.completionPercent === null ||
+        depMetric.completionPercent === undefined ||
+        depMetric.completionPercent === ''
+    )
+) {
+    return `
+<td class="sf-hccm-matrix-td">
+    <div class="sf-hccm-tcell is-empty">
+        <div class="sf-hccm-tcell-empty">
+            لا توجد بيانات مالية
+        </div>
+    </div>
+</td>`;
+}
+
+
         const s = toneStyle(depMetric.tone || metric?.tone, depMetric.color || metric?.color, idx);
         const percent = resolvePercent(depMetric, opts);
         const perfCls = getPerfClass(percent);
@@ -353,6 +723,57 @@ const targetLabel = has(metric?.targetLabel)
 const remainingLabel = has(metric?.remainingLabel)
     ? metric.remainingLabel
     : 'المتبقي';
+
+
+    
+const isProceduresKpi =
+    metric?.key === 'm_housing_procedures';
+
+const hasProceduresScore =
+    actual !== null && actual !== undefined &&
+    target !== null && target !== undefined;
+
+const proceduresStatsHtml = isProceduresKpi
+    ? `
+      <div class="sf-hccm-tcell-stat-line is-actual-target">
+          <span class="sf-hccm-tcell-stat-label"
+                style="white-space:normal">
+              كفاءة سرعة الإنجاز
+          </span>
+          <strong class="is-actual">
+              ${hasProceduresScore
+                  ? esc(fmtPercent(actual, 1))
+                  : '—'}
+          </strong>
+      </div>
+
+      <div class="sf-hccm-tcell-stat-line is-actual-target">
+          <span class="sf-hccm-tcell-stat-label"
+                style="white-space:normal">
+              الكفاءة المستهدفة
+          </span>
+          <strong class="is-target">
+              ${hasProceduresScore
+                  ? esc(fmtPercent(target, 0))
+                  : '—'}
+          </strong>
+      </div>
+
+      <div class="sf-hccm-tcell-stat-line is-remaining">
+          <span class="sf-hccm-tcell-stat-label"
+                style="white-space:normal">
+              الفجوة عن المستهدف
+          </span>
+          <strong style="white-space:normal;text-align:left">
+              ${hasProceduresScore
+                  ? esc(fmtNumber(
+                      Math.max(0, num(target) - num(actual)), 1
+                    )) + ' نقطة مئوية'
+                  : '—'}
+          </strong>
+      </div>`
+    : null;
+
 
         const noteHtml = has(depMetric?.note)
             ? `<div class="sf-hccm-tcell-tooltip">
@@ -389,6 +810,7 @@ const remainingLabel = has(metric?.remainingLabel)
         ${opts.showMetricProgressBar ? buildCellProgress(percent, s.accent) : ''}
 
         <div class="sf-hccm-tcell-stats">
+        ${proceduresStatsHtml !== null ? proceduresStatsHtml : `
 
     <div class="sf-hccm-tcell-stat-line is-actual-target">
 
@@ -410,7 +832,7 @@ const remainingLabel = has(metric?.remainingLabel)
         <span class="sf-hccm-tcell-stat-label">${esc(remainingLabel)}</span>
         <strong>${esc(fmtNumber(remaining, 0))}</strong>
     </div>
-
+    `}
 </div>
 </td>`;
     }
@@ -576,7 +998,19 @@ const remainingLabel = has(metric?.remainingLabel)
     function buildMatrixOverallCell(dep, metricMap, opts, depIndex) {
         const depTone = toneStyle(dep?.tone, dep?.color, depIndex);
         const overall = calcDepartmentOverall(dep, metricMap, opts);
-        const perfCls = getPerfClass(overall);
+
+if (overall === null) {
+    return `
+<td class="sf-hccm-matrix-td is-overall-col">
+    <div class="sf-hccm-overall-cell is-empty">
+        <div class="sf-hccm-overall-caption">
+            غير قابل للتقييم
+        </div>
+    </div>
+</td>`;
+}
+
+const perfCls = getPerfClass(overall);
 
         return `
 <td class="sf-hccm-matrix-td is-overall-col">
@@ -591,7 +1025,10 @@ const remainingLabel = has(metric?.remainingLabel)
     function buildMatrixDepartmentCell(dep, metricMap, opts, depIndex, depRank) {
         const depTone = toneStyle(dep?.tone, dep?.color, depIndex);
         const overall = calcDepartmentOverall(dep, metricMap, opts);
-        const perfCls = getPerfClass(overall);
+        const hasOverall = overall !== null;
+const perfCls = hasOverall
+    ? getPerfClass(overall)
+    : 'is-empty';
 
         const barColor = depTone.accent;
 
@@ -606,7 +1043,9 @@ const remainingLabel = has(metric?.remainingLabel)
             : `<span class="sf-hccm-dep-card-btn is-disabled">${chartIcon}<span>التفاصيل</span></span>`;
 
         // عرض الميدالية للمراكز الثلاثة الأولى 
-        const medalIcon = getMedalIcon(depRank);
+        const medalIcon = hasOverall
+    ? getMedalIcon(depRank)
+    : null;
         const medalHtml = medalIcon 
             ? `<div class="sf-hccm-dep-card-medal">${medalIcon}</div>`
             : `<div class="sf-hccm-dep-card-medal-placeholder"></div>`;
@@ -617,11 +1056,13 @@ const remainingLabel = has(metric?.remainingLabel)
         <div class="sf-hccm-dep-card-stripe"></div>
         <div class="sf-hccm-dep-card-inner">
             <div class="sf-hccm-dep-card-top">
-                <div class="sf-hccm-dep-card-badge">${depRank + 1}</div>
+                <div class="sf-hccm-dep-card-badge">${hasOverall ? depRank + 1 : '—'}</div>
                 <div class="sf-hccm-dep-card-name">${esc(dep?.shortName || dep?.name || '')}</div>
             </div>
             <div class="sf-hccm-dep-card-track">
-                <div class="sf-hccm-dep-card-fill" style="width:${overall.toFixed(1)}%;background:${barColor}"></div>
+                ${hasOverall
+    ? `<div class="sf-hccm-dep-card-fill" style="width:${overall.toFixed(1)}%;background:${barColor}"></div>`
+    : ''}
             </div>
             <div class="sf-hccm-dep-card-foot">
                 ${medalHtml}
@@ -1129,25 +1570,50 @@ host.style.setProperty(
             return;
         }
 
-        // احسب الأعلى والأدنى لكل معيار
-        metrics.forEach(metric => {
-            const vals = departments
-                .map(dep => {
-                    const dm = findDepartmentMetric(dep, metric.key);
-                    if (!dm) return null;
-                    return {
-                        name: dep.shortName || dep.name || '',
-                        percent: resolvePercent(dm, opts)
-                    };
-                })
-                .filter(x => x !== null);
+        // احسب الأعلى والأدنى لمؤشرات الأداء فقط
+// الأعلى والأدنى للمؤشرات القابلة للتقييم فقط
+metrics.forEach(metric => {
 
-            if (vals.length) {
-                vals.sort((a, b) => b.percent - a.percent);
-                metric.__best = vals[0];
-                metric.__worst = vals[vals.length - 1];
+    metric.__best = null;
+    metric.__worst = null;
+
+    // قوائم الانتظار ليست مؤشر كفاءة حاليًا
+    if (metric.key === 'm_waiting_list') {
+        return;
+    }
+
+    const vals = departments
+        .map(dep => {
+
+            const dm = findDepartmentMetric(
+                dep,
+                metric.key
+            );
+
+            if (!hasExplicitPercent(dm)) {
+                return null;
             }
-        });
+
+            return {
+                name: dep.shortName || dep.name || '',
+                percent: clamp(
+                    Number(dm.completionPercent),
+                    0,
+                    100
+                )
+            };
+        })
+        .filter(x => x !== null)
+        .sort((a, b) => b.percent - a.percent);
+
+    if (vals.length > 0) {
+        metric.__best = vals[0];
+    }
+
+    if (vals.length > 1) {
+        metric.__worst = vals[vals.length - 1];
+    }
+});
 
         metricsBox.innerHTML = metrics.map((metric, i) => buildMetricCard(metric, opts, i)).join('');
         matrixHead.innerHTML = buildDynamicHead(metrics);
@@ -1165,7 +1631,18 @@ host.style.setProperty(
                 dep,
                 originalIndex,
                 overall: calcDepartmentOverall(dep, metricMap, opts)
-            })).sort((a, b) => b.overall - a.overall);
+            })).sort((a, b) => {
+
+    if (a.overall === null) {
+        return b.overall === null ? 0 : 1;
+    }
+
+    if (b.overall === null) {
+        return -1;
+    }
+
+    return b.overall - a.overall;
+});
 
             matrixBody.innerHTML = sortedDepartments
                 .map((item, rank) => buildMatrixRow(item.dep, metrics, metricMap, opts, item.originalIndex, rank))

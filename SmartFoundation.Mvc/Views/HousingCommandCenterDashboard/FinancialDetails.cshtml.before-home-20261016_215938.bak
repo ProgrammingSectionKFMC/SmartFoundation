@@ -1,0 +1,1740 @@
+@model SmartFoundation.UI.ViewModels.SmartCharts.DepFinancialDetailsViewModel
+@using System.Globalization
+@using SmartFoundation.UI.ViewModels.SmartCharts
+
+@{
+    Layout = null;
+
+    var rows =
+        Model.Rows
+        ?? new List<DepFinancialDetailRow>();
+
+
+    var accent =
+        Model.Mode == "CLAIMS"
+            ? "#2b6cb0"
+            : Model.Mode == "PAYMENTS"
+                ? "#276749"
+                : Model.Mode == "DEFICIT"
+                    ? "#9b2c2c"
+                    : Model.Mode == "SURPLUS"
+                        ? "#553c9a"
+                        : "#057a55";
+
+
+    var icon =
+        Model.Mode == "CLAIMS"
+            ? "fa-solid fa-file-invoice-dollar"
+            : Model.Mode == "PAYMENTS"
+                ? "fa-solid fa-money-bill-transfer"
+                : Model.Mode == "DEFICIT"
+                    ? "fa-solid fa-user-minus"
+                    : Model.Mode == "SURPLUS"
+                        ? "fa-solid fa-user-plus"
+                        : "fa-solid fa-scale-balanced";
+
+
+    string FmtNumber(long value)
+    {
+        return value.ToString(
+            "N0",
+            CultureInfo.InvariantCulture);
+    }
+
+
+    string FmtAmount(decimal value)
+    {
+        return value.ToString(
+            "N2",
+            CultureInfo.InvariantCulture);
+    }
+
+
+    string FmtSar(decimal value)
+    {
+        return
+            value.ToString(
+                "N2",
+                CultureInfo.InvariantCulture)
+            + " <span class=\"sar-icon\"></span>";
+    }
+
+
+    string FmtDate(DateTime? value)
+    {
+        return value.HasValue
+            ? value.Value.ToString(
+                "yyyy/MM/dd",
+                CultureInfo.InvariantCulture)
+            : "—";
+    }
+
+
+    string Display(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value)
+            ? "—"
+            : value;
+    }
+
+
+    long startRow =
+        Model.TotalRows <= 0
+            ? 0
+            : ((long)(Model.PageNumber - 1)
+                * Model.PageSize) + 1;
+
+
+    long endRow =
+        Model.TotalRows <= 0
+            ? 0
+            : Math.Min(
+                (long)Model.PageNumber
+                    * Model.PageSize,
+                Model.TotalRows);
+
+
+    string firstStatLabel;
+    string secondStatLabel;
+    string thirdStatLabel;
+    string fourthStatLabel;
+
+    string firstStatValue;
+    string secondStatValue;
+    string thirdStatValue;
+    string fourthStatValue;
+
+string? fifthStatLabel = null;
+string? fifthStatValue = null;
+
+
+    switch (Model.Mode)
+    {
+        case "CLAIMS":
+
+            firstStatLabel = "المستفيدون";
+            firstStatValue = FmtNumber(Model.TotalRows);
+
+            secondStatLabel = "إجمالي المطالبات";
+            secondStatValue = FmtSar(Model.TotalClaims);
+
+            thirdStatLabel = "عدد المطالبات";
+            thirdStatValue = FmtNumber(Model.ClaimsCount);
+
+            fourthStatLabel = "متوسط المطالبة";
+            fourthStatValue =
+                Model.ClaimsCount > 0
+                    ? FmtSar(
+                        Model.TotalClaims /
+                        Model.ClaimsCount)
+                    : "—";
+
+            break;
+
+
+        case "PAYMENTS":
+
+            firstStatLabel = "المستفيدون";
+            firstStatValue = FmtNumber(Model.TotalRows);
+
+            secondStatLabel = "إجمالي السدادات";
+            secondStatValue = FmtSar(Model.TotalPayments);
+
+            thirdStatLabel = "عدد السدادات";
+            thirdStatValue = FmtNumber(Model.PaymentsCount);
+
+            fourthStatLabel = "متوسط السداد";
+            fourthStatValue =
+                Model.PaymentsCount > 0
+                    ? FmtSar(
+                        Model.TotalPayments /
+                        Model.PaymentsCount)
+                    : "—";
+
+            break;
+
+
+        case "DEFICIT":
+
+            firstStatLabel = "مستفيدون بعجز";
+            firstStatValue = FmtNumber(Model.TotalRows);
+
+            secondStatLabel = "مطلوب تحصيله";
+            secondStatValue = FmtSar(Model.DeficitAmount);
+
+            thirdStatLabel = "مطالباتهم";
+            thirdStatValue = FmtSar(Model.TotalClaims);
+
+            fourthStatLabel = "سداداتهم";
+            fourthStatValue = FmtSar(Model.TotalPayments);
+
+            break;
+
+
+        case "SURPLUS":
+
+            firstStatLabel = "مستفيدون بفائض";
+            firstStatValue = FmtNumber(Model.TotalRows);
+
+            secondStatLabel = "مطلوب إعادته";
+            secondStatValue = FmtSar(Model.SurplusAmount);
+
+            thirdStatLabel = "مطالباتهم";
+            thirdStatValue = FmtSar(Model.TotalClaims);
+
+            fourthStatLabel = "سداداتهم";
+            fourthStatValue = FmtSar(Model.TotalPayments);
+
+            break;
+
+
+        default:
+
+    firstStatLabel =
+        "المستفيدون المتوازنون";
+
+    firstStatValue =
+        FmtNumber(
+            Model.TotalRows);
+
+
+    secondStatLabel =
+        "إجمالي المطالبات";
+
+    secondStatValue =
+        FmtSar(
+            Model.TotalClaims);
+
+
+    thirdStatLabel =
+        "إجمالي السدادات";
+
+    thirdStatValue =
+        FmtSar(
+            Model.TotalPayments);
+
+
+    fourthStatLabel =
+        "عدد المطالبات";
+
+    fourthStatValue =
+        FmtNumber(
+            Model.ClaimsCount);
+
+
+    fifthStatLabel =
+        "عدد السدادات";
+
+    fifthStatValue =
+        FmtNumber(
+            Model.PaymentsCount);
+
+    break;
+    }
+}
+
+<!doctype html>
+
+<html lang="ar" dir="rtl">
+
+<head>
+
+    <meta charset="utf-8" />
+
+    <meta name="viewport"
+          content="width=device-width,initial-scale=1" />
+
+    <title>@Model.Title</title>
+
+
+    <link rel="icon"
+          type="image/svg+xml"
+          href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='2' y='18' width='7' height='12' rx='3.5' fill='%230f766e'/><rect x='12' y='10' width='7' height='20' rx='3.5' fill='%232563eb'/><rect x='22' y='4' width='7' height='26' rx='3.5' fill='%23d97706'/></svg>" />
+
+    <link rel="stylesheet"
+          href="~/css/Fontawesome6-5-0.min.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/lib/fontawesome/css/all.min.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/css/site.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/css/statistics.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/css/smartcharts/smartcharts.housingcommandcenter.css"
+          asp-append-version="true" />
+
+    <link rel="stylesheet"
+          href="~/css/smartcharts/smartcharts.housingdepartment.css"
+          asp-append-version="true" />
+
+
+    <style>
+
+        :root {
+            --fin-accent: @accent;
+            --fin-border: #e2e8f0;
+            --fin-muted: #718096;
+            --fin-text: #1e293b;
+            --fin-bg: #f6f8fb;
+        }
+
+
+        * {
+            box-sizing: border-box;
+        }
+
+
+        body {
+            margin: 0;
+            background: var(--fin-bg);
+            color: var(--fin-text);
+        }
+
+
+        .fin-wrap {
+            width: min(1900px, calc(100% - 28px));
+            margin: 18px auto;
+        }
+
+
+        .fin-stats {
+    display: grid;
+    grid-template-columns:
+        repeat(auto-fit, minmax(210px, 1fr));
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+
+        .fin-stat {
+            background: #fff;
+            border: 1px solid var(--fin-border);
+            border-radius: 13px;
+            min-height: 84px;
+            padding: 13px 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+
+        .fin-stat > i {
+            width: 38px;
+            height: 38px;
+            border-radius: 11px;
+            display: grid;
+            place-items: center;
+            background:
+                color-mix(
+                    in srgb,
+                    var(--fin-accent) 10%,
+                    white);
+            color: var(--fin-accent);
+            font-size: 17px;
+        }
+
+
+        .fin-stat strong {
+            display: block;
+            color: #0f172a;
+            font-size: 19px;
+            line-height: 1.2;
+            font-weight: 900;
+            white-space: nowrap;
+        }
+
+
+        .fin-stat span {
+            display: block;
+            margin-top: 5px;
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+
+        .fin-panel {
+            background: #fff;
+            border: 1px solid var(--fin-border);
+            border-radius: 14px;
+            overflow: hidden;
+        }
+
+
+        .fin-toolbar {
+            display: grid;
+            grid-template-columns:
+                minmax(260px, 1.5fr)
+                minmax(180px, .75fr)
+                minmax(190px, .8fr)
+                110px
+                auto;
+            gap: 9px;
+            padding: 12px;
+            border-bottom: 1px solid var(--fin-border);
+            align-items: center;
+        }
+
+
+        .fin-toolbar.no-type {
+            grid-template-columns:
+                minmax(300px, 1.8fr)
+                minmax(220px, .9fr)
+                110px
+                auto;
+        }
+
+
+        .fin-field {
+            position: relative;
+        }
+
+
+        .fin-field > i {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            pointer-events: none;
+        }
+
+
+        .fin-input,
+        .fin-select {
+            width: 100%;
+            height: 39px;
+            border: 1px solid #dbe3ed;
+            border-radius: 9px;
+            background: #fff;
+            color: #334155;
+            outline: none;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+
+        .fin-input {
+            padding: 0 36px 0 10px;
+        }
+
+
+        .fin-select {
+            padding: 0 10px;
+        }
+
+
+        .fin-input:focus,
+        .fin-select:focus {
+            border-color: var(--fin-accent);
+            box-shadow:
+                0 0 0 3px
+                color-mix(
+                    in srgb,
+                    var(--fin-accent) 10%,
+                    transparent);
+        }
+
+
+        .fin-actions {
+            display: flex;
+            gap: 7px;
+        }
+
+
+        .fin-btn {
+            min-height: 39px;
+            border-radius: 9px;
+            border: 1px solid #dbe3ed;
+            padding: 0 14px;
+            background: #fff;
+            color: #475569;
+            font-size: 11px;
+            font-weight: 900;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+
+        .fin-btn.primary {
+            border-color: var(--fin-accent);
+            background: var(--fin-accent);
+            color: #fff;
+        }
+
+
+        .fin-table-scroll {
+            width: 100%;
+            overflow: auto;
+            min-height: 400px;
+            max-height: calc(100vh - 335px);
+        }
+
+
+        .fin-table {
+            width: 100%;
+            min-width: 1550px;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 11px;
+        }
+
+
+        .fin-table th {
+            position: sticky;
+            top: 0;
+            z-index: 3;
+            padding: 10px 8px;
+            background: #f8fafc;
+            border-bottom: 1px solid #dbe3ed;
+            color: #475569;
+            text-align: right;
+            white-space: nowrap;
+            font-weight: 900;
+        }
+
+
+        .fin-table td {
+            padding: 9px 8px;
+            border-bottom: 1px solid #edf2f7;
+            color: #334155;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+
+        .fin-table tbody tr:hover {
+            background: #f8fbff;
+        }
+
+        .fin-resident-row {
+    cursor: pointer;
+}
+
+.fin-resident-row:hover {
+    background: #f3f8ff !important;
+}
+
+.fin-resident-row:focus {
+    outline: 2px solid var(--fin-accent);
+    outline-offset: -2px;
+}
+
+
+        .fin-index {
+            color: #94a3b8;
+            font-weight: 800;
+            text-align: center;
+        }
+
+
+        .fin-name {
+            max-width: 220px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+.fin-resident-link {
+    color: var(--fin-accent);
+    text-decoration: none;
+    font-weight: 900;
+}
+
+.fin-resident-link:hover {
+    text-decoration: underline;
+}
+
+
+        .fin-unit {
+            max-width: 260px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+
+        .fin-money {
+            direction: ltr;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            font-weight: 800;
+        }
+
+
+        .fin-money.deficit {
+            color: #9b2c2c;
+        }
+
+
+        .fin-money.surplus {
+            color: #553c9a;
+        }
+
+
+        .fin-date {
+            direction: ltr;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+
+        .fin-chip {
+            display: inline-flex;
+            align-items: center;
+            min-height: 25px;
+            padding: 4px 9px;
+            border-radius: 999px;
+            border: 1px solid
+                color-mix(
+                    in srgb,
+                    var(--fin-accent) 22%,
+                    white);
+            background:
+                color-mix(
+                    in srgb,
+                    var(--fin-accent) 7%,
+                    white);
+            color: var(--fin-accent);
+            font-size: 10px;
+            font-weight: 900;
+        }
+
+
+        .fin-chip.muted {
+            border-color: #e2e8f0;
+            background: #f8fafc;
+            color: #64748b;
+        }
+
+
+        .fin-empty {
+            min-height: 360px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 8px;
+            color: #94a3b8;
+        }
+
+
+        .fin-empty i {
+            font-size: 32px;
+        }
+
+
+        .fin-pager {
+            min-height: 54px;
+            padding: 10px 12px;
+            border-top: 1px solid var(--fin-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+
+        .fin-pager-info {
+            color: #64748b;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+
+        .fin-page-controls {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+
+
+        .fin-page-btn {
+            height: 32px;
+            min-width: 34px;
+            border: 1px solid #dbe3ed;
+            border-radius: 8px;
+            background: #fff;
+            color: #475569;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            font-weight: 900;
+        }
+
+
+        .fin-page-btn.disabled {
+            opacity: .4;
+            pointer-events: none;
+        }
+
+
+        .fin-page-current {
+            min-width: 90px;
+            text-align: center;
+            color: #334155;
+            font-size: 11px;
+            font-weight: 900;
+        }
+
+
+        @@media (max-width: 1100px) {
+
+            .fin-stats {
+                grid-template-columns:
+                    repeat(2, minmax(0,1fr));
+            }
+
+            .fin-toolbar,
+            .fin-toolbar.no-type {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .fin-actions {
+                grid-column: 1 / -1;
+            }
+
+            .fin-table-scroll {
+                max-height: none;
+            }
+        }
+
+
+        @@media (max-width: 650px) {
+
+            .fin-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .fin-toolbar,
+            .fin-toolbar.no-type {
+                grid-template-columns: 1fr;
+            }
+
+            .fin-actions {
+                grid-column: auto;
+            }
+
+            .fin-btn {
+                flex: 1;
+            }
+        }
+
+
+        @@media print {
+
+            .fin-toolbar,
+            .fin-pager,
+            .dep-hdr-back {
+                display: none !important;
+            }
+
+            .fin-wrap {
+                width: 100%;
+                margin: 0;
+            }
+
+            .fin-table-scroll {
+                overflow: visible;
+                max-height: none;
+            }
+
+            .fin-table {
+                min-width: 0;
+                font-size: 8px;
+            }
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<header class="dep-hdr">
+
+    <div class="dep-hdr-bg"></div>
+
+    <div class="dep-hdr-grid"></div>
+
+
+    <a href="/HousingCommandCenterDashboard/Department?id=@Model.DepartmentId#t4"
+       class="dep-hdr-back">
+
+        <i class="fa-solid fa-arrow-right"></i>
+
+        العودة
+
+    </a>
+
+
+    <div class="dep-hdr-body">
+
+        <div class="dep-hdr-main">
+
+            <div class="dep-hdr-icon">
+
+                <i class="@icon"></i>
+
+            </div>
+
+
+            <div class="dep-hdr-copy">
+
+                <div class="dep-hdr-label">
+
+                    <span class="dep-hdr-dot"></span>
+
+                    الكفاءة المالية — تفاصيل المستفيدين
+
+                </div>
+
+
+                <div class="dep-hdr-name">
+
+                    @Model.Title
+
+                </div>
+
+
+                @if (!string.IsNullOrWhiteSpace(
+                    Model.DepartmentName))
+                {
+                    <div style="
+                        margin-top:5px;
+                        color:rgba(255,255,255,.72);
+                        font-size:11px;
+                        font-weight:700">
+
+                        @Model.DepartmentName
+
+                    </div>
+                }
+
+            </div>
+
+        </div>
+
+
+        <div class="dep-hdr-stats">
+
+            <div class="dep-hdr-stat">
+
+                <span class="dep-hdr-stat-val">
+
+                    @FmtNumber(Model.TotalRows)
+
+                </span>
+
+                <span class="dep-hdr-stat-lbl">
+
+                    مستفيد
+
+                </span>
+
+            </div>
+
+
+            <div class="dep-hdr-stat">
+
+                <span class="dep-hdr-stat-val">
+
+                    @DateTime.Now.ToString(
+                        "yyyy-MM-dd",
+                        CultureInfo.InvariantCulture)
+
+                </span>
+
+                <span class="dep-hdr-stat-lbl">
+
+                    @DateTime.Now.ToString(
+                        "dddd",
+                        new CultureInfo("ar-SA"))
+
+                </span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="dep-hdr-bar">
+
+        <div class="dep-hdr-bar-fill"
+             style="width:100%;background:@accent">
+        </div>
+
+    </div>
+
+</header>
+
+
+<main class="fin-wrap">
+
+
+    <section class="fin-stats">
+
+        <div class="fin-stat">
+
+            <i class="fa-solid fa-users"></i>
+
+            <div>
+
+                <strong>
+                    @Html.Raw(firstStatValue)
+                </strong>
+
+                <span>
+                    @firstStatLabel
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <div class="fin-stat">
+
+            <i class="@icon"></i>
+
+            <div>
+
+                <strong>
+                    @Html.Raw(secondStatValue)
+                </strong>
+
+                <span>
+                    @secondStatLabel
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <div class="fin-stat">
+
+            <i class="fa-solid fa-list-ol"></i>
+
+            <div>
+
+                <strong>
+                    @Html.Raw(thirdStatValue)
+                </strong>
+
+                <span>
+                    @thirdStatLabel
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <div class="fin-stat">
+
+            <i class="fa-solid fa-chart-simple"></i>
+
+            <div>
+
+                <strong>
+                    @Html.Raw(fourthStatValue)
+                </strong>
+
+                <span>
+                    @fourthStatLabel
+                </span>
+
+            </div>
+
+        </div>
+
+@if (!string.IsNullOrWhiteSpace(fifthStatLabel))
+{
+    <div class="fin-stat">
+
+        <i class="fa-solid fa-money-bill-transfer"></i>
+
+        <div>
+
+            <strong>
+                @Html.Raw(fifthStatValue)
+            </strong>
+
+            <span>
+                @fifthStatLabel
+            </span>
+
+        </div>
+
+    </div>
+}
+
+    </section>
+
+
+    <section class="fin-panel">
+
+
+        <form method="get"
+              action="@Url.Action(
+                  "FinancialDetails",
+                  "HousingCommandCenterDashboard")"
+              id="fin-filter-form"
+              class="fin-toolbar @(Model.ShowChargeTypeFilter ? "" : "no-type")">
+
+
+            <input type="hidden"
+                   name="id"
+                   value="@Model.DepartmentId" />
+
+            <input type="hidden"
+                   name="mode"
+                   value="@Model.Mode" />
+
+            <input type="hidden"
+                   name="pageNumber"
+                   value="1" />
+
+
+            <div class="fin-field">
+
+                <i class="fa-solid fa-magnifying-glass"></i>
+
+                <input class="fin-input"
+                       type="search"
+                       name="searchText"
+                       value="@Model.SearchText"
+                       autocomplete="off"
+                       placeholder="بحث بالرقم العام، الاسم، الرتبة أو الوحدة..." />
+
+            </div>
+
+
+            @if (Model.ShowChargeTypeFilter)
+            {
+                <div class="fin-field">
+
+                    <select class="fin-select"
+                            id="fin-charge-type"
+                            name="billChargeTypeID">
+
+                        <option value="">
+                            كل أنواع الرسوم
+                        </option>
+
+                        @foreach (
+                            var chargeType
+                            in Model.ChargeTypes)
+                        {
+                            <option value="@chargeType.BillChargeTypeID"
+                                    selected="@(Model.BillChargeTypeID == chargeType.BillChargeTypeID)">
+
+                                @chargeType.BillChargeTypeName
+
+                            </option>
+                        }
+
+                    </select>
+
+                </div>
+            }
+
+
+            <div class="fin-field">
+
+                <select class="fin-select"
+                        id="fin-sort"
+                        name="sortKey">
+
+                    @if (Model.Mode == "CLAIMS")
+                    {
+                        <option value="TOTAL_DESC"
+                                selected="@(Model.SortKey == "TOTAL_DESC")">
+                            الأعلى مطالبة أولًا
+                        </option>
+
+                        <option value="TOTAL_ASC"
+                                selected="@(Model.SortKey == "TOTAL_ASC")">
+                            الأقل مطالبة أولًا
+                        </option>
+
+                        <option value="LATEST"
+                                selected="@(Model.SortKey == "LATEST")">
+                            أحدث مطالبة
+                        </option>
+
+                        <option value="OLDEST"
+                                selected="@(Model.SortKey == "OLDEST")">
+                            أقدم مطالبة
+                        </option>
+                    }
+                    else if (Model.Mode == "PAYMENTS")
+                    {
+                        <option value="TOTAL_DESC"
+                                selected="@(Model.SortKey == "TOTAL_DESC")">
+                            الأعلى سدادًا أولًا
+                        </option>
+
+                        <option value="TOTAL_ASC"
+                                selected="@(Model.SortKey == "TOTAL_ASC")">
+                            الأقل سدادًا أولًا
+                        </option>
+
+                        <option value="LATEST"
+                                selected="@(Model.SortKey == "LATEST")">
+                            أحدث سداد
+                        </option>
+
+                        <option value="OLDEST"
+                                selected="@(Model.SortKey == "OLDEST")">
+                            أقدم سداد
+                        </option>
+                    }
+                    else if (Model.Mode == "DEFICIT")
+                    {
+                        <option value="BALANCE_DESC"
+                                selected="@(Model.SortKey == "BALANCE_DESC")">
+                            أعلى عجز أولًا
+                        </option>
+
+                        <option value="BALANCE_ASC"
+                                selected="@(Model.SortKey == "BALANCE_ASC")">
+                            أقل عجز أولًا
+                        </option>
+
+                        <option value="CLAIM_NEWEST"
+                                selected="@(Model.SortKey == "CLAIM_NEWEST")">
+                            أحدث مطالبة
+                        </option>
+
+                        <option value="PAYMENT_NEWEST"
+                                selected="@(Model.SortKey == "PAYMENT_NEWEST")">
+                            أحدث سداد
+                        </option>
+                    }
+                    else if (Model.Mode == "SURPLUS")
+                    {
+                        <option value="BALANCE_DESC"
+                                selected="@(Model.SortKey == "BALANCE_DESC")">
+                            أعلى فائض أولًا
+                        </option>
+
+                        <option value="BALANCE_ASC"
+                                selected="@(Model.SortKey == "BALANCE_ASC")">
+                            أقل فائض أولًا
+                        </option>
+
+                        <option value="PAYMENT_NEWEST"
+                                selected="@(Model.SortKey == "PAYMENT_NEWEST")">
+                            أحدث سداد
+                        </option>
+
+                        <option value="CLAIM_NEWEST"
+                                selected="@(Model.SortKey == "CLAIM_NEWEST")">
+                            أحدث مطالبة
+                        </option>
+                    }
+                    else
+                    {
+                        <option value="ACTIVITY_NEWEST"
+                                selected="@(Model.SortKey == "ACTIVITY_NEWEST")">
+                            أحدث حركة مالية
+                        </option>
+
+                        <option value="TOTAL_DESC"
+                                selected="@(Model.SortKey == "TOTAL_DESC")">
+                            الأعلى مبلغًا أولًا
+                        </option>
+
+                        <option value="TOTAL_ASC"
+                                selected="@(Model.SortKey == "TOTAL_ASC")">
+                            الأقل مبلغًا أولًا
+                        </option>
+                    }
+
+                </select>
+
+            </div>
+
+
+            <div class="fin-field">
+
+                <select class="fin-select"
+                        id="fin-page-size"
+                        name="pageSize">
+
+                    <option value="25"
+                            selected="@(Model.PageSize == 25)">
+                        25 صف
+                    </option>
+
+                    <option value="50"
+                            selected="@(Model.PageSize == 50)">
+                        50 صف
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <div class="fin-actions">
+
+                <button type="submit"
+                        class="fin-btn primary">
+
+                    <i class="fa-solid fa-magnifying-glass"></i>
+
+                    بحث
+
+                </button>
+
+
+                <a class="fin-btn"
+                   href="@Url.Action(
+                       "FinancialDetails",
+                       "HousingCommandCenterDashboard",
+                       new
+                       {
+                           id = Model.DepartmentId,
+                           mode = Model.Mode,
+                           pageSize = Model.PageSize
+                       })">
+
+                    <i class="fa-solid fa-rotate-left"></i>
+
+                    مسح
+
+                </a>
+
+            </div>
+
+        </form>
+
+
+        <div class="fin-table-scroll">
+
+            @if (rows.Any())
+            {
+                <table class="fin-table">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>#</th>
+
+                            <th>الرقم العام</th>
+
+                            <th>الرتبة</th>
+
+                            <th>المستفيد</th>
+
+                            <th>الوحدة</th>
+
+                            @if (Model.Mode != "PAYMENTS")
+                            {
+                                <th>المطالبات</th>
+                            }
+
+                            @if (Model.Mode != "CLAIMS")
+                            {
+                                <th>السدادات</th>
+                            }
+
+                            @if (Model.Mode == "DEFICIT")
+                            {
+                                <th>العجز</th>
+                            }
+
+                            @if (Model.Mode == "SURPLUS")
+                            {
+                                <th>الفائض</th>
+                            }
+
+                            @if (Model.Mode != "PAYMENTS")
+                            {
+                                <th>عدد المطالبات</th>
+                            }
+
+                            @if (Model.Mode != "CLAIMS")
+                            {
+                                <th>عدد السدادات</th>
+                            }
+
+                            @if (Model.Mode == "CLAIMS" ||
+                                 Model.Mode == "DEFICIT" ||
+                                 Model.Mode == "SURPLUS")
+                            {
+                                <th>آخر مطالبة</th>
+                            }
+
+                            @if (Model.Mode == "PAYMENTS" ||
+                                 Model.Mode == "DEFICIT" ||
+                                 Model.Mode == "SURPLUS")
+                            {
+                                <th>آخر سداد</th>
+                            }
+
+                            @if (Model.Mode == "BALANCED")
+                            {
+                                <th>آخر حركة مالية</th>
+                            }
+
+                            <th>حالة السكن</th>
+
+                            <th>المبنى</th>
+
+                            <th>آخر إجراء سكني</th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        @foreach (var row in rows)
+{
+    var residentUrl =
+        Url.Action(
+            "ResidentFinancialDetails",
+            "HousingCommandCenterDashboard",
+            new
+            {
+                id = Model.DepartmentId,
+                residentInfoID = row.ResidentInfoID,
+                returnMode = Model.Mode
+            });
+
+    <tr class="fin-resident-row"
+        data-href="@residentUrl"
+        tabindex="0"
+        role="link">
+
+                                <td class="fin-index">
+                                    @row.RowNo
+                                </td>
+
+
+                                <td>
+    <a class="fin-resident-link"
+       href="@Url.Action(
+           "ResidentFinancialDetails",
+           "HousingCommandCenterDashboard",
+           new
+           {
+               id = Model.DepartmentId,
+               residentInfoID = row.ResidentInfoID,
+               returnMode = Model.Mode
+           })">
+
+        @Display(row.GeneralNo)
+
+    </a>
+</td>
+
+
+                                <td>
+                                    @Display(row.RankName)
+                                </td>
+
+
+                                <td class="fin-name"
+    title="@row.FullName">
+
+    <a class="fin-resident-link"
+       href="@Url.Action(
+           "ResidentFinancialDetails",
+           "HousingCommandCenterDashboard",
+           new
+           {
+               id = Model.DepartmentId,
+               residentInfoID = row.ResidentInfoID,
+               returnMode = Model.Mode
+           })">
+
+        @Display(row.FullName)
+
+    </a>
+
+</td>
+
+
+                                <td class="fin-unit"
+                                    title="@row.MilitaryUnitName">
+
+                                    @Display(row.MilitaryUnitName)
+
+                                </td>
+
+
+                                @if (Model.Mode != "PAYMENTS")
+                                {
+                                    <td class="fin-money">
+
+                                        @FmtAmount(row.TotalClaims)
+
+                                    </td>
+                                }
+
+
+                                @if (Model.Mode != "CLAIMS")
+                                {
+                                    <td class="fin-money">
+
+                                        @FmtAmount(row.TotalPayments)
+
+                                    </td>
+                                }
+
+
+                                @if (Model.Mode == "DEFICIT")
+                                {
+                                    <td class="fin-money deficit">
+
+                                        @FmtAmount(row.DeficitAmount)
+
+                                    </td>
+                                }
+
+
+                                @if (Model.Mode == "SURPLUS")
+                                {
+                                    <td class="fin-money surplus">
+
+                                        @FmtAmount(row.SurplusAmount)
+
+                                    </td>
+                                }
+
+
+                                @if (Model.Mode != "PAYMENTS")
+                                {
+                                    <td>
+                                        @FmtNumber(row.ClaimsCount)
+                                    </td>
+                                }
+
+
+                                @if (Model.Mode != "CLAIMS")
+                                {
+                                    <td>
+                                        @FmtNumber(row.PaymentsCount)
+                                    </td>
+                                }
+
+
+                                @if (Model.Mode == "CLAIMS" ||
+                                     Model.Mode == "DEFICIT" ||
+                                     Model.Mode == "SURPLUS")
+                                {
+                                    <td class="fin-date">
+
+                                        @FmtDate(row.LastClaimDate)
+
+                                    </td>
+                                }
+
+
+                                @if (Model.Mode == "PAYMENTS" ||
+                                     Model.Mode == "DEFICIT" ||
+                                     Model.Mode == "SURPLUS")
+                                {
+                                    <td class="fin-date">
+
+                                        @FmtDate(row.LastPaymentDate)
+
+                                    </td>
+                                }
+
+
+                                @if (Model.Mode == "BALANCED")
+                                {
+                                    <td class="fin-date">
+
+                                        @FmtDate(
+                                            row.LastFinancialActivityDate)
+
+                                    </td>
+                                }
+
+
+                                <td>
+
+                                    <span class="fin-chip">
+
+                                        @Display(row.HousingStatus)
+
+                                    </span>
+
+                                </td>
+
+
+                                <td>
+
+                                    @Display(
+                                        row.LastActionBuildingNo)
+
+                                </td>
+
+
+                                <td class="fin-date">
+
+                                    @FmtDate(
+                                        row.LastActionDate)
+
+                                </td>
+
+                            </tr>
+                        }
+
+                    </tbody>
+
+                </table>
+            }
+            else
+            {
+                <div class="fin-empty">
+
+                    <i class="fa-solid fa-magnifying-glass"></i>
+
+                    <strong>
+                        لا توجد نتائج مطابقة
+                    </strong>
+
+                    <span>
+                        تحقق من البحث أو الفلاتر المستخدمة.
+                    </span>
+
+                </div>
+            }
+
+        </div>
+
+
+        <div class="fin-pager">
+
+            <div class="fin-pager-info">
+
+                @if (Model.TotalRows > 0)
+                {
+                    <span>
+                        عرض
+                        @FmtNumber(startRow)
+                        -
+                        @FmtNumber(endRow)
+                        من
+                        @FmtNumber(Model.TotalRows)
+                    </span>
+                }
+                else
+                {
+                    <span>
+                        لا توجد نتائج
+                    </span>
+                }
+
+            </div>
+
+
+            <div class="fin-page-controls">
+
+                <a class="fin-page-btn @(Model.HasPreviousPage ? "" : "disabled")"
+                   href="@Url.Action(
+                       "FinancialDetails",
+                       "HousingCommandCenterDashboard",
+                       new
+                       {
+                           id = Model.DepartmentId,
+                           mode = Model.Mode,
+                           searchText = Model.SearchText,
+                           billChargeTypeID = Model.BillChargeTypeID,
+                           sortKey = Model.SortKey,
+                           pageNumber = Model.PageNumber - 1,
+                           pageSize = Model.PageSize
+                       })">
+
+                    <i class="fa-solid fa-chevron-right"></i>
+
+                </a>
+
+
+                <span class="fin-page-current">
+
+                    @(Model.TotalPages > 0
+                        ? $"{Model.PageNumber} / {Model.TotalPages}"
+                        : "0 / 0")
+
+                </span>
+
+
+                <a class="fin-page-btn @(Model.HasNextPage ? "" : "disabled")"
+                   href="@Url.Action(
+                       "FinancialDetails",
+                       "HousingCommandCenterDashboard",
+                       new
+                       {
+                           id = Model.DepartmentId,
+                           mode = Model.Mode,
+                           searchText = Model.SearchText,
+                           billChargeTypeID = Model.BillChargeTypeID,
+                           sortKey = Model.SortKey,
+                           pageNumber = Model.PageNumber + 1,
+                           pageSize = Model.PageSize
+                       })">
+
+                    <i class="fa-solid fa-chevron-left"></i>
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </section>
+
+</main>
+
+
+<script>
+
+    (function () {
+
+        'use strict';
+
+
+        var form =
+            document.getElementById(
+                'fin-filter-form');
+
+
+        var type =
+            document.getElementById(
+                'fin-charge-type');
+
+
+        var sort =
+            document.getElementById(
+                'fin-sort');
+
+
+        var pageSize =
+            document.getElementById(
+                'fin-page-size');
+
+
+        function submitFilter() {
+
+            if (form) {
+                form.submit();
+            }
+        }
+
+
+        if (type) {
+
+            type.addEventListener(
+                'change',
+                submitFilter);
+        }
+
+
+        if (sort) {
+
+            sort.addEventListener(
+                'change',
+                submitFilter);
+        }
+
+
+        if (pageSize) {
+
+            pageSize.addEventListener(
+                'change',
+                submitFilter);
+        }
+
+        var residentRows =
+    document.querySelectorAll(
+        '.fin-resident-row');
+
+
+residentRows.forEach(
+    function (row) {
+
+        function openResident() {
+
+            var href =
+                row.getAttribute(
+                    'data-href');
+
+            if (href) {
+
+                window.location.href =
+                    href;
+
+            }
+        }
+
+
+        row.addEventListener(
+            'click',
+            function (event) {
+
+                // إذا ضغط المستخدم على عنصر تفاعلي
+                // داخلي فلا ننفذ انتقال الصف مرة ثانية.
+                if (
+                    event.target.closest(
+                        'a, button, input, select')
+                ) {
+                    return;
+                }
+
+                openResident();
+
+            });
+
+
+        row.addEventListener(
+            'keydown',
+            function (event) {
+
+                if (
+                    event.key === 'Enter' ||
+                    event.key === ' '
+                ) {
+                    event.preventDefault();
+
+                    openResident();
+                }
+
+            });
+
+    });
+
+    })();
+
+</script>
+
+
+</body>
+
+</html>

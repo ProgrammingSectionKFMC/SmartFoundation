@@ -10,24 +10,23 @@
         ?? new List<DepProcedureDetailRow>();
 
 
-    var accent =
-        Model.Workflow == "ALLOCATION"
-            ? "#2b6cb0"
-            : Model.Workflow == "EXTEND"
-                ? "#805ad5"
-                : Model.Workflow == "EXIT"
-                    ? "#c05621"
-                    : "#1e3a5f";
+    var accent = Model.Workflow switch
+{
+    "ALLOCATION" => "#2b6cb0",
+    "HOUSING"    => "#0f766e",
+    "EXTEND"     => "#805ad5",
+    "EXIT"       => "#c05621",
+    _            => "#1e3a5f"
+};
 
-
-    var icon =
-        Model.Workflow == "ALLOCATION"
-            ? "fa-solid fa-house-circle-check"
-            : Model.Workflow == "EXTEND"
-                ? "fa-solid fa-clock-rotate-left"
-                : Model.Workflow == "EXIT"
-                    ? "fa-solid fa-door-open"
-                    : "fa-solid fa-list-check";
+var icon = Model.Workflow switch
+{
+    "ALLOCATION" => "fa-solid fa-house-circle-check",
+    "HOUSING"    => "fa-solid fa-house-user",
+    "EXTEND"     => "fa-solid fa-clock-rotate-left",
+    "EXIT"       => "fa-solid fa-door-open",
+    _            => "fa-solid fa-list-check"
+};
 
 
     string FmtDateTime(DateTime? value)
@@ -169,15 +168,16 @@
 
 
     string ProcedureLabel(string key)
+{
+    return key switch
     {
-        return key switch
-        {
-            "ALLOCATION" => "تخصيص",
-            "EXTEND" => "إمهال",
-            "EXIT" => "إخلاء",
-            _ => "إجراء"
-        };
-    }
+        "ALLOCATION" => "تخصيص",
+        "HOUSING"    => "تسكين",
+        "EXTEND"     => "إمهال",
+        "EXIT"       => "إخلاء",
+        _            => "إجراء"
+    };
+}
 
 
     
@@ -190,6 +190,11 @@
         rows.Count(x =>
             x.ProcedureGroupKey ==
             "ALLOCATION");
+
+            var housingCount =
+    rows.Count(x =>
+        x.ProcedureGroupKey ==
+        "HOUSING");
 
 
     var extendCount =
@@ -278,7 +283,7 @@
 
         .prd-stats {
             display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-columns: repeat(5, minmax(0, 1fr));
             gap: 12px;
             margin-bottom: 14px;
         }
@@ -709,6 +714,13 @@
         العودة
 
     </a>
+    <a href="@Url.Action("Index", "HousingCommandCenterDashboard")"
+       class="dep-hdr-back hcc-home-link"
+       data-hcc-home="true"
+       style="right:145px;left:auto"
+       title="العودة إلى لوحة القيادة الرئيسية">
+        <i class="fa-solid fa-house"></i> الرئيسية
+    </a>
 
 
     <div class="dep-hdr-body">
@@ -838,6 +850,24 @@
     </div>
 
 
+    <!-- HOUSING -->
+<div class="prd-stat">
+
+    <i class="fa-solid fa-house-user"></i>
+
+    <div>
+        <strong>
+            @FmtNumber(housingCount)
+        </strong>
+
+        <span>
+            إجراءات التسكين
+        </span>
+    </div>
+
+</div>
+
+
     <div class="prd-stat">
 
         <i class="fa-solid fa-clock-rotate-left"></i>
@@ -913,13 +943,13 @@
             <option value="ALLOCATION">
                 التخصيص
             </option>
-
+            
+            <option value="HOUSING">
+                التسكين
+            </option>
+            
             <option value="EXTEND">
                 الإمهال
-            </option>
-
-            <option value="EXIT">
-                الإخلاء
             </option>
 
         </select>

@@ -8,6 +8,9 @@
     var occupancyLocations = Model.OccupancyLocations;
     var readiness = Model.HousingReadiness;
 
+    var readinessMetric = dep?.Metrics?
+    .FirstOrDefault(x => x.MetricKey == "m_housing_readiness");
+
 var readinessGroups =
     readiness?.Groups?
         .OrderBy(x => x.Order)
@@ -24,6 +27,11 @@ var allocationPerformance =
     procedures?.Performance
         .FirstOrDefault(x =>
             x.WorkflowKey == "ALLOCATION");
+
+var housingPerformance =
+    procedures?.Performance
+        .FirstOrDefault(x =>
+            x.WorkflowKey == "HOUSING");
 
 var extendPerformance =
     procedures?.Performance
@@ -49,16 +57,20 @@ var exitPerformance =
 
     var jsonOpts = new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
 
-var occPct =
-    housing == null
-        ? 0m
-        : housing.TotalUnits <= 0
-            ? 100m
-            : Math.Round(
-                (decimal)housing.Occupied /
-                housing.TotalUnits * 100,
-                1);
-    var vacPct = housing != null && housing.TotalUnits > 0 ? Math.Round((decimal)housing.Vacant / housing.TotalUnits * 100, 1) : 0m;
+    decimal? occPct =
+    housing != null && housing.TotalUnits > 0
+        ? Math.Round(
+            (decimal)housing.Occupied /
+            housing.TotalUnits * 100m, 1)
+        : null;
+
+decimal? vacPct =
+    housing != null && housing.TotalUnits > 0
+        ? Math.Round(
+            (decimal)housing.Vacant /
+            housing.TotalUnits * 100m, 1)
+        : null;
+
     var mPct = maint != null && maint.PlannedJobs > 0 ? Math.Round((decimal)maint.CompletedJobs / maint.PlannedJobs * 100, 1) : 0m;
     
 }
@@ -220,6 +232,13 @@ var occPct =
             <a href="/HousingCommandCenterDashboard/Index" class="dep-hdr-back">
                 <i class="fa-solid fa-arrow-right"></i> العودة
             </a>
+            <a href="@Url.Action("Index", "HousingCommandCenterDashboard")"
+               class="dep-hdr-back hcc-home-link"
+               data-hcc-home="true"
+               style="right:145px;left:auto"
+               title="العودة إلى لوحة القيادة الرئيسية">
+                <i class="fa-solid fa-house"></i> الرئيسية
+            </a>
             <div class="dep-hdr-body">
                 <div class="dep-hdr-main">
                     <div class="dep-hdr-icon">
@@ -249,15 +268,25 @@ var occPct =
         <!-- TABS NAV -->
         <div class="dep-wrap">
             <nav class="dep-tabs">
+
+                <button type="button" class="dep-tab" data-tab="t8">
+    <i class="fa-solid fa-list-ol"></i>
+    <span>قوائم الانتظار</span>
+</button>
+
                 <button class="dep-tab is-active" data-tab="t1">
     <i class="fa-solid fa-house-circle-check"></i>
-    <span>جاهزية السكن</span>
+                    <span>كفاءة جاهزية المباني غير المشغولة</span>
 </button>
 
 <button class="dep-tab" data-tab="t2">
     <i class="fa-solid fa-people-roof"></i>
     <span>إشغال المباني</span>
 </button>
+
+
+
+
                 <button class="dep-tab" data-tab="t3"><i class="fa-solid fa-stopwatch"></i><span>اجراءات الاسكان</span></button>
                 <button class="dep-tab" data-tab="t4"><i class="fa-solid fa-money-bill-wave"></i><span>الكفاءة المالية</span></button>
                @*  <button class="dep-tab" data-tab="t5"><i class="fa-solid fa-screwdriver-wrench"></i><span>الصيانة</span></button>
@@ -269,21 +298,43 @@ var occPct =
 
 
             <!-- TAB 1 — جاهزية السكن -->
-<div class="dep-panel is-active" id="t1">
+<div class="dep-panel" id="t1">
 
     <div class="dep-drill-hint">
         <i class="fa-solid fa-hand-pointer"></i>
 
         <span>
             لاستعراض التفاصيل،
-            <strong>اضغط على أي حالة من حالات جاهزية السكن</strong>
+                        <strong>اضغط على أي حالة من حالات كفاءة جاهزية المباني غير المشغولة</strong>
             أدناه.
         </span>
     </div>
 
     @if (readiness != null && readiness.Groups.Any())
     {
-        
+                    <div class="ccard" style="margin-bottom:16px">
+                        <div class="ccard-hdr">
+                            <div class="ccard-title">
+                                <i class="fa-solid fa-house-circle-check"></i>
+                                كفاءة جاهزية المباني غير المشغولة
+                            </div>
+
+                            <span class="ccard-badge">
+                                @(readinessMetric?.DisplayText ?? "بيانات الجاهزية غير متاحة")
+                            </span>
+                        </div>
+
+                        @if (readinessMetric?.CompletionPercent.HasValue == true)
+                        {
+                            <div style="padding:12px 16px">
+                                الجاهزة للتسكين أو تحت التخصيص:
+                                <strong>@Fmt(readinessMetric.Actual ?? 0m)</strong>
+
+                                من إجمالي المساكن غير المشغولة:
+                                <strong>@Fmt(readinessMetric.Target ?? 0m)</strong>
+                            </div>
+                        }
+                    </div>
 
         <!-- Row 1: Housing Readiness Chart + Summary -->
 
@@ -299,7 +350,7 @@ var occPct =
 
     <span>
         <i class="fa-solid fa-list-check"></i>
-        حالات جاهزية السكن — اضغط للتفاصيل
+        كفاءة جاهزية المباني غير المشغولة — اضغط للتفاصيل
     </span>
 
     <span class="ccard-badge">
@@ -444,7 +495,7 @@ var occPct =
                 justify-content:center;
                 color:#718096">
 
-                لا توجد بيانات جاهزية سكن لهذه الإدارة
+                لا توجد بيانات للمباني الغير المشغولة لهذه الإدارة
 
             </div>
         </div>
@@ -494,7 +545,7 @@ var occPct =
 
             <span>
                 مشغولة
-                <em>@occPct.ToString("0.0")%</em>
+                <em>@(occPct.HasValue ? $"{occPct.Value:0.0}%" : "—")</em>
             </span>
         </div>
     </a>
@@ -519,7 +570,7 @@ var occPct =
 
             <span>
                 شاغرة
-                <em>@vacPct.ToString("0.0")%</em>
+               <em>@(vacPct.HasValue ? $"{vacPct.Value:0.0}%" : "—")</em>
             </span>
         </div>
 
@@ -556,20 +607,39 @@ var occPct =
                                 حالة الوحدات السكنية
                             </div>
 
-                            <span class="ccard-badge success">
-                                <i class="fa-solid fa-arrow-up"></i>
-                                @occPct.ToString("0.0")% إشغال
-                            </span>
+                            @if (occPct.HasValue)
+{
+    <span class="ccard-badge success">
+        <i class="fa-solid fa-arrow-up"></i>
+        @occPct.Value.ToString("0.0")% إشغال
+    </span>
+}
+else
+{
+    <span class="ccard-badge">
+        لا توجد مساكن لدى الإدارة
+    </span>
+}
                         </div>
 
-                        <div class="ch-wrap ch250">
-                            <canvas id="c-unit-status"></canvas>
+                        @if (occPct.HasValue)
+                        {
+                            <div class="ch-wrap ch250">
+                                <canvas id="c-unit-status"></canvas>
 
-                            <div class="ch-center" style="color:#1e3a5f">
-                                <strong>@occPct.ToString("0.0")%</strong>
-                                <small>نسبة الإشغال</small>
+                                <div class="ch-center" style="color:#1e3a5f">
+                                    <strong>@occPct.Value.ToString("0.0")%</strong>
+                                    <small>نسبة الإشغال</small>
+                                </div>
                             </div>
-                        </div>
+                        }
+                        else
+                        {
+                            <div class="ch-wrap ch250"
+                                 style="display:flex;align-items:center;justify-content:center;color:#718096">
+                                لا توجد مساكن لدى الإدارة
+                            </div>
+                        }
                     </div>
 
                     @if (occupancyLocations.Any())
@@ -684,6 +754,102 @@ var occPct =
                 </div>
             } *@ 
 
+
+            
+            <!-- TAB 8 — قوائم الانتظار -->
+            <div class="dep-panel  is-active" id="t8"
+                 data-url="@Url.Action("WaitingListData", "HousingCommandCenterDashboard", new { id = dep.Key })">
+
+                <div class="dep-drill-hint">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span>
+                        يُحسب تسجيل المستفيد في كل فئة انتظار مختلفة كسجل مستقل،
+                        ولا يُكرر احتسابه داخل الفئة نفسها.
+                    </span>
+                </div>
+
+                <div id="wl-status" class="ccard" role="status"
+                     style="text-align:center;padding:24px">
+                    سيتم تحميل قوائم الانتظار عند فتح التبويب.
+                </div>
+
+                <div id="wl-content" hidden>
+
+                    <!-- بطاقات المؤشرات -->
+                    <div class="krow" id="wl-kpis"></div>
+
+                    <!-- المنتظرون في الفئات الرئيسية -->
+                    <div class="ccard" style="margin-bottom:14px">
+                        <div class="ccard-hdr">
+                            <div class="ccard-title">
+                                <i class="fa-solid fa-list-ol"></i>
+                                المنتظرون في قوائم الانتظار الرئيسية
+                            </div>
+                            <span class="ccard-badge">الانتظار فقط</span>
+                        </div>
+
+                        <div class="krow" id="wl-main-waiting-cards"
+                             style="margin-bottom:0"></div>
+                    </div>
+
+                    <!-- المنتظرون في الفئات الجانبية -->
+                    <div class="ccard" style="margin-bottom:14px">
+                        <div class="ccard-hdr">
+                            <div class="ccard-title">
+                                <i class="fa-solid fa-layer-group"></i>
+                                المنتظرون في قوائم الانتظار الجانبية
+                            </div>
+                            <span class="ccard-badge">الانتظار فقط</span>
+                        </div>
+
+                        <div class="krow" id="wl-side-waiting-cards"
+                             style="margin-bottom:0"></div>
+                    </div>
+
+                    <!-- الرسوم البيانية للقوائم الرئيسية والجانبية -->
+                    <div class="cgrid cgrid-2">
+
+                        <div class="ccard">
+
+                            <div class="ccard-hdr">
+                                <div class="ccard-title">
+                                    <i class="fa-solid fa-chart-bar"></i>
+                                    قوائم الانتظار الرئيسية
+                                </div>
+
+                                <span class="ccard-badge" id="wl-main-count"></span>
+                            </div>
+
+                            <div class="ch-wrap" style="height:270px">
+                                <canvas id="c-wl-main"></canvas>
+                            </div>
+
+                        </div>
+
+                        <div class="ccard">
+
+                            <div class="ccard-hdr">
+                                <div class="ccard-title">
+                                    <i class="fa-solid fa-chart-bar"></i>
+                                    قوائم الانتظار الجانبية
+                                </div>
+
+                                <span class="ccard-badge" id="wl-side-count"></span>
+                            </div>
+
+                            <div class="ch-wrap" style="height:270px">
+                                <canvas id="c-wl-side"></canvas>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    
+
+                </div>
+            </div>
+
 <!-- TAB 3 — إجراءات الإسكان -->
 <div class="dep-panel" id="t3">
 
@@ -788,6 +954,34 @@ var occPct =
         </div>
 
     </a>
+
+
+
+    <!-- HOUSING -->
+<a class="kc dep-drill-card"
+   title="عرض إجراءات التسكين الجارية"
+   href="@Url.Action(
+       "ProcedureDetails",
+       "HousingCommandCenterDashboard",
+       new
+       {
+           id = dep.Key,
+           workflow = "HOUSING"
+       })"
+   style="--ka:rgba(15,118,110,.06);--kt:#0f766e">
+
+    <i class="fa-solid fa-house-user"></i>
+
+    <div>
+        <strong>
+            @procedures.HousingCurrent
+        </strong>
+
+        <span>
+            في مرحلة التسكين
+        </span>
+    </div>
+</a>
 
 
     <!-- EXTEND -->
@@ -966,172 +1160,127 @@ var occPct =
                         كفاءة دورات إجراءات الإسكان
                     </div>
 
-                    <span class="ccard-badge">
-                        النظام الحالي
-                    </span>
+                    
+@{
+    var completedWorkflows = procedures.Performance
+        .Where(x => x.CompletedCount > 0 &&
+                    x.AverageDays.HasValue)
+        .ToList();
+
+    var totalCompletedCycles = completedWorkflows
+        .Sum(x => x.CompletedCount);
+
+    decimal? overallAverageDays = totalCompletedCycles > 0
+        ? completedWorkflows.Sum(x =>
+            x.AverageDays.Value * x.CompletedCount)
+            / totalCompletedCycles
+        : null;
+}
+
+
+<span class="ccard-badge">
+    كفاءة إجراءات الإسكان:
+    @(dep.Metrics?
+        .FirstOrDefault(x =>
+            x.MetricKey == "m_housing_procedures")?
+        .DisplayText ?? "—")
+</span>
+
+
 
                 </div>
 
 
-                <div class="mini-stats">
-
-    <!-- التسكين -->
-    <div class="mini-stat">
-
-        <span class="mini-stat-val"
-              style="color:#2b6cb0">
-
-            @if (allocationPerformance?.CompletedCount > 0 &&
-                 allocationPerformance.AverageDays.HasValue)
-            {
-                @FmtDuration(allocationPerformance.AverageDays)
-            }
-            else
-            {
-                @:—
-            }
-
-        </span>
-
-        <span class="mini-stat-lbl">
-            متوسط مدة التسكين
-        </span>
-
-        @if (allocationPerformance?.CompletedCount > 0)
-        {
-            <span style="
-                font-size:9px;
-                color:#64748b;
-                margin-top:3px">
-
-                الوسيط:
-                @FmtDuration(allocationPerformance.MedianDays)
-
-                &nbsp;|&nbsp;
-
-                مكتمل:
-                @allocationPerformance.CompletedCount
-
-            </span>
+                
+@{
+    var workflowCards = new[]
+    {
+        new {
+            Title = "متوسط التخصيص",
+            Color = "#2b6cb0",
+            TargetDays = 30m,
+            Performance = procedures?.Performance
+                .FirstOrDefault(x => x.WorkflowKey == "ALLOCATION")
+        },
+        new {
+            Title = "متوسط التسكين",
+            Color = "#0694a2",
+            TargetDays = 5m,
+            Performance = procedures?.Performance
+                .FirstOrDefault(x => x.WorkflowKey == "HOUSING")
+        },
+        new {
+            Title = "متوسط الإمهال",
+            Color = "#553c9a",
+            TargetDays = 5m,
+            Performance = procedures?.Performance
+                .FirstOrDefault(x => x.WorkflowKey == "EXTEND")
+        },
+        new {
+            Title = "متوسط الإخلاء",
+            Color = "#c05621",
+            TargetDays = 5m,
+            Performance = procedures?.Performance
+                .FirstOrDefault(x => x.WorkflowKey == "EXIT")
         }
-        else
+    };
+}
+
+<div class="mini-stats">
+    @foreach (var card in workflowCards)
+    {
+        decimal? efficiency = null;
+
+        if (card.Performance?.CompletedCount > 0 &&
+            card.Performance.AverageDays.HasValue)
         {
-            <span style="
-                font-size:9px;
-                color:#94a3b8;
-                margin-top:3px">
-                لا توجد دورات مكتملة
-            </span>
-        }
+            var avg = card.Performance.AverageDays.Value;
 
-    </div>
-
-
-    <!-- الإمهال -->
-    <div class="mini-stat">
-
-        <span class="mini-stat-val"
-              style="color:#553c9a">
-
-            @if (extendPerformance?.CompletedCount > 0 &&
-                 extendPerformance.AverageDays.HasValue)
-            {
-                @FmtDuration(extendPerformance.AverageDays)
-            }
-            else
-            {
-                @:—
-            }
-
-        </span>
-
-        <span class="mini-stat-lbl">
-            متوسط مدة الإمهال
-        </span>
-
-        @if (extendPerformance?.CompletedCount > 0)
-        {
-            <span style="
-                font-size:9px;
-                color:#64748b;
-                margin-top:3px">
-
-                الوسيط:
-                @FmtDuration(extendPerformance.MedianDays)
-
-                &nbsp;|&nbsp;
-
-                مكتمل:
-                @extendPerformance.CompletedCount
-
-            </span>
-        }
-        else
-        {
-            <span style="
-                font-size:9px;
-                color:#94a3b8;
-                margin-top:3px">
-                لا توجد دورات مكتملة
-            </span>
+            efficiency = avg <= 0m
+                ? 100m
+                : Math.Round(
+                    Math.Min(
+                        100m,
+                        card.TargetDays / avg * 100m),
+                    1);
         }
 
-    </div>
+        <div class="mini-stat" style="text-align:center">
 
-
-    <!-- الإخلاء -->
-    <div class="mini-stat">
-
-        <span class="mini-stat-val"
-              style="color:#c05621">
-
-            @if (exitPerformance?.CompletedCount > 0 &&
-                 exitPerformance.AverageDays.HasValue)
-            {
-                @FmtDuration(exitPerformance.AverageDays)
-            }
-            else
-            {
-                @:—
-            }
-
-        </span>
-
-        <span class="mini-stat-lbl">
-            متوسط مدة الإخلاء
-        </span>
-
-        @if (exitPerformance?.CompletedCount > 0)
-        {
-            <span style="
-                font-size:9px;
-                color:#64748b;
-                margin-top:3px">
-
-                الوسيط:
-                @FmtDuration(exitPerformance.MedianDays)
-
-                &nbsp;|&nbsp;
-
-                مكتمل:
-                @exitPerformance.CompletedCount
-
+            <span class="mini-stat-lbl"
+                  style="display:block;font-weight:800;margin-bottom:8px">
+                @card.Title
             </span>
-        }
-        else
-        {
-            <span style="
-                font-size:9px;
-                color:#94a3b8;
-                margin-top:3px">
-                لا توجد دورات مكتملة
+
+            <span class="mini-stat-val"
+                  style="display:block;color:@card.Color;margin-bottom:8px">
+                @(efficiency.HasValue
+                    ? FmtDuration(card.Performance!.AverageDays)
+                    : "—")
             </span>
-        }
 
-    </div>
+            <span style="display:block;font-size:11px;
+                         color:#475569;margin-bottom:6px">
+                الكفاءة:
+                <strong style="color:@card.Color">
+                    @(efficiency.HasValue
+                        ? $"{efficiency.Value:0.0}%"
+                        : "—")
+                </strong>
+            </span>
 
+            <span style="display:block;font-size:10px;color:#64748b">
+                الدورات المكتملة:
+                <strong>
+                    @(card.Performance?.CompletedCount ?? 0)
+                </strong>
+            </span>
+
+        </div>
+    }
 </div>
 
+        
 
                 <div style="
                     margin-top:12px;
@@ -1693,34 +1842,53 @@ var occPct =
         </div>
 
 
-        <div style="
-            margin:6px 12px 0;
-            color:#64748b;
-            font-size:10px;
-            font-weight:600;
-            line-height:1.7;
-            text-align:right">
+        @if (fin.FinancialBeneficiariesCount > 0)
+{
+    <div style="
+        margin:6px 12px 0;
+        color:#64748b;
+        font-size:10px;
+        font-weight:600;
+        line-height:1.7;
+        text-align:right">
 
-            <i class="fa-solid fa-circle-info"
-               style="
-                   color:#2b6cb0;
-                   margin-left:4px">
-            </i>
+        <i class="fa-solid fa-circle-info"
+           style="
+                color:#2b6cb0;
+                margin-left:4px">
+        </i>
 
-            المتوازن: المطالبات تساوي السدادات،
-            العجز: المطالبات أعلى من السدادات،
-            الفائض: السدادات أعلى من المطالبات.
+        المتوازن: المطالبات تساوي السدادات،
+        العجز: المطالبات أعلى من السدادات،
+        الفائض: السدادات أعلى من المطالبات.
 
-        </div>
+    </div>
 
+    <div class="ch-wrap"
+         style="height:190px;">
 
-        <div class="ch-wrap"
-             style="height:190px;">
+        <canvas id="c-finance-beneficiaries">
+        </canvas>
 
-            <canvas id="c-finance-beneficiaries">
-            </canvas>
+    </div>
+}
+else
+{
+    <div style="
+        min-height:190px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        text-align:center;
+        color:#94a3b8;
+        font-size:12px;
+        font-weight:700;
+        padding:20px;">
 
-        </div>
+        لا توجد بيانات مالية للمستفيدين في هذه الإدارة
+
+    </div>
+}
 
     </div>
 
@@ -4043,9 +4211,478 @@ if (dFinanceClaimsType) {
             return c === '#7c3aed' ? COLORS.purple : c;
         })));
 
+
+
+        
+                       /* ═══════════════════════════════════════════════
+               WAITING LIST DASHBOARD
+               ═══════════════════════════════════════════════ */
+
+            var waitingLoaded = false;
+            var waitingLoading = false;
+
+            function wlNumber(value) {
+                return Number(value || 0).toLocaleString('en-US');
+            }
+
+            function wlElement(tag, className, textValue) {
+                var el = document.createElement(tag);
+
+                if (className)
+                    el.className = className;
+
+                if (textValue !== undefined)
+                    el.textContent = textValue;
+
+                return el;
+            }
+
+
+            /* ═══════════════════════════════════════════════
+               KPI CARDS
+               ═══════════════════════════════════════════════ */
+
+               function wlDetailsUrl(mode, waitingClassID) {
+
+    var url = new URL(
+        '@Url.Action("WaitingListDetails", "HousingCommandCenterDashboard", new { id = dep.Key })',
+        window.location.origin
+    );
+
+    url.searchParams.set('mode', mode);
+
+    if (waitingClassID !== undefined &&
+        waitingClassID !== null) {
+
+        url.searchParams.set(
+            'waitingClassID',
+            String(waitingClassID)
+        );
+    }
+
+    return url.pathname + url.search;
+}
+
+
+
+
+            function wlKpi(parent, label, value, icon, color, mode, waitingClassID) {
+
+    var clickable = !!mode;
+
+    var card = wlElement(
+        clickable ? 'a' : 'div',
+        clickable ? 'kc dep-drill-card' : 'kc'
+    );
+
+    card.style.setProperty('--kt', color);
+    card.style.setProperty('--ka', color + '10');
+
+    if (clickable) {
+
+        card.href = wlDetailsUrl(
+            mode,
+            waitingClassID
+        );
+
+        card.title = 'عرض تفاصيل ' + label;
+
+        card.setAttribute(
+            'aria-label',
+            'عرض تفاصيل ' + label
+        );
+    }
+
+    card.appendChild(
+        wlElement('i', 'fa-solid ' + icon)
+    );
+
+    var body = wlElement('div');
+
+    body.appendChild(
+        wlElement('strong', '', wlNumber(value))
+    );
+
+    body.appendChild(
+        wlElement('span', '', label)
+    );
+
+    card.appendChild(body);
+
+    parent.appendChild(card);
+}
+
+
+            /* ═══════════════════════════════════════════════
+               WAITING CLASS CHARTS
+               ═══════════════════════════════════════════════ */
+
+                       function wlClassesChart(canvasId, classes, isMain) {
+
+                var labels = classes.map(function(x) {
+                    return x.waitingClassName;
+                });
+
+                var datasets = [
+                    {
+                        label: 'الانتظار',
+                        data: classes.map(function(x) {
+                            return Number(x.waitingResidents || 0);
+                        }),
+                        backgroundColor: COLORS.info,
+                        borderRadius: 4,
+                        borderSkipped: false,
+                        maxBarThickness: 12
+                    }
+                ];
+
+                // التخصيص للقوائم الرئيسية فقط
+                if (isMain) {
+                    datasets.push({
+                        label: 'التخصيص',
+                        data: classes.map(function(x) {
+                            return Number(x.allocationResidents || 0);
+                        }),
+                        backgroundColor: COLORS.warning,
+                        borderRadius: 4,
+                        borderSkipped: false,
+                        maxBarThickness: 12
+                    });
+                }
+
+                // التسكين للقوائم الرئيسية والجانبية
+                datasets.push({
+                    label: 'التسكين',
+                    data: classes.map(function(x) {
+                        return Number(x.housingProcedureResidents || 0);
+                    }),
+                    backgroundColor: COLORS.success,
+                    borderRadius: 4,
+                    borderSkipped: false,
+                    maxBarThickness: 12
+                });
+
+                mk(canvasId, {
+                    type: 'bar',
+                    plugins: [ChartDataLabels],
+
+                    data: {
+                        labels: labels,
+                        datasets: datasets
+                    },
+
+                    options: {
+                        indexAxis: 'y',
+                        maintainAspectRatio: false,
+
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'bottom'
+                            },
+
+                            datalabels: {
+                                display: false
+                            },
+
+                            tooltip: {
+                                backgroundColor: '#1a1a2e',
+                                padding: 12,
+                                cornerRadius: 6,
+
+                                callbacks: {
+                                    label: function(ctx) {
+                                        return ' ' +
+                                            ctx.dataset.label +
+                                            ': ' +
+                                            Number(ctx.parsed.x || 0)
+                                                .toLocaleString('en-US');
+                                    }
+                                }
+                            }
+                        },
+
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+
+                                grid: {
+                                    color: 'rgba(0,0,0,.04)'
+                                },
+
+                                ticks: {
+                                    font: { size: 10 },
+                                    color: '#718096',
+                                    precision: 0
+                                }
+                            },
+
+                            y: {
+                                grid: {
+                                    display: false
+                                },
+
+                                ticks: {
+                                    autoSkip: false,
+                                    font: {
+                                        size: 10,
+                                        weight: '600'
+                                    },
+                                    color: '#2d3748'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            
+
+            /* ═══════════════════════════════════════════════
+               RENDER WAITING LIST
+               ═══════════════════════════════════════════════ */
+                           function wlRenderWaitingClassCards(containerId, classes, color) {
+
+                var container = document.getElementById(containerId);
+
+                if (!container) return;
+
+                container.replaceChildren();
+
+                classes.forEach(function(item) {
+
+                    wlKpi(
+                        container,
+                        item.waitingClassName,
+                        item.waitingResidents,
+                        'fa-users',
+                        color,
+                        'DETAIL_WAITING',
+                        item.waitingClassID
+                    );
+
+                });
+            }
+
+
+
+
+
+
+            function wlRender(data) {
+
+                var kpis =
+                    document.getElementById('wl-kpis');
+
+                kpis.replaceChildren();
+
+                [
+    [
+        'إجمالي سجلات قوائم الانتظار',
+        data.totalWaitingRecords,
+        'fa-list-check',
+        COLORS.primary,
+        'DETAIL_ALL'
+    ],
+    [
+        'إجمالي المنتظرين',
+        data.waitingResidents,
+        'fa-clock',
+        COLORS.info,
+        'DETAIL_WAITING'
+    ],
+    [
+        'في مراحل التخصيص',
+        data.allocationResidents,
+        'fa-house-circle-check',
+        COLORS.warning,
+        'DETAIL_ALLOCATION'
+    ],
+    [
+        'في مراحل التسكين',
+        data.housingProcedureResidents,
+        'fa-key',
+        COLORS.success,
+        'DETAIL_HOUSING'
+    ],
+    [
+        'قوائم الانتظار الرئيسية',
+        data.mainWaitingResidents,
+        'fa-list-ol',
+        COLORS.purple,
+        'DETAIL_MAIN_WAITING'
+    ],
+    [
+        'قوائم الانتظار الجانبية',
+        data.sideWaitingResidents,
+        'fa-layer-group',
+        COLORS.cyan,
+        'DETAIL_SIDE_WAITING'
+    ]
+
+].forEach(function(item) {
+
+    wlKpi(
+        kpis,
+        item[0],
+        item[1],
+        item[2],
+        item[3],
+        item[4]
+    );
+
+});
+
+
+                /* Waiting Classes */
+
+                var classes =
+                    Array.isArray(data.classes)
+                        ? data.classes
+                        : [];
+
+                var main = classes.filter(function(x) {
+                    return x.classType === 'MAIN';
+                });
+
+                var side = classes.filter(function(x) {
+                    return x.classType === 'SIDE';
+                });
+
+
+                            wlRenderWaitingClassCards(
+                'wl-main-waiting-cards',
+                main,
+                COLORS.purple
+            );
+
+            wlRenderWaitingClassCards(
+                'wl-side-waiting-cards',
+                side,
+                COLORS.cyan
+            );
+
+                document.getElementById('wl-main-count')
+                    .textContent = wlNumber(main.length) + ' فئة';
+
+                document.getElementById('wl-side-count')
+                    .textContent = wlNumber(side.length) + ' فئة';
+
+
+                wlClassesChart('c-wl-main', main, true);
+
+                wlClassesChart('c-wl-side', side, false);
+
+
+
+               
+
+            }
+
+
+            /* ═══════════════════════════════════════════════
+               LAZY LOADING
+               ═══════════════════════════════════════════════ */
+
+            function loadWaitingList() {
+
+                if (waitingLoaded || waitingLoading)
+                    return;
+
+                var panel =
+                    document.getElementById('t8');
+
+                var status =
+                    document.getElementById('wl-status');
+
+                var content =
+                    document.getElementById('wl-content');
+
+                if (!panel || !status || !content)
+                    return;
+
+                waitingLoading = true;
+
+                status.hidden = false;
+
+                status.textContent =
+                    'جاري تحميل بيانات قوائم الانتظار...';
+
+                fetch(panel.dataset.url, {
+
+                    credentials: 'same-origin',
+
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+
+                })
+                .then(function(response) {
+
+                    if (!response.ok) {
+
+                        throw new Error(
+                            response.status === 403
+                                ? 'FORBIDDEN'
+                                : 'LOAD_ERROR'
+                        );
+
+                    }
+
+                    return response.json();
+                })
+                .then(function(data) {
+
+    const totalRecords =
+        Number(data?.totalWaitingRecords);
+
+    // التحميل نجح، ولكن الإدارة لا تملك
+    // أي سجلات في قوائم الانتظار
+    if (
+        Number.isFinite(totalRecords) &&
+        totalRecords === 0
+    ) {
+        content.hidden = true;
+        status.hidden = false;
+
+        status.textContent =
+            'لا توجد بيانات لقوائم الانتظار لهذه الإدارة.';
+
+        waitingLoaded = true;
+        return;
+    }
+
+    // توجد بيانات: عرض المؤشرات والرسوم
+    content.hidden = false;
+    status.hidden = true;
+
+    wlRender(data);
+
+    waitingLoaded = true;
+
+})
+                .catch(function(error) {
+
+                    content.hidden = true;
+                    status.hidden = false;
+
+                    status.textContent =
+                        error.message === 'FORBIDDEN'
+                            ? 'غير مصرح بعرض قوائم انتظار هذه الإدارة.'
+                            : 'تعذر تحميل قوائم الانتظار. أعد فتح التبويب للمحاولة.';
+
+                })
+                .finally(function() {
+
+                    waitingLoading = false;
+
+                });
+
+            }
+
         /* ── TABS ── */
         function activateDepartmentTab(tabId, updateHash) {
-            if (!/^t[1-7]$/.test(tabId || '')) return;
+            if (!/^t[1-8]$/.test(tabId || '')) return;
 
             var btn =
                 document.querySelector(
@@ -4071,6 +4708,10 @@ if (dFinanceClaimsType) {
 
             btn.classList.add('is-active');
             panel.classList.add('is-active');
+            
+            if (tabId === 't8') {
+                loadWaitingList();
+            }
 
             if (updateHash &&
                 window.history &&
@@ -4107,15 +4748,14 @@ if (dFinanceClaimsType) {
             });
 
         var requestedTab =
-            (window.location.hash || '')
-                .replace('#', '');
+    (window.location.hash || '')
+        .replace('#', '');
 
-        if (/^t[1-7]$/.test(requestedTab)) {
-            activateDepartmentTab(
-                requestedTab,
-                false
-            );
-        }
+if (/^t[1-8]$/.test(requestedTab)) {
+    activateDepartmentTab(requestedTab, false);
+} else {
+    activateDepartmentTab('t8', false);
+}
 
         })();
     </script>
