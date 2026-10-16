@@ -543,6 +543,10 @@ BEGIN
                     , @entryData                      = @entrydata
                     , @hostName                       = @hostName
                     , @UsersID                        = @parameter_01
+
+
+          
+           
         END
 
 
@@ -719,8 +723,8 @@ BEGIN
        t.[distributorPermissionTypeID]
       ,t.[permissionTypeID_FK]
       ,t.[DistributorID_FK]
-      ,t.[distributorPermissionTypeStartDate]
-      ,t.[distributorPermissionTypeEndDate]
+      ,CONVERT(nvarchar(10),t.[distributorPermissionTypeStartDate],23) distributorPermissionTypeStartDate
+      ,CONVERT(nvarchar(10),t.[distributorPermissionTypeEndDate],23) distributorPermissionTypeEndDate
       ,t.[distributorPermissionTypeActive]
       ,t.[permissionAuthLvl]
       ,d.distributorName_A
@@ -810,27 +814,7 @@ BEGIN
 END
 
 
--------------------------------------------------------------------
---                     PAGE: RealChartsDemo
--------------------------------------------------------------------
-        
-        ELSE IF @pageName_ = 'RealChartsDemo'
-        BEGIN
 
-
-
-            -- Pie3D Data (Table 1) من جدول الديمو
-            SELECT
-                SegmentKey     AS [Key],
-                SegmentLabel_A AS [Label],
-                SegmentValue   AS [Value],
-                SegmentHref    AS [Href],
-                SegmentHint    AS [Hint]
-            FROM Demo.Demo_Pie3D_UnitDistribution
-            WHERE IsActive = 1
-              AND (@idaraID IS NULL OR IdaraId_FK IS NULL OR IdaraId_FK = @idaraID)
-            ORDER BY SortOrder;
-        END
 
 
 
@@ -933,6 +917,25 @@ ELSE IF @pageName_ = 'buildingUtilityType'
                     , @entryData                      = @entrydata
                     , @hostName                       = @hostName
                     , @buildingUtilityTypeID_FK       = @parameter_01
+
+
+        END
+
+         -------------------------------------------------------------------
+    --                     PAGE: BuildingSpaces
+    -------------------------------------------------------------------
+        ELSE IF @pageName_ = 'BuildingSpaces'
+        BEGIN
+
+
+             EXEC [Housing].[BuildingSpacesDL]
+                                           
+                      @pageName_                      = @pageName_
+                    , @idaraID                        = @idaraID
+                    , @entryData                      = @entrydata
+                    , @hostName                       = @hostName
+                    , @buildingUtilityTypeID_FK       = @parameter_01
+                    , @BuildingDetailsID_FK       = @parameter_02
 
 
         END
@@ -1380,6 +1383,21 @@ ELSE IF @pageName_ = 'buildingUtilityType'
            
 
 
+        END
+
+
+
+
+    -------------------------------------------------------------------
+    --                     PAGE: HousingUnallocatedPaymentsReview
+    -------------------------------------------------------------------
+        ELSE IF @pageName_ = N'HousingUnallocatedPaymentsReview'
+        BEGIN
+            EXEC [Housing].[HousingUnallocatedPaymentsReviewDL]
+                  @pageName_ = @pageName_
+                , @idaraID   = @idaraID
+                , @entrydata = @entrydata
+                , @hostname  = @hostname;
         END
 
 
@@ -2312,6 +2330,126 @@ END
 
 
 
+
+-------------------------------------------------------------------
+--             PAGE: الشاشه التفاعليه
+-------------------------------------------------------------------
+-------------------------------------------------------------------
+--             PAGE: HousingCommandCenterDashboard
+-------------------------------------------------------------------
+ELSE IF @pageName_ = 'HousingCommandCenterDashboard'
+BEGIN
+
+    DECLARE @CommandCenterTargetIdaraID BIGINT =
+        TRY_CONVERT
+        (
+            BIGINT,
+            NULLIF
+            (
+                LTRIM(RTRIM(@parameter_01)),
+                N''
+            )
+        );
+
+    DECLARE @CommandCenterSection NVARCHAR(20) =
+        NULLIF
+        (
+            LOWER(LTRIM(RTRIM(@parameter_02))),
+            N''
+        );
+
+    DECLARE @CommandCenterStatus NVARCHAR(30) =
+        NULLIF
+        (
+            UPPER(LTRIM(RTRIM(@parameter_03))),
+            N''
+        );
+
+        DECLARE @CommandCenterSearchText NVARCHAR(4000) =
+    NULLIF
+    (
+        LTRIM(RTRIM(@parameter_04)),
+        N''
+    );
+
+
+DECLARE @CommandCenterBillChargeTypeID INT =
+    TRY_CONVERT
+    (
+        INT,
+        NULLIF
+        (
+            LTRIM(RTRIM(@parameter_05)),
+            N''
+        )
+    );
+
+
+DECLARE @CommandCenterSortKey NVARCHAR(30) =
+    NULLIF
+    (
+        UPPER
+        (
+            LTRIM(RTRIM(@parameter_06))
+        ),
+        N''
+    );
+
+
+DECLARE @CommandCenterPageNumber INT =
+    TRY_CONVERT
+    (
+        INT,
+        NULLIF
+        (
+            LTRIM(RTRIM(@parameter_07)),
+            N''
+        )
+    );
+
+
+DECLARE @CommandCenterPageSize INT =
+    TRY_CONVERT
+    (
+        INT,
+        NULLIF
+        (
+            LTRIM(RTRIM(@parameter_08)),
+            N''
+        )
+    );
+
+    DECLARE @CommandCenterResidentInfoID BIGINT =
+    TRY_CONVERT
+    (
+        BIGINT,
+        NULLIF
+        (
+            LTRIM(RTRIM(@parameter_09)),
+            N''
+        )
+    );
+
+
+    EXEC [Housing].[HousingCommandCenterDashboardDL]
+          @pageName_      = @pageName_
+        , @idaraID        = @idaraID
+        , @entryData      = @entrydata
+        , @hostName       = @hostName
+
+        , @targetIdaraID  = @CommandCenterTargetIdaraID
+        , @section        = @CommandCenterSection
+        , @status         = @CommandCenterStatus
+
+        , @searchText       = @CommandCenterSearchText
+        , @billChargeTypeID = @CommandCenterBillChargeTypeID
+        , @sortKey          = @CommandCenterSortKey
+        , @pageNumber       = @CommandCenterPageNumber
+        , @pageSize         = @CommandCenterPageSize
+        , @residentInfoID   = @CommandCenterResidentInfoID
+        ;
+
+END
 
 
     -------------------------------------------------------------------

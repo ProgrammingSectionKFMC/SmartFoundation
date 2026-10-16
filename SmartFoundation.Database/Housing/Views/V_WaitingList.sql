@@ -12,6 +12,7 @@
 
 
 
+
 CREATE   VIEW [Housing].[V_WaitingList]
 AS
 WITH d AS
@@ -182,7 +183,8 @@ LEFT JOIN dbo.Idara toidara
 
 
 WHERE b.buildingActionTypeID_FK in(1,7,25)
-  AND b.buildingActionActive = 1;
+  AND b.buildingActionActive = 1
+  AND b.residentInfoID_FK is not null;
 
 GO
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane1', @value = N'[0E232FF0-B466-11cf-A24F-00AA00A3EFFF, 1.00]

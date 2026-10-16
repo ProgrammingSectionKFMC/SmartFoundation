@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [MoveData].[usp_MigrateAll]
+﻿CREATE   PROCEDURE [MoveData].[usp_MigrateAll]
     @IdaraId bigint,
     /* مهم عند التشغيل الفعلي: تاريخ نهاية الترحيل وبداية اعتماد النظام الجديد. */
     @CutoverDate date,
@@ -25,6 +25,73 @@ BEGIN
         THROW 57000, N'The supplied IdaraId does not exist.', 1;
     IF @CutoverDate IS NULL
         THROW 57001, N'CutoverDate is required.', 1;
+
+
+        
+-- ==========================================
+-- Preflight: Duplicate active waiting roots
+-- ==========================================
+
+SELECT
+    a.generalNo_FK AS GeneralNo,
+    a.buildingActionExtraType1 AS WaitingClassID,
+    COUNT_BIG(*) AS ActiveRequests,
+    STRING_AGG(
+        CONVERT(NVARCHAR(MAX), a.buildingActionID),
+        N', '
+    ) AS ActionIDs
+INTO #WaitingRootDuplicates
+FROM KFMC.Housing.BuildingAction a
+WHERE a.buildingActionTypeID_FK IN (1, 7, 25)
+  AND a.buildingActionActive = 1
+  AND a.generalNo_FK IS NOT NULL
+  AND a.generalNo_FK NOT IN (0, 1)
+  AND a.buildingActionExtraType1 IS NOT NULL
+GROUP BY
+    a.generalNo_FK,
+    a.buildingActionExtraType1
+HAVING COUNT_BIG(*) > 1;
+
+IF EXISTS
+(
+    SELECT 1
+    FROM #WaitingRootDuplicates
+)
+BEGIN
+    SELECT
+        GeneralNo,
+        WaitingClassID,
+        ActiveRequests,
+        ActionIDs
+    FROM #WaitingRootDuplicates
+    ORDER BY GeneralNo, WaitingClassID;
+
+    DECLARE @DuplicateGroups BIGINT;
+    DECLARE @FirstGeneralNo NVARCHAR(50);
+    DECLARE @WaitingError NVARCHAR(2048);
+
+    SELECT @DuplicateGroups = COUNT_BIG(*)
+    FROM #WaitingRootDuplicates;
+
+    SELECT TOP (1)
+        @FirstGeneralNo = CONVERT(
+            NVARCHAR(50), GeneralNo
+        )
+    FROM #WaitingRootDuplicates
+    ORDER BY GeneralNo;
+
+    SET @WaitingError = CONCAT(
+        N'فشل فحص الترحيل: يوجد ',
+        @DuplicateGroups,
+        N' مجموعات طلبات انتظار نشطة مكررة في KFMC. ',
+        N'أول رقم عام مخالف: ',
+        @FirstGeneralNo,
+        N'. يجب تصحيح جميع المخالفات قبل النقل.'
+    );
+
+    THROW 57120, @WaitingError, 1;
+END;
+
 
     BEGIN TRY
         BEGIN TRANSACTION;
@@ -54,29 +121,66 @@ BEGIN
              @IdaraId=@IdaraId, @RollbackAfterTest=0;
         INSERT @ExecutionTiming VALUES(@CurrentStepNumber,@CurrentProcedure,@StepStartedAt,SYSDATETIME(),DATEDIFF_BIG(MILLISECOND,@StepStartedAt,SYSDATETIME()),'Succeeded',NULL,NULL);
 
-        SET @CurrentStepNumber=6; SET @CurrentProcedure=N'MoveData.usp_MigrateBuildingActions'; SET @StepStartedAt=SYSDATETIME();
-        EXEC MoveData.usp_MigrateBuildingActions
-             @IdaraId=@IdaraId, @RollbackAfterTest=0;
-        INSERT @ExecutionTiming VALUES(@CurrentStepNumber,@CurrentProcedure,@StepStartedAt,SYSDATETIME(),DATEDIFF_BIG(MILLISECOND,@StepStartedAt,SYSDATETIME()),'Succeeded',NULL,NULL);
+        /* Step 6: Migrate WaitingClass */
+SET @CurrentStepNumber=6;
+SET @CurrentProcedure=N'MoveData.usp_MigrateWaitingClass';
+SET @StepStartedAt=SYSDATETIME();
 
-        SET @CurrentStepNumber=7; SET @CurrentProcedure=N'MoveData.usp_MigrateLegacyAssignments'; SET @StepStartedAt=SYSDATETIME();
+EXEC MoveData.usp_MigrateWaitingClass
+     @IdaraId=@IdaraId,
+     @RollbackAfterTest=0;
+
+INSERT @ExecutionTiming
+VALUES(
+    @CurrentStepNumber,
+    @CurrentProcedure,
+    @StepStartedAt,
+    SYSDATETIME(),
+    DATEDIFF_BIG(MILLISECOND,@StepStartedAt,SYSDATETIME()),
+    'Succeeded',
+    NULL,
+    NULL
+);
+
+/* Step 7: Migrate BuildingActions */
+SET @CurrentStepNumber=7;
+SET @CurrentProcedure=N'MoveData.usp_MigrateBuildingActions';
+SET @StepStartedAt=SYSDATETIME();
+
+EXEC MoveData.usp_MigrateBuildingActions
+     @IdaraId=@IdaraId,
+     @RollbackAfterTest=0;
+
+INSERT @ExecutionTiming
+VALUES(
+    @CurrentStepNumber,
+    @CurrentProcedure,
+    @StepStartedAt,
+    SYSDATETIME(),
+    DATEDIFF_BIG(MILLISECOND,@StepStartedAt,SYSDATETIME()),
+    'Succeeded',
+    NULL,
+    NULL
+);
+
+        SET @CurrentStepNumber=8; SET @CurrentProcedure=N'MoveData.usp_MigrateLegacyAssignments'; SET @StepStartedAt=SYSDATETIME();
         EXEC MoveData.usp_MigrateLegacyAssignments
              @IdaraId=@IdaraId, @RollbackAfterTest=0;
         INSERT @ExecutionTiming VALUES(@CurrentStepNumber,@CurrentProcedure,@StepStartedAt,SYSDATETIME(),DATEDIFF_BIG(MILLISECOND,@StepStartedAt,SYSDATETIME()),'Succeeded',NULL,NULL);
 
-        SET @CurrentStepNumber=8; SET @CurrentProcedure=N'MoveData.usp_MigrateExtendInsurance'; SET @StepStartedAt=SYSDATETIME();
+        SET @CurrentStepNumber=9; SET @CurrentProcedure=N'MoveData.usp_MigrateExtendInsurance'; SET @StepStartedAt=SYSDATETIME();
         EXEC MoveData.usp_MigrateExtendInsurance
              @IdaraId=@IdaraId, @RollbackAfterTest=0;
         INSERT @ExecutionTiming VALUES(@CurrentStepNumber,@CurrentProcedure,@StepStartedAt,SYSDATETIME(),DATEDIFF_BIG(MILLISECOND,@StepStartedAt,SYSDATETIME()),'Succeeded',NULL,NULL);
 
         /* Electricity is inserted first to preserve old BillsID values. */
-        SET @CurrentStepNumber=9; SET @CurrentProcedure=N'MoveData.usp_MigrateElectricBillsAndPayments'; SET @StepStartedAt=SYSDATETIME();
+        SET @CurrentStepNumber=10; SET @CurrentProcedure=N'MoveData.usp_MigrateElectricBillsAndPayments'; SET @StepStartedAt=SYSDATETIME();
         EXEC MoveData.usp_MigrateElectricBillsAndPayments
              @IdaraId=@IdaraId, @RollbackAfterTest=0;
         INSERT @ExecutionTiming VALUES(@CurrentStepNumber,@CurrentProcedure,@StepStartedAt,SYSDATETIME(),DATEDIFF_BIG(MILLISECOND,@StepStartedAt,SYSDATETIME()),'Succeeded',NULL,NULL);
 
         /* Rent and water receive new BillsID values after electricity. */
-        SET @CurrentStepNumber=10; SET @CurrentProcedure=N'MoveData.usp_MigrateHistoricalRentAndWaterBills'; SET @StepStartedAt=SYSDATETIME();
+        SET @CurrentStepNumber=11; SET @CurrentProcedure=N'MoveData.usp_MigrateHistoricalRentAndWaterBills'; SET @StepStartedAt=SYSDATETIME();
         EXEC MoveData.usp_MigrateHistoricalRentAndWaterBills
              @IdaraId=@IdaraId,
              @CutoverDate=@CutoverDate,
@@ -87,7 +191,7 @@ BEGIN
         /* Restore the house-to-service configuration and service identity on
            historical fixed-service bills.  It uses only services already
            configured with an active idara link and fixed tariff. */
-        SET @CurrentStepNumber=11; SET @CurrentProcedure=N'MoveData.usp_MigrateBuildingFixedServices'; SET @StepStartedAt=SYSDATETIME();
+        SET @CurrentStepNumber=12; SET @CurrentProcedure=N'MoveData.usp_MigrateBuildingFixedServices'; SET @StepStartedAt=SYSDATETIME();
         EXEC MoveData.usp_MigrateBuildingFixedServices
              @IdaraId=@IdaraId, @RollbackAfterTest=0;
         INSERT @ExecutionTiming VALUES(@CurrentStepNumber,@CurrentProcedure,@StepStartedAt,SYSDATETIME(),DATEDIFF_BIG(MILLISECOND,@StepStartedAt,SYSDATETIME()),'Succeeded',NULL,NULL);
@@ -95,12 +199,12 @@ BEGIN
         /* ربط سدادات الإيجار بالمبنى من فترة السكن بعد إنشاء فواتير الإيجار. */
         /* Deferred: run Housing.usp_ClassifyAndLinkBuildingPayments after migration validation. */
 
-        SET @CurrentStepNumber=12; SET @CurrentProcedure=N'MoveData.usp_MigrateOccupantCustodyActions'; SET @StepStartedAt=SYSDATETIME();
+        SET @CurrentStepNumber=13; SET @CurrentProcedure=N'MoveData.usp_MigrateOccupantCustodyActions'; SET @StepStartedAt=SYSDATETIME();
         EXEC MoveData.usp_MigrateOccupantCustodyActions
              @RollbackAfterTest=0;
         INSERT @ExecutionTiming VALUES(@CurrentStepNumber,@CurrentProcedure,@StepStartedAt,SYSDATETIME(),DATEDIFF_BIG(MILLISECOND,@StepStartedAt,SYSDATETIME()),'Succeeded',NULL,NULL);
 
-        SET @CurrentStepNumber=13; SET @CurrentProcedure=N'MoveData.usp_MigratePenaltyBillsAndPayments'; SET @StepStartedAt=SYSDATETIME();
+        SET @CurrentStepNumber=14; SET @CurrentProcedure=N'MoveData.usp_MigratePenaltyBillsAndPayments'; SET @StepStartedAt=SYSDATETIME();
         EXEC MoveData.usp_MigratePenaltyBillsAndPayments
              @IdaraId=@IdaraId, @RollbackAfterTest=0;
         INSERT @ExecutionTiming VALUES(@CurrentStepNumber,@CurrentProcedure,@StepStartedAt,SYSDATETIME(),DATEDIFF_BIG(MILLISECOND,@StepStartedAt,SYSDATETIME()),'Succeeded',NULL,NULL);

@@ -758,6 +758,115 @@ END
 
 
 
+
+    -------------------------------------------------------------------
+    --                  HousingUnallocatedPaymentsReview
+    -------------------------------------------------------------------
+
+
+
+ELSE IF @pageName_ = N'HousingUnallocatedPaymentsReview'
+BEGIN
+    IF @ActionType = N'GetUnallocatedPaymentsByResident'
+    BEGIN
+        SELECT
+              bp.paymentID
+            , bp.residentInfoID_FK AS residentInfoID
+            , bp.BillChargeTypeID_FK AS BillChargeTypeID
+            , d.deductName
+            , bt.buildingPaymentTypeName_A
+            , d.issueYear
+            , d.issueMonth
+            , CONVERT(NVARCHAR(10), d.paymentDate, 23) AS paymentDate
+            , bp.amount
+            , CASE WHEN bp.amount < 0 THEN N'استرداد سابق'
+                   ELSE N'سداد عام' END AS PaymentMovementText
+        FROM Housing.BuildingPayment bp
+        INNER JOIN Housing.DeductList d
+            ON d.deductListID = bp.deductListID_FK
+        LEFT JOIN Housing.BuildingPaymentType bt
+            ON bt.buildingPaymentTypeID = bp.buildingPaymentTypeID_FK
+        WHERE bp.residentInfoID_FK = TRY_CONVERT(BIGINT, @parameter_01)
+          AND bp.BillChargeTypeID_FK = TRY_CONVERT(BIGINT, @parameter_02)
+          AND bp.IdaraId_FK = @idaraID
+          AND bp.buildingPaymentLinkStatusID_FK = 2
+          AND bp.buildingPayementActive = 1
+          AND d.deductActive = 1
+        ORDER BY bp.paymentID DESC;
+    END
+
+        ELSE IF @ActionType = N'GetUnallocatedRefundsByResident'
+    BEGIN
+
+        
+
+        SELECT
+              r.RefundID
+            , r.ResidentInfoID_FK AS residentInfoID
+            , r.BillChargeTypeID_FK AS BillChargeTypeID
+            , r.RefundAmount
+            , CONVERT(NVARCHAR(10), r.RefundDate, 23)
+                AS RefundDate
+            , r.RefundReference
+            , r.RefundDetails
+            , r.RefundStatus
+            , CASE
+                WHEN r.RefundStatus = 1 THEN N'مؤكد'
+                WHEN r.RefundStatus = 2 THEN N'ملغى'
+                ELSE N'غير معروف'
+              END AS RefundStatusText
+            , CONVERT(NVARCHAR(19), r.EntryDate, 120)
+                AS EntryDate
+            , ISNULL(a.AllocationCount, 0)
+                AS AllocationCount
+            , ISNULL(a.TotalAllocated, 0)
+                AS TotalAllocated
+            , ISNULL(a.AllocationDetails, N'')
+                AS AllocationDetails
+
+        FROM Housing.UnallocatedPaymentRefund r
+
+        OUTER APPLY
+        (
+            SELECT
+                  COUNT(*) AS AllocationCount
+                , SUM(d.AllocatedAmount) AS TotalAllocated
+                , STRING_AGG
+                  (
+                      CONVERT
+                      (
+                          NVARCHAR(MAX),
+                          CONCAT
+                          (
+                              N'الحركة ',
+                              d.PaymentID_FK,
+                              N' : ',
+                              d.AllocatedAmount
+                          )
+                      ),
+                      N'، '
+                  ) AS AllocationDetails
+            FROM Housing.UnallocatedPaymentRefundDetail d
+            WHERE d.RefundID_FK = r.RefundID
+        ) a
+
+        WHERE r.ResidentInfoID_FK =
+              TRY_CONVERT(BIGINT, @parameter_01)
+
+          AND r.BillChargeTypeID_FK =
+              TRY_CONVERT(BIGINT, @parameter_02)
+
+          AND r.IdaraId_FK = @idaraID
+
+        ORDER BY
+            r.RefundDate DESC,
+            r.RefundID DESC;
+
+    END
+END
+
+
+
     -------------------------------------------------------------------
     --                     PAGE NOT FOUND
     --            DO NOT TOUCH DOWN THIS LINE PLEASE

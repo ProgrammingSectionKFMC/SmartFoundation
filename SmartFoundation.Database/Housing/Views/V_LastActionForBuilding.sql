@@ -1,8 +1,117 @@
-﻿CREATE VIEW Housing.V_LastActionForBuilding
+﻿CREATE   VIEW [Housing].[V_LastActionForBuilding]
 AS
-SELECT        MAX(buildingActionID) AS buildingActionID, buildingDetailsID_FK AS buildingDetailsID
-FROM            Housing.BuildingAction AS b
-GROUP BY buildingDetailsID_FK
+
+WITH RealActions AS
+(
+    SELECT
+          a.buildingActionID
+        , a.buildingDetailsID_FK AS buildingDetailsID
+        , a.entryDate
+
+        , ROW_NUMBER() OVER
+          (
+              PARTITION BY
+                  a.buildingDetailsID_FK
+
+              ORDER BY
+                  a.buildingActionID DESC
+
+          ) AS rn
+
+    FROM Housing.BuildingAction a
+
+    WHERE
+        a.buildingActionActive = 1
+        AND a.buildingDetailsID_FK IS NOT NULL
+
+        AND
+        (
+            a.buildingActionExtraText4 IS NULL
+            OR
+            a.buildingActionExtraText4 NOT LIKE N'MoveData:%'
+        )
+),
+
+GeneratedActions AS
+(
+    SELECT
+          a.buildingActionID
+        , a.buildingDetailsID_FK AS buildingDetailsID
+        , a.entryDate
+
+        , ROW_NUMBER() OVER
+          (
+              PARTITION BY
+                  a.buildingDetailsID_FK
+
+              ORDER BY
+                    a.entryDate DESC
+                  , a.buildingActionID DESC
+
+          ) AS rn
+
+    FROM Housing.BuildingAction a
+
+    WHERE
+        a.buildingActionActive = 1
+        AND a.buildingDetailsID_FK IS NOT NULL
+
+        AND a.buildingActionExtraText4
+            LIKE N'MoveData:%'
+),
+
+RealLast AS
+(
+    SELECT
+          buildingActionID
+        , buildingDetailsID
+        , entryDate
+
+    FROM RealActions
+
+    WHERE rn = 1
+),
+
+GeneratedLast AS
+(
+    SELECT
+          buildingActionID
+        , buildingDetailsID
+        , entryDate
+
+    FROM GeneratedActions
+
+    WHERE rn = 1
+)
+
+SELECT
+
+      CASE
+
+          WHEN r.buildingActionID IS NULL
+              THEN g.buildingActionID
+
+          WHEN g.buildingActionID IS NULL
+              THEN r.buildingActionID
+
+          WHEN g.entryDate > r.entryDate
+              THEN g.buildingActionID
+
+          ELSE r.buildingActionID
+
+      END AS buildingActionID
+
+    , COALESCE
+      (
+          r.buildingDetailsID,
+          g.buildingDetailsID
+      ) AS buildingDetailsID
+
+FROM RealLast r
+
+FULL OUTER JOIN GeneratedLast g
+    ON g.buildingDetailsID =
+       r.buildingDetailsID;
 
 GO
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane1', @value = N'[0E232FF0-B466-11cf-A24F-00AA00A3EFFF, 1.00]

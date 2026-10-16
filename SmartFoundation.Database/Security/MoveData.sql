@@ -1,7 +1,3 @@
 ﻿CREATE SCHEMA [MoveData]
     AUTHORIZATION [dbo];
 
-
-
-
-

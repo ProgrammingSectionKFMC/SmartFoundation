@@ -1,7 +1,7 @@
 ﻿CREATE PROCEDURE [dbo].[_BackupDatabase]
 (
-      @databaseName  NVARCHAR(50)  = N'DATACORE'
-    , @pathOfBackup  NVARCHAR(256) = N'D:\DATACORE BackUp'
+      @1Home2Work   INT
+    , @databaseName SYSNAME = N'DATACORE'
 )
 AS
 BEGIN
@@ -9,36 +9,33 @@ BEGIN
     SET XACT_ABORT ON;
 
     DECLARE
-          @name      NVARCHAR(50)
-        , @basePath  NVARCHAR(256)
-        , @folder    NVARCHAR(4000)
-        , @fileName  NVARCHAR(4000)
-        , @fileDate  NVARCHAR(8);
+          @basePath NVARCHAR(256)
+        , @folder   NVARCHAR(4000)
+        , @fileName NVARCHAR(4000)
+        , @fileDate NVARCHAR(8);
 
-    -- تاريخ اليوم YYYYMMDD
     SET @fileDate = CONVERT(NVARCHAR(8), GETDATE(), 112);
 
-    -- المسار الأساسي
-    SET @basePath = NULLIF(LTRIM(RTRIM(@pathOfBackup)), N'');
-    IF @basePath IS NULL
+    IF @1Home2Work = 1
         SET @basePath = N'D:\DATACORE BackUp';
+    ELSE IF @1Home2Work = 2
+        SET @basePath = N'B:\test';
+    ELSE
+    BEGIN
+        ;THROW 50001, N'قيمة @1Home2Work غير صحيحة. استخدم 1 أو 2.', 1;
+    END
 
-    -- تأكد ينتهي بـ "\"
     IF RIGHT(@basePath, 1) <> N'\'
         SET @basePath += N'\';
 
-    -- مجلد اليوم
     SET @folder = @basePath + @fileDate + N'\';
 
     BEGIN TRY
-        -- أنشئ مجلد اليوم (إذا موجود ما يضر)
         EXEC master.dbo.xp_create_subdir @folder;
 
-        -- لو أرسلت NULL خله DATACORE
         IF NULLIF(LTRIM(RTRIM(@databaseName)), N'') IS NULL
             SET @databaseName = N'DATACORE';
 
-        -- اسم ملف الباكب داخل مجلد اليوم (مثال: DATACORE_20260224_181530.bak)
         SET @fileName =
             @folder
             + @databaseName + N'_'
@@ -46,19 +43,27 @@ BEGIN
             + REPLACE(CONVERT(NVARCHAR(8), GETDATE(), 108), N':', N'')
             + N'.bak';
 
-        -- نفّذ الباكب
         DECLARE @sql NVARCHAR(MAX) =
-            N'BACKUP DATABASE ' + QUOTENAME(@databaseName) +
-            N' TO DISK = N''' + REPLACE(@fileName, N'''', N'''''') + N'''
-              WITH INIT, CHECKSUM, STATS = 5;';
+    N'BACKUP DATABASE ' + QUOTENAME(@databaseName) +
+    N' TO DISK = N''' + REPLACE(@fileName, N'''', N'''''') + N'''
+       WITH INIT, CHECKSUM, COPY_ONLY, STATS = 5;';
 
-        EXEC sys.sp_executesql @sql;
+EXEC sys.sp_executesql @sql;
 
-        SELECT 1 AS IsSuccessful,
-               N'تم أخذ النسخة الاحتياطية بنجاح: ' + @fileName AS Message_;
+DECLARE @verifySql NVARCHAR(MAX) =
+    N'RESTORE VERIFYONLY
+      FROM DISK = N''' + REPLACE(@fileName, N'''', N'''''') + N'''
+      WITH CHECKSUM;';
+
+EXEC sys.sp_executesql @verifySql;
+
+SELECT
+    1 AS IsSuccessful,
+    @databaseName AS DatabaseName,
+    @fileName AS BackupFile,
+    N'تم أخذ النسخة الاحتياطية والتحقق منها بنجاح.' AS Message_;
     END TRY
-    BEGIN CATCH
-        DECLARE @err NVARCHAR(4000) = ERROR_MESSAGE();
-        ;THROW 50002, @err, 1;
-    END CATCH
+   BEGIN CATCH
+    THROW;
+END CATCH
 END

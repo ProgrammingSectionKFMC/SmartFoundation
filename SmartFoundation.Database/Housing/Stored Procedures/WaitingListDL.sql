@@ -54,7 +54,7 @@ FROM Housing.V_WaitingList w
       AND (w.WaitingClassID in(1,2,3,4,11))  
       AND (w.IdaraId = @idaraID)
 
-
+      ORDER BY w.ActionDecisionDate ASC,w.ActionDecisionNo ASC, w.GeneralNo ASC
 
      -- WaitingClass DDL
             SELECT c.waitingClassID,c.waitingClassName_A

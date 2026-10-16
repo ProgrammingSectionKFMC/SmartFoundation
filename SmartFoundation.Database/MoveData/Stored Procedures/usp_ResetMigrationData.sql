@@ -1,5 +1,4 @@
-﻿
-CREATE   PROCEDURE [MoveData].[usp_ResetMigrationData]
+﻿CREATE   PROCEDURE [MoveData].[usp_ResetMigrationData]
     @ConfirmReset bit = 0,
     @RollbackAfterTest bit = 1
 AS
@@ -21,7 +20,23 @@ BEGIN
     );
 
     INSERT @Before(TableOrder,TableName,RowCount_)
-    SELECT -14,N'dbo.AuthenticationAuditLog',COUNT_BIG(*) FROM [dbo].[AuthenticationAuditLog]
+
+SELECT -16,
+       N'Housing.UnallocatedPaymentRefundDetail',
+       COUNT_BIG(*)
+FROM [Housing].[UnallocatedPaymentRefundDetail]
+
+UNION ALL
+
+SELECT -15,
+       N'Housing.UnallocatedPaymentRefund',
+       COUNT_BIG(*)
+FROM [Housing].[UnallocatedPaymentRefund]
+
+UNION ALL
+
+SELECT -14,N'dbo.AuthenticationAuditLog',COUNT_BIG(*)
+FROM [dbo].[AuthenticationAuditLog]
     UNION ALL SELECT -13,N'Housing.BillCalculationDetails',COUNT_BIG(*) FROM [Housing].[BillCalculationDetails]
     UNION ALL SELECT -12,N'Housing.BillCalculation',COUNT_BIG(*) FROM [Housing].[BillCalculation]
     UNION ALL SELECT -11,N'Housing.BuildingSpace',COUNT_BIG(*) FROM [Housing].[BuildingSpace]
@@ -63,10 +78,14 @@ BEGIN
     UNION ALL SELECT 25,N'dbo.MilitaryUnit',COUNT_BIG(*) FROM [dbo].[MilitaryUnit];
 
     BEGIN TRY
-        BEGIN TRANSACTION;
+    BEGIN TRANSACTION;
 
-        /* Authentication activity generated during testing; users and user history are preserved. */
-        DELETE FROM [dbo].[AuthenticationAuditLog];
+    /* Unallocated payment refunds - delete children first. */
+    DELETE FROM [Housing].[UnallocatedPaymentRefundDetail];
+    DELETE FROM [Housing].[UnallocatedPaymentRefund];
+
+    /* Authentication activity generated during testing; users and user history are preserved. */
+    DELETE FROM [dbo].[AuthenticationAuditLog];
 
         /* Transactional estimated billing data; preserve policy and space-type configuration. */
         DELETE FROM [Housing].[BillCalculationDetails];
@@ -120,7 +139,40 @@ BEGIN
         DELETE FROM [dbo].[MilitaryUnit];
 
         /* DELETE does not reset identities; reseed empty tables so next value is 1. */
-        DBCC CHECKIDENT (N'dbo.AuthenticationAuditLog', RESEED, 0) WITH NO_INFOMSGS;
+
+IF EXISTS
+(
+    SELECT 1
+    FROM sys.identity_columns
+    WHERE object_id = OBJECT_ID(
+        N'Housing.UnallocatedPaymentRefundDetail'
+    )
+)
+BEGIN
+    DBCC CHECKIDENT
+    (
+        N'Housing.UnallocatedPaymentRefundDetail',
+        RESEED, 0
+    ) WITH NO_INFOMSGS;
+END;
+
+IF EXISTS
+(
+    SELECT 1
+    FROM sys.identity_columns
+    WHERE object_id = OBJECT_ID(
+        N'Housing.UnallocatedPaymentRefund'
+    )
+)
+BEGIN
+    DBCC CHECKIDENT
+    (
+        N'Housing.UnallocatedPaymentRefund',
+        RESEED, 0
+    ) WITH NO_INFOMSGS;
+END;
+
+DBCC CHECKIDENT (N'dbo.AuthenticationAuditLog', RESEED, 0) WITH NO_INFOMSGS;
 
         DBCC CHECKIDENT (N'Housing.BillCalculationDetails', RESEED, 0) WITH NO_INFOMSGS;
         DBCC CHECKIDENT (N'Housing.BillCalculation', RESEED, 0) WITH NO_INFOMSGS;

@@ -1,5 +1,4 @@
-﻿
-CREATE PROCEDURE [dbo].[Masters_CRUD]
+﻿CREATE   PROCEDURE [dbo].[Masters_CRUD]
       @pageName_      NVARCHAR(400)
     , @ActionType     NVARCHAR(100)
     , @idaraID        INT
@@ -425,6 +424,8 @@ BEGIN
                   , @distributorPermissionTypeID     = @parameter_01
                   , @permissionTypeID                = @parameter_02
                   , @permissionAuthLvl               = @parameter_07
+                  , @permissionTypeName_A            = @parameter_08
+                  , @permissionTypeName_E            = @parameter_09
                   , @idaraID_FK                      = @idaraID
                   , @entryData                       = @entrydata
                   , @hostName                        = @hostName;
@@ -3948,6 +3949,80 @@ END;
             SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
             GOTO Finish;
         END
+
+
+
+
+        
+----------------------------------------------------------------
+-- HousingUnallocatedPaymentsReview
+----------------------------------------------------------------
+ELSE IF @pageName_ = N'HousingUnallocatedPaymentsReview'
+BEGIN
+
+    IF (
+        SELECT COUNT(*)
+        FROM dbo.V_GetListUserPermission v
+        WHERE v.userID = @entrydata
+          AND v.menuName_E = @pageName_
+          AND v.permissionTypeName_E = @ActionType
+    ) <= 0
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+        GOTO Finish;
+    END
+
+    DELETE FROM @Result;
+
+    IF @ActionType = N'INSERTUNALLOCATEDPAYMENTREFUND'
+    BEGIN
+
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [Housing].[HousingUnallocatedPaymentsReviewSP]
+              @Action            = @ActionType
+            , @residentInfoID    = @parameter_01
+            , @BillChargeTypeID  = @parameter_02
+            , @RefundAmount      = @parameter_03
+            , @RefundDate        = @parameter_04
+            , @RefundReference   = @parameter_05
+            , @RefundDetails     = @parameter_06
+            , @BillPaymentTypeID = @parameter_07
+            , @RequestKey        = @parameter_08
+            , @idaraID_FK        = @idaraID
+            , @entryData         = @entrydata
+            , @hostName          = @hostName;
+
+    END
+
+    
+    ELSE IF @ActionType = N'CANCELUNALLOCATEDPAYMENTREFUND'
+    BEGIN
+        INSERT INTO @Result(IsSuccessful, Message_)
+        EXEC [Housing].[HousingUnallocatedPaymentsReviewSP]
+              @Action             = @ActionType
+            , @RefundID           = @parameter_01
+            , @CancellationReason = @parameter_02
+            , @idaraID_FK         = @idaraID
+            , @entryData          = @entrydata
+            , @hostName           = @hostName;
+    END
+
+    ELSE
+    BEGIN
+        SET @ok = 0;
+        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+        GOTO Finish;
+    END
+
+    SELECT TOP (1)
+        @ok = IsSuccessful,
+        @msg = Message_
+    FROM @Result;
+
+    GOTO Finish;
+
+END
 
 
         ----------------------------------------------------------------

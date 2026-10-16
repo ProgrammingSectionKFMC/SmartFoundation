@@ -1,8 +1,35 @@
-﻿CREATE VIEW [Housing].[V_LastActionForResident]
+﻿
+CREATE VIEW [Housing].[V_LastActionForResident]
 AS
-SELECT        MAX(buildingActionID) AS buildingActionID, generalNo_FK AS generalNo
-FROM            Housing.BuildingAction AS b
-GROUP BY generalNo_FK
+
+WITH LastAction AS
+(
+    SELECT
+          b.buildingActionID
+        , b.generalNo_FK
+        , b.residentInfoID_FK
+
+        , ROW_NUMBER() OVER
+          (
+              PARTITION BY b.residentInfoID_FK
+              ORDER BY b.buildingActionID DESC
+          ) AS RowNo
+
+    FROM Housing.BuildingAction b
+
+    WHERE
+        b.residentInfoID_FK IS NOT NULL
+        AND b.buildingActionActive = 1
+)
+
+SELECT
+      buildingActionID
+    , generalNo_FK AS generalNo
+    , residentInfoID_FK AS residentInfoID
+
+FROM LastAction
+
+WHERE RowNo = 1;
 
 GO
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane1', @value = N'[0E232FF0-B466-11cf-A24F-00AA00A3EFFF, 1.00]

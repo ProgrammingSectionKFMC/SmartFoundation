@@ -342,6 +342,66 @@ BEGIN
             begin
 
 
+
+            
+-- التحقق المالي قبل اعتماد الإخلاء فقط (57 -> 58)
+
+DECLARE @AuditResidentID BIGINT =
+    TRY_CONVERT(BIGINT, @residentInfoID);
+
+DECLARE @AuditBuildingID BIGINT =
+    TRY_CONVERT(BIGINT, @buildingDetailsID);
+
+IF @AuditResidentID IS NULL
+   OR @AuditBuildingID IS NULL
+BEGIN
+    ;THROW 50001,
+        N'بيانات المستفيد أو المبنى غير صحيحة',
+        1;
+END;
+
+-- عدم اعتبار غياب البيانات المالية إثباتًا
+-- على أن جميع الأرصدة صفر
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM Housing.V_SumBillsTotalPriceAndTotalPaidForResident e
+    WHERE e.residentInfoID = @AuditResidentID
+      AND (
+          e.buildingDetailsID = @AuditBuildingID
+          OR e.buildingDetailsID IS NULL
+      )
+)
+BEGIN
+    ;THROW 50001,
+        N'تعذر التحقق من الرصيد المالي للمبنى',
+        1;
+END;
+
+-- يجب أن يكون صافي كل خدمة في كل نطاق مبنى صفرًا
+IF EXISTS
+(
+    SELECT 1
+    FROM Housing.V_SumBillsTotalPriceAndTotalPaidForResident e
+    WHERE e.residentInfoID = @AuditResidentID
+      AND (
+          e.buildingDetailsID = @AuditBuildingID
+          OR e.buildingDetailsID IS NULL
+      )
+    GROUP BY
+        e.BillChargeTypeID,
+        e.buildingDetailsID
+    HAVING
+        SUM(e.Remaining) <> 0
+        OR COUNT_BIG(e.Remaining) <> COUNT_BIG(*)
+)
+BEGIN
+    ;THROW 50001,
+        N'لا يمكن اعتماد الإخلاء حتى تصفية جميع أرصدة الخدمات وإتمام التسويات المالية',
+        1;
+END;
+
+
               INSERT INTO  Housing.BuildingAction
             (
                   buildingActionTypeID_FK

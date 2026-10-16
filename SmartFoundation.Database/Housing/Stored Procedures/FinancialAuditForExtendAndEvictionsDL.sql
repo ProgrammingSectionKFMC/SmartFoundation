@@ -99,7 +99,7 @@ BEGIN
 
           
         SELECT 
-            rd.FullName_A+' - '+rd.NationalID+' - '+case when w.LastActionTypeID = 51 then N'امهال' when w.LastActionTypeID = 57 then N'اخلاء' END as FullName_A,
+           rd.rankNameA+' - ' +rd.FullName_A+' - '+rd.NationalID+' - '+case when w.LastActionTypeID = 51 then N'امهال' when w.LastActionTypeID = 57 then N'اخلاء' END as FullName_A,
             w.residentInfoID
           
     FROM Housing.V_WaitingList w 
@@ -108,7 +108,7 @@ BEGIN
         Inner Join Housing.BuildingActionType ba on w.LastActionTypeID = ba.buildingActionTypeID
     WHERE w.IdaraId = @idaraID
       AND  w.LastActionTypeID in (51,57)
-      order by   w.waitingClassSequence asc
+      order by   w.LastActionEntryDate desc
 
 
       --or w.LastActionTypeID in (2,3,18,19,20,21,22,23,24,26,27,28,33,34,35)

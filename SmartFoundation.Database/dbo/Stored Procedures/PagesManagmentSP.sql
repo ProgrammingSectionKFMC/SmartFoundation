@@ -938,6 +938,13 @@ SET @dateOfBirth_DT         = TRY_CONVERT(date, @dateOfBirth, 23);
                    permissionAuthLvl = @permissionAuthLvl_Edit
              WHERE distributorPermissionTypeID = @dptID_Edit;
 
+
+             UPDATE dbo.PermissionType
+               SET permissionTypeName_A = @permissionTypeName_A,
+                   permissionTypeName_E = @permissionTypeName_E
+             WHERE permissionTypeID = (select top(1) t.permissionTypeID_FK from DistributorPermissionType t where distributorPermissionTypeID = @dptID_Edit order by t.distributorPermissionTypeID desc );
+
+
             SELECT 1 AS IsSuccessful, N'تم تعديل صلاحية الصفحة بنجاح' AS Message_;
             RETURN;
         END

@@ -34,14 +34,28 @@ BEGIN
           AND sourceAction.[buildingActionExtraInt1] NOT IN (1, 2, 3, 4, 5)
     )
         THROW 54004, N'KFMC contains an unsupported evacuation stage in buildingActionExtraInt1.', 1;
-    IF EXISTS
-    (
-        SELECT 1 FROM [KFMC].[Housing].[ResidentInfo] sourceResident
-        LEFT JOIN [Housing].[ResidentInfo] targetResident
-          ON targetResident.[residentInfoID] = CONVERT(bigint, sourceResident.[residentInfoID])
-        WHERE targetResident.[residentInfoID] IS NULL
-    )
-        THROW 54001, N'Run MoveData.usp_MigrateResidents before migrating building actions.', 1;
+   IF EXISTS
+(
+    SELECT 1
+    FROM [KFMC].[Housing].[ResidentInfo] sourceResident
+
+    LEFT JOIN [Housing].[ResidentInfo] targetResident
+        ON targetResident.[residentInfoID] =
+           CONVERT(bigint, sourceResident.[residentInfoID])
+
+    WHERE targetResident.[residentInfoID] IS NULL
+
+      AND EXISTS
+      (
+          SELECT 1
+          FROM [KFMC].[Housing].[ResidentDetails] sourceDetails
+          WHERE sourceDetails.[generalNo_FK] =
+                sourceResident.[generalNo]
+      )
+)
+    THROW 54001,
+        N'Run MoveData.usp_MigrateResidents before migrating building actions.',
+        1;
     IF EXISTS
     (
         SELECT 1 FROM [KFMC].[Housing].[BuildingDetails] sourceBuilding
@@ -276,6 +290,7 @@ BEGIN
             [buildingActionToSourceID_FK], [buildingActionNote],
             [buildingActionExtraText1], [buildingActionExtraText2],
             [buildingActionExtraText3], [buildingActionExtraText4],
+            [buildingActionExtraText5],
             [buildingActionExtraDate1], [buildingActionExtraDate2], [buildingActionExtraDate3],
             [buildingActionExtraFloat1], [buildingActionExtraFloat2],
             [buildingActionExtraInt1], [buildingActionExtraInt2],
@@ -321,7 +336,9 @@ BEGIN
             sourceAction.[buildingActionFromSourceID_FK], sourceAction.[buildingActionToSourceID_FK],
             sourceAction.[buildingActionNote], sourceAction.[buildingActionExtraText1],
             sourceAction.[buildingActionExtraText2], sourceAction.[buildingActionExtraText3],
-            sourceAction.[buildingActionExtraText4], sourceAction.[buildingActionExtraDate1],
+            sourceAction.[buildingActionExtraText4],
+            N'LEGACY',
+            sourceAction.[buildingActionExtraDate1],
             sourceAction.[buildingActionExtraDate2], sourceAction.[buildingActionExtraDate3],
             sourceAction.[buildingActionExtraFloat1], sourceAction.[buildingActionExtraFloat2],
             sourceAction.[buildingActionExtraInt1], sourceAction.[buildingActionExtraInt2],

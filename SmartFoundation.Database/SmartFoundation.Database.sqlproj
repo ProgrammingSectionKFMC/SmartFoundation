@@ -103,12 +103,9 @@
     <Build Include="Housing\Tables\BillType.sql" />
     <Build Include="dbo\Tables\_GregorianHijriDate.sql" />
     <Build Include="dbo\Tables\Country.sql" />
-    <Build Include="Housing\Tables\BillOldelectricbillPayment.sql" />
     <Build Include="Housing\Tables\BuildingAssignCount.sql" />
     <Build Include="Housing\Tables\BillsDeductListDetails.sql" />
-    <Build Include="dbo\Tables\DecisionForSolider.sql" />
     <Build Include="Tickets\Tables\Ticket.sql" />
-    <Build Include="dbo\Tables\DecisionTypeForSolider.sql" />
     <Build Include="Housing\Tables\BuildingRentType.sql" />
     <Build Include="dbo\Tables\Section.sql" />
     <Build Include="Housing\Tables\BillDeductType.sql" />
@@ -186,21 +183,15 @@
     <Build Include="dbo\Tables\City.sql" />
     <Build Include="Housing\Tables\BuildingDetailsMeterServices.sql" />
     <Build Include="Housing\Tables\AssignNote.sql" />
-    <Build Include="dbo\Tables\oldmeter.sql" />
-    <Build Include="dbo\Tables\NewMeter.sql" />
     <Build Include="Tickets\Tables\ServiceCatalogSuggestion.sql" />
     <Build Include="VIC\Tables\HandoverType.sql" />
-    <Build Include="dbo\Tables\HomeControl.sql" />
     <Build Include="dbo\Tables\Nationality.sql" />
     <Build Include="VIC\Tables\MaintenanceDetails.sql" />
     <Build Include="VIC\Tables\MaintenanceTemplate.sql" />
-    <Build Include="dbo\Tables\DocumentTypeForDDL.sql" />
     <Build Include="Tickets\Tables\TicketHistory.sql" />
     <Build Include="VIC\Tables\TypesRoot.sql" />
     <Build Include="Housing\Tables\MeterServiceTypeFixedAmount.sql" />
     <Build Include="VIC\Tables\VehicleDetailesExchang.sql" />
-    <Build Include="Demo\Tables\Demo_Pie3D_UnitDistribution.sql" />
-    <Build Include="Housing\Tables\BuildingPayment_.sql" />
     <Build Include="Housing\Tables\BuildingPaymentDestaination.sql" />
     <Build Include="dbo\Tables\PermissionType.sql" />
     <Build Include="Housing\Tables\MeterServiceTypeLinkedWithIdara.sql" />
@@ -241,7 +232,6 @@
     <Build Include="Housing\Tables\MeterServicePrice.sql" />
     <Build Include="Housing\Tables\BuildingUtilityType.sql" />
     <Build Include="support\Tables\TeamMember.sql" />
-    <Build Include="dbo\Tables\KFMCReportsHeader.sql" />
     <Build Include="Tickets\Tables\QualityReviewResult.sql" />
     <Build Include="dbo\Tables\UserType.sql" />
     <Build Include="Housing\Tables\MeterSlide.sql" />
@@ -252,7 +242,6 @@
     <Build Include="Housing\Tables\WaitingClass.sql" />
     <Build Include="Housing\Tables\billPaymentType.sql" />
     <Build Include="Housing\Tables\BillDeductListStatus.sql" />
-    <Build Include="dbo\Tables\KFMCReportsType.sql" />
     <Build Include="dbo\Tables\DeptSecDiv.sql" />
     <Build Include="Housing\Tables\WaitingOrderType.sql" />
     <Build Include="dbo\Tables\contactInfo.sql" />
@@ -264,7 +253,6 @@
     <Build Include="WH\Tables\CategoryLevel.sql" />
     <Build Include="Housing\Tables\BillPeriod.sql" />
     <Build Include="Housing\Tables\ResidentContactInfo.sql" />
-    <Build Include="dbo\Tables\KFMCReports.sql" />
     <Build Include="Tickets\Tables\TicketPriority.sql" />
     <Build Include="Housing\Tables\CustodyItems.sql" />
     <Build Include="Housing\Tables\billPayment.sql" />
@@ -323,7 +311,6 @@
     <Build Include="WH\Tables\WarehousePartType.sql" />
     <Build Include="Tickets\Tables\Service.sql" />
     <Build Include="Housing\Tables\BuildingRent.sql" />
-    <Build Include="Housing\Tables\MerchantBusinessCategory.sql" />
     <Build Include="Housing\Tables\BillsPaidDeductListType.sql" />
     <Build Include="dbo\Tables\UserNotifications.sql" />
     <Build Include="support\Tables\TicketAttachment.sql" />
@@ -336,12 +323,9 @@
     <Build Include="Housing\Tables\BuildingActionType.sql" />
     <Build Include="Tickets\Tables\ServiceSLAPolicy.sql" />
     <Build Include="dbo\Tables\ProgramDistributor.sql" />
-    <Build Include="dbo\Tables\OperatingSystem.sql" />
     <Build Include="Housing\Tables\BuildingActionPermission.sql" />
     <Build Include="support\Tables\TicketAssignmentHistory.sql" />
-    <Build Include="dbo\Tables\JSONData.sql" />
     <Build Include="Housing\Tables\ResidentRentExemptionType.sql" />
-    <Build Include="dbo\Tables\MangerVisitorApp.sql" />
     <Build Include="Tickets\Tables\ApprovalStep.sql" />
     <Build Include="dbo\Tables\MenuDistributor.sql" />
     <Build Include="dbo\Tables\Attachment.sql" />
@@ -383,7 +367,6 @@
       <QuotedIdentifier>Off</QuotedIdentifier>
     </Build>
     <Build Include="Housing\Views\V_ResidentBillsFinancialSummary.sql" />
-    <Build Include="dbo\Views\V_KFMCReportsHeader.sql" />
     <Build Include="dbo\Views\V_DSD.sql" />
     <Build Include="WH\Views\V_warehouse.sql">
       <QuotedIdentifier>Off</QuotedIdentifier>
@@ -608,7 +591,6 @@
     <Build Include="Housing\Stored Procedures\HousingExtendFollowUpDL.sql" />
     <Build Include="VIC\Stored Procedures\TransferRequestType_List_DL.sql" />
     <Build Include="Housing\Stored Procedures\FinancialAuditForExtendAndEvictionsDL.sql" />
-    <Build Include="dbo\Stored Procedures\_BackupDatabaseSami.sql" />
     <Build Include="VIC\Stored Procedures\TransferRequestType_Upsert_SP.sql" />
     <Build Include="Housing\Stored Procedures\MeterServiceTypeFixedAmountDL.sql" />
     <Build Include="VIC\Stored Procedures\TypesRoot_List_DL.sql" />
@@ -623,7 +605,6 @@
     <Build Include="VIC\Stored Procedures\Vehicle_Search_DL.sql" />
     <Build Include="VIC\Stored Procedures\Vehicle_Upsert_SP.sql" />
     <Build Include="VIC\Stored Procedures\VehicleDocument_List_DL.sql" />
-    <Build Include="Demo\Stored Procedures\usp_Demo_Pie3D_Units.sql" />
     <Build Include="VIC\Stored Procedures\VehicleDocument_Upsert_SP.sql" />
     <Build Include="dbo\Stored Procedures\_searchInSPsOrViews.sql" />
     <Build Include="Housing\Stored Procedures\BuildingUtilityTypeSP.sql" />
@@ -647,8 +628,6 @@
     <Build Include="Housing\Stored Procedures\WaitingListMoveListSP.sql" />
     <Build Include="Housing\Stored Procedures\AllMeterReadSP.sql" />
     <Build Include="Housing\Stored Procedures\WaitingListByResidentSP.sql" />
-    <Build Include="dbo\Stored Procedures\UpdateIdaraLogoFromFolder.sql" />
-    <Build Include="dbo\Stored Procedures\UpdateOrganizationLogoFromFile.sql" />
     <Build Include="Housing\Stored Procedures\FinancialAuditForExtendAndEvictionsSP.sql" />
     <Build Include="Housing\Stored Procedures\ResidentsSP.sql" />
     <Build Include="dbo\Stored Procedures\Masters_ExtraDataLoad.sql" />
@@ -659,7 +638,7 @@
     <Build Include="Housing\Stored Procedures\GenerateMonthlyRentBillForResident.sql" />
     <Build Include="Housing\Stored Procedures\MeterReadForOccubentAndExitSP.sql" />
     <Build Include="dbo\Stored Procedures\Masters_CRUD.sql">
-      <QuotedIdentifier>Off</QuotedIdentifier>
+      <QuotedIdentifier>On</QuotedIdentifier>
     </Build>
     <Build Include="Housing\Stored Procedures\BuildingTypeSP.sql" />
     <Build Include="Housing\Stored Procedures\HousingExitSP.sql" />
@@ -672,7 +651,6 @@
     <Build Include="dbo\Stored Procedures\Masters_DataLoad.sql">
       <QuotedIdentifier>On</QuotedIdentifier>
     </Build>
-    <Build Include="Housing\Stored Procedures\UploadExcel_ImportSelected3Cols.sql" />
     <Build Include="Housing\Stored Procedures\BuildingRentForOneMonth_2026-05-12.sql" />
     <Build Include="Housing\Stored Procedures\RentExemptionDL.sql" />
     <Build Include="Housing\Stored Procedures\GenerateMonthlyRentBills.sql" />
@@ -696,7 +674,6 @@
     <Build Include="VIC\Stored Procedures\Custody_Current_ByUser_DL.sql" />
     <Build Include="Housing\Stored Procedures\ExtendInsuranceDL.sql" />
     <Build Include="VIC\Stored Procedures\CustodyCurrentListDL.sql" />
-    <Build Include="Housing\User Defined Types\UploadExcelRowType.sql" />
     <Build Include="Housing\User Defined Types\ImportExcelForBuildingPaymentRowType.sql" />
     <Build Include="Security\Demo.sql" />
     <Build Include="Security\Housing.sql" />
@@ -743,7 +720,6 @@
     <Build Include="Housing\Stored Procedures\usp_ClassifyAndLinkBuildingPayments_V2.sql" />
     <Build Include="Housing\Stored Procedures\usp_ClassifyAndLinkBuildingPayments.sql" />
     <Build Include="Housing\Stored Procedures\ImportExcelForBuildingPayment.sql" />
-    <Build Include="dbo\Stored Procedures\_DeleteTableAndResetIdentity.sql" />
     <Build Include="MoveData\Stored Procedures\usp_MigrateSystemUsers.sql" />
     <Build Include="MoveData\Stored Procedures\usp_MigrateExtendInsurance.sql" />
     <Build Include="MoveData\Stored Procedures\usp_ValidateMigration.sql" />
@@ -816,6 +792,13 @@
     <Build Include="Housing\Stored Procedures\HousingResidentSP_2026_08_26.sql" />
     <Build Include="Housing\Stored Procedures\BackfillResidentServiceBills_2026_08_26.sql" />
     <Build Include="Housing\Stored Procedures\AllMeterReadSP_2026_08_26.sql" />
+    <Build Include="Housing\Tables\UnallocatedPaymentRefundDetail.sql" />
+    <Build Include="Housing\Tables\UnallocatedPaymentRefund.sql" />
+    <Build Include="MoveData\Stored Procedures\usp_MigrateWaitingClass.sql" />
+    <Build Include="MoveData\Stored Procedures\usp_FinalValidateMigrationForEveryResident.sql" />
+    <Build Include="Housing\Stored Procedures\HousingUnallocatedPaymentsReviewSP.sql" />
+    <Build Include="Housing\Stored Procedures\HousingUnallocatedPaymentsReviewDL.sql" />
+    <Build Include="Housing\Stored Procedures\HousingCommandCenterDashboardDL.sql" />
   </ItemGroup>
   <ItemGroup>
     <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\150\SqlSchemas\master.dacpac">

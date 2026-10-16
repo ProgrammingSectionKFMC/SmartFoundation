@@ -1,5 +1,5 @@
 ﻿CREATE SEQUENCE [Housing].[DeductListReportNoSequence]
     AS BIGINT
-    START WITH 870
+    START WITH 1
     INCREMENT BY 1;
 

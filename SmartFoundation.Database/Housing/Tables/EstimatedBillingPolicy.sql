@@ -1,4 +1,4 @@
-CREATE TABLE [Housing].[EstimatedBillingPolicy] (
+﻿CREATE TABLE [Housing].[EstimatedBillingPolicy] (
     [EstimatedBillingPolicyID]          BIGINT          IDENTITY (1, 1) NOT NULL,
     [EstimatedBillingPolicyName_A]      NVARCHAR (200)  NOT NULL,
     [EstimatedBillingPolicyName_E]      NVARCHAR (200)  NULL,
@@ -9,16 +9,18 @@ CREATE TABLE [Housing].[EstimatedBillingPolicy] (
     [TaxInclusive]                      BIT             CONSTRAINT [DF_EstimatedBillingPolicy_TaxInclusive] DEFAULT ((1)) NOT NULL,
     [EstimatedBillingPolicyActive]      BIT             CONSTRAINT [DF_EstimatedBillingPolicy_Active] DEFAULT ((1)) NOT NULL,
     [EstimatedBillingPolicyDescription] NVARCHAR (1000) NULL,
-    [CanceledBy]                        NVARCHAR (20)   NULL,
-    [CanceledDate]                      DATETIME        NULL,
     [entryDate]                         DATETIME        CONSTRAINT [DF_EstimatedBillingPolicy_entryDate] DEFAULT (getdate()) NOT NULL,
     [entryData]                         NVARCHAR (20)   NULL,
     [hostName]                          NVARCHAR (200)  NULL,
+    [CanceledBy]                        NVARCHAR (20)   NULL,
+    [CanceledDate]                      DATETIME        NULL,
     CONSTRAINT [PK_EstimatedBillingPolicy] PRIMARY KEY CLUSTERED ([EstimatedBillingPolicyID] ASC),
-    CONSTRAINT [FK_EstimatedBillingPolicy_Idara] FOREIGN KEY ([IdaraID_FK]) REFERENCES [dbo].[Idara] ([idaraID]),
-    CONSTRAINT [CK_EstimatedBillingPolicy_Dates] CHECK ([EffectiveTo] IS NULL OR [EffectiveTo] >= [EffectiveFrom]),
-    CONSTRAINT [CK_EstimatedBillingPolicy_TaxFlags] CHECK ([TaxApplicable] = (1) OR [TaxInclusive] = (0))
+    CONSTRAINT [CK_EstimatedBillingPolicy_Dates] CHECK ([EffectiveTo] IS NULL OR [EffectiveTo]>=[EffectiveFrom]),
+    CONSTRAINT [CK_EstimatedBillingPolicy_TaxFlags] CHECK ([TaxApplicable]=(1) OR [TaxInclusive]=(0)),
+    CONSTRAINT [FK_EstimatedBillingPolicy_Idara] FOREIGN KEY ([IdaraID_FK]) REFERENCES [dbo].[Idara] ([idaraID])
 );
+
+
 
 
 GO

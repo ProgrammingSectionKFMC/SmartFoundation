@@ -1,4 +1,4 @@
-CREATE PROCEDURE [Housing].[MonthlyBillingMonitorDL]
+﻿CREATE PROCEDURE [Housing].[MonthlyBillingMonitorDL]
       @Year INT = NULL, @Month INT = NULL, @IdaraID BIGINT = NULL
 AS
 BEGIN
@@ -26,6 +26,11 @@ BEGIN
     ORDER BY d.MonthlyBillingRunID_FK,d.ResultStatus,d.BuildingDetailsID_FK;
 
     SELECT DISTINCT i.idaraID,i.idaraLongName_A
-    FROM Housing.MonthlyBillingRun r JOIN dbo.Idara i ON i.idaraID=r.IdaraID_FK
-    WHERE (@IdaraID IS NULL OR r.IdaraID_FK=@IdaraID) ORDER BY i.idaraLongName_A;
+    FROM 
+    --Housing.MonthlyBillingRun r 
+    --JOIN 
+    dbo.Idara i --ON i.idaraID=r.IdaraID_FK
+    --WHERE 
+    --(@IdaraID IS NULL OR r.IdaraID_FK=@IdaraID) 
+    ORDER BY i.idaraLongName_A;
 END;

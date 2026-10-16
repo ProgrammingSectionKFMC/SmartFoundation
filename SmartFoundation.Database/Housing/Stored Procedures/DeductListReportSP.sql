@@ -1,4 +1,4 @@
-CREATE PROCEDURE Housing.DeductListReportSP @Action NVARCHAR(50),@ReportID BIGINT=NULL,@Year INT=NULL,@Month INT=NULL,@BillingType NVARCHAR(20)=NULL,@ServiceID INT=NULL,@CalculationMethod NVARCHAR(30)=NULL,@ReportNo NVARCHAR(50)=NULL,@ExternalReferenceNo NVARCHAR(100)=NULL,@ExternalReferenceDate DATE=NULL,@Notes NVARCHAR(1000)=NULL,@IdaraID BIGINT,@EntryData NVARCHAR(20),@HostName NVARCHAR(200)
+﻿CREATE   PROCEDURE [Housing].[DeductListReportSP] @Action NVARCHAR(50),@ReportID BIGINT=NULL,@Year INT=NULL,@Month INT=NULL,@BillingType NVARCHAR(20)=NULL,@ServiceID INT=NULL,@CalculationMethod NVARCHAR(30)=NULL,@ReportNo NVARCHAR(50)=NULL,@ExternalReferenceNo NVARCHAR(100)=NULL,@ExternalReferenceDate DATE=NULL,@Notes NVARCHAR(1000)=NULL,@IdaraID BIGINT,@EntryData NVARCHAR(20),@HostName NVARCHAR(200)
 AS
 BEGIN
  SET NOCOUNT ON; SET XACT_ABORT ON;
@@ -60,7 +60,22 @@ BEGIN
   INSERT Housing.DeductListReport(IdaraID_FK,PeriodYear,PeriodMonth,BillingType,MeterServiceTypeID_FK,CalculationMethod,ReportNo,Notes,entryData,hostName) VALUES(@IdaraID,@Year,@Month,@BillingType,@ServiceID,@CalculationMethod,@ReportNo,@Notes,@EntryData,@HostName);
   SET @ReportID=SCOPE_IDENTITY();
   INSERT Housing.DeductListReportDetails(DeductListReportID_FK,BillsID_FK,BillNumber,ResidentInfoID_FK,GeneralNo_FK,IDNumber,ResidentFullName_A,MilitaryUnitName_A,BuildingDetailsID_FK,BuildingDetailsNo,MeterID_FK,MeterNo,BillsFromDate,BillsToDate,AmountBeforeTax,TaxAmount,TotalAmount)
-  SELECT @ReportID,b.BillsID,b.BillNumber,b.residentInfoID_FK,COALESCE(b.generalNo_FK,person.GeneralNo_FK),r.NationalID,person.FullName_A,person.MilitaryUnitName_A,b.buildingDetailsID,COALESCE(NULLIF(b.buildingDetailsNo,N''),building.buildingDetailsNo),b.meterID,b.meterNo,CONVERT(date,b.BillsFromDate),CONVERT(date,b.BillsToDate),ISNULL(b.PRICE,0),ISNULL(b.PRICETAX,0),ISNULL(b.TotalPrice,0)
+  SELECT @ReportID,b.BillsID,b.BillNumber,b.residentInfoID_FK,COALESCE(b.generalNo_FK,person.GeneralNo_FK),r.NationalID,person.FullName_A,person.MilitaryUnitName_A,b.buildingDetailsID,COALESCE(NULLIF(b.buildingDetailsNo,N''),building.buildingDetailsNo),b.meterID,b.meterNo,CONVERT(date,b.BillsFromDate),CONVERT(date,b.BillsToDate),
+  --ISNULL(b.PRICE,0),ISNULL(b.PRICETAX,0),ISNULL(b.TotalPrice,0)
+
+  
+-- AmountBeforeTax: الاستهلاك + رسوم خدمة العداد
+ISNULL(b.PRICE, 0)
++ ISNULL(b.meterServicePrice, 0),
+
+-- TaxAmount: الضريبة الشاملة لتسوية الإجمالي
+ISNULL(b.TotalPrice, 0)
+- ISNULL(b.PRICE, 0)
+- ISNULL(b.meterServicePrice, 0),
+
+-- TotalAmount: الإجمالي الأصلي دون تعديل
+ISNULL(b.TotalPrice, 0)
+
   FROM Housing.Bills b
   LEFT JOIN Housing.ResidentInfo r ON r.residentInfoID=b.residentInfoID_FK
   LEFT JOIN Housing.BuildingDetails building ON building.buildingDetailsID=b.buildingDetailsID
@@ -84,6 +99,58 @@ BEGIN
           AND occupant.IdaraId=@IdaraID
     );
   IF NOT EXISTS(SELECT 1 FROM Housing.DeductListReportDetails WHERE DeductListReportID_FK=@ReportID) THROW 50001,N'لا توجد فواتير مؤهلة للمسير المحدد.',1;
+
+  
+/*
+    Financial reconciliation guard.
+
+    The total must equal the displayed components.
+
+    Any unexplained source difference above one
+    halala requires reviewing the invoice components.
+*/
+IF EXISTS
+(
+    SELECT 1
+    FROM Housing.DeductListReportDetails d
+
+    INNER JOIN Housing.Bills b
+        ON b.BillsID = d.BillsID_FK
+
+    WHERE d.DeductListReportID_FK = @ReportID
+
+      AND
+      (
+          ABS
+          (
+              CONVERT(decimal(19,2),
+                  d.TotalAmount
+                  - d.AmountBeforeTax
+                  - d.TaxAmount
+              )
+          ) > 0
+
+          OR
+
+          ABS
+          (
+              CONVERT(decimal(19,2),
+                  ISNULL(b.TotalPrice,0)
+                  - ISNULL(b.PRICE,0)
+                  - ISNULL(b.PRICETAX,0)
+                  - ISNULL(b.meterServicePrice,0)
+                  - ISNULL(b.meterServicePriceTAX,0)
+              )
+          ) > 0.01
+      )
+)
+BEGIN
+    ;THROW 50001,
+        N'تعذر إنشاء المسير: يوجد اختلاف مالي غير مفسر بين إجمالي الفاتورة ومكوناتها.',
+        1;
+END;
+
+
   UPDATE r SET InvoiceCount=x.c,AmountBeforeTax=x.a,TaxAmount=x.t,TotalAmount=x.total FROM Housing.DeductListReport r CROSS APPLY(SELECT COUNT(*)c,SUM(AmountBeforeTax)a,SUM(TaxAmount)t,SUM(TotalAmount)total FROM Housing.DeductListReportDetails WHERE DeductListReportID_FK=@ReportID)x WHERE r.DeductListReportID=@ReportID;
  END
  ELSE IF @Action=N'APPROVEDEDUCTLISTREPORT' UPDATE Housing.DeductListReport SET ReportStatus=N'APPROVED',ApprovedDate=GETDATE(),ApprovedBy=@EntryData WHERE DeductListReportID=@ReportID AND IdaraID_FK=@IdaraID AND ReportStatus=N'DRAFT';

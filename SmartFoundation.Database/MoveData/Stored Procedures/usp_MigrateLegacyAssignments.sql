@@ -61,6 +61,9 @@ BEGIN
              SELECT 1 FROM KFMC.Housing.ResidentInfo validResident
              WHERE validResident.generalNo=ownerAction.generalNo_FK
          )
+        /* Consume only assignments copied during the previous migration step. */
+        JOIN Housing.BuildingAssign migratedAssign
+          ON migratedAssign.BuildingAssignID=currentAssign.BuildingAssignID
         LEFT JOIN KFMC.Housing.BuildingAssign previousAssign
           ON previousAssign.BuildingAssignID=currentAssign.PreviousAssignID
         WHERE previousAssign.BuildingAssignID IS NULL
@@ -118,6 +121,14 @@ BEGIN
                 JOIN KFMC.Housing.BuildingAction waitingRoot
                   ON waitingRoot.buildingActionID=action27.buildingActionParentID
                  AND waitingRoot.buildingActionTypeID_FK=1
+                 AND waitingRoot.buildingActionActive=1
+                JOIN Housing.BuildingAction migratedRoot
+                  ON migratedRoot.buildingActionID=waitingRoot.buildingActionID
+                 AND migratedRoot.buildingActionTypeID_FK=1
+                 AND migratedRoot.buildingActionActive=1
+                JOIN Housing.BuildingAction migratedAction27
+                  ON migratedAction27.buildingActionID=action27.buildingActionID
+                 AND migratedAction27.buildingActionTypeID_FK=27
                  AND COALESCE(action27.buildingActionExtraType1,waitingRoot.buildingActionExtraType1)
                      =@WaitingClassID;
 
@@ -154,6 +165,14 @@ BEGIN
             JOIN KFMC.Housing.BuildingAction waitingRoot
               ON waitingRoot.buildingActionID=action27.buildingActionParentID
              AND waitingRoot.buildingActionTypeID_FK=1
+             AND waitingRoot.buildingActionActive=1
+            JOIN Housing.BuildingAction migratedRoot
+              ON migratedRoot.buildingActionID=waitingRoot.buildingActionID
+             AND migratedRoot.buildingActionTypeID_FK=1
+             AND migratedRoot.buildingActionActive=1
+            JOIN Housing.BuildingAction migratedAction27
+              ON migratedAction27.buildingActionID=action27.buildingActionID
+             AND migratedAction27.buildingActionTypeID_FK=27
             JOIN Housing.ResidentInfo targetResident
               ON targetResident.residentInfoID=CONVERT(bigint,
                  (SELECT TOP(1) sourceResident.residentInfoID
@@ -204,14 +223,14 @@ BEGIN
                     (
                         buildingActionTypeID_FK,residentInfoID_FK,generalNo_FK,
                         buildingActionActive,buildingActionParentID,AssignPeriodID_FK,
-                        InAssignPeriod,buildingActionNote,buildingActionExtraText4,
+                        InAssignPeriod,buildingActionNote,buildingActionExtraText4,buildingActionExtraText5,
                         IdaraId_FK,entryDate,entryData,hostName
                     )
                     VALUES
                     (
                         42,@ResidentInfoID,@GeneralNo,1,@Action27ID,@PeriodID,0,
                         N'Eligibility cancelled after two legacy virtual allocations (No_house)',
-                        @Marker,@IdaraId,@OfferEntryDate,
+                        @Marker,N'MIGRATION_GENERATED',@IdaraId,@OfferEntryDate,
                         MoveData.fn_MapEntryData(@OfferEntryData),
                         MoveData.fn_MapHostName(@OfferHostName,@OfferEntryData)
                     );
@@ -265,12 +284,12 @@ BEGIN
                             buildingActionTypeID_FK,residentInfoID_FK,generalNo_FK,
                             buildingDetailsID_FK,buildingDetailsNo,buildingActionActive,
                             buildingActionParentID,AssignPeriodID_FK,InAssignPeriod,
-                            buildingActionExtraText4,IdaraId_FK,entryDate,entryData,hostName
+                            buildingActionExtraText4,buildingActionExtraText5,IdaraId_FK,entryDate,entryData,hostName
                         )
                         VALUES
                         (
                             @ActionType,@ResidentInfoID,@GeneralNo,@BuildingID,@BuildingNo,1,
-                            @CurrentParentID,@PeriodID,0,@Marker,@IdaraId,@OfferEntryDate,
+                            @CurrentParentID,@PeriodID,0,@Marker,N'MIGRATION_GENERATED',@IdaraId,@OfferEntryDate,
                             MoveData.fn_MapEntryData(@OfferEntryData),
                             MoveData.fn_MapHostName(@OfferHostName,@OfferEntryData)
                         );
@@ -293,12 +312,12 @@ BEGIN
                                 buildingActionTypeID_FK,residentInfoID_FK,generalNo_FK,
                                 buildingDetailsID_FK,buildingDetailsNo,buildingActionActive,
                                 buildingActionParentID,AssignPeriodID_FK,InAssignPeriod,
-                                buildingActionExtraText4,IdaraId_FK,entryDate,entryData,hostName
+                                buildingActionExtraText4,buildingActionExtraText5,IdaraId_FK,entryDate,entryData,hostName
                             )
                             VALUES
                             (
                                 @ActionType,@ResidentInfoID,@GeneralNo,@BuildingID,@BuildingNo,1,
-                                @CurrentParentID,@PeriodID,0,@Marker,@IdaraId,@RejectionEntryDate,
+                                @CurrentParentID,@PeriodID,0,@Marker,N'MIGRATION_GENERATED',@IdaraId,@RejectionEntryDate,
                                 MoveData.fn_MapEntryData(@RejectionEntryData),
                                 MoveData.fn_MapHostName(@RejectionHostName,@RejectionEntryData)
                             );
@@ -328,7 +347,7 @@ BEGIN
                                     buildingActionTypeID_FK,residentInfoID_FK,generalNo_FK,
                                     buildingDetailsID_FK,buildingDetailsNo,buildingActionActive,
                                     buildingActionParentID,AssignPeriodID_FK,InAssignPeriod,
-                                    buildingActionExtraInt1,buildingActionExtraText4,
+                                    buildingActionExtraInt1,buildingActionExtraText4,buildingActionExtraText5,
                                     IdaraId_FK,entryDate,entryData,hostName
                                 )
                                 VALUES
@@ -336,7 +355,7 @@ BEGIN
                                     @StageType,@ResidentInfoID,@GeneralNo,@BuildingID,@BuildingNo,1,
                                     @CurrentParentID,@PeriodID,0,
                                     CASE WHEN @StageType IN(46,47) THEN @MeterReadValue END,
-                                    @Marker,@IdaraId,@OfferEntryDate,
+                                    @Marker,N'MIGRATION_GENERATED',@IdaraId,@OfferEntryDate,
                                     MoveData.fn_MapEntryData(@OfferEntryData),
                                     MoveData.fn_MapHostName(@OfferHostName,@OfferEntryData)
                                 );
@@ -397,6 +416,11 @@ BEGIN
             JOIN KFMC.Housing.BuildingAction letterRoot
               ON letterRoot.buildingActionID=oldAction27.buildingActionParentID
              AND letterRoot.buildingActionTypeID_FK=7
+             AND letterRoot.buildingActionActive=1
+            JOIN Housing.BuildingAction migratedLetterRoot
+              ON migratedLetterRoot.buildingActionID=letterRoot.buildingActionID
+             AND migratedLetterRoot.buildingActionTypeID_FK=7
+             AND migratedLetterRoot.buildingActionActive=1
             JOIN Housing.ResidentInfo targetResident
               ON targetResident.residentInfoID=CONVERT(bigint,
                  (SELECT TOP(1) sourceResident.residentInfoID
@@ -443,12 +467,12 @@ BEGIN
                     buildingActionTypeID_FK,residentInfoID_FK,generalNo_FK,
                     buildingDetailsID_FK,buildingDetailsNo,buildingActionActive,
                     buildingActionParentID,AssignPeriodID_FK,InAssignPeriod,
-                    buildingActionExtraText4,IdaraId_FK,entryDate,entryData,hostName
+                    buildingActionExtraText4,buildingActionExtraText5,IdaraId_FK,entryDate,entryData,hostName
                 )
                 VALUES
                 (
                     45,@ResidentInfoID,@GeneralNo,@BuildingID,@BuildingNo,1,
-                    @CurrentParentID,NULL,NULL,@Marker,@IdaraId,@OfferEntryDate,
+                    @CurrentParentID,NULL,NULL,@Marker,N'MIGRATION_GENERATED',@IdaraId,@OfferEntryDate,
                     MoveData.fn_MapEntryData(@OfferEntryData),
                     MoveData.fn_MapHostName(@OfferHostName,@OfferEntryData)
                 );

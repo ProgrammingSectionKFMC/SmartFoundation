@@ -264,7 +264,7 @@ AND EXISTS
         ON mst.meterServiceTypeID = mi.MeterServiceTypeID_FK
     WHERE mst.meterServiceTypeActive = 1
       AND mi.MeterServiceTypeLinkedWithIdaraActive = 1
-      AND mi.Idara_FK = @idaraID
+      AND (mi.Idara_FK = @idaraID or mi.Idara_FK is null)
       AND mst.meterServiceTypeStartDate <= @MonthEnd
       AND (mst.meterServiceTypeEndDate IS NULL OR mst.meterServiceTypeEndDate >= @MonthStart)
       AND mi.MeterServiceTypeLinkedWithIdaraStartDate <= @MonthEnd

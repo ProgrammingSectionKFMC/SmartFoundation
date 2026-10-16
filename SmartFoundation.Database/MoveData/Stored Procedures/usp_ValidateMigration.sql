@@ -26,6 +26,37 @@ BEGIN
     DECLARE @RentChargeStartDate date = CONVERT(date, '20171001', 112);
     DECLARE @WaterChargeStartDate date = CONVERT(date, '20240101', 112);
 
+    /* Distinguish historical monthly charges from operational invoices issued
+       after cutover. NULL retains the existing interface and resolves from a
+       successful non-rollback historical rent/water migration run. */
+    DECLARE @ValidationCutoverDate date = COALESCE
+    (
+        @CutoverDate,
+        (
+            SELECT TOP (1) logRow.CutoverDate
+            FROM MoveData.MigrationExecutionLog logRow
+            WHERE logRow.IdaraId = @IdaraId
+              AND logRow.RollbackAfterTest = 0
+              AND logRow.ExecutionStatus = 'Succeeded'
+              AND logRow.ProcedureName = N'MoveData.usp_MigrateHistoricalRentAndWaterBills'
+              AND logRow.CutoverDate IS NOT NULL
+              AND NOT EXISTS
+              (
+                  SELECT 1
+                  FROM MoveData.MigrationExecutionLog failedRow
+                  WHERE failedRow.MigrationRunID = logRow.MigrationRunID
+                    AND failedRow.ExecutionStatus <> 'Succeeded'
+              )
+            ORDER BY logRow.CompletedAt DESC
+        )
+    );
+
+    IF @ValidationCutoverDate IS NULL
+        THROW 57991, N'CutoverDate مطلوب لتحديد نطاق فواتير الترحيل، ولم يُعثر على تشغيل ترحيل ناجح مسجل.', 1;
+
+    DECLARE @HistoricalBillMonthEnd date =
+        EOMONTH(DATEADD(month, -1, @ValidationCutoverDate));
+
     /* Build the same consecutive-duplicate action map used by the migration. */
     ;WITH OrderedSourceActions AS
     (
@@ -127,6 +158,99 @@ BEGIN
     CREATE UNIQUE CLUSTERED INDEX IX_ValidationDuplicateActionMap
         ON #ValidationDuplicateActionMap(duplicateActionID);
 
+    /* Source preflight: duplicate active waiting roots are always a FAIL,
+       regardless of whether the copied actions match byte-for-byte. */
+    SELECT
+        a.generalNo_FK AS GeneralNo,
+        a.buildingActionExtraType1 AS WaitingClassID,
+        COUNT_BIG(*) AS ActiveRequests,
+        STRING_AGG(CONVERT(nvarchar(max), a.buildingActionID), N', ') AS ActionIDs
+    INTO #ValidationWaitingRootDuplicates
+    FROM KFMC.Housing.BuildingAction a
+    WHERE a.buildingActionTypeID_FK IN (1,7,25)
+      AND a.buildingActionActive = 1
+      AND a.generalNo_FK IS NOT NULL
+      AND a.generalNo_FK NOT IN (0,1)
+      AND a.buildingActionExtraType1 IS NOT NULL
+    GROUP BY a.generalNo_FK, a.buildingActionExtraType1
+    HAVING COUNT_BIG(*) > 1;
+
+    INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
+    SELECT N'WaitingList', N'Duplicate active waiting roots in KFMC',
+           0, COUNT_BIG(*), COUNT_BIG(*),
+           CASE WHEN COUNT_BIG(*)=0 THEN 'PASS' ELSE 'FAIL' END,
+           N'Each GeneralNo / WaitingClassID allows at most one active root (types 1,7,25). See the diagnostic result set at the end.'
+    FROM #ValidationWaitingRootDuplicates;
+
+    /* Mirror usp_MigrateBuildingActions: exclude an inactive root and all
+       descendants only if none of those descendants is active. */
+    ;WITH InactiveWaitingTree AS
+    (
+        SELECT
+            a.buildingActionID AS RootActionID,
+            a.generalNo_FK AS GeneralNo,
+            a.buildingActionExtraType1 AS WaitingClassID,
+            a.buildingActionID AS ActionID,
+            a.buildingActionActive AS IsActive,
+            0 AS Depth
+        FROM KFMC.Housing.BuildingAction a
+        WHERE a.buildingActionTypeID_FK IN (1,7,25)
+          AND ISNULL(a.buildingActionActive,0)=0
+          AND a.generalNo_FK IS NOT NULL
+          AND a.generalNo_FK NOT IN (0,1)
+
+        UNION ALL
+
+        SELECT
+            t.RootActionID, t.GeneralNo, t.WaitingClassID,
+            c.buildingActionID, c.buildingActionActive, t.Depth+1
+        FROM InactiveWaitingTree t
+        JOIN KFMC.Housing.BuildingAction c
+          ON c.buildingActionParentID=t.ActionID
+        WHERE t.Depth<100
+    )
+    SELECT RootActionID,GeneralNo,WaitingClassID,ActionID,IsActive,Depth
+    INTO #ValidationInactiveWaitingTree
+    FROM InactiveWaitingTree
+    OPTION (MAXRECURSION 101);
+
+    SELECT DISTINCT ActionID
+    INTO #ValidationExcludedWaitingActions
+    FROM #ValidationInactiveWaitingTree;
+
+    CREATE UNIQUE CLUSTERED INDEX IX_ValidationExcludedWaitingActions
+        ON #ValidationExcludedWaitingActions(ActionID);
+
+    INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
+    SELECT N'WaitingList', N'Active descendants of inactive waiting roots in KFMC',
+           0, COUNT_BIG(*), COUNT_BIG(*),
+           CASE WHEN COUNT_BIG(*)=0 THEN 'PASS' ELSE 'FAIL' END,
+           N'An inactive waiting root with any active descendant blocks the full migration. Actual counts distinct violating roots.'
+    FROM
+    (
+        SELECT DISTINCT RootActionID
+        FROM #ValidationInactiveWaitingTree
+        WHERE Depth>0 AND IsActive=1
+    ) badRoot;
+
+    INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
+    SELECT N'WaitingList', N'Inactive waiting-root chains exceed 100 levels',
+           0, COUNT_BIG(*), COUNT_BIG(*),
+           CASE WHEN COUNT_BIG(*)=0 THEN 'PASS' ELSE 'FAIL' END,
+           N'Chains deeper than 100 levels (or cyclic chains) cannot be safely classified for exclusion.'
+    FROM
+    (
+        SELECT DISTINCT t.RootActionID
+        FROM #ValidationInactiveWaitingTree t
+        WHERE t.Depth=100
+          AND EXISTS
+          (
+              SELECT 1
+              FROM KFMC.Housing.BuildingAction nextAction
+              WHERE nextAction.buildingActionParentID=t.ActionID
+          )
+    ) overflowRoot;
+
     /* Build the same valid/de-duplicated assignment set used by migration. */
     ;WITH OrderedAssignments AS
     (
@@ -151,6 +275,12 @@ BEGIN
          SELECT 1 FROM KFMC.Housing.ResidentInfo validResident
          WHERE validResident.generalNo=ownerAction.generalNo_FK
      )
+     AND NOT EXISTS
+     (
+          SELECT 1
+          FROM #ValidationExcludedWaitingActions excluded
+          WHERE excluded.ActionID=ownerAction.buildingActionID
+     )
     LEFT JOIN KFMC.Housing.BuildingAssign previousAssign
       ON previousAssign.BuildingAssignID=currentAssign.PreviousAssignID
     WHERE previousAssign.BuildingAssignID IS NULL
@@ -166,6 +296,154 @@ BEGIN
     CREATE UNIQUE CLUSTERED INDEX IX_ValidationValidAssign_ID
         ON #ValidationValidAssign(BuildingAssignID);
 
+    /* WaitingClass migration parity for Idara 1.
+       IDs 1-11 retain their frozen KFMC identities and names.
+       IDs 1-4 and 12 are main lists; 5-11 are side lists for @IdaraId.
+       ID 99 is a virtual legacy letter-housing marker, not a master row. */
+    ;WITH ExpectedWaitingClasses AS
+    (
+        SELECT
+            s.waitingClassID AS ClassID,
+            s.waitingClassName_A COLLATE DATABASE_DEFAULT AS NameA,
+            s.waitingClassName_E COLLATE DATABASE_DEFAULT AS NameE,
+            CASE WHEN s.waitingClassID BETWEEN 1 AND 4
+                 THEN s.waitingClassID + 1
+                 ELSE s.waitingClassSequence END AS ClassSequence,
+            s.waitingClassRoot AS ClassRoot,
+            CAST(CASE WHEN s.waitingClassID BETWEEN 1 AND 4
+                      THEN NULL ELSE @IdaraId END AS bigint) AS ClassIdara
+        FROM KFMC.Housing.WaitingClass s
+        WHERE s.waitingClassID BETWEEN 1 AND 11
+
+        UNION ALL
+
+        SELECT 12, N'القادة', CAST(NULL AS nvarchar(100)),
+               1, CAST(NULL AS int), CAST(NULL AS bigint)
+    ),
+    MatchedWaitingClasses AS
+    (
+        SELECT
+            e.ClassID,
+            CASE WHEN t.waitingClassID IS NOT NULL
+                  AND NOT EXISTS
+                  (
+                      SELECT t.waitingClassName_A,
+                             t.waitingClassName_E,
+                             t.waitingClassSequence,
+                             t.waitingClassRoot,
+                             t.waitingClassActive,
+                             t.idara_FK
+                      EXCEPT
+                      SELECT e.NameA,
+                             e.NameE,
+                             e.ClassSequence,
+                             e.ClassRoot,
+                             CAST(1 AS bit),
+                             e.ClassIdara
+                  )
+                 THEN 1 ELSE 0 END AS IsMatched
+        FROM ExpectedWaitingClasses e
+        LEFT JOIN Housing.WaitingClass t
+          ON t.waitingClassID = e.ClassID
+    )
+    INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
+    SELECT N'WaitingClass',N'WaitingClass master parity',
+           12,COALESCE(SUM(IsMatched),0),COALESCE(SUM(IsMatched),0)-12,
+           CASE WHEN COUNT_BIG(*)=12 AND COALESCE(SUM(IsMatched),0)=12
+                THEN 'PASS' ELSE 'FAIL' END,
+           N'KFMC IDs 1-11: preserved names, root and historical sequence; main IDs 1-4 use sequence 2-5; side IDs 5-11 use Idara 1; ID 12 is main class القادة.'
+    FROM MatchedWaitingClasses;
+
+    INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
+    SELECT N'WaitingClass',N'Test and virtual IDs incorrectly in WaitingClass master',
+           0,COUNT_BIG(*),COUNT_BIG(*),
+           CASE WHEN COUNT_BIG(*)=0 THEN 'PASS' ELSE 'FAIL' END,
+           N'IDs 13-15 are confirmed test data; ID 99 is a virtual legacy letter-housing category, not a WaitingClass master row.'
+    FROM Housing.WaitingClass
+    WHERE waitingClassID IN (13,14,15,99);
+
+    /* Only action types known to use ExtraType1 as a waiting-list class are checked.
+       Other action types can use the same generic column for unrelated meanings. */
+    INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
+    SELECT N'WaitingClass',N'Orphan waiting-class references in BuildingAction',
+           0,COUNT_BIG(*),COUNT_BIG(*),
+           CASE WHEN COUNT_BIG(*)=0 THEN 'PASS' ELSE 'FAIL' END,
+           N'Action types 1,21,22,27,28: every non-NULL class must have a master row, except virtual legacy ID 99.'
+    FROM Housing.BuildingAction a
+    WHERE a.buildingActionTypeID_FK IN (1,21,22,27,28)
+      AND a.buildingActionExtraType1 IS NOT NULL
+      AND a.buildingActionExtraType1 <> 99
+      AND NOT EXISTS
+      (
+          SELECT 1 FROM Housing.WaitingClass wc
+          WHERE wc.waitingClassID=a.buildingActionExtraType1
+      );
+
+    INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
+    SELECT N'WaitingClass',N'Waiting-class values changed in copied historical actions',
+           0,COUNT_BIG(*),COUNT_BIG(*),
+           CASE WHEN COUNT_BIG(*)=0 THEN 'PASS' ELSE 'FAIL' END,
+           N'For copied historical waiting/allocation actions, the ExtraType1 value (including virtual 99) must match frozen KFMC.'
+    FROM KFMC.Housing.BuildingAction sourceAction
+    JOIN Housing.BuildingAction targetAction
+      ON targetAction.buildingActionID=CONVERT(bigint,sourceAction.buildingActionID)
+    WHERE sourceAction.buildingActionTypeID_FK IN (1,21,22,27,28)
+      AND EXISTS
+      (
+          SELECT targetAction.buildingActionExtraType1
+          EXCEPT
+          SELECT sourceAction.buildingActionExtraType1
+      );
+
+    INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
+    SELECT N'WaitingClass',N'Orphan waiting-class references in AssignPeriod',
+           0,COUNT_BIG(*),COUNT_BIG(*),
+           CASE WHEN COUNT_BIG(*)=0 THEN 'PASS' ELSE 'FAIL' END,
+           N'Every populated AssignPeriod.WaitingClassID_FK must match an existing master row.'
+    FROM Housing.AssignPeriod ap
+    WHERE ap.WaitingClassID_FK IS NOT NULL
+      AND NOT EXISTS
+      (
+          SELECT 1 FROM Housing.WaitingClass wc
+          WHERE wc.waitingClassID=ap.WaitingClassID_FK
+      );
+
+    INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
+    SELECT N'WaitingClass',N'Missing or duplicated legacy periods for main waiting classes',
+           0,COUNT_BIG(*),COUNT_BIG(*),
+           CASE WHEN COUNT_BIG(*)=0 THEN 'PASS' ELSE 'FAIL' END,
+           N'Exactly one historical period per class 1,2,3,4 in the migration Idara; no legacy period is required for side classes.'
+    FROM (VALUES (1),(2),(3),(4)) expected(ClassID)
+    CROSS APPLY
+    (
+        SELECT COUNT_BIG(*) AS PeriodCount
+        FROM Housing.AssignPeriod ap
+        WHERE ap.IdaraId_FK=@IdaraId
+          AND ap.WaitingClassID_FK=expected.ClassID
+          AND ap.AssignPeriodDescrption=CONCAT(N'Legacy allocation migration - WaitingClass ',expected.ClassID)
+    ) actual
+    WHERE actual.PeriodCount<>1;
+
+    INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
+    SELECT N'WaitingClass',N'Orphan waiting classes in BuildingAssign allocation chains',
+           0,COUNT_BIG(*),COUNT_BIG(*),
+           CASE WHEN COUNT_BIG(*)=0 THEN 'PASS' ELSE 'FAIL' END,
+           N'When a BuildingAssign row links to action 27 under waiting root 1, its effective class must exist, except virtual ID 99.'
+    FROM Housing.BuildingAssign ba
+    JOIN Housing.BuildingAction action27
+      ON action27.buildingActionID=ba.BuildingActionID_FK
+     AND action27.buildingActionTypeID_FK=27
+    JOIN Housing.BuildingAction waitingRoot
+      ON waitingRoot.buildingActionID=action27.buildingActionParentID
+     AND waitingRoot.buildingActionTypeID_FK=1
+    WHERE COALESCE(action27.buildingActionExtraType1,waitingRoot.buildingActionExtraType1) IS NOT NULL
+      AND COALESCE(action27.buildingActionExtraType1,waitingRoot.buildingActionExtraType1)<>99
+      AND NOT EXISTS
+      (
+          SELECT 1 FROM Housing.WaitingClass wc
+          WHERE wc.waitingClassID=COALESCE(action27.buildingActionExtraType1,waitingRoot.buildingActionExtraType1)
+      );
+
     /* Directly copied master and transactional data. Actual means source rows found in target. */
     INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
     SELECT N'Completeness',N'Military units',s.c,t.c,t.c-s.c,
@@ -176,19 +454,152 @@ BEGIN
        ON y.militaryUnitID=x.militaryUnitID
       AND ISNULL(LTRIM(RTRIM(y.militaryUnitCode)),N'')=ISNULL(LTRIM(RTRIM(x.militaryUnitCode)),N'')) t;
 
-    INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
-    SELECT N'Completeness',N'ResidentInfo',s.c,t.c,t.c-s.c,
-           CASE WHEN s.c=t.c THEN 'PASS' ELSE 'FAIL' END,N'Matched by residentInfoID.'
-    FROM (SELECT COUNT_BIG(*) c FROM KFMC.Housing.ResidentInfo) s
-    CROSS JOIN (SELECT COUNT_BIG(*) c FROM KFMC.Housing.ResidentInfo x JOIN Housing.ResidentInfo y
-                 ON y.residentInfoID=CONVERT(bigint,x.residentInfoID)) t;
+    
+/* ResidentInfo: migrate only residents having source details. */
+INSERT @Checks
+(
+    Category, CheckName, ExpectedValue, ActualValue,
+    Difference, Result, Notes
+)
+SELECT
+    N'Completeness',
+    N'ResidentInfo',
+    s.c,
+    t.c,
+    t.c - s.c,
+    CASE WHEN s.c = t.c THEN 'PASS' ELSE 'FAIL' END,
+    N'Only KFMC residents having at least one ResidentDetails row.'
 
-    INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
-    SELECT N'Completeness',N'ResidentDetails',s.c,t.c,t.c-s.c,
-           CASE WHEN s.c=t.c THEN 'PASS' ELSE 'FAIL' END,N'Matched by residentDetailsID.'
-    FROM (SELECT COUNT_BIG(*) c FROM KFMC.Housing.ResidentDetails) s
-    CROSS JOIN (SELECT COUNT_BIG(*) c FROM KFMC.Housing.ResidentDetails x JOIN Housing.ResidentDetails y
-                 ON y.residentDetailsID=CONVERT(bigint,x.residentDetailsID)) t;
+FROM
+(
+    SELECT COUNT_BIG(*) AS c
+    FROM KFMC.Housing.ResidentInfo r
+    WHERE EXISTS
+    (
+        SELECT 1
+        FROM KFMC.Housing.ResidentDetails d
+        WHERE d.generalNo_FK = r.generalNo
+    )
+) s
+
+CROSS JOIN
+(
+    SELECT COUNT_BIG(*) AS c
+    FROM KFMC.Housing.ResidentInfo r
+    INNER JOIN Housing.ResidentInfo t
+        ON t.residentInfoID =
+           CONVERT(bigint, r.residentInfoID)
+    WHERE EXISTS
+    (
+        SELECT 1
+        FROM KFMC.Housing.ResidentDetails d
+        WHERE d.generalNo_FK = r.generalNo
+    )
+) t;
+
+
+    
+/*
+    ResidentDetails:
+    One row per eligible resident.
+    Prefer active details, then latest entryDate,
+    then highest residentDetailsID.
+*/
+;WITH SelectedDetails AS
+(
+    SELECT
+        d.residentDetailsID,
+
+        ROW_NUMBER() OVER
+        (
+            PARTITION BY r.residentInfoID
+            ORDER BY
+                CASE
+                    WHEN d.residentDetailsActive = 1
+                    THEN 0 ELSE 1
+                END,
+                d.entryDate DESC,
+                d.residentDetailsID DESC
+        ) AS rn
+
+    FROM KFMC.Housing.ResidentInfo r
+
+    INNER JOIN KFMC.Housing.ResidentDetails d
+        ON d.generalNo_FK = r.generalNo
+)
+
+INSERT @Checks
+(
+    Category, CheckName, ExpectedValue, ActualValue,
+    Difference, Result, Notes
+)
+
+SELECT
+    N'Completeness',
+    N'ResidentDetails',
+    s.c,
+    t.c,
+    t.c - s.c,
+    CASE WHEN s.c = t.c THEN 'PASS' ELSE 'FAIL' END,
+    N'One selected detail per resident, preserving the original residentDetailsID.'
+
+FROM
+(
+    SELECT COUNT_BIG(*) AS c
+    FROM SelectedDetails
+    WHERE rn = 1
+) s
+
+CROSS JOIN
+(
+    SELECT COUNT_BIG(*) AS c
+    FROM SelectedDetails x
+
+    INNER JOIN Housing.ResidentDetails y
+        ON y.residentDetailsID =
+           CONVERT(bigint, x.residentDetailsID)
+
+    WHERE x.rn = 1
+) t;
+
+
+
+
+/*
+    Excluded residents must not exist in
+    DATACORE after a clean migration.
+*/
+INSERT @Checks
+(
+    Category, CheckName, ExpectedValue, ActualValue,
+    Difference, Result, Notes
+)
+SELECT
+    N'Integrity',
+    N'Excluded residents migrated',
+    0,
+    COUNT_BIG(*),
+    COUNT_BIG(*),
+    CASE
+        WHEN COUNT_BIG(*) = 0 THEN 'PASS'
+        ELSE 'FAIL'
+    END,
+    N'Residents without any KFMC ResidentDetails must not be migrated.'
+
+FROM KFMC.Housing.ResidentInfo sourceResident
+
+INNER JOIN Housing.ResidentInfo targetResident
+    ON targetResident.residentInfoID =
+       CONVERT(bigint, sourceResident.residentInfoID)
+
+WHERE NOT EXISTS
+(
+    SELECT 1
+    FROM KFMC.Housing.ResidentDetails sourceDetails
+    WHERE sourceDetails.generalNo_FK =
+          sourceResident.generalNo
+);
+
 
     /* Legacy Excel runs are identified only by the required name prefix. */
     INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
@@ -278,20 +689,83 @@ BEGIN
             )
           );
 
-    INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
-    SELECT N'Completeness',N'Resident contacts',s.c,t.c,t.c-s.c,
-           CASE WHEN s.c=t.c THEN 'PASS' ELSE 'FAIL' END,
-           N'Only contacts whose userID exists in KFMC.Housing.ResidentInfo.'
-    FROM
+    
+/*
+    Resident contacts:
+    Only contacts belonging to eligible
+    migrated residents are required.
+*/
+INSERT @Checks
+(
+    Category, CheckName, ExpectedValue,
+    ActualValue, Difference, Result, Notes
+)
+SELECT
+    N'Completeness',
+    N'Resident contacts',
+    s.c,
+    t.c,
+    t.c - s.c,
+    CASE WHEN s.c = t.c THEN 'PASS' ELSE 'FAIL' END,
+    N'جهات اتصال المستفيدين المؤهلين للترحيل فقط.'
+FROM
+(
+    SELECT COUNT_BIG(*) AS c
+    FROM KFMC.dbo.contactInfo sourceContact
+    INNER JOIN KFMC.Housing.ResidentInfo sourceResident
+        ON sourceResident.generalNo = sourceContact.userID_FK
+    WHERE EXISTS
     (
-        SELECT COUNT_BIG(*) c FROM KFMC.dbo.contactInfo c
-        JOIN KFMC.Housing.ResidentInfo r ON r.generalNo=c.userID_FK
-    ) s
-    CROSS JOIN
+        SELECT 1
+        FROM KFMC.Housing.ResidentDetails sourceDetails
+        WHERE sourceDetails.generalNo_FK =
+              sourceResident.generalNo
+    )
+) s
+CROSS JOIN
+(
+    SELECT COUNT_BIG(*) AS c
+    FROM Housing.ResidentContactInfo targetContact
+    INNER JOIN KFMC.Housing.ResidentInfo sourceResident
+        ON CONVERT(bigint, sourceResident.residentInfoID) =
+           targetContact.residentInfoID_FK
+    WHERE EXISTS
     (
-        SELECT COUNT_BIG(*) c FROM Housing.ResidentContactInfo c
-        JOIN Housing.ResidentInfo r ON r.residentInfoID=c.residentInfoID_FK
-    ) t;
+        SELECT 1
+        FROM KFMC.Housing.ResidentDetails sourceDetails
+        WHERE sourceDetails.generalNo_FK =
+              sourceResident.generalNo
+    )
+) t;
+
+
+
+INSERT @Checks
+(
+    Category, CheckName, ExpectedValue,
+    ActualValue, Difference, Result, Notes
+)
+SELECT
+    N'Integrity',
+    N'Contacts linked to excluded residents',
+    0,
+    COUNT_BIG(*),
+    COUNT_BIG(*),
+    CASE WHEN COUNT_BIG(*) = 0
+         THEN 'PASS' ELSE 'FAIL' END,
+    N'يجب عدم نقل جهات اتصال المستفيدين المستبعدين.'
+FROM Housing.ResidentContactInfo targetContact
+INNER JOIN KFMC.Housing.ResidentInfo sourceResident
+    ON CONVERT(bigint, sourceResident.residentInfoID) =
+       targetContact.residentInfoID_FK
+WHERE NOT EXISTS
+(
+    SELECT 1
+    FROM KFMC.Housing.ResidentDetails sourceDetails
+    WHERE sourceDetails.generalNo_FK =
+          sourceResident.generalNo
+);
+
 
     INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
     SELECT N'Completeness',N'Buildings',s.c,t.c,t.c-s.c,
@@ -307,12 +781,146 @@ BEGIN
     CROSS JOIN (SELECT COUNT_BIG(*) c FROM KFMC.Housing.Meter x JOIN Housing.Meter y
                  ON y.meterID=CONVERT(bigint,x.meterID)) t;
 
-    INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
-    SELECT N'Completeness',N'Meter reads',s.c,t.c,t.c-s.c,
-           CASE WHEN s.c=t.c THEN 'PASS' ELSE 'FAIL' END,N'Matched by meterReadID.'
-    FROM (SELECT COUNT_BIG(*) c FROM KFMC.Housing.MeterRead) s
-    CROSS JOIN (SELECT COUNT_BIG(*) c FROM KFMC.Housing.MeterRead x JOIN Housing.MeterRead y
-                 ON y.meterReadID=CONVERT(bigint,x.meterReadID)) t;
+    
+/*
+    MeterRead:
+    Exclude readings belonging to KFMC residents
+    who have no ResidentDetails.
+
+    Preserve all other source readings by meterReadID.
+*/
+
+INSERT @Checks
+(
+    Category,
+    CheckName,
+    ExpectedValue,
+    ActualValue,
+    Difference,
+    Result,
+    Notes
+)
+SELECT
+    N'Completeness',
+    N'Meter reads',
+    s.c,
+    t.c,
+    t.c - s.c,
+    CASE
+        WHEN s.c = t.c THEN 'PASS'
+        ELSE 'FAIL'
+    END,
+    N'قراءات المستفيدين الذين لا يملكون ResidentDetails مستبعدة من الترحيل.'
+
+FROM
+(
+    SELECT COUNT_BIG(*) AS c
+
+    FROM KFMC.Housing.MeterRead sourceRead
+
+    WHERE NOT EXISTS
+    (
+        SELECT 1
+        FROM KFMC.Housing.ResidentInfo excludedResident
+
+        WHERE excludedResident.generalNo =
+              sourceRead.generalNo_FK
+
+          AND NOT EXISTS
+          (
+              SELECT 1
+              FROM KFMC.Housing.ResidentDetails details
+
+              WHERE details.generalNo_FK =
+                    excludedResident.generalNo
+          )
+    )
+) s
+
+CROSS JOIN
+(
+    SELECT COUNT_BIG(*) AS c
+
+    FROM KFMC.Housing.MeterRead sourceRead
+
+    INNER JOIN Housing.MeterRead targetRead
+        ON targetRead.meterReadID =
+           CONVERT(bigint, sourceRead.meterReadID)
+
+    WHERE NOT EXISTS
+    (
+        SELECT 1
+        FROM KFMC.Housing.ResidentInfo excludedResident
+
+        WHERE excludedResident.generalNo =
+              sourceRead.generalNo_FK
+
+          AND NOT EXISTS
+          (
+              SELECT 1
+              FROM KFMC.Housing.ResidentDetails details
+
+              WHERE details.generalNo_FK =
+                    excludedResident.generalNo
+          )
+    )
+) t;
+
+
+
+/*
+    Verify excluded MeterRead rows are absent
+    from DATACORE after clean migration.
+*/
+
+INSERT @Checks
+(
+    Category,
+    CheckName,
+    ExpectedValue,
+    ActualValue,
+    Difference,
+    Result,
+    Notes
+)
+SELECT
+    N'Integrity',
+    N'Excluded source meter reads migrated',
+    0,
+    COUNT_BIG(*),
+    COUNT_BIG(*),
+
+    CASE
+        WHEN COUNT_BIG(*) = 0 THEN 'PASS'
+        ELSE 'FAIL'
+    END,
+
+    N'يجب عدم نقل قراءات المستفيدين المستبعدين، مع الاحتفاظ بفواتيرها الأصلية.'
+
+FROM KFMC.Housing.MeterRead sourceRead
+
+INNER JOIN Housing.MeterRead targetRead
+    ON targetRead.meterReadID =
+       CONVERT(bigint, sourceRead.meterReadID)
+
+WHERE EXISTS
+(
+    SELECT 1
+    FROM KFMC.Housing.ResidentInfo excludedResident
+
+    WHERE excludedResident.generalNo =
+          sourceRead.generalNo_FK
+
+      AND NOT EXISTS
+      (
+          SELECT 1
+          FROM KFMC.Housing.ResidentDetails details
+
+          WHERE details.generalNo_FK =
+                excludedResident.generalNo
+      )
+);
+
 
     INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
     SELECT N'Historical corrections',N'Meter reads linked to corrected residents',s.c,t.c,t.c-s.c,
@@ -352,6 +960,52 @@ BEGIN
           AND targetRead.buildingDetailsID IS NOT NULL
     ) t;
 
+    /* Exclusion integrity: these actions and assignments are deliberately
+       absent after a CLEAN migration. Old DATACORE copies will FAIL this check. */
+    INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
+    SELECT N'WaitingList',N'Excluded inactive waiting actions migrated',
+           0,COUNT_BIG(*),COUNT_BIG(*),
+           CASE WHEN COUNT_BIG(*)=0 THEN 'PASS' ELSE 'FAIL' END,
+           N'No inactive waiting root or descendant excluded by the new migration rule may remain in DATACORE after clean migration.'
+    FROM #ValidationExcludedWaitingActions excluded
+    JOIN Housing.BuildingAction targetAction
+      ON targetAction.buildingActionID=excluded.ActionID;
+
+    INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
+    SELECT N'WaitingList',N'Non-excluded actions referring to excluded roots or descendants',
+           0,COUNT_BIG(*),COUNT_BIG(*),
+           CASE WHEN COUNT_BIG(*)=0 THEN 'PASS' ELSE 'FAIL' END,
+           N'Retained actions may not reference excluded waiting actions via buildingActionParentID.'
+    FROM Housing.BuildingAction targetAction
+    JOIN #ValidationExcludedWaitingActions excluded
+      ON excluded.ActionID=targetAction.buildingActionParentID
+    WHERE NOT EXISTS
+    (
+        SELECT 1
+        FROM #ValidationExcludedWaitingActions selfExcluded
+        WHERE selfExcluded.ActionID=targetAction.buildingActionID
+    );
+
+    INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
+    SELECT N'WaitingList',N'Assignments linked to excluded waiting actions',
+           0,COUNT_BIG(*),COUNT_BIG(*),
+           CASE WHEN COUNT_BIG(*)=0 THEN 'PASS' ELSE 'FAIL' END,
+           N'No target BuildingAssign row may reference an excluded waiting action.'
+    FROM Housing.BuildingAssign targetAssign
+    JOIN #ValidationExcludedWaitingActions excluded
+      ON excluded.ActionID=targetAssign.BuildingActionID_FK;
+
+    INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
+    SELECT N'WaitingList',N'Excluded source assignments migrated',
+           0,COUNT_BIG(*),COUNT_BIG(*),
+           CASE WHEN COUNT_BIG(*)=0 THEN 'PASS' ELSE 'FAIL' END,
+           N'Assignments whose KFMC owning action belongs to an excluded inactive waiting chain must not be imported.'
+    FROM KFMC.Housing.BuildingAssign sourceAssign
+    JOIN #ValidationExcludedWaitingActions excluded
+      ON excluded.ActionID=sourceAssign.BuildingActionID_FK
+    JOIN Housing.BuildingAssign targetAssign
+      ON targetAssign.BuildingAssignID=sourceAssign.BuildingAssignID;
+
     INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
     SELECT N'Completeness',N'Building actions',s.c,t.c,t.c-s.c,
            CASE WHEN s.c=t.c THEN 'PASS' ELSE 'FAIL' END,
@@ -364,6 +1018,11 @@ BEGIN
         (
             SELECT 1 FROM #ValidationDuplicateActionMap duplicateAction
             WHERE duplicateAction.duplicateActionID=sourceAction.buildingActionID
+        )
+          AND NOT EXISTS
+        (
+            SELECT 1 FROM #ValidationExcludedWaitingActions excluded
+            WHERE excluded.ActionID=sourceAction.buildingActionID
         )
           AND
           (
@@ -394,7 +1053,12 @@ BEGIN
         SELECT COUNT_BIG(*) c
         FROM KFMC.Housing.BuildingAction x
         JOIN Housing.BuildingAction y ON y.buildingActionID=CONVERT(bigint,x.buildingActionID)
-        WHERE
+        WHERE NOT EXISTS
+        (
+            SELECT 1 FROM #ValidationExcludedWaitingActions excluded
+            WHERE excluded.ActionID=x.buildingActionID
+        )
+          AND
         (
             x.generalNo_FK IS NULL
             OR
@@ -418,6 +1082,82 @@ BEGIN
             )
         )
     ) t;
+
+    /* Origin classification validations. Values other than the two reserved
+       labels (including NULL) are allowed for future operational uses. */
+    INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
+    SELECT N'Action provenance',N'Source-matched actions missing LEGACY classification',
+           0,COUNT_BIG(*),COUNT_BIG(*),
+           CASE WHEN COUNT_BIG(*)=0 THEN 'PASS' ELSE 'FAIL' END,
+           N'An action with the same source ID and UDID must be classified LEGACY.'
+    FROM Housing.BuildingAction a
+    JOIN KFMC.Housing.BuildingAction k
+      ON k.buildingActionID=a.buildingActionID
+     AND k.buildingActionUDID=a.buildingActionUDID
+    WHERE a.buildingActionExtraText5 IS NULL
+       OR a.buildingActionExtraText5<>N'LEGACY';
+
+    INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
+    SELECT N'Action provenance',N'LEGACY classification without source identity',
+           0,COUNT_BIG(*),COUNT_BIG(*),
+           CASE WHEN COUNT_BIG(*)=0 THEN 'PASS' ELSE 'FAIL' END,
+           N'LEGACY requires matching source buildingActionID and buildingActionUDID.'
+    FROM Housing.BuildingAction a
+    WHERE a.buildingActionExtraText5=N'LEGACY'
+      AND NOT EXISTS
+      (
+          SELECT 1 FROM KFMC.Housing.BuildingAction k
+          WHERE k.buildingActionID=a.buildingActionID
+            AND k.buildingActionUDID=a.buildingActionUDID
+      );
+
+    INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
+    SELECT N'Action provenance',N'MIGRATION_GENERATED without marker or with source identity',
+           0,COUNT_BIG(*),COUNT_BIG(*),
+           CASE WHEN COUNT_BIG(*)=0 THEN 'PASS' ELSE 'FAIL' END,
+           N'Generated actions need MoveData: marker and may not replace source actions.'
+    FROM Housing.BuildingAction a
+    WHERE a.buildingActionExtraText5=N'MIGRATION_GENERATED'
+      AND
+      (
+          a.buildingActionExtraText4 IS NULL
+          OR a.buildingActionExtraText4 NOT LIKE N'MoveData:%'
+          OR EXISTS
+          (
+              SELECT 1 FROM KFMC.Housing.BuildingAction k
+              WHERE k.buildingActionID=a.buildingActionID
+          )
+      );
+
+    INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
+    SELECT N'Action provenance',N'MoveData-generated marker missing classification',
+           0,COUNT_BIG(*),COUNT_BIG(*),
+           CASE WHEN COUNT_BIG(*)=0 THEN 'PASS' ELSE 'FAIL' END,
+           N'MoveData: marker without a source action requires MIGRATION_GENERATED.'
+    FROM Housing.BuildingAction a
+    WHERE a.buildingActionExtraText4 LIKE N'MoveData:%'
+      AND NOT EXISTS
+      (
+          SELECT 1 FROM KFMC.Housing.BuildingAction k
+          WHERE k.buildingActionID=a.buildingActionID
+      )
+      AND
+      (
+          a.buildingActionExtraText5 IS NULL
+          OR a.buildingActionExtraText5<>N'MIGRATION_GENERATED'
+      );
+
+    INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
+    SELECT N'Action provenance',N'Source ID collision with different action UDID',
+           0,COUNT_BIG(*),COUNT_BIG(*),
+           CASE WHEN COUNT_BIG(*)=0 THEN 'PASS' ELSE 'FAIL' END,
+           N'A matching legacy ID with different or missing UDID must be investigated.'
+    FROM Housing.BuildingAction a
+    JOIN KFMC.Housing.BuildingAction k
+      ON k.buildingActionID=a.buildingActionID
+    WHERE a.buildingActionUDID IS NULL
+       OR k.buildingActionUDID IS NULL
+       OR a.buildingActionUDID<>k.buildingActionUDID;
 
     INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
     SELECT N'Completeness',N'Building assignments',s.c,t.c,t.c-s.c,
@@ -643,8 +1383,17 @@ BEGIN
                    AND x.PeriodMonth=10
                   THEN ROW_NUMBER() OVER
                   (
-                    PARTITION BY x.generalNo_FK,x.buildingDetailsNo,x.PeriodYear,x.PeriodMonth,
-                                 CAST(ISNULL(x.TotalPrice,0) AS decimal(18,2))
+                    
+PARTITION BY
+    x.generalNo_FK,
+    x.buildingDetailsNo,
+    x.PeriodYear,
+    x.PeriodMonth,
+    CAST(ISNULL(x.TotalPrice,0) AS decimal(18,2)),
+    x.meterID,
+    x.meterNo,
+    x.meterReadID
+
                     ORDER BY
                       CASE WHEN EXISTS
                       (
@@ -675,8 +1424,17 @@ BEGIN
                    AND x.PeriodMonth=10
                   THEN ROW_NUMBER() OVER
                   (
-                    PARTITION BY x.generalNo_FK,x.buildingDetailsNo,x.PeriodYear,x.PeriodMonth,
-                                 CAST(ISNULL(x.TotalPrice,0) AS decimal(18,2))
+                    
+PARTITION BY
+    x.generalNo_FK,
+    x.buildingDetailsNo,
+    x.PeriodYear,
+    x.PeriodMonth,
+    CAST(ISNULL(x.TotalPrice,0) AS decimal(18,2)),
+    x.meterID,
+    x.meterNo,
+    x.meterReadID
+
                     ORDER BY
                       CASE WHEN EXISTS
                       (
@@ -710,8 +1468,18 @@ BEGIN
                AND x.PeriodMonth=10
               THEN ROW_NUMBER() OVER
               (
-                PARTITION BY x.generalNo_FK,x.buildingDetailsNo,x.PeriodYear,x.PeriodMonth,
-                             CAST(ISNULL(x.TotalPrice,0) AS decimal(18,2))
+                
+PARTITION BY
+    x.generalNo_FK,
+    x.buildingDetailsNo,
+    x.PeriodYear,
+    x.PeriodMonth,
+    CAST(ISNULL(x.TotalPrice,0) AS decimal(18,2)),
+    x.meterID,
+    x.meterNo,
+    x.meterReadID
+
+
                 ORDER BY
                   CASE WHEN EXISTS
                   (
@@ -731,6 +1499,170 @@ BEGIN
     WHERE excludedBills.migrationRowNo>1
       AND y.BillChargeTypeID_FK=2;
 
+
+
+
+      
+/*
+    Validate electricity bills linked to excluded MeterRead rows.
+
+    The bills must be preserved with:
+    - Original BillsID and BillsUID.
+    - Original generalNo_FK and TotalPrice.
+    - NULL meterReadID.
+    - NULL residentInfoID_FK.
+
+    Excluded readings are identified dynamically
+    from KFMC residents without ResidentDetails.
+*/
+
+;WITH AffectedBills AS
+(
+    SELECT
+        sourceBill.BillsID,
+        sourceBill.TotalPrice,
+
+        CASE
+            WHEN targetBill.BillsID IS NOT NULL
+                THEN 1
+            ELSE 0
+        END AS IsCorrectlyMigrated
+
+    FROM KFMC.Housing.Bills sourceBill
+
+    LEFT JOIN Housing.Bills targetBill
+        ON targetBill.BillsID =
+           CONVERT(bigint, sourceBill.BillsID)
+
+       AND targetBill.BillsUID =
+           sourceBill.BillsUID
+
+       AND targetBill.BillChargeTypeID_FK = 2
+
+       AND targetBill.meterReadID IS NULL
+
+       AND targetBill.residentInfoID_FK IS NULL
+
+       AND NOT EXISTS
+       (
+           SELECT
+               targetBill.generalNo_FK,
+               targetBill.TotalPrice
+
+           EXCEPT
+
+           SELECT
+               CONVERT(bigint, sourceBill.generalNo_FK),
+               sourceBill.TotalPrice
+       )
+
+    WHERE EXISTS
+    (
+        SELECT 1
+        FROM KFMC.Housing.MeterRead sourceRead
+
+        INNER JOIN KFMC.Housing.ResidentInfo excludedResident
+            ON excludedResident.generalNo =
+               sourceRead.generalNo_FK
+
+        WHERE sourceRead.meterReadID =
+              sourceBill.meterReadID
+
+          AND NOT EXISTS
+          (
+              SELECT 1
+              FROM KFMC.Housing.ResidentDetails details
+              WHERE details.generalNo_FK =
+                    excludedResident.generalNo
+          )
+    )
+),
+Totals AS
+(
+    SELECT
+        COUNT_BIG(*) AS ExpectedBills,
+
+        COALESCE(
+            SUM(CONVERT(bigint, IsCorrectlyMigrated)),
+            0
+        ) AS MatchedBills,
+
+        COALESCE(
+            SUM(CONVERT(decimal(38,2), TotalPrice)),
+            0
+        ) AS ExpectedAmount,
+
+        COALESCE(
+            SUM
+            (
+                CASE
+                    WHEN IsCorrectlyMigrated = 1
+                        THEN CONVERT(decimal(38,2), TotalPrice)
+                    ELSE CONVERT(decimal(38,2), 0)
+                END
+            ),
+            0
+        ) AS MatchedAmount
+
+    FROM AffectedBills
+)
+
+INSERT @Checks
+(
+    Category,
+    CheckName,
+    ExpectedValue,
+    ActualValue,
+    Difference,
+    Result,
+    Notes
+)
+SELECT
+    N'Integrity',
+    v.CheckName,
+    v.ExpectedValue,
+    v.ActualValue,
+    v.ActualValue - v.ExpectedValue,
+
+    CASE
+        WHEN v.ExpectedValue = v.ActualValue
+            THEN 'PASS'
+        ELSE 'FAIL'
+    END,
+
+    v.Notes
+
+FROM Totals t
+
+CROSS APPLY
+(
+    VALUES
+    (
+        N'Electricity bills with excluded readings - count',
+
+        CONVERT(decimal(38,2), t.ExpectedBills),
+        CONVERT(decimal(38,2), t.MatchedBills),
+
+        N'Bills must retain their original identity, amount and general number, with NULL meterReadID and residentInfoID_FK.'
+    ),
+
+    (
+        N'Electricity bills with excluded readings - amount',
+
+        CONVERT(decimal(38,2), t.ExpectedAmount),
+        CONVERT(decimal(38,2), t.MatchedAmount),
+
+        N'Total amounts of correctly migrated bills linked to excluded source readings.'
+    )
+) v
+(
+    CheckName,
+    ExpectedValue,
+    ActualValue,
+    Notes
+);
+
+
     INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
     SELECT N'Completeness',N'Active rent payments',s.c,t.c,t.c-s.c,
            CASE WHEN s.c=t.c THEN 'PASS' ELSE 'FAIL' END,N'Cancelled source lists and payments are excluded.'
@@ -741,15 +1673,203 @@ BEGIN
         WHERE p.buildingPayementActive=1 AND d.deductActive=1
     ) s
     CROSS JOIN
-    (SELECT COUNT_BIG(*) c FROM Housing.BuildingPayment
-     WHERE BillChargeTypeID_FK=1 AND buildingPayementActive=1 AND IdaraId_FK=@IdaraId) t;
+    (
+        SELECT COUNT_BIG(*) c
+        FROM Housing.BuildingPayment targetPayment
+        INNER JOIN KFMC.Housing.BuildingPayment sourcePayment
+            ON sourcePayment.paymentID = targetPayment.paymentID
+        INNER JOIN KFMC.Housing.DeductList sourceDeduct
+            ON sourceDeduct.deductListID = sourcePayment.deductListID_FK
+        WHERE targetPayment.BillChargeTypeID_FK = 1
+          AND targetPayment.buildingPayementActive = 1
+          AND targetPayment.IdaraId_FK = @IdaraId
+          AND sourcePayment.buildingPayementActive = 1
+          AND sourceDeduct.deductActive = 1
+    ) t;
+
+
+
+     
+/*
+    Validate historical rent payments by original ID.
+
+    Source payments with buildingPayementActive = 1:
+    - Active source list   => active target payment.
+    - Inactive source list => inactive target payment.
+
+    Preserve original payment identity, general number,
+    amount, deduction list and payment UID.
+*/
+
+;WITH SourcePayments AS
+(
+    SELECT
+        p.paymentID,
+        p.PaymentUID,
+        p.userID_FK,
+        p.amount,
+        p.deductListID_FK,
+        p.buildingPayementActive,
+        d.deductActive,
+
+        CASE
+            WHEN t.paymentID IS NOT NULL
+             AND td.deductListID IS NOT NULL
+
+             AND td.deductActive = d.deductActive
+
+             AND t.BillChargeTypeID_FK = 1
+             AND t.IdaraId_FK = @IdaraId
+
+             AND NOT EXISTS
+             (
+                 SELECT
+                     t.PaymentUID,
+                     t.generalNo_FK,
+                     t.amount,
+                     t.deductListID_FK,
+                     t.buildingPayementActive
+
+                 EXCEPT
+
+                 SELECT
+                     p.PaymentUID,
+                     CONVERT(bigint, p.userID_FK),
+                     p.amount,
+                     p.deductListID_FK,
+
+                     CASE
+                         WHEN d.deductActive = 0
+                             THEN CONVERT(bit, 0)
+                         ELSE p.buildingPayementActive
+                     END
+             )
+            THEN CONVERT(bigint, 1)
+            ELSE CONVERT(bigint, 0)
+        END AS IsCorrectlyMigrated
+
+    FROM KFMC.Housing.BuildingPayment p
+
+    INNER JOIN KFMC.Housing.DeductList d
+        ON d.deductListID = p.deductListID_FK
+
+    LEFT JOIN Housing.BuildingPayment t
+        ON t.paymentID = CONVERT(bigint, p.paymentID)
+
+    LEFT JOIN Housing.DeductList td
+        ON td.deductListID = p.deductListID_FK
+
+    WHERE p.buildingPayementActive = 1
+      AND d.deductActive IN (0, 1)
+),
+Totals AS
+(
+    SELECT
+        deductActive,
+
+        COUNT_BIG(*) AS ExpectedCount,
+
+        SUM(IsCorrectlyMigrated) AS MatchedCount,
+
+        COALESCE
+        (
+            SUM(CONVERT(decimal(38,2), amount)),
+            0
+        ) AS ExpectedAmount,
+
+        COALESCE
+        (
+            SUM
+            (
+                CASE
+                    WHEN IsCorrectlyMigrated = 1
+                        THEN CONVERT(decimal(38,2), amount)
+                    ELSE CONVERT(decimal(38,2), 0)
+                END
+            ),
+            0
+        ) AS MatchedAmount
+
+    FROM SourcePayments
+
+    GROUP BY deductActive
+)
+
+INSERT @Checks
+(
+    Category,
+    CheckName,
+    ExpectedValue,
+    ActualValue,
+    Difference,
+    Result,
+    Notes
+)
+SELECT
+    N'Financial reconciliation',
+    v.CheckName,
+    v.ExpectedValue,
+    v.ActualValue,
+    v.ActualValue - v.ExpectedValue,
+
+    CASE
+        WHEN v.ExpectedValue = v.ActualValue
+            THEN 'PASS'
+        ELSE 'FAIL'
+    END,
+
+    N'مطابقة السدادات بالمعرف الأصلي والرقم العام والمبلغ وحالة النشاط والمسير.'
+
+FROM Totals t
+
+CROSS APPLY
+(
+    VALUES
+    (
+        CASE
+            WHEN t.deductActive = 1
+                THEN N'Active historical rent payments - count'
+            ELSE N'Inactive historical rent payments - count'
+        END,
+        CONVERT(decimal(38,2), t.ExpectedCount),
+        CONVERT(decimal(38,2), t.MatchedCount)
+    ),
+
+    (
+        CASE
+            WHEN t.deductActive = 1
+                THEN N'Active historical rent payments - amount'
+            ELSE N'Inactive historical rent payments - amount'
+        END,
+        t.ExpectedAmount,
+        t.MatchedAmount
+    )
+) v
+(
+    CheckName,
+    ExpectedValue,
+    ActualValue
+);
+
+
 
     INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
     SELECT N'Completeness',N'Penalty bills',s.c,t.c,t.c-s.c,
            CASE WHEN s.c=t.c THEN 'PASS' ELSE 'FAIL' END,N'Every old custody penalty becomes a bill.'
     FROM (SELECT COUNT_BIG(*) c FROM KFMC.Housing.OccupantCustodyAction) s
-    CROSS JOIN (SELECT COUNT_BIG(*) c FROM Housing.Bills
-                 WHERE BillChargeTypeID_FK=5 AND idaraID_FK=@IdaraId) t;
+    CROSS JOIN
+    (
+        SELECT COUNT_BIG(*) c
+        FROM Housing.Bills targetBill
+        INNER JOIN KFMC.Housing.OccupantCustodyAction sourcePenalty
+            ON targetBill.BillsUID = CONVERT
+            (
+                uniqueidentifier,
+                HASHBYTES('MD5', CONCAT(N'PENALTY-BILL|', sourcePenalty.occupantCustodyActionID))
+            )
+        WHERE targetBill.BillChargeTypeID_FK = 5
+          AND targetBill.idaraID_FK = @IdaraId
+    ) t;
 
     INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
     SELECT N'Completeness',N'Paid penalties',s.c,t.c,t.c-s.c,
@@ -1246,6 +2366,8 @@ BEGIN
                        WHEN DAY(b.BillsFromDate)>30 THEN 30 ELSE DAY(b.BillsFromDate) END)+1) Days30
         FROM Housing.Bills b
         WHERE b.BillChargeTypeID_FK=3 AND b.idaraID_FK=@IdaraId AND b.BillActive=1
+          AND b.BillsFromDate IS NOT NULL
+          AND b.BillsToDate <= @HistoricalBillMonthEnd
     )
     INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
     SELECT N'Generated bills',N'Incorrect water-bill calculations',0,COUNT_BIG(*),COUNT_BIG(*),
@@ -1280,20 +2402,24 @@ BEGIN
     INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
     SELECT N'Generated bills',N'No migrated rent/water bills in cutover month',0,COUNT_BIG(*),COUNT_BIG(*),
            CASE WHEN COUNT_BIG(*)=0 THEN 'PASS' ELSE 'FAIL' END,
-           CASE WHEN @CutoverDate IS NULL THEN N'CutoverDate was not supplied; check skipped.'
-                ELSE N'The cutover month must be generated by the new system only.' END
+           N'The historical monthly migration must not generate rent/water bills in the cutover month. Operational invoices are excluded.'
     FROM Housing.Bills
-    WHERE @CutoverDate IS NOT NULL
-      AND BillChargeTypeID_FK IN (1,3)
+    /* Only bills stamped by the historical monthly migration are in scope;
+       operational rent/water bills issued during the cutover month are valid. */
+    WHERE BillChargeTypeID_FK IN (1,3)
       AND idaraID_FK=@IdaraId
-      AND PeriodYear=YEAR(@CutoverDate)
-      AND PeriodMonth=MONTH(@CutoverDate)
-      AND BillActive=1;
+      AND PeriodYear=YEAR(@ValidationCutoverDate)
+      AND PeriodMonth=MONTH(@ValidationCutoverDate)
+      AND BillActive=1
+      AND (hostName = N'Data Migration' OR hostName LIKE N'Data Migration-%');
 
     /* New-system billing-period and fixed-service contract. */
     INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
     SELECT N'Billing periods',N'Water bills without current billing period',0,COUNT_BIG(*),COUNT_BIG(*),CASE WHEN COUNT_BIG(*)=0 THEN 'PASS' ELSE 'FAIL' END,N'Every migrated water bill must link to its generated monthly water period.'
-    FROM Housing.Bills WHERE BillChargeTypeID_FK=3 AND idaraID_FK=@IdaraId AND BillActive=1 AND CurrentPeriodID IS NULL;
+    FROM Housing.Bills
+    WHERE BillChargeTypeID_FK=3 AND idaraID_FK=@IdaraId AND BillActive=1
+      AND BillsFromDate IS NOT NULL AND BillsToDate <= @HistoricalBillMonthEnd
+      AND CurrentPeriodID IS NULL;
 
     INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
     SELECT N'Billing periods',N'Water bills linked to incorrect billing period',0,COUNT_BIG(*),COUNT_BIG(*),CASE WHEN COUNT_BIG(*)=0 THEN 'PASS' ELSE 'FAIL' END,N'The current period must belong to the same administration, water service, and cover the bill dates.'
@@ -1301,6 +2427,7 @@ BEGIN
     LEFT JOIN Housing.BillPeriod bp ON bp.billPeriodID=b.CurrentPeriodID
     LEFT JOIN Housing.BillPeriodType bpt ON bpt.billPeriodTypeID=bp.billPeriodTypeID_FK
     WHERE b.BillChargeTypeID_FK=3 AND b.idaraID_FK=@IdaraId AND b.BillActive=1
+      AND b.BillsFromDate IS NOT NULL AND b.BillsToDate <= @HistoricalBillMonthEnd
       AND (bp.billPeriodID IS NULL OR bp.IdaraId_FK<>@IdaraId OR bpt.meterServiceTypeID_FK<>2 OR CAST(bp.billPeriodStartDate AS date)>CAST(b.BillsFromDate AS date) OR CAST(bp.billPeriodEndDate AS date)<CAST(b.BillsToDate AS date));
 
     INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
@@ -1334,6 +2461,14 @@ BEGIN
     LEFT JOIN Housing.BillPeriod previousPeriod ON previousPeriod.billPeriodID=b.PerviosPeriodID
     LEFT JOIN Housing.BillPeriodType previousType ON previousType.billPeriodTypeID=previousPeriod.billPeriodTypeID_FK
     WHERE b.BillChargeTypeID_FK=2 AND b.idaraID_FK=@IdaraId AND b.BillActive=1 AND b.PerviosPeriodID IS NOT NULL
+      /* Electricity migration preserves the source BillsID. Do not treat
+         newly issued occupancy/exit meter-read bills as migrated bills. */
+      AND EXISTS
+      (
+          SELECT 1
+          FROM KFMC.Housing.Bills sourceBill
+          WHERE CONVERT(bigint, sourceBill.BillsID) = b.BillsID
+      )
       AND (previousPeriod.billPeriodID IS NULL OR previousPeriod.IdaraId_FK<>@IdaraId OR previousType.meterServiceTypeID_FK<>1 OR previousPeriod.billPeriodStartDate>=currentPeriod.billPeriodStartDate);
     /* Broken relationships and business invariants. Expected value is zero. */
     INSERT @Checks(Category,CheckName,ExpectedValue,ActualValue,Difference,Result,Notes)
@@ -1628,4 +2763,29 @@ BEGIN
     SELECT TableName, entryData, RowCount_
     FROM #UnmatchedEntryDataStats
     ORDER BY TableName, RowCount_ DESC, entryData;
+
+    /* Diagnostic sets appended last: existing result-set order is preserved. */
+    SELECT GeneralNo,WaitingClassID,ActiveRequests,ActionIDs
+    FROM #ValidationWaitingRootDuplicates
+    ORDER BY GeneralNo,WaitingClassID;
+
+    SELECT DISTINCT
+        GeneralNo,WaitingClassID,RootActionID,
+        ActionID AS ActiveDescendantID,Depth
+    FROM #ValidationInactiveWaitingTree
+    WHERE Depth>0 AND IsActive=1
+    ORDER BY GeneralNo,WaitingClassID,RootActionID,Depth,ActiveDescendantID;
+
+    SELECT DISTINCT
+        t.GeneralNo,t.WaitingClassID,t.RootActionID,
+        t.ActionID AS Depth100ActionID
+    FROM #ValidationInactiveWaitingTree t
+    WHERE t.Depth=100
+      AND EXISTS
+      (
+          SELECT 1
+          FROM KFMC.Housing.BuildingAction nextAction
+          WHERE nextAction.buildingActionParentID=t.ActionID
+      )
+    ORDER BY t.GeneralNo,t.WaitingClassID,t.RootActionID,Depth100ActionID;
 END;

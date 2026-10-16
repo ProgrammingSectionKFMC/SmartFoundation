@@ -37,33 +37,33 @@ BEGIN
     -- تواريخ (تحويل آمن)
     DECLARE @StartDT DATE = TRY_CONVERT(DATE, NULLIF(LTRIM(RTRIM(@permissionStartDate)), ''), 120);
     DECLARE @EndDT   DATE = TRY_CONVERT(DATE, NULLIF(LTRIM(RTRIM(@permissionEndDate)), ''), 120);
-    DECLARE @Falg1 BIGINT = 0;
-    DECLARE @Falg2 BIGINT = 0;
+    --DECLARE @Falg1 BIGINT = 0;
+    --DECLARE @Falg2 BIGINT = 0;
 
 
-    if
-    (SELECT COUNT(*)  
-    FROM dbo.DistributorPermissionType d
-    inner join dbo.PermissionType p on d.permissionTypeID_FK = p.permissionTypeID
-    WHERE distributorPermissionTypeID = @DistributorPermissionTypeID_FK and p.RoleID_FK = 20 and d.distributorPermissionTypeActive = 1 and p.permissionTypeActive = 1) > 0
-    begin
+    --if
+    --(SELECT COUNT(*)  
+    --FROM dbo.DistributorPermissionType d
+    --inner join dbo.PermissionType p on d.permissionTypeID_FK = p.permissionTypeID
+    --WHERE distributorPermissionTypeID = @DistributorPermissionTypeID_FK and p.RoleID_FK = 20 and d.distributorPermissionTypeActive = 1 and p.permissionTypeActive = 1) > 0
+    --begin
 
-    set @Falg1 = 1
+    --set @Falg1 = 1
 
-    end
+    --end
 
 
-    if
-    (SELECT COUNT(*)  
-    FROM dbo.Permission p
-    inner join dbo.DistributorPermissionType d on p.DistributorPermissionTypeID_FK = d.distributorPermissionTypeID
-    inner join dbo.PermissionType t on d.permissionTypeID_FK = t.permissionTypeID
-    WHERE p.UsersID_FK = 4 and t.RoleID_FK = 20 and p.permissionActive = 1 and d.distributorPermissionTypeActive = 1 and t.permissionTypeActive = 1) > 0
-    begin
+    --if
+    --(SELECT COUNT(*)  
+    --FROM dbo.Permission p
+    --inner join dbo.DistributorPermissionType d on p.DistributorPermissionTypeID_FK = d.distributorPermissionTypeID
+    --inner join dbo.PermissionType t on d.permissionTypeID_FK = t.permissionTypeID
+    --WHERE p.UsersID_FK = @UsersID and t.RoleID_FK = 20 and p.permissionActive = 1 and d.distributorPermissionTypeActive = 1 and t.permissionTypeActive = 1) > 0
+    --begin
 
-    set @Falg2 = 1
+    --set @Falg2 = 1
 
-    end
+    --end
 
 
 
@@ -96,10 +96,10 @@ BEGIN
             ;THROW 50001, N'لايمكن ان يكون تاريخ النهاية اصغر من او مساوي لتاريخ اليوم', 1;
         END
 
-        IF (@Falg1 = @Falg2)
-        BEGIN
-            ;THROW 50001, N'لايمكن ان يكون مستخدم واحد مسؤول استلام وتسليم المساكن في قسمين', 1;
-        END
+        --IF (@Falg1 = @Falg2)
+        --BEGIN
+        --    ;THROW 50001, N'لايمكن ان يكون مستخدم واحد مسؤول استلام وتسليم المساكن في قسمين', 1;
+        --END
 
 
 
@@ -287,6 +287,39 @@ BEGIN
             BEGIN
                 ;THROW 50001, N'البيانات مدخلة مسبقا', 1;
             END
+
+
+            IF ISNULL(@searchID, 0) = 1
+AND EXISTS
+(
+    SELECT 1
+    FROM dbo.DistributorPermissionType d
+    INNER JOIN dbo.PermissionType t
+        ON d.permissionTypeID_FK = t.permissionTypeID
+    WHERE d.distributorPermissionTypeID = @DistributorPermissionTypeID_FK
+      AND d.distributorPermissionTypeActive = 1
+      AND t.permissionTypeActive = 1
+      AND t.RoleID_FK = 20
+)
+AND EXISTS
+(
+    SELECT 1
+    FROM dbo.Permission p
+    INNER JOIN dbo.DistributorPermissionType d
+        ON p.DistributorPermissionTypeID_FK = d.distributorPermissionTypeID
+    INNER JOIN dbo.PermissionType t
+        ON d.permissionTypeID_FK = t.permissionTypeID
+    WHERE p.UsersID_FK = @UsersID
+      AND p.permissionActive = 1
+      AND d.distributorPermissionTypeActive = 1
+      AND t.permissionTypeActive = 1
+      AND t.RoleID_FK = 20
+)
+BEGIN
+    ;THROW 50001,
+        N'لايمكن منح المستخدم أكثر من صلاحية واحدة من صلاحيات مسؤول اجراءات المباني في قسمين',
+        1;
+END
 
             INSERT INTO  dbo.Permission
             (

@@ -1,4 +1,4 @@
-CREATE TABLE [Housing].[BuildingSpaceType] (
+﻿CREATE TABLE [Housing].[BuildingSpaceType] (
     [BuildingSpaceTypeID]          INT             IDENTITY (1, 1) NOT NULL,
     [BuildingSpaceTypeCode]        NVARCHAR (50)   NOT NULL,
     [BuildingSpaceTypeName_A]      NVARCHAR (100)  NOT NULL,
@@ -7,15 +7,17 @@ CREATE TABLE [Housing].[BuildingSpaceType] (
     [BuildingSpaceTypeStartDate]   DATE            NULL,
     [BuildingSpaceTypeEndDate]     DATE            NULL,
     [BuildingSpaceTypeActive]      BIT             CONSTRAINT [DF_BuildingSpaceType_Active] DEFAULT ((1)) NOT NULL,
-    [CanceledBy]                   NVARCHAR (20)   NULL,
-    [CanceledDate]                 DATETIME        NULL,
     [entryDate]                    DATETIME        CONSTRAINT [DF_BuildingSpaceType_entryDate] DEFAULT (getdate()) NOT NULL,
     [entryData]                    NVARCHAR (20)   NULL,
     [hostName]                     NVARCHAR (200)  NULL,
+    [CanceledBy]                   NVARCHAR (20)   NULL,
+    [CanceledDate]                 DATETIME        NULL,
     CONSTRAINT [PK_BuildingSpaceType] PRIMARY KEY CLUSTERED ([BuildingSpaceTypeID] ASC),
-    CONSTRAINT [UQ_BuildingSpaceType_Code] UNIQUE NONCLUSTERED ([BuildingSpaceTypeCode] ASC),
-    CONSTRAINT [CK_BuildingSpaceType_Dates] CHECK ([BuildingSpaceTypeEndDate] IS NULL OR [BuildingSpaceTypeStartDate] IS NULL OR [BuildingSpaceTypeEndDate] >= [BuildingSpaceTypeStartDate])
+    CONSTRAINT [CK_BuildingSpaceType_Dates] CHECK ([BuildingSpaceTypeEndDate] IS NULL OR [BuildingSpaceTypeStartDate] IS NULL OR [BuildingSpaceTypeEndDate]>=[BuildingSpaceTypeStartDate]),
+    CONSTRAINT [UQ_BuildingSpaceType_Code] UNIQUE NONCLUSTERED ([BuildingSpaceTypeCode] ASC)
 );
+
+
 
 
 GO

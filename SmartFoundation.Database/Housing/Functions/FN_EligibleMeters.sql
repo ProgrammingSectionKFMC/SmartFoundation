@@ -13,7 +13,7 @@ RETURN
     JOIN Housing.MeterForBuilding mfb
       ON md.meterID = mfb.meterID_FK
     WHERE
-        md.MeterServiceTypeLinkedWithIdaraID_FK = @idaraID
+        (md.MeterServiceTypeLinkedWithIdaraID_FK = @idaraID or md.MeterServiceTypeLinkedWithIdaraID_FK is null)
     AND md.MeterIDaraID = @idaraID
     AND md.MeterTypeIDaraID = @idaraID
     AND md.meterActive = 1

@@ -4,7 +4,8 @@
     @ApplyChanges bit = 0,
     @ShowDetails bit = 0,
     @ReturnResults bit = 1,
-    @ChangedBy nvarchar(100) = NULL
+    @ChangedBy nvarchar(100) = NULL,
+@BillChargeTypeID_FK int = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -31,31 +32,179 @@ BEGIN
     SELECT generalNo_FK,residentInfoID_FK FROM RankedDetails WHERE rowNumber=1;
 
     CREATE TABLE #PaymentBase
-    (
-        paymentID bigint NOT NULL PRIMARY KEY,
-        oldStatusID int NULL,
-        residentInfoID bigint NULL,
-        effectivePaymentDate date NULL,
-        effectivePaymentEndDate date NULL
-    );
+(
+    paymentID bigint NOT NULL PRIMARY KEY,
+    oldStatusID int NULL,
+    residentInfoID bigint NULL,
+    effectivePaymentDate date NULL,
+    effectivePaymentEndDate date NULL,
+    isHijriPeriod bit NOT NULL
+);
 
-    INSERT #PaymentBase(paymentID,oldStatusID,residentInfoID,effectivePaymentDate,effectivePaymentEndDate)
-    SELECT paymentRow.paymentID,paymentRow.buildingPaymentLinkStatusID_FK,
-           COALESCE(paymentRow.residentInfoID_FK,residentMatch.residentInfoID),
-           CASE WHEN deductRow.issueYear BETWEEN 1900 AND 9999 AND deductRow.issueMonth BETWEEN 1 AND 12
-                THEN TRY_CONVERT(date,CONCAT(deductRow.issueYear,N'-',RIGHT(N'0'+CONVERT(nvarchar(2),deductRow.issueMonth),2),N'-01'))
-                ELSE CONVERT(date,deductRow.paymentDate) END,
-           CASE WHEN deductRow.issueYear BETWEEN 1900 AND 9999 AND deductRow.issueMonth BETWEEN 1 AND 12
-                THEN EOMONTH(TRY_CONVERT(date,CONCAT(deductRow.issueYear,N'-',RIGHT(N'0'+CONVERT(nvarchar(2),deductRow.issueMonth),2),N'-01')))
-                ELSE CONVERT(date,deductRow.paymentDate) END
-    FROM Housing.BuildingPayment paymentRow
-    LEFT JOIN Housing.DeductList deductRow ON deductRow.deductListID=paymentRow.deductListID_FK
-    LEFT JOIN #ResidentMatch residentMatch ON residentMatch.generalNo=paymentRow.generalNo_FK
-    WHERE (@PaymentID IS NULL OR paymentRow.paymentID=@PaymentID)
-      AND (@DeductListID IS NULL OR paymentRow.deductListID_FK=@DeductListID)
-      AND paymentRow.buildingPayementActive=1
-      AND (paymentRow.buildingPaymentLinkStatusID_FK IS NULL OR paymentRow.buildingPaymentLinkStatusID_FK IN(2,3,4))
-    OPTION(RECOMPILE);
+    CREATE TABLE #HijriPeriodMap
+(
+      issueYear  int NOT NULL
+    , issueMonth int NOT NULL
+    , PeriodFrom date NOT NULL
+    , PeriodTo   date NOT NULL
+    , PRIMARY KEY (issueYear, issueMonth)
+);
+
+INSERT INTO #HijriPeriodMap
+(
+      issueYear
+    , issueMonth
+    , PeriodFrom
+    , PeriodTo
+)
+SELECT
+      g.yearH
+    , g.monthH
+    , MIN(CONVERT(date, g.gregorianDate))
+    , MAX(CONVERT(date, g.gregorianDate))
+FROM dbo._GregorianHijriDate g
+WHERE g.yearH BETWEEN 1300 AND 1600
+  AND g.monthH BETWEEN 1 AND 12
+GROUP BY
+      g.yearH
+    , g.monthH;
+
+
+INSERT #PaymentBase
+(
+      paymentID
+    , oldStatusID
+    , residentInfoID
+    , effectivePaymentDate
+    , effectivePaymentEndDate
+    , isHijriPeriod
+)
+SELECT
+      paymentRow.paymentID
+    , paymentRow.buildingPaymentLinkStatusID_FK
+    , COALESCE
+      (
+          paymentRow.residentInfoID_FK,
+          residentMatch.residentInfoID
+      )
+
+    , CASE
+          WHEN deductRow.issueYear BETWEEN 1300 AND 1600
+           AND deductRow.issueMonth BETWEEN 1 AND 12
+              THEN hijri.PeriodFrom
+
+          WHEN deductRow.issueYear BETWEEN 1900 AND 9999
+           AND deductRow.issueMonth BETWEEN 1 AND 12
+              THEN TRY_CONVERT
+                   (
+                       date,
+                       CONCAT
+                       (
+                           deductRow.issueYear,
+                           N'-',
+                           RIGHT
+                           (
+                               N'0'
+                               + CONVERT
+                                 (
+                                     nvarchar(2),
+                                     deductRow.issueMonth
+                                 ),
+                               2
+                           ),
+                           N'-01'
+                       )
+                   )
+
+          ELSE CONVERT(date, deductRow.paymentDate)
+      END
+
+    , CASE
+          WHEN deductRow.issueYear BETWEEN 1300 AND 1600
+           AND deductRow.issueMonth BETWEEN 1 AND 12
+              THEN hijri.PeriodTo
+
+          WHEN deductRow.issueYear BETWEEN 1900 AND 9999
+           AND deductRow.issueMonth BETWEEN 1 AND 12
+              THEN EOMONTH
+                   (
+                       TRY_CONVERT
+                       (
+                           date,
+                           CONCAT
+                           (
+                               deductRow.issueYear,
+                               N'-',
+                               RIGHT
+                               (
+                                   N'0'
+                                   + CONVERT
+                                     (
+                                         nvarchar(2),
+                                         deductRow.issueMonth
+                                     ),
+                                   2
+                               ),
+                               N'-01'
+                           )
+                       )
+                   )
+
+          ELSE CONVERT(date, deductRow.paymentDate)
+      END
+
+    , CASE
+          WHEN deductRow.issueYear BETWEEN 1300 AND 1600
+           AND deductRow.issueMonth BETWEEN 1 AND 12
+              THEN CONVERT(bit, 1)
+
+          ELSE CONVERT(bit, 0)
+      END
+
+FROM Housing.BuildingPayment paymentRow
+
+LEFT JOIN Housing.DeductList deductRow
+    ON deductRow.deductListID =
+       paymentRow.deductListID_FK
+
+LEFT JOIN #ResidentMatch residentMatch
+    ON residentMatch.generalNo =
+       paymentRow.generalNo_FK
+
+LEFT JOIN #HijriPeriodMap hijri
+    ON hijri.issueYear = deductRow.issueYear
+   AND hijri.issueMonth = deductRow.issueMonth
+
+WHERE
+      (@PaymentID IS NULL OR paymentRow.paymentID = @PaymentID)
+
+  AND (@DeductListID IS NULL
+       OR paymentRow.deductListID_FK = @DeductListID)
+
+  AND paymentRow.buildingPayementActive = 1
+
+  AND
+  (
+      @BillChargeTypeID_FK IS NULL
+      OR paymentRow.BillChargeTypeID_FK =
+         @BillChargeTypeID_FK
+  )
+
+  AND
+(
+       paymentRow.buildingPaymentLinkStatusID_FK IS NULL
+
+    OR paymentRow.buildingPaymentLinkStatusID_FK IN (2,3,4)
+
+    OR
+    (
+        paymentRow.buildingPaymentLinkStatusID_FK = 1
+        AND deductRow.issueYear BETWEEN 1300 AND 1600
+        AND deductRow.issueMonth BETWEEN 1 AND 12
+    )
+)
+
+OPTION(RECOMPILE);
 
     CREATE INDEX IX_PaymentBase_ResidentDates
       ON #PaymentBase(residentInfoID,effectivePaymentDate,effectivePaymentEndDate) INCLUDE(paymentID,oldStatusID);
@@ -140,7 +289,21 @@ BEGIN
     INSERT #CandidateBuildings(paymentID,buildingDetailsID)
     SELECT DISTINCT paymentBase.paymentID,occupancy.buildingDetailsID
     FROM #PaymentBase paymentBase
-    JOIN #OccupancyPeriods occupancy ON occupancy.residentInfoID=paymentBase.residentInfoID
+JOIN #OccupancyPeriods occupancy
+  ON occupancy.residentInfoID =
+     paymentBase.residentInfoID
+
+ AND paymentBase.isHijriPeriod = 0
+
+ AND paymentBase.effectivePaymentEndDate >=
+     occupancy.occupancyDate
+
+ AND paymentBase.effectivePaymentDate <=
+     ISNULL
+     (
+         occupancy.exitDate,
+         CONVERT(date, GETDATE())
+     )
      AND paymentBase.effectivePaymentEndDate>=occupancy.occupancyDate
      AND paymentBase.effectivePaymentDate<=ISNULL(occupancy.exitDate,CONVERT(date,GETDATE()));
 
@@ -176,25 +339,83 @@ BEGIN
     );
 
     INSERT #Proposal
-    SELECT paymentBase.paymentID,paymentBase.residentInfoID,
-           paymentBase.effectivePaymentDate,paymentBase.effectivePaymentEndDate,
-           firstOccupancy.firstOccupancyDate,ISNULL(candidateSummary.candidateCount,0),
-           CASE WHEN candidateSummary.candidateCount=1 THEN candidateSummary.proposedBuildingDetailsID END,
-           paymentBase.oldStatusID,
-           CASE WHEN paymentBase.residentInfoID IS NULL THEN 3
-                WHEN paymentBase.effectivePaymentEndDate IS NOT NULL AND firstOccupancy.firstOccupancyDate IS NOT NULL
-                 AND paymentBase.effectivePaymentEndDate<firstOccupancy.firstOccupancyDate THEN 4
-                WHEN candidateSummary.candidateCount=1 THEN 1 ELSE 2 END,
-           CASE WHEN paymentBase.residentInfoID IS NULL THEN N'لم يتم العثور على ملف المستفيد.'
-                WHEN paymentBase.effectivePaymentDate IS NULL THEN N'تعذر تحديد تاريخ ميلادي موثوق للسداد.'
-                WHEN firstOccupancy.firstOccupancyDate IS NULL THEN N'المستفيد معروف ولكن لا توجد له فترة سكن.'
-                WHEN paymentBase.effectivePaymentEndDate<firstOccupancy.firstOccupancyDate THEN N'السداد يسبق أول فترة سكن معروفة.'
-                WHEN candidateSummary.candidateCount=1 THEN N'تم تحديد مبنى واحد من فترة السكن في تاريخ السداد.'
-                WHEN candidateSummary.candidateCount>1 THEN N'تاريخ السداد يقع داخل أكثر من فترة سكن؛ بقي رصيدا عاما.'
-                ELSE N'السداد بعد أول سكن ولكنه خارج فترة سكن محددة؛ بقي رصيدا عاما.' END
-    FROM #PaymentBase paymentBase
-    LEFT JOIN #CandidateSummary candidateSummary ON candidateSummary.paymentID=paymentBase.paymentID
-    LEFT JOIN #FirstOccupancy firstOccupancy ON firstOccupancy.residentInfoID=paymentBase.residentInfoID;
+SELECT
+       paymentBase.paymentID,
+       paymentBase.residentInfoID,
+       paymentBase.effectivePaymentDate,
+       paymentBase.effectivePaymentEndDate,
+       firstOccupancy.firstOccupancyDate,
+       ISNULL(candidateSummary.candidateCount,0),
+
+       CASE
+            WHEN paymentBase.isHijriPeriod = 0
+             AND candidateSummary.candidateCount = 1
+                THEN candidateSummary.proposedBuildingDetailsID
+            ELSE NULL
+       END,
+
+       paymentBase.oldStatusID,
+
+       CASE
+            WHEN paymentBase.residentInfoID IS NULL
+                THEN 3
+
+            WHEN paymentBase.isHijriPeriod = 1
+             AND paymentBase.effectivePaymentEndDate IS NOT NULL
+             AND firstOccupancy.firstOccupancyDate IS NOT NULL
+             AND paymentBase.effectivePaymentEndDate < firstOccupancy.firstOccupancyDate
+                THEN 4
+
+            WHEN paymentBase.isHijriPeriod = 1
+                THEN 2
+
+            WHEN paymentBase.effectivePaymentEndDate IS NOT NULL
+             AND firstOccupancy.firstOccupancyDate IS NOT NULL
+             AND paymentBase.effectivePaymentEndDate < firstOccupancy.firstOccupancyDate
+                THEN 4
+
+            WHEN candidateSummary.candidateCount = 1
+                THEN 1
+
+            ELSE 2
+       END,
+
+       CASE
+            WHEN paymentBase.residentInfoID IS NULL
+                THEN N'لم يتم العثور على ملف المستفيد.'
+
+            WHEN paymentBase.effectivePaymentDate IS NULL
+                THEN N'تعذر تحديد تاريخ ميلادي موثوق للسداد.'
+
+            WHEN firstOccupancy.firstOccupancyDate IS NULL
+                THEN N'المستفيد معروف ولكن لا توجد له فترة سكن.'
+
+            WHEN paymentBase.isHijriPeriod = 1
+             AND paymentBase.effectivePaymentEndDate < firstOccupancy.firstOccupancyDate
+                THEN N'السداد الهجري يسبق أول فترة سكن معروفة.'
+
+            WHEN paymentBase.isHijriPeriod = 1
+                THEN N'سداد تاريخي بفترة هجرية؛ تم الاحتفاظ به كرصد عام للمستفيد دون ربطه بمبنى.'
+
+            WHEN paymentBase.effectivePaymentEndDate < firstOccupancy.firstOccupancyDate
+                THEN N'السداد يسبق أول فترة سكن معروفة.'
+
+            WHEN candidateSummary.candidateCount = 1
+                THEN N'تم تحديد مبنى واحد من فترة السكن في تاريخ السداد.'
+
+            WHEN candidateSummary.candidateCount > 1
+                THEN N'تاريخ السداد يقع داخل أكثر من فترة سكن؛ بقي رصيدا عاما.'
+
+            ELSE N'السداد بعد أول سكن ولكنه خارج فترة سكن محددة؛ بقي رصيدا عاما.'
+       END
+
+FROM #PaymentBase paymentBase
+
+LEFT JOIN #CandidateSummary candidateSummary
+    ON candidateSummary.paymentID = paymentBase.paymentID
+
+LEFT JOIN #FirstOccupancy firstOccupancy
+    ON firstOccupancy.residentInfoID = paymentBase.residentInfoID;
 
     IF @ReturnResults=1
     BEGIN

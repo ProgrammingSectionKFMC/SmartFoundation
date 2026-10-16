@@ -75,7 +75,6 @@
     [PenaltyReason]         NVARCHAR (4000)  NULL,
     [BillActive]            BIT              NULL,
     [CanceledBy]            NVARCHAR (1000)  NULL,
-    [CanceledDate]          DATETIME         NULL,
     [idaraID_FK]            BIGINT           NULL,
     [entryDate]             DATETIME         CONSTRAINT [DF_Bills_entryDate] DEFAULT (getdate()) NULL,
     [entryData]             NVARCHAR (20)    NULL,
@@ -85,9 +84,12 @@
     [SplitType]             NVARCHAR (20)    NULL,
     [SplitDate]             DATETIME         NULL,
     [SplitBy]               NVARCHAR (20)    NULL,
+    [CanceledDate]          DATETIME         NULL,
     CONSTRAINT [PK_Bills] PRIMARY KEY CLUSTERED ([BillsID] ASC),
     CONSTRAINT [FK_Bills_ParentBills] FOREIGN KEY ([ParentBillsID_FK]) REFERENCES [Housing].[Bills] ([BillsID])
 );
+
+
 
 
 
@@ -135,4 +137,10 @@ CREATE NONCLUSTERED INDEX [IX_Bills_RentDateOverlap]
 GO
 CREATE NONCLUSTERED INDEX [IX_Bills_CheckDuplicate]
     ON [Housing].[Bills]([CurrentPeriodID] ASC, [idaraID_FK] ASC, [BillTypeID_FK] ASC, [buildingDetailsID] ASC, [meterServiceTypeID] ASC, [BillActive] ASC);
+
+
+GO
+CREATE NONCLUSTERED INDEX [IX_Bills_CommandCenter_FinancialByType]
+    ON [Housing].[Bills]([idaraID_FK] ASC, [BillChargeTypeID_FK] ASC, [residentInfoID_FK] ASC)
+    INCLUDE([TotalPrice]) WHERE ([BillActive]=(1) AND [residentInfoID_FK] IS NOT NULL);
 

@@ -1,6 +1,4 @@
-﻿
-
-CREATE PROCEDURE [Housing].[AllMeterReadSP] 
+﻿CREATE PROCEDURE [Housing].[AllMeterReadSP] 
 (
       @Action                                     NVARCHAR(100) = NULL
      ,@MeterServiceTypeID                        NVARCHAR(100)   = NULL
@@ -284,7 +282,8 @@ AND EXISTS
                 FROM Housing.MeterServiceType mst
                 inner join Housing.MeterServiceTypeLinkedWithIdara msl on mst.meterServiceTypeID = msl.meterServiceTypeID_FK
                 WHERE mst.meterServiceTypeActive = 1 and msl.MeterServiceTypeLinkedWithIdaraActive = 1
-                    AND msl.Idara_FK = @IdaraId_FK and msl.MeterServiceTypeID_FK = @MeterServiceTypeID   
+                    AND (msl.Idara_FK = @IdaraId_FK or msl.Idara_FK is null)
+                    and msl.MeterServiceTypeID_FK = @MeterServiceTypeID   
                       )
 
             BEGIN
@@ -394,7 +393,8 @@ AND EXISTS
                 FROM Housing.MeterServiceType mst
                 inner join Housing.MeterServiceTypeLinkedWithIdara msl on mst.meterServiceTypeID = msl.meterServiceTypeID_FK
                 WHERE mst.meterServiceTypeActive = 1 and msl.MeterServiceTypeLinkedWithIdaraActive = 1
-                    AND msl.Idara_FK = @IdaraId_FK  and msl.MeterServiceTypeID_FK = @MeterServiceTypeID   
+                    AND (msl.Idara_FK = @IdaraId_FK or msl.Idara_FK is null)  
+                    and msl.MeterServiceTypeID_FK = @MeterServiceTypeID   
                       )
 
             BEGIN
@@ -1462,7 +1462,8 @@ END;
                 FROM Housing.MeterServiceType mst
                 inner join Housing.MeterServiceTypeLinkedWithIdara msl on mst.meterServiceTypeID = msl.meterServiceTypeID_FK
                 WHERE mst.meterServiceTypeActive = 1 and msl.MeterServiceTypeLinkedWithIdaraActive = 1
-                    AND msl.Idara_FK = @IdaraId_FK and msl.MeterServiceTypeID_FK = @MeterServiceTypeID   
+                    AND (msl.Idara_FK = @IdaraId_FK or msl.Idara_FK is null)
+                    and msl.MeterServiceTypeID_FK = @MeterServiceTypeID   
                       )
 
             BEGIN
@@ -2058,7 +2059,7 @@ FROM Housing.CalculteElectrictyBills_ByNewReadValue_ForInsert(@meterID, @meterRe
                     ON mst.meterServiceTypeID = msl.meterServiceTypeID_FK
                 WHERE mst.meterServiceTypeActive = 1
                   AND msl.MeterServiceTypeLinkedWithIdaraActive = 1
-                  AND msl.Idara_FK = @IdaraId_FK
+                  AND (msl.Idara_FK = @IdaraId_FK or msl.Idara_FK is null)
                   AND msl.MeterServiceTypeID_FK = @MeterServiceTypeID
             )
             BEGIN
@@ -2739,7 +2740,7 @@ FROM Housing.CalculteElectrictyBills_ByNewReadValue_ForInsert(@meterID, @meterRe
                     ON mst.meterServiceTypeID = msl.meterServiceTypeID_FK
                 WHERE mst.meterServiceTypeActive = 1
                   AND msl.MeterServiceTypeLinkedWithIdaraActive = 1
-                  AND msl.Idara_FK = @IdaraId_FK
+                  AND (msl.Idara_FK = @IdaraId_FK or msl.Idara_FK is null)
                   AND msl.MeterServiceTypeID_FK = @MeterServiceTypeID
             )
             BEGIN

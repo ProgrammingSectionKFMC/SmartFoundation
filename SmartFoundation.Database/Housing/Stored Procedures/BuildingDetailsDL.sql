@@ -112,7 +112,7 @@ BEGIN
             -- MilitaryLocation DDL
             SELECT r.militaryLocationID, r.militaryLocationName_A
             FROM [DATACORE].[Housing].[MilitaryLocation] r
-            WHERE r.militaryLocationActive = 1 --and (r.IdaraId_FK = @idaraID or r.IdaraId_FK is null);
+            WHERE r.militaryLocationActive = 1 and (r.IdaraId_FK = @idaraID or r.IdaraId_FK is null);
 
 
             
@@ -125,17 +125,46 @@ BEGIN
 
             -- services
 
-            select 
-             (select count(*) from Housing.MeterServiceTypeLinkedWithIdara m 
-                inner join Housing.MeterServiceTypeFixedAmount f on m.MeterServiceTypeID_FK = f.MeterServiceTypeID_FK
-                where m.MeterServiceTypeLinkedWithIdaraActive = 1 and m.Idara_FK = @idaraID and m.MeterServiceTypeID_FK = 1) ElectrictyService
-                ,(select count(*) from Housing.MeterServiceTypeLinkedWithIdara m 
-                  inner join Housing.MeterServiceTypeFixedAmount f on m.MeterServiceTypeID_FK = f.MeterServiceTypeID_FK
-                where m.MeterServiceTypeLinkedWithIdaraActive = 1 and m.Idara_FK = @idaraID and m.MeterServiceTypeID_FK = 2) WaterService
-                ,(select count(*) from Housing.MeterServiceTypeLinkedWithIdara m
-                  inner join Housing.MeterServiceTypeFixedAmount f on m.MeterServiceTypeID_FK = f.MeterServiceTypeID_FK
-                  where m.MeterServiceTypeLinkedWithIdaraActive = 1 and m.Idara_FK = @idaraID and m.MeterServiceTypeID_FK = 3) GasService
+            --select 
+            -- (select count(*) from Housing.MeterServiceTypeLinkedWithIdara m 
+            --    inner join Housing.MeterServiceTypeFixedAmount f on m.MeterServiceTypeID_FK = f.MeterServiceTypeID_FK
+            --    where m.MeterServiceTypeLinkedWithIdaraActive = 1 and (m.Idara_FK = @idaraID or m.Idara_FK is null) and m.MeterServiceTypeID_FK = 1) ElectrictyService
+            --    ,(select count(*) from Housing.MeterServiceTypeLinkedWithIdara m 
+            --      inner join Housing.MeterServiceTypeFixedAmount f on m.MeterServiceTypeID_FK = f.MeterServiceTypeID_FK
+            --    where m.MeterServiceTypeLinkedWithIdaraActive = 1 and (m.Idara_FK = @idaraID or m.Idara_FK is null) and m.MeterServiceTypeID_FK = 2) WaterService
+            --    ,(select count(*) from Housing.MeterServiceTypeLinkedWithIdara m
+            --      inner join Housing.MeterServiceTypeFixedAmount f on m.MeterServiceTypeID_FK = f.MeterServiceTypeID_FK
+            --      where m.MeterServiceTypeLinkedWithIdaraActive = 1 and (m.Idara_FK = @idaraID or m.Idara_FK is null) and m.MeterServiceTypeID_FK = 3) GasService
 
+
+            -- services
+SELECT
+    CONVERT(BIT, CASE WHEN EXISTS
+    (
+        SELECT 1
+        FROM Housing.MeterServiceTypeLinkedWithIdara m
+        WHERE m.MeterServiceTypeLinkedWithIdaraActive = 1
+          AND (m.Idara_FK = @idaraID OR m.Idara_FK IS NULL)
+          AND m.MeterServiceTypeID_FK = 1
+    ) THEN 1 ELSE 0 END) AS ElectrictyService,
+
+    CONVERT(BIT, CASE WHEN EXISTS
+    (
+        SELECT 1
+        FROM Housing.MeterServiceTypeLinkedWithIdara m
+        WHERE m.MeterServiceTypeLinkedWithIdaraActive = 1
+          AND (m.Idara_FK = @idaraID OR m.Idara_FK IS NULL)
+          AND m.MeterServiceTypeID_FK = 2
+    ) THEN 1 ELSE 0 END) AS WaterService,
+
+    CONVERT(BIT, CASE WHEN EXISTS
+    (
+        SELECT 1
+        FROM Housing.MeterServiceTypeLinkedWithIdara m
+        WHERE m.MeterServiceTypeLinkedWithIdaraActive = 1
+          AND (m.Idara_FK = @idaraID OR m.Idara_FK IS NULL)
+          AND m.MeterServiceTypeID_FK = 3
+    ) THEN 1 ELSE 0 END) AS GasService;
 
 
                   --- is rent 

@@ -1,5 +1,6 @@
 ﻿
 
+
 CREATE   VIEW [Housing].[V_ResidentFinancialSummary]
 AS
 SELECT
@@ -17,9 +18,13 @@ SELECT
     -- إجمالي المدفوع من الإيجار
     ISNULL(
         (
-            SELECT SUM(p.amount)
-            FROM Housing.BuildingPayment p
-            WHERE p.generalNo_FK = f.generalNo_FK
+            
+SELECT SUM(p.amount)
+FROM Housing.BuildingPayment p
+WHERE p.generalNo_FK = f.generalNo_FK
+  AND p.BillChargeTypeID_FK = 1
+  AND p.buildingPayementActive = 1
+
         ), 0
     ) AS TotalRentBillsPaid,
 

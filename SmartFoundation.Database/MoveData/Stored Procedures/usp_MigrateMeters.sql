@@ -153,10 +153,17 @@ BEGIN
         )
         SELECT
             s.[meterReadID], s.[meterReadTypeID_FK], CONVERT(bigint, s.[meterID_FK]),
-            s.[billPeriodID_FK], CONVERT(bigint, resident.[residentInfoID]),
-            correction.[CorrectedGeneralNo], CONVERT(bigint, building.[buildingDetailsID]),
-            correction.[CorrectedBuildingNo], s.[dateOfRead], CONVERT(bigint, s.[meterReadValue]),
-            NULL, s.[meterReadActive], s.[CanceledBy], CONVERT(int, @IdaraId),
+            
+            s.[billPeriodID_FK],
+migratedResident.[residentInfoID],
+correction.[CorrectedGeneralNo],
+CONVERT(bigint, building.[buildingDetailsID]),
+            correction.[CorrectedBuildingNo], s.[dateOfRead], 
+            CONVERT(bigint, s.[meterReadValue]),
+NULL,
+s.[meterReadActive],
+s.[CanceledBy],
+CONVERT(int, @IdaraId),
             s.[entryDate], [MoveData].[fn_MapEntryData](s.[entryData]), [MoveData].[fn_MapHostName](s.[hostName], s.[entryData])
         FROM [KFMC].[Housing].[MeterRead] s
         CROSS APPLY
@@ -177,11 +184,50 @@ BEGIN
                         ELSE s.[buildingDetailsNo]
                     END) AS [CorrectedBuildingNo]
         ) correction
-        LEFT JOIN [KFMC].[Housing].[ResidentInfo] resident
-          ON resident.[generalNo] = correction.[CorrectedGeneralNo]
+        LEFT JOIN [KFMC].[Housing].[ResidentInfo] sourceOriginal
+    ON sourceOriginal.[generalNo] = s.[generalNo_FK]
+
+OUTER APPLY
+(
+    SELECT
+        CASE
+            WHEN sourceOriginal.[residentInfoID] IS NOT NULL
+             AND NOT EXISTS
+             (
+                 SELECT 1
+                 FROM [KFMC].[Housing].[ResidentDetails] d
+                 WHERE d.[generalNo_FK] =
+                       sourceOriginal.[generalNo]
+             )
+            THEN CONVERT(bit, 1)
+            ELSE CONVERT(bit, 0)
+        END AS ExcludedOriginalResident
+) ownership
+
+LEFT JOIN [KFMC].[Housing].[ResidentInfo] resident
+    ON resident.[generalNo] = correction.[CorrectedGeneralNo]
+
+LEFT JOIN [Housing].[ResidentInfo] migratedResident
+    ON migratedResident.[residentInfoID] =
+       CONVERT(bigint, resident.[residentInfoID])
+   AND EXISTS
+   (
+       SELECT 1
+       FROM [KFMC].[Housing].[ResidentDetails] eligible
+       WHERE eligible.[generalNo_FK] =
+             resident.[generalNo]
+   )
         LEFT JOIN [KFMC].[Housing].[BuildingDetails] building
           ON LTRIM(RTRIM(building.[buildingDetailsNo])) = LTRIM(RTRIM(correction.[CorrectedBuildingNo]))
-        WHERE NOT EXISTS (SELECT 1 FROM [Housing].[MeterRead] t WHERE t.[meterReadID] = s.[meterReadID]);
+        
+WHERE ownership.ExcludedOriginalResident = 0
+  AND NOT EXISTS
+  (
+      SELECT 1
+      FROM [Housing].[MeterRead] t
+      WHERE t.[meterReadID] = s.[meterReadID]
+  );
+
         SET @ReadsInserted = @@ROWCOUNT;
 
         SELECT @ResidentReadsCorrected=COUNT_BIG(*)
