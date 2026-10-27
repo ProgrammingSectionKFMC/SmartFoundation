@@ -11,6 +11,7 @@ using SmartFoundation.DataEngine.Core.Utilities;
 using SmartFoundation.Mvc.Controllers;
 using SmartFoundation.Mvc.Middleware;
 using SmartFoundation.Mvc.Services.Chart;
+using SmartFoundation.Mvc.Services.DataLoad;
 using SmartFoundation.Mvc.Services.Exports.Pdf;
 using System.Text.Json;
 
@@ -110,6 +111,7 @@ builder.Services.AddHsts(o =>
 builder.Services.AddSingleton<ConnectionFactory>();
 builder.Services.AddScoped<ISmartComponentService, SmartComponentService>();
 builder.Services.AddScoped<CrudController>();
+builder.Services.AddScoped<RequestScopedDataLoadService>();
 builder.Services.AddScoped<IPdfExportService, QuestPdfExportService>();
 builder.Services.AddApplicationServices();
 builder.Services.AddHttpContextAccessor();

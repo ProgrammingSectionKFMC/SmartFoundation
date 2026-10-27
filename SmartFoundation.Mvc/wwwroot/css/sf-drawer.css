@@ -233,3 +233,23 @@
         transition: none !important;
     }
 }
+
+.sf-modal-backdrop.sf-modal-backdrop--drawer {
+    z-index: 10000020 !important;
+}
+
+/* Flatpickr calendar above Modal opened from SmartDrawer */
+body:has(.sf-modal-backdrop--drawer) > .flatpickr-calendar.open {
+    z-index: 10000030 !important;
+}
+
+/* =====================================================
+   Financial Audit - Print Busy Modal above SmartDrawer
+   ===================================================== */
+
+body:has(#sf-audit-bills-drawer.is-open) .sf-modal-backdrop,
+body:has(#sf-audit-payments-drawer.is-open) .sf-modal-backdrop,
+body:has(#sf-user-audit-bills-drawer.is-open) .sf-modal-backdrop,
+body:has(#sf-user-audit-payments-drawer.is-open) .sf-modal-backdrop {
+    z-index: 10000030 !important;
+}

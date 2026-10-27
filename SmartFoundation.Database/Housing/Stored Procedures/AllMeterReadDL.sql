@@ -255,7 +255,7 @@ AND EXISTS
     ----------------------------------------------------------------
     -- RESULTSET (3) MeterServiceType Options (SARGable + idara)
     ----------------------------------------------------------------
-    SELECT
+    SELECT distinct
           mst.meterServiceTypeID
         , mst.meterServiceTypeName_A
         , mst.BillChargeTypeID_FK

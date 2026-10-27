@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using SmartFoundation.Mvc.Services.DataLoad;
 using SmartFoundation.MVC.Reports;
 using SmartFoundation.UI.ViewModels.SmartForm;
 using SmartFoundation.UI.ViewModels.SmartPage;
@@ -8,11 +9,12 @@ using System.Data;
 using System.Linq;
 using System.Text.Json;
 
+
 namespace SmartFoundation.Mvc.Controllers.Housing
 {
     public partial class HousingController : Controller
     {
-        public async Task<IActionResult> HousingExtend(int pdf = 0, int? rowId = null)
+        public async Task<IActionResult> HousingExtend([FromServices] RequestScopedDataLoadService requestDataLoad, int pdf = 0, int? rowId = null)
         {
             //  قراءة السيشن والكونتكست
             if (!InitPageContext(out var redirect))
@@ -21,18 +23,41 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             ControllerName = nameof(Housing);
             PageName = string.IsNullOrWhiteSpace(PageName) ? "HousingExtend" : PageName;
 
-            var spParameters = new object?[]
+            //var spParameters = new object?[]
+            //{
+            // PageName ?? "HousingExtend",
+            // IdaraId,
+            // usersId,
+            // HostName
+            //};
+
+            var ddlParameters = new Dictionary<string, object?>(
+               StringComparer.OrdinalIgnoreCase)
             {
-             PageName ?? "HousingExtend",
-             IdaraId,
-             usersId,
-             HostName
+                ["pageName_"] = PageName ?? "FinancialAuditForUser"
             };
+
+            if (IdaraId != null)
+                ddlParameters["idaraID"] = Convert.ToInt32(IdaraId);
+
+            if (usersId != null)
+                ddlParameters["entrydata"] = Convert.ToInt32(usersId);
+
+            if (HostName != null)
+                ddlParameters["hostname"] = HostName;
+
+            // معاملات تحميل بيانات الصفحة.
+            // نضيف رقم الهوية فقط عند وجوده.
+            var pageParameters = new Dictionary<string, object?>(
+                ddlParameters,
+                StringComparer.OrdinalIgnoreCase);
 
             var rowsList = new List<Dictionary<string, object?>>();
             var dynamicColumns = new List<TableColumn>();
 
-            DataSet ds = await _mastersServies.GetDataLoadDataSetAsync(spParameters);
+            //DataSet ds = await _mastersServies.GetDataLoadDataSetAsync(spParameters);
+            DataSet ds = await requestDataLoad.GetDataLoadDataSetAsync(pageParameters);
+
 
             //  تقسيم الداتا سيت للجدول الأول + جداول أخرى
             SplitDataSet(ds);
@@ -58,33 +83,106 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             List<OptionItem> ExtendInsuranceTypeOptions = new();
 
 
-            // ---------------------- DDLValues ----------------------
+            DataSet ddlDs = await requestDataLoad
+                   .GetDataLoadDataSetAsync(ddlParameters);
 
-            JsonResult? result;
-            string json;
+            static List<OptionItem> ReadOptions(
+                DataSet source,
+                int tableIndex,
+                string textColumn,
+                string valueColumn)
+            {
+                if (tableIndex < 0 ||
+                    tableIndex >= source.Tables.Count)
+                {
+                    throw new InvalidOperationException(
+                        $"DDL table index {tableIndex} not found.");
+                }
 
-            //// ---------------------- rankOptions ----------------------
-            result = await _CrudController.GetDDLValues(
-                "ExtendReasonTypeName_A", "ExtendReasonTypeID", "2", nameof(HousingExtend), usersId, IdaraId, HostName
-           ) as JsonResult;
+                DataTable table = source.Tables[tableIndex];
+
+                if (!table.Columns.Contains(textColumn) ||
+                    !table.Columns.Contains(valueColumn))
+                {
+                    throw new InvalidOperationException(
+                        $"DDL columns mismatch at table {tableIndex}.");
+                }
+
+                var options = new List<OptionItem>();
+
+                foreach (DataRow row in table.Rows)
+                {
+                    string value = row[valueColumn]
+                        ?.ToString()?.Trim() ?? "";
+
+                    string text = row[textColumn]
+                        ?.ToString()?.Trim() ?? "";
+
+                    if (!string.IsNullOrEmpty(value))
+                    {
+                        options.Add(new OptionItem
+                        {
+                            Value = value,
+                            Text = text
+                        });
+                    }
+                }
+
+                if (options.Count == 0)
+                {
+                    options.Add(new OptionItem
+                    {
+                        Value = "-1",
+                        Text = "لاتوجد خيارات"
+                    });
+                }
+
+                return options;
+            }
+
+            ExtendTypeOptions = ReadOptions(
+                ddlDs,
+                2,
+                "ExtendReasonTypeName_A",
+                "ExtendReasonTypeID");
+
+            ExtendInsuranceTypeOptions = ReadOptions(
+                ddlDs,
+                3,
+                "ExtendInsuranceTypeName_A",
+                "ExtendInsuranceTypeID");
+
+           
+
+            // END DDL
+
+            // // ---------------------- DDLValues ----------------------
+
+            // JsonResult? result;
+            // string json;
+
+            // //// ---------------------- rankOptions ----------------------
+            // result = await _CrudController.GetDDLValues(
+            //     "ExtendReasonTypeName_A", "ExtendReasonTypeID", "2", nameof(HousingExtend), usersId, IdaraId, HostName
+            //) as JsonResult;
 
 
-            json = JsonSerializer.Serialize(result!.Value);
+            // json = JsonSerializer.Serialize(result!.Value);
 
-            ExtendTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+            // ExtendTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
-            //// ---------------------- rankOptions ----------------------
-            result = await _CrudController.GetDDLValues(
-                "ExtendInsuranceTypeName_A", "ExtendInsuranceTypeID", "3", nameof(HousingExtend), usersId, IdaraId, HostName
-           ) as JsonResult;
-
-
-            json = JsonSerializer.Serialize(result!.Value);
-
-            ExtendInsuranceTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+            // //// ---------------------- rankOptions ----------------------
+            // result = await _CrudController.GetDDLValues(
+            //     "ExtendInsuranceTypeName_A", "ExtendInsuranceTypeID", "3", nameof(HousingExtend), usersId, IdaraId, HostName
+            //) as JsonResult;
 
 
-            //// ---------------------- END DDL ----------------------
+            // json = JsonSerializer.Serialize(result!.Value);
+
+            // ExtendInsuranceTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+
+
+            // //// ---------------------- END DDL ----------------------
 
             try
             {

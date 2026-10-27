@@ -2112,6 +2112,7 @@
             selectAll: false,
             modal: {
                 open: false,
+                isPrintBusy: false,
                 title: "",
                 message: "",
                 messageClass: "",
@@ -4122,6 +4123,27 @@
                     const confirmText = action.confirmText ?? action.ConfirmText ?? "";
                     if (confirmText && !confirm(confirmText)) return;
 
+
+                    const openAccordionModalFlag = !!(
+                        action.openAccordionModal ?? action.OpenAccordionModal
+                    );
+                    if (openAccordionModalFlag) {
+                        const accordionId = String(
+                            action.accordionId ?? action.AccordionId ?? ""
+                        ).trim().replace(/^#/, "");
+                        const selectedRow = row ?? this.getSelectedRowFromCurrentData?.() ?? null;
+                        if (!selectedRow) {
+                            this.showToast("يرجى اختيار السداد المطلوب أولاً", "error");
+                            return;
+                        }
+                        if (!window.SmartAccordion?.openModal?.(accordionId, selectedRow)) {
+                            this.showToast("تعذر فتح سجل التفاصيل", "error");
+                        }
+                        return;
+                    }
+
+
+
                     const clickJs = action.onClickJs ?? action.OnClickJs ?? "";
                     if (clickJs && String(clickJs).trim()) {
                         try {
@@ -4439,6 +4461,10 @@ if (subtitleElement) {
             },
 
             async openModal(action, row) {
+                this.modal.fromDrawer =
+                    !!this.$el?.closest?.('[data-sf-drawer]');
+                this.modal.isPrintBusy = false;
+
                 this.modal.open = true;
                 window.__sfTableActive = this;
 
@@ -6177,6 +6203,7 @@ if (subtitleElement) {
                 }
                 if (window.__sfPrintSession?.active) window.__sfPrintSession.canceled = true;
 
+                this.modal.isPrintBusy = false;
                 this.modal.open = false;
                 this.modal.html = "";
                 this.modal.action = null;
@@ -8135,6 +8162,7 @@ if (subtitleElement) {
             showBusyPrint(message = "جاري تجهيز البيانات للطباعة...", opts = {}) {
                 const isHtml = (opts.isHtml === true);
 
+                this.modal.isPrintBusy = true;
                 this.modal.open = true;
                 window.__sfTableActive = this;
                 window.__sfTableLastActive = this;
@@ -8156,6 +8184,7 @@ if (subtitleElement) {
             hideBusyPrint() {
                 this.modal.loading = false;
                 this.modal.open = false;
+                this.modal.isPrintBusy = false;
             },
 
             bindPrintListenerOnce() {

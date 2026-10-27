@@ -752,6 +752,25 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 PanelTitle = dsModel.PanelTitle,
                 PanelIcon = "fa-home",
                 Form = form,
+                Panel = new SmartPagePanelConfig
+                {
+                    Show = true,
+                    ShowIcon = true,
+                    ShowSubtitle = true,
+                    ShowDescription = true,
+                    ShowBadges = true,
+                    Layout = "compact",
+                    Title = "اضافة الفراغات التابعة للمبنى",
+                    Subtitle = "اضافة جميع الفراغات المتعلقة بالبمنى",
+                    Description = "يجب اختيار نوع الفراغ بدقة لان ذلك قد يؤثر على احتساب الفواتير للمبنى بحيث ان كل فراغ يحتب بسعر مختلف حسب النظام الجديد ",
+                    Icon = "fa-user-group",
+                    Badges = new List<SmartPagePanelBadge>
+                    {
+                        new() { Label = "البحث", Value = "البحث عن المبنى", Icon = "fa-solid fa-search", Tone = "success" },
+                        new() { Label = "بدء الاجراء", Value = "اضافة فراغ", Icon = "fa-solid fa-bed", Tone = "info" },
+                        new() { Label = "اكمال الاجراء", Value = "التحقق من البيانات ثم الاضافة", Icon = "fa-solid fa-check", Tone = "default" }
+                    }
+                },
                 //TableDS = dsModel
                 TableDS = ready ? dsModel : null
 

@@ -1,10 +1,11 @@
-CREATE PROCEDURE [Housing].[SyncRentExemptionPayments]
+﻿CREATE PROCEDURE [Housing].[SyncRentExemptionPayments]
       @Action                    NVARCHAR(20)
     , @ResidentRentExemptionID   BIGINT
     , @ThroughDate               DATE = NULL
     , @SourceType                NVARCHAR(30) = N'MANUAL'
     , @EntryData                 NVARCHAR(20) = NULL
     , @HostName                  NVARCHAR(200) = NULL
+    , @TargetBillsID BIGINT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -25,6 +26,28 @@ BEGIN
         BEGIN
             ;THROW 50001, N'رقم الإعفاء مطلوب لمعالجة سدادات الإعفاء', 1;
         END;
+
+        /* منع استخدام الإلغاء العام على فاتورة محددة */
+IF @TargetBillsID IS NOT NULL
+   AND @Action <> N'GENERATE'
+BEGIN
+    THROW 50001,
+          N'لا يمكن استخدام إلغاء الإعفاء العام لفاتورة محددة.',
+          1;
+END;
+
+/* معالجة إعفاء الإخلاء يجب أن تستهدف فاتورة محددة */
+IF @SourceType = N'EXIT_RENT'
+   AND
+   (
+       @Action <> N'GENERATE'
+       OR @TargetBillsID IS NULL
+   )
+BEGIN
+    THROW 50001,
+          N'يجب تحديد فاتورة الإخلاء عند معالجة إعفائها.',
+          1;
+END;
 
         IF @Action = N'CANCEL'
         BEGIN
@@ -146,6 +169,36 @@ BEGIN
 
         SET @ThroughDate = ISNULL(@ThroughDate, CAST(GETDATE() AS date));
 
+        /* التحقق من الفاتورة المستهدفة */
+IF @TargetBillsID IS NOT NULL
+BEGIN
+    IF NOT EXISTS
+    (
+        SELECT 1
+        FROM Housing.Bills b WITH (UPDLOCK, HOLDLOCK)
+        WHERE b.BillsID = @TargetBillsID
+          AND b.residentInfoID_FK = @ResidentInfoID
+          AND b.buildingDetailsID = @BuildingDetailsID
+          AND b.idaraID_FK = @IdaraID
+          AND b.BillChargeTypeID_FK = 1
+          AND b.BillActive = 1
+          AND
+          (
+              @SourceType <> N'EXIT_RENT'
+              OR
+              (
+                  b.BillTypeID_FK = 3
+                  AND b.ExitRequestActionID_FK IS NOT NULL
+              )
+          )
+    )
+    BEGIN
+        THROW 50001,
+              N'الفاتورة المحددة غير موجودة أو لا تتبع المستفيد ودورة الإخلاء.',
+              1;
+    END;
+END;
+
         DECLARE billCursor CURSOR LOCAL FAST_FORWARD FOR
         SELECT
               bill.BillsID
@@ -158,6 +211,11 @@ BEGIN
           AND bill.idaraID_FK = @IdaraID
           AND bill.BillChargeTypeID_FK = 1
           AND bill.BillActive = 1
+          AND
+(
+    @TargetBillsID IS NULL
+    OR bill.BillsID = @TargetBillsID
+)
           AND CAST(bill.BillsFromDate AS date) <= ISNULL(@ExemptionEndDate, @ThroughDate)
           AND CAST(bill.BillsToDate AS date) >= @ExemptionStartDate
           AND CAST(bill.BillsFromDate AS date) <= @ThroughDate

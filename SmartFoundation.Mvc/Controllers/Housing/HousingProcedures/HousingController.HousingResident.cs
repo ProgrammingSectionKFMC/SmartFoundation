@@ -779,6 +779,25 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 PageTitle = dsModel.PageTitle,
                 PanelTitle = dsModel.PanelTitle,
                 PanelIcon = "fa-solid fa-user-group",
+                Panel = new SmartPagePanelConfig
+                {
+                    Show = true,
+                    ShowIcon = true,
+                    ShowSubtitle = true,
+                    ShowDescription = true,
+                    ShowBadges = true,
+                    Layout = "compact",
+                    Title = "اسكان المستفيدين",
+                    Subtitle = "انهاء اجراءات تسكين المستفيدين بعد الموافقة على المنزل",
+                    Description = "تنبيه مهم: لايمكن تسكين المستفيدين بأثر رجعي",
+                    Icon = "fa-user-group",
+                    Badges = new List<SmartPagePanelBadge>
+                    {
+                        new() { Label = "البحث", Value = "اختيار المستفيد", Icon = "fa-solid fa-search", Tone = "success" },
+                        new() { Label = "بدء الاجراء", Value = "تسجيل الملاحظات وطلب قراءة العدادات", Icon = "fa-solid fa-sign-in", Tone = "info" },
+                        new() { Label = "اعتماد التسكين", Value = "اعتماد تسكين المستفيد", Icon = "fa-solid fa-check", Tone = "default" }
+                    }
+                },
                 TableDS = dsModel
             };
 

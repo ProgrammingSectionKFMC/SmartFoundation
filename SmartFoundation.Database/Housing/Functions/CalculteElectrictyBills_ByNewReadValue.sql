@@ -219,7 +219,7 @@ Calc AS
         ReadDiff =
             CASE
                 WHEN x.CurrentRead < x.LastRead
-                    THEN (ISNULL(x.meterMaxRead,0) - x.LastRead) + x.CurrentRead
+                    THEN (ISNULL(x.meterMaxRead,0) + 1 - x.LastRead) + x.CurrentRead
                 ELSE (x.CurrentRead - x.LastRead)
             END
     FROM X x

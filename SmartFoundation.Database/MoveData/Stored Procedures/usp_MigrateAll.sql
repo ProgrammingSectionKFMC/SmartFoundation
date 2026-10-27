@@ -209,6 +209,31 @@ VALUES(
              @IdaraId=@IdaraId, @RollbackAfterTest=0;
         INSERT @ExecutionTiming VALUES(@CurrentStepNumber,@CurrentProcedure,@StepStartedAt,SYSDATETIME(),DATEDIFF_BIG(MILLISECOND,@StepStartedAt,SYSDATETIME()),'Succeeded',NULL,NULL);
 
+
+        /* Step 15: Register unfinished legacy exit cycles */
+
+SET @CurrentStepNumber = 15;
+SET @CurrentProcedure =
+    N'MoveData.usp_RegisterLegacyOpenExitCycles';
+SET @StepStartedAt = SYSDATETIME();
+
+EXEC MoveData.usp_RegisterLegacyOpenExitCycles
+     @IdaraId = @IdaraId,
+     @RollbackAfterTest = 0;
+
+INSERT @ExecutionTiming
+VALUES
+(
+    @CurrentStepNumber,
+    @CurrentProcedure,
+    @StepStartedAt,
+    SYSDATETIME(),
+    DATEDIFF_BIG(MILLISECOND, @StepStartedAt, SYSDATETIME()),
+    'Succeeded',
+    NULL,
+    NULL
+);
+
         SELECT
             @RollbackAfterTest [RollbackAfterTest],
             @CutoverDate [CutoverDate],

@@ -2694,7 +2694,7 @@ END;
                   , @buildingDetailsID            = @parameter_18
                   , @AssignPeriodID               = @parameter_20
                   , @LastActionID                 = @parameter_21
-                  , @ExitDate                     = @parameter_22
+                  , @ExitDate                     = @parameter_44
                   , @OccupentDate                 = @parameter_43
                   , @FinalExitDate                = @parameter_44
                   , @idaraID_FK                   = @idaraID
@@ -2723,7 +2723,7 @@ END;
                   , @buildingDetailsID            = @parameter_18
                   , @AssignPeriodID               = @parameter_20
                   , @LastActionID                 = @parameter_21
-                  , @ExitDate                     = @parameter_22
+                  , @ExitDate                     = @parameter_44
                   , @LastActionTypeID             = @parameter_16
                   , @OccupentDate                 = @parameter_43
                   , @FinalExitDate                = @parameter_44
@@ -2753,7 +2753,7 @@ END;
                   , @buildingDetailsID            = @parameter_18
                   , @AssignPeriodID               = @parameter_20
                   , @LastActionID                 = @parameter_21
-                  , @ExitDate                     = @parameter_22
+                  , @ExitDate                     = @parameter_44
                   , @OccupentDate                 = @parameter_43
                   , @FinalExitDate                = @parameter_44
                   , @idaraID_FK                   = @idaraID
@@ -2781,7 +2781,7 @@ END;
                   , @buildingDetailsID            = @parameter_18
                   , @AssignPeriodID               = @parameter_20
                   , @LastActionID                 = @parameter_21
-                  , @ExitDate                     = @parameter_22
+                  , @ExitDate                     = @parameter_44
                   , @LastActionTypeID             = @parameter_16
                   , @OccupentDate                 = @parameter_43
                   , @FinalExitDate                = @parameter_44
@@ -2829,7 +2829,7 @@ END;
                   , @buildingDetailsID            = @parameter_18
                   , @AssignPeriodID               = @parameter_20
                   , @LastActionID                 = @parameter_21
-                  , @ExitDate                     = @parameter_22
+                  , @ExitDate                     = @parameter_44
                   , @PenaltyPrice                 = @parameter_40
                   , @PenaltyReason                = @parameter_31
                   , @BillsID                      = @parameter_41
@@ -2881,7 +2881,7 @@ END;
                   , @buildingDetailsID            = @parameter_18
                   , @AssignPeriodID               = @parameter_20
                   , @LastActionID                 = @parameter_21
-                  , @ExitDate                     = @parameter_22
+                  , @ExitDate                     = @parameter_44
                   , @LastActionTypeID             = @parameter_16
                   , @OccupentDate                 = @parameter_43
                   , @FinalExitDate                = @parameter_44
@@ -3049,7 +3049,7 @@ END;
                   , @buildingDetailsID                  = @parameter_05
                   , @LastActionID                       = @parameter_21
                   , @PaymentType                        = @parameter_12
-                  --, @PaymentNo                          = @parameter_13
+                  , @PaymentNo                          = @parameter_13
                   --, @PaymentDate                        = @parameter_14
                   , @Amount                             = @parameter_39
                   , @FullRemining                       = @parameter_09
@@ -3102,26 +3102,7 @@ END;
                              
 
 
-              IF @ActionType = 'FinancialAuditForUser'
-            BEGIN
-                      INSERT INTO @Result(IsSuccessful, Message_)
-                EXEC [Housing].[FinancialAuditForUserSP]
-                    @Action                             = @ActionType
-                  , @ActionID                           = @parameter_22
-                  , @residentInfoID                     = @parameter_02
-                  , @Notes                              = @parameter_11
-                  , @buildingDetailsID                  = @parameter_03
-                  , @LastActionID                       = @parameter_21
-                  , @LastActionTypeID                   = @parameter_16
-                  , @ExitDate                           = @parameter_30
-                  , @LastActionExtendReasonTypeID       = @parameter_40
-                  , @idaraID_FK                         = @idaraID
-                  , @entryData                          = @entrydata
-                  , @hostName                           = @hostName;
-
-            END
-
-              ELSE IF @ActionType = 'PAYMENTANDREFUNDFORUSER'
+               IF @ActionType = 'PAYMENTANDREFUNDFORUSER'
             BEGIN
                         INSERT INTO @Result(IsSuccessful, Message_)
                 EXEC [Housing].[FinancialAuditForUserSP]
@@ -3156,7 +3137,7 @@ END;
                   , @buildingDetailsID                  = @parameter_05
                   , @LastActionID                       = @parameter_21
                   , @PaymentType                        = @parameter_12
-                  --, @PaymentNo                          = @parameter_13
+                  , @PaymentNo                          = @parameter_13
                   --, @PaymentDate                        = @parameter_14
                   , @Amount                             = @parameter_39
                   , @FullRemining                       = @parameter_09
@@ -3171,8 +3152,69 @@ END;
 
 
            
+           ELSE IF @ActionType = N'INSERTGENERALBALANCEREFUND'
+         BEGIN
+             INSERT INTO @Result(IsSuccessful, Message_)
+             EXEC Housing.FinancialAuditForUserSP
+                   @Action              = @ActionType
+                 , @residentInfoID      = @parameter_01
+                 , @BillChargeTypeID_FK = @parameter_02
+                 , @GeneralPaymentID    = @parameter_03
+                 , @Amount              = @parameter_04
+                 , @PaymentDate         = @parameter_05
+                 , @PaymentNo           = @parameter_06
+                 , @description         = @parameter_07
+                 , @GeneralRequestKey   = @parameter_08
+                 , @idaraID_FK          = @idaraID
+                 , @entryData           = @entrydata
+                 , @hostName            = @hostName;
+         END
 
+         ELSE IF @ActionType = N'CANCELGENERALBALANCEREFUND'
+         BEGIN
+    INSERT INTO @Result(IsSuccessful, Message_)
+    EXEC Housing.FinancialAuditForUserSP
+         @Action = @ActionType,
+         @ActionID = @parameter_22,
+         @Amount = N'0',
+         @description = @parameter_07,
+         @idaraID_FK = @idaraID,
+         @entryData = @entrydata,
+         @hostName = @hostName;
+END
             
+            ELSE IF @ActionType = N'LINKGENERALBALANCETOBUILDING'
+         BEGIN
+    INSERT INTO @Result(IsSuccessful, Message_)
+    EXEC Housing.FinancialAuditForUserSP
+          @Action              = @ActionType
+        , @residentInfoID      = @parameter_01
+        , @BillChargeTypeID_FK = @parameter_02
+        , @GeneralPaymentID    = @parameter_03
+        , @Amount              = @parameter_04
+        , @PaymentDate         = @parameter_05
+        , @PaymentNo           = @parameter_06
+        , @description         = @parameter_07
+        , @GeneralRequestKey   = @parameter_08
+        , @buildingDetailsID   = @parameter_09
+        , @idaraID_FK          = @idaraID
+        , @entryData           = @entrydata
+        , @hostName            = @hostName;
+END
+
+
+ELSE IF @ActionType = N'CANCELGENERALBALANCEBUILDINGALLOCATION'
+BEGIN
+    INSERT INTO @Result(IsSuccessful, Message_)
+    EXEC Housing.FinancialAuditForUserSP
+          @Action           = @ActionType
+        , @GeneralPaymentID = @parameter_22
+        , @Amount = N'0'
+        , @description      = @parameter_07
+        , @idaraID_FK       = @idaraID
+        , @entryData        = @entrydata
+        , @hostName         = @hostName;
+END
 
             ELSE
             BEGIN

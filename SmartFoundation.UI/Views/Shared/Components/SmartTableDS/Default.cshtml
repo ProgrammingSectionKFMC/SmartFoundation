@@ -1046,7 +1046,9 @@
 
             <template x-teleport="body">
                 <template x-if="modal.open">
-                    <div class="sf-modal-backdrop" x-transition.opacity>
+                    <div class="sf-modal-backdrop"
+     x-bind:class="{ 'sf-modal-backdrop--drawer': modal.fromDrawer }"
+     x-transition.opacity>
                         <div class="sf-modal" role="dialog" aria-modal="true" x-transition>
                             <div class="sf-modal-header">
                                 <h3 x-html="renderModalTitleHtml()"></h3>

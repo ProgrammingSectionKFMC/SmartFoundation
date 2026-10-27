@@ -86,23 +86,54 @@ BEGIN
    
 
 
-         IF @Action IN(N'MeterRead')
-        BEGIN
-         
-            IF NULLIF(LTRIM(RTRIM(@meterID)), N'') IS NULL
-            BEGIN
-                ;THROW 50001, N'معرف العداد غير مرسل بشكل صحيح', 1;
-            END
+         IF @Action IN
+(
+    N'MeterRead',
+    N'METERREADFOROCCUBENTANDEXIT',
+    N'UPDATEMETERREADFOROCCUBENTANDEXIT'
+)
+BEGIN
 
-          IF NULLIF(LTRIM(RTRIM(@NewMeterReadValue)), N'') IS NULL
-               OR TRY_CONVERT(BIGINT, @NewMeterReadValue) IS NULL
-               OR TRY_CONVERT(BIGINT, @NewMeterReadValue) < 0
-            BEGIN
-                ;THROW 50001, N'يجب إدخال قراءة عداد صحيحة (رقم صحيح موجب)', 1;
-            END
+    -- التحقق من معرف العداد
+    IF NULLIF(LTRIM(RTRIM(@meterID)), N'') IS NULL
+    BEGIN
+        ;THROW 50001, N'معرف العداد غير مرسل بشكل صحيح', 1;
+    END;
 
+    -- التحقق من أن القراءة رقم صحيح غير سالب
+    IF NULLIF(LTRIM(RTRIM(@NewMeterReadValue)), N'') IS NULL
+       OR TRY_CONVERT(BIGINT, @NewMeterReadValue) IS NULL
+       OR TRY_CONVERT(BIGINT, @NewMeterReadValue) < 0
+    BEGIN
+        ;THROW 50001, N'يجب إدخال قراءة عداد صحيحة (رقم صحيح غير سالب)', 1;
+    END;
 
-        END
+    -- بداية التعديل الجديد: التحقق من الحد الأعلى للعداد
+
+    DECLARE @ConfiguredMeterMaxRead BIGINT;
+
+    SELECT
+        @ConfiguredMeterMaxRead = mt.meterMaxRead
+    FROM Housing.Meter m
+    INNER JOIN Housing.MeterType mt
+        ON mt.meterTypeID = m.meterTypeID_FK
+    WHERE m.meterID = TRY_CONVERT(BIGINT, @meterID);
+
+    IF @ConfiguredMeterMaxRead IS NULL
+       OR @ConfiguredMeterMaxRead <= 0
+    BEGIN
+        ;THROW 50001, N'الحد الأقصى للعداد غير معرف بشكل صحيح', 1;
+    END;
+
+    IF TRY_CONVERT(BIGINT, @NewMeterReadValue)
+       > @ConfiguredMeterMaxRead
+    BEGIN
+        ;THROW 50001, N'القراءة المدخلة تتجاوز الحد الأقصى المسموح لهذا العداد', 1;
+    END;
+
+    -- نهاية التعديل الجديد
+
+END;
 
         
 
@@ -1293,8 +1324,12 @@ FROM Housing.CalculteElectrictyBills_ByNewReadValue_ForInsert(@meterID, @NewMete
             
 
 
-            SELECT 1 AS IsSuccessful, N'تم تسجيل القراءة واصدار الفاتورة بنجاح' AS Message_;
-            RETURN;
+            IF @tc = 0
+    COMMIT TRANSACTION;
+
+SELECT 1 AS IsSuccessful,
+       N'تم تسجيل القراءة واصدار الفاتورة بنجاح' AS Message_;
+RETURN;
 
          END
 
@@ -2489,7 +2524,8 @@ FROM Housing.CalculteElectrictyBills_ByNewReadValue_ForInsert(@meterID, @NewMete
 
            END
             
-
+            IF @tc = 0
+    COMMIT TRANSACTION;
             SELECT 1 AS IsSuccessful, N'تم تعديل قراءة العداد بنجاح' AS Message_;
             RETURN;
         END
@@ -2613,7 +2649,362 @@ FROM Housing.CalculteElectrictyBills_ByNewReadValue_ForInsert(@meterID, @NewMete
             END
 
 
+            /* ==========================================================
+   SERVER-SIDE METER READINGS COMPLETENESS GUARD
 
+   Applies to:
+       46 -> 47 : Occupancy
+       59 -> 60 : Exit
+
+   Must run before INSERT INTO Housing.BuildingAction.
+
+   No changes to meter pricing or bill calculations.
+   ========================================================== */
+
+DECLARE
+      @QA_StageType INT
+    , @QA_StageActionID BIGINT
+    , @QA_ResidentID BIGINT
+    , @QA_GeneralNo BIGINT
+    , @QA_BuildingID BIGINT
+    , @QA_IdaraID INT
+    , @QA_EffectiveDate DATE
+    , @QA_ExpectedReadType INT
+    , @QA_ExpectedBillType INT
+    , @QA_LockResult INT
+    , @QA_LockResource NVARCHAR(255);
+
+
+-- 1. حجز العملية لمنع اعتمادين متزامنين.
+
+IF @ActionID IS NULL OR @IdaraID_INT IS NULL
+BEGIN
+    THROW 50001,
+        N'بيانات نطاق اعتماد قراءات العدادات غير صحيحة.',
+        1;
+END;
+
+SET @QA_LockResource =
+    CONCAT(
+        N'ApproveMeterRead:',
+        @IdaraID_INT,
+        N':',
+        @ActionID
+    );
+
+EXEC @QA_LockResult = sys.sp_getapplock
+      @Resource    = @QA_LockResource
+    , @LockMode    = N'Exclusive'
+    , @LockOwner   = N'Transaction'
+    , @LockTimeout = 15000;
+
+IF @QA_LockResult < 0
+BEGIN
+    THROW 50001,
+        N'تعذر حجز عملية اعتماد قراءات العدادات.',
+        1;
+END;
+
+
+-- 2. قراءة بيانات الدورة الحالية من الخادم.
+
+SELECT
+      @QA_StageType = w.LastActionTypeID
+    , @QA_StageActionID =
+        TRY_CONVERT(BIGINT, w.LastActionID)
+    , @QA_ResidentID =
+        TRY_CONVERT(BIGINT, w.residentInfoID)
+    , @QA_GeneralNo =
+        TRY_CONVERT(BIGINT, w.GeneralNo)
+    , @QA_BuildingID =
+        TRY_CONVERT(BIGINT, w.buildingDetailsID)
+    , @QA_IdaraID =
+        TRY_CONVERT(INT, w.IdaraId)
+    ,@QA_EffectiveDate =
+    CASE
+        WHEN w.LastActionTypeID = 59
+            THEN TRY_CONVERT(DATE, w.ExitDate)
+
+        WHEN w.LastActionTypeID = 46
+            THEN COALESCE(
+                TRY_CONVERT(DATE, w.LastActionDate),
+                (
+                    SELECT CAST(
+                        COALESCE(a.buildingActionDate, a.entryDate)
+                        AS DATE
+                    )
+                    FROM Housing.BuildingAction a
+                    WHERE a.buildingActionID =
+                          TRY_CONVERT(BIGINT, w.LastActionID)
+                      AND a.buildingActionTypeID_FK = 46
+                      AND a.buildingActionActive = 1
+                      AND a.residentInfoID_FK =
+                          TRY_CONVERT(BIGINT, w.residentInfoID)
+                      AND a.generalNo_FK =
+                          TRY_CONVERT(BIGINT, w.GeneralNo)
+                      AND a.buildingDetailsID_FK =
+                          TRY_CONVERT(BIGINT, w.buildingDetailsID)
+                      AND a.IdaraId_FK =
+                          TRY_CONVERT(INT, w.IdaraId)
+                )
+            )
+
+        ELSE TRY_CONVERT(DATE, w.LastActionDate)
+    END
+FROM Housing.V_WaitingList w
+WHERE w.ActionID = @ActionID;
+
+
+-- 3. التحقق من المرحلة والمستفيد والمسكن والإدارة.
+
+IF
+       @QA_StageType IS NULL
+    OR @QA_StageType NOT IN (46, 59)
+    OR @QA_StageActionID IS NULL
+    OR @QA_ResidentID IS NULL
+    OR @QA_GeneralNo IS NULL
+    OR @QA_BuildingID IS NULL
+    OR @QA_IdaraID IS NULL
+    OR @QA_EffectiveDate IS NULL
+
+    OR TRY_CONVERT(BIGINT, @residentInfoID) IS NULL
+    OR TRY_CONVERT(BIGINT, @GeneralNo) IS NULL
+    OR TRY_CONVERT(BIGINT, @buildingDetailsID) IS NULL
+    OR TRY_CONVERT(BIGINT, @LastActionID) IS NULL
+
+    OR @QA_ResidentID <> TRY_CONVERT(BIGINT, @residentInfoID)
+    OR @QA_GeneralNo <> TRY_CONVERT(BIGINT, @GeneralNo)
+    OR @QA_BuildingID <> TRY_CONVERT(BIGINT, @buildingDetailsID)
+    OR @QA_IdaraID <> @IdaraID_INT
+    OR @QA_StageActionID <> TRY_CONVERT(BIGINT, @LastActionID)
+
+    OR TRY_CONVERT(INT, @buildingActionRoot) IS NULL
+    OR (
+        @QA_StageType = 59
+        AND TRY_CONVERT(INT, @buildingActionRoot) <> 2
+    )
+    OR (
+        @QA_StageType = 46
+        AND TRY_CONVERT(INT, @buildingActionRoot) <> 1
+    )
+BEGIN
+    THROW 50001,
+        N'بيانات طلب اعتماد القراءات لا تطابق المرحلة الحالية.',
+        1;
+END;
+
+
+-- 4. تحديد نوع القراءة والفاتورة حسب العملية.
+
+SET @QA_ExpectedReadType =
+    CASE
+        WHEN @QA_StageType = 59 THEN 3
+        ELSE 1
+    END;
+
+SET @QA_ExpectedBillType =
+    CASE
+        WHEN @QA_StageType = 59 THEN 3
+        WHEN @QA_StageType = 46 THEN 1
+    END;
+
+
+-- 5. حصر العدادات المفوترة المؤهلة في تاريخ العملية.
+
+DECLARE @QA_EligibleMeters TABLE
+(
+      MeterID BIGINT NOT NULL PRIMARY KEY
+    , ServiceTypeID INT NOT NULL
+);
+
+INSERT INTO @QA_EligibleMeters
+(
+    MeterID,
+    ServiceTypeID
+)
+SELECT DISTINCT
+      m.meterID
+    , mt.meterServiceTypeID_FK
+FROM Housing.MeterForBuilding l WITH (UPDLOCK, HOLDLOCK)
+
+INNER JOIN Housing.Meter m
+    ON m.meterID = l.meterID_FK
+
+INNER JOIN Housing.MeterType mt
+    ON mt.meterTypeID = m.meterTypeID_FK
+
+WHERE l.buildingDetailsID_FK = @QA_BuildingID
+  AND l.IdaraID_FK = @QA_IdaraID
+  AND l.meterForBuildingActive = 1
+
+  AND (
+        l.meterForBuildingStartDate IS NULL
+        OR CAST(l.meterForBuildingStartDate AS DATE)
+           <= @QA_EffectiveDate
+      )
+  AND (
+        l.meterForBuildingEndDate IS NULL
+        OR CAST(l.meterForBuildingEndDate AS DATE)
+           >= @QA_EffectiveDate
+      )
+
+  AND m.meterActive = 1
+  AND (
+        m.meterStartDate IS NULL
+        OR CAST(m.meterStartDate AS DATE)
+           <= @QA_EffectiveDate
+      )
+  AND (
+        m.meterEndDate IS NULL
+        OR CAST(m.meterEndDate AS DATE)
+           >= @QA_EffectiveDate
+      )
+
+  AND mt.meterTypeActive = 1
+  AND mt.IdaraId_FK = @QA_IdaraID
+
+  -- العدادات التي تعتمد على قراءة استهلاك.
+  AND mt.MeterCalculateTypeID_FK = 1
+
+  AND (
+        mt.meterTypeStartDate IS NULL
+        OR CAST(mt.meterTypeStartDate AS DATE)
+           <= @QA_EffectiveDate
+      )
+  AND (
+        mt.meterTypeEndDate IS NULL
+        OR CAST(mt.meterTypeEndDate AS DATE)
+           >= @QA_EffectiveDate
+      );
+
+
+-- 6. يجب وجود عدادات مؤهلة لهذه المرحلة.
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM @QA_EligibleMeters
+)
+BEGIN
+    THROW 50001,
+        N'لا توجد عدادات مفوترة مؤهلة للاعتماد في هذه الدورة.',
+        1;
+END;
+
+
+-- 7. منع الاعتماد إذا كانت قراءة أو فاتورة أي عداد ناقصة.
+
+IF EXISTS
+(
+    SELECT 1
+    FROM @QA_EligibleMeters e
+
+    OUTER APPLY
+    (
+        SELECT
+              COUNT(DISTINCT r.meterReadID) AS ReadCount
+            , COUNT(DISTINCT b.BillsID) AS BillCount
+
+        FROM Housing.MeterRead r
+
+        LEFT JOIN Housing.Bills b
+            ON b.meterReadID = r.meterReadID
+           AND b.meterID = e.MeterID
+           AND b.BillActive = 1
+           AND b.BillTypeID_FK = @QA_ExpectedBillType
+           AND b.meterServiceTypeID = e.ServiceTypeID
+           AND
+(
+    (
+        @QA_StageType = 59
+        AND b.residentInfoID_FK = @QA_ResidentID
+        AND b.generalNo_FK = @QA_GeneralNo
+    )
+    OR
+    (
+        @QA_StageType = 46
+        AND b.residentInfoID_FK IS NULL
+        AND b.generalNo_FK IS NULL
+    )
+)
+           AND b.buildingDetailsID = @QA_BuildingID
+           AND b.idaraID_FK = @QA_IdaraID
+           AND b.BillChargeTypeID_FK IN (2, 3, 4)
+
+        WHERE r.meterID_FK = e.MeterID
+          AND r.meterReadActive = 1
+          AND r.meterReadTypeID_FK = @QA_ExpectedReadType
+
+          -- القراءة يجب أن تخص المرحلة الحالية.
+          AND r.buildingActionID_FK = @QA_StageActionID
+
+          AND r.residentInfoID_FK = @QA_ResidentID
+          AND r.generalNo_FK = @QA_GeneralNo
+          AND r.buildingDetailsID = @QA_BuildingID
+          AND r.IdaraID_FK = @QA_IdaraID
+
+    ) coverage
+
+    WHERE coverage.ReadCount <> 1
+       OR coverage.BillCount <> 1
+)
+BEGIN
+    THROW 50001,
+        N'لا يمكن اعتماد القراءات؛ توجد عدادات مفوترة دون قراءة وفاتورة صحيحتين لهذه الدورة.',
+        1;
+END;
+
+
+-- 8. التأكد من أن القراءة والفاتورة المرسلتين للاعتماد
+--    تخصان الدورة الحالية وليستا من دورة قديمة.
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM @QA_EligibleMeters e
+
+    INNER JOIN Housing.MeterRead r
+        ON r.meterID_FK = e.MeterID
+       AND r.meterReadID = TRY_CONVERT(BIGINT, @meterReadID)
+       AND r.meterReadActive = 1
+       AND r.meterReadTypeID_FK = @QA_ExpectedReadType
+       AND r.buildingActionID_FK = @QA_StageActionID
+       AND r.residentInfoID_FK = @QA_ResidentID
+       AND r.generalNo_FK = @QA_GeneralNo
+       AND r.buildingDetailsID = @QA_BuildingID
+       AND r.IdaraID_FK = @QA_IdaraID
+
+    INNER JOIN Housing.Bills b
+        ON b.meterReadID = r.meterReadID
+       AND b.BillsID = TRY_CONVERT(BIGINT, @BillsID)
+       AND b.meterID = e.MeterID
+       AND b.BillActive = 1
+       AND b.BillTypeID_FK = @QA_ExpectedBillType
+       AND b.meterServiceTypeID = e.ServiceTypeID
+       AND
+(
+    (
+        @QA_StageType = 59
+        AND b.residentInfoID_FK = @QA_ResidentID
+        AND b.generalNo_FK = @QA_GeneralNo
+    )
+    OR
+    (
+        @QA_StageType = 46
+        AND b.residentInfoID_FK IS NULL
+        AND b.generalNo_FK IS NULL
+    )
+)
+AND b.buildingDetailsID = @QA_BuildingID
+       AND b.idaraID_FK = @QA_IdaraID
+)
+BEGIN
+    THROW 50001,
+        N'قراءة أو فاتورة التأكيد غير مرتبطة بدورة الاعتماد الحالية.',
+        1;
+END;
+
+/* END SERVER-SIDE COMPLETENESS GUARD */
 
                 
                       INSERT INTO  Housing.BuildingAction
@@ -2702,7 +3093,8 @@ FROM Housing.CalculteElectrictyBills_ByNewReadValue_ForInsert(@meterID, @NewMete
            
           
             
-
+            IF @tc = 0
+    COMMIT TRANSACTION;
             SELECT 1 AS IsSuccessful, N'تم اعتماد القراءات بنجاح' AS Message_;
             RETURN;
         END

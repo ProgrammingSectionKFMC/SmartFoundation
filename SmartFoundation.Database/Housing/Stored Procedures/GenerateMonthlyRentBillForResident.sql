@@ -1,4 +1,4 @@
-CREATE PROCEDURE [Housing].[GenerateMonthlyRentBillForResident]
+﻿CREATE   PROCEDURE [Housing].[GenerateMonthlyRentBillForResident]
 (
       @ResidentInfoID    BIGINT
     , @GeneralNo         BIGINT
@@ -19,7 +19,12 @@ BEGIN
     DECLARE @MonthStart DATE;
     DECLARE @MonthEnd DATE;
     DECLARE @BillingFromDate DATE;
-    DECLARE @LastBilledToDate DATE;
+    DECLARE @UnbilledRanges TABLE
+(
+    GapFrom DATE NOT NULL,
+    GapTo   DATE NOT NULL,
+    PRIMARY KEY (GapFrom, GapTo)
+);
 
     BEGIN TRY
         IF @TransactionCount = 0
@@ -38,44 +43,121 @@ BEGIN
         SET @MonthStart = DATEFROMPARTS(@Year, @Month, 1);
         SET @MonthEnd = EOMONTH(@MonthStart);
 
-        SELECT @LastBilledToDate = MAX(CAST(b.BillsToDate AS date))
-        FROM Housing.Bills b
-        WHERE b.residentInfoID_FK = @ResidentInfoID
-          AND b.buildingDetailsID = @BuildingDetailsID
-          AND b.idaraID_FK = @IdaraID
-          AND b.BillChargeTypeID_FK = 1
-          AND b.BillActive = 1
-          AND CAST(b.BillsFromDate AS date) <= @MonthEnd
-          AND CAST(b.BillsToDate AS date) >= DATEADD(DAY, -1, @MonthStart);
-
         SET @BillingFromDate =
-            CASE
-                WHEN @OccupentDate > @MonthStart THEN @OccupentDate
-                ELSE @MonthStart
-            END;
+    CASE
+        WHEN @OccupentDate > @MonthStart
+            THEN @OccupentDate
+        ELSE @MonthStart
+    END;
 
-        IF @LastBilledToDate IS NOT NULL
-           AND DATEADD(DAY, 1, @LastBilledToDate) > @BillingFromDate
-        BEGIN
-            SET @BillingFromDate = DATEADD(DAY, 1, @LastBilledToDate);
-        END;
+IF @BillingFromDate <= @MonthEnd
+BEGIN
 
-        IF @BillingFromDate <= @MonthEnd
-        BEGIN
+    /* تحديد جميع الأيام غير المفوترة داخل الشهر */
+    ;WITH DayNumbers AS
+    (
+        SELECT 0 AS DayNumber
+
+        UNION ALL
+
+        SELECT DayNumber + 1
+        FROM DayNumbers
+        WHERE DayNumber <
+              DATEDIFF(DAY, @BillingFromDate, @MonthEnd)
+    ),
+    UnbilledDays AS
+    (
+        SELECT
+            DATEADD(DAY, n.DayNumber, @BillingFromDate)
+                AS MissingDay
+        FROM DayNumbers n
+        WHERE NOT EXISTS
+        (
+            SELECT 1
+            FROM Housing.Bills b WITH (UPDLOCK, HOLDLOCK)
+            WHERE b.residentInfoID_FK = @ResidentInfoID
+              AND b.buildingDetailsID = @BuildingDetailsID
+              AND b.idaraID_FK = @IdaraID
+              AND b.BillChargeTypeID_FK = 1
+              AND b.BillActive = 1
+              AND CAST(b.BillsFromDate AS DATE)
+                  <= DATEADD(DAY, n.DayNumber, @BillingFromDate)
+              AND CAST(b.BillsToDate AS DATE)
+                  >= DATEADD(DAY, n.DayNumber, @BillingFromDate)
+        )
+    ),
+    GroupedDays AS
+    (
+        SELECT
+            MissingDay,
+            DATEADD
+            (
+                DAY,
+                -CONVERT
+                (
+                    INT,
+                    ROW_NUMBER() OVER (ORDER BY MissingDay)
+                ),
+                MissingDay
+            ) AS GroupKey
+        FROM UnbilledDays
+    )
+    INSERT INTO @UnbilledRanges
+    (
+        GapFrom,
+        GapTo
+    )
+    SELECT
+        MIN(MissingDay),
+        MAX(MissingDay)
+    FROM GroupedDays
+    GROUP BY GroupKey
+    OPTION (MAXRECURSION 32);
+
+    /*
+إذا لم توجد فجوات، لن تُنشأ فواتير جديدة لأن
+@UnbilledRanges فارغ، لكن يجب الاستمرار
+لمزامنة سدادات الإعفاء للفواتير الموجودة.
+*/
+
+    /* رفض الفترات التي لا يوجد لها تعريف إيجار */
+    IF EXISTS
+    (
+        SELECT 1
+        FROM @UnbilledRanges g
+        OUTER APPLY Housing.fn_CalcBuildingRent_ForOneMonth
+        (
+            @BuildingDetailsID,
+            g.GapFrom,
+            @Year,
+            @Month,
+            g.GapTo
+        ) rent
+        WHERE rent.buildingDetailsID IS NULL
+    )
+    BEGIN
+        THROW 50001,
+              N'توجد فترة إيجار غير مفوترة ولا يمكن تحديد قيمتها؛ يرجى مراجعة تعريف الإيجار.',
+              1;
+    END;
+
+       
             ;WITH CalculatedRent AS
             (
                 SELECT
                       rent.CalcFromDate
                     , rent.CalcToDate
                     , RentAmount = CAST(rent.RentForMonth AS DECIMAL(18,2))
-                FROM Housing.fn_CalcBuildingRent_ForOneMonth
-                (
-                      @BuildingDetailsID
-                    , @BillingFromDate
-                    , @Year
-                    , @Month
-                    , NULL
-                ) rent
+                FROM @UnbilledRanges g
+
+CROSS APPLY Housing.fn_CalcBuildingRent_ForOneMonth
+(
+      @BuildingDetailsID
+    , g.GapFrom
+    , @Year
+    , @Month
+    , g.GapTo
+) rent
                 OUTER APPLY
                 (
                     SELECT

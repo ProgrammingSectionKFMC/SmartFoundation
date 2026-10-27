@@ -4,6 +4,7 @@ using SmartFoundation.UI.ViewModels.SmartForm;
 using SmartFoundation.UI.ViewModels.SmartTable;
 using SmartFoundation.UI.ViewModels.SmartPrint;
 using SmartFoundation.UI.ViewModels.SmartDrawer;
+using SmartFoundation.UI.ViewModels.SmartAccordion;
 
 namespace SmartFoundation.UI.ViewModels.SmartPage
 {
@@ -68,7 +69,7 @@ namespace SmartFoundation.UI.ViewModels.SmartPage
         public SmartPrintConfig? Print { get; set; }
         public List<SmartDrawerConfig> Drawers { get; set; } = new();
 
-
+        public List<SmartAccordionConfig> Accordions { get; set; } = new();
 
 
     }

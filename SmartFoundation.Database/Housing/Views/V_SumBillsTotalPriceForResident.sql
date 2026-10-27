@@ -1,11 +1,92 @@
 ﻿
-CREATE VIEW [Housing].[V_SumBillsTotalPriceForResident]
+CREATE   VIEW Housing.V_SumBillsTotalPriceForResident
 AS
-SELECT SUM(r.TotalPrice) AS SumBillsTotalPrice, r.residentInfoID_FK AS residentInfoID, r.BillChargeTypeID_FK AS BillChargeTypeID, bct.BillChargeTypeName_A, r.buildingDetailsID, r.idaraID_FK AS idaraID
-FROM   Housing.Bills AS r INNER JOIN
-             Housing.BillChargeType AS bct ON r.BillChargeTypeID_FK = bct.BillChargeTypeID
-WHERE (r.BillActive = 1)
-GROUP BY r.residentInfoID_FK, r.BillChargeTypeID_FK, bct.BillChargeTypeName_A, r.buildingDetailsID, r.idaraID_FK
+WITH FirstOccupancy AS
+(
+    SELECT
+        a.residentInfoID_FK,
+        a.IdaraId_FK,
+        MIN(CONVERT(date, a.buildingActionDate))
+            AS FirstOccupancyDate
+    FROM Housing.BuildingAction a
+    WHERE a.buildingActionTypeID_FK = 2
+      AND a.buildingActionActive = 1
+      AND a.buildingActionDate IS NOT NULL
+      AND a.residentInfoID_FK IS NOT NULL
+      AND a.IdaraId_FK IS NOT NULL
+    GROUP BY
+        a.residentInfoID_FK,
+        a.IdaraId_FK
+),
+EligibleBillPeriods AS
+(
+    SELECT
+        b.residentInfoID_FK,
+        b.BillChargeTypeID_FK,
+        b.buildingDetailsID,
+        b.idaraID_FK,
+        b.TotalPrice,
+
+        CASE
+            -- الغرامات: تاريخ تسجيل الغرامة
+            WHEN b.BillChargeTypeID_FK = 5
+                THEN CONVERT(date, b.entryDate)
+
+            -- الفترة الأصلية الصحيحة
+            WHEN b.BillsFromDate IS NOT NULL
+             AND b.BillsToDate IS NOT NULL
+             AND b.BillsFromDate <= b.BillsToDate
+                THEN CONVERT(date, b.BillsToDate)
+
+            -- فترة أصلية غير صحيحة: لا نفترض بديلاً
+            WHEN b.BillsFromDate IS NOT NULL
+             AND b.BillsToDate IS NOT NULL
+                THEN NULL
+
+            -- البديل: شهر وسنة الفاتورة نفسها
+            WHEN b.PeriodYear BETWEEN 1753 AND 9999
+             AND b.PeriodMonth BETWEEN 1 AND 12
+                THEN EOMONTH(
+                    DATEFROMPARTS(
+                        b.PeriodYear,
+                        b.PeriodMonth,
+                        1
+                    )
+                )
+
+            ELSE NULL
+        END AS EffectiveEndDate
+
+    FROM Housing.Bills b
+    WHERE b.BillActive = 1
+      AND b.residentInfoID_FK IS NOT NULL
+      AND b.idaraID_FK IS NOT NULL
+)
+SELECT
+    SUM(b.TotalPrice) AS SumBillsTotalPrice,
+    b.residentInfoID_FK AS residentInfoID,
+    b.BillChargeTypeID_FK AS BillChargeTypeID,
+    t.BillChargeTypeName_A,
+    b.buildingDetailsID,
+    b.idaraID_FK AS idaraID
+
+FROM EligibleBillPeriods b
+
+INNER JOIN FirstOccupancy o
+    ON o.residentInfoID_FK = b.residentInfoID_FK
+   AND o.IdaraId_FK = b.idaraID_FK
+
+INNER JOIN Housing.BillChargeType t
+    ON t.BillChargeTypeID = b.BillChargeTypeID_FK
+
+WHERE b.EffectiveEndDate >= o.FirstOccupancyDate
+
+GROUP BY
+    b.residentInfoID_FK,
+    b.BillChargeTypeID_FK,
+    t.BillChargeTypeName_A,
+    b.buildingDetailsID,
+    b.idaraID_FK;
 
 GO
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane1', @value = N'[0E232FF0-B466-11cf-A24F-00AA00A3EFFF, 1.00]

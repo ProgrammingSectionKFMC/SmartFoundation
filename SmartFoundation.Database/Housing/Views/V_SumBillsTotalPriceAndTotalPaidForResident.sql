@@ -1,10 +1,54 @@
 ﻿
-CREATE VIEW [Housing].[V_SumBillsTotalPriceAndTotalPaidForResident]
+CREATE   VIEW [Housing].[V_SumBillsTotalPriceAndTotalPaidForResident]
 AS
-SELECT COALESCE (br.residentInfoID, po.residentInfoID) AS residentInfoID, COALESCE (br.BillChargeTypeID, po.BillChargeTypeID) AS BillChargeTypeID, COALESCE (br.BillChargeTypeName_A, po.BillChargeTypeName_A) AS BillChargeTypeName_A, COALESCE (br.buildingDetailsID, 
-             po.buildingDetailsID) AS buildingDetailsID, ISNULL(br.SumBillsTotalPrice, 0) AS SumBillsTotalPrice, ISNULL(po.SumTotalPaidBills, 0) AS SumTotalPaidBills, ISNULL(br.SumBillsTotalPrice, 0) - ISNULL(po.SumTotalPaidBills, 0) AS Remaining
-FROM   Housing.V_SumBillsTotalPriceForResident AS br FULL OUTER JOIN
-             Housing.V_SumBillsTotalPaidByResident AS po ON br.residentInfoID = po.residentInfoID AND br.BillChargeTypeID = po.BillChargeTypeID AND ISNULL(br.buildingDetailsID, - 1) = ISNULL(po.buildingDetailsID, - 1)
+
+SELECT
+    COALESCE(
+        br.residentInfoID,
+        po.residentInfoID
+    ) AS residentInfoID,
+
+    COALESCE(
+        br.BillChargeTypeID,
+        po.BillChargeTypeID
+    ) AS BillChargeTypeID,
+
+    COALESCE(
+        br.BillChargeTypeName_A,
+        po.BillChargeTypeName_A
+    ) AS BillChargeTypeName_A,
+
+    COALESCE(
+        br.buildingDetailsID,
+        po.buildingDetailsID
+    ) AS buildingDetailsID,
+
+    ISNULL(
+        br.SumBillsTotalPrice, 0
+    ) AS SumBillsTotalPrice,
+
+    ISNULL(
+        po.SumTotalPaidBills, 0
+    ) AS SumTotalPaidBills,
+
+    ISNULL(br.SumBillsTotalPrice, 0)
+      - ISNULL(po.SumTotalPaidBills, 0)
+        AS Remaining,
+
+    COALESCE(
+        br.idaraID,
+        po.idaraID
+    ) AS idaraID
+
+FROM Housing.V_SumBillsTotalPriceForResident br
+
+FULL OUTER JOIN
+    Housing.V_SumBillsTotalPaidByResident po
+
+    ON br.residentInfoID = po.residentInfoID
+   AND br.BillChargeTypeID = po.BillChargeTypeID
+   AND br.idaraID = po.idaraID
+   AND br.buildingDetailsID = po.buildingDetailsID;
 
 GO
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane1', @value = N'[0E232FF0-B466-11cf-A24F-00AA00A3EFFF, 1.00]

@@ -138,12 +138,12 @@ BEGIN
 
 
 
-             SELECT [meterServiceTypeID]
+             SELECT distinct [meterServiceTypeID]
                   ,[meterServiceTypeName_A]
                  
               FROM [DATACORE].[Housing].[MeterServiceType] mst 
               inner join  Housing.MeterServiceTypeLinkedWithIdara mi on mst.meterServiceTypeID = mi.MeterServiceTypeID_FK
-              where mst.meterServiceTypeActive = 1 and mi.MeterServiceTypeLinkedWithIdaraActive = 1 and mi.Idara_FK = @idaraID
+              where mst.meterServiceTypeActive = 1 and mi.MeterServiceTypeLinkedWithIdaraActive = 1 and (mi.Idara_FK = @idaraID or mi.Idara_FK is null)
 
 
               SELECT mt.meterTypeID

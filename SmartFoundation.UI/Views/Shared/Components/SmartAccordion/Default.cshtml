@@ -1,0 +1,211 @@
+@using System.Text.Json
+@using System.Linq
+@using SmartFoundation.UI.ViewModels.SmartAccordion
+@model SmartAccordionConfig
+
+@functions {
+    // One rendering implementation for both inline and modal modes.
+    // This is a Razor templating method; it writes markup to the current view.
+    private void RenderAccordionContent(SmartAccordionConfig accordion)
+    {
+        // Razor encodes the attribute; getAttribute() recovers the JSON in the browser.
+        var accordionJson = JsonSerializer.Serialize(
+            accordion, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        var initiallyOpened = false;
+
+        <section class="sf-accordion" id="@accordion.Id" data-sf-accordion data-sf-accordion-config="@accordionJson" dir="rtl">
+            @if (!accordion.RenderInModal && (!string.IsNullOrWhiteSpace(accordion.Title) || !string.IsNullOrWhiteSpace(accordion.Description)))
+            {
+                <header class="sf-accordion__heading">
+                    @if (!string.IsNullOrWhiteSpace(accordion.Title))
+                    {
+                        <h3 class="sf-accordion__heading-title">@accordion.Title</h3>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(accordion.Description))
+                    {
+                        <p class="sf-accordion__description">@accordion.Description</p>
+                    }
+                </header>
+            }
+            @if (accordion.ShowSummary)
+            {
+                <div class="sf-accordion__summary" data-sf-accordion-summary aria-live="polite"></div>
+            }
+            @if (accordion.Searchable || accordion.EnableStatusFilter)
+            {
+                <div class="sf-accordion__filters">
+                    @if (accordion.Searchable)
+                    {
+                        <label class="sf-accordion__search-wrap">
+                            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                            <input type="search" class="sf-accordion__search"
+                                   data-sf-accordion-search
+                                   aria-label="البحث في السجلات"
+                                   placeholder="@accordion.SearchPlaceholder" autocomplete="off" />
+                        </label>
+                    }
+                    @if (accordion.EnableStatusFilter)
+                    {
+                        <label class="sf-accordion__filter-wrap">
+                            <span>الحالة</span>
+                            <select class="sf-accordion__status-filter" data-sf-accordion-status-filter
+                                    aria-label="تصفية السجلات حسب الحالة">
+                                <option value="">جميع الحالات</option>
+                            </select>
+                        </label>
+                    }
+                </div>
+            }
+            <p class="sf-accordion__message" data-sf-accordion-message hidden role="status"></p>
+            <div class="sf-accordion__scroll" data-sf-accordion-scroll>
+            <div class="sf-accordion__items" data-sf-accordion-items>
+                @foreach (var item in accordion.Items)
+                {
+                    var isOpen = item.InitiallyOpen && (accordion.AllowMultipleOpen || !initiallyOpened);
+                    if (isOpen) { initiallyOpened = true; }
+                    var itemDetailId = accordion.Id + "-" + item.Id + "-details";
+                    var statusTone = new[] { "success", "warning", "danger", "info" }.Contains(item.StatusTone?.ToLowerInvariant())
+                        ? item.StatusTone!.ToLowerInvariant() : "neutral";
+                    <article class="sf-accordion__item" data-sf-accordion-item data-item-id="@item.Id">
+                        <button type="button" class="sf-accordion__trigger" data-sf-accordion-toggle
+                                aria-expanded="@(isOpen ? "true" : "false")" aria-controls="@itemDetailId">
+                            <span class="sf-accordion__identity">
+                                <strong class="sf-accordion__item-title">@item.Title</strong>
+                                @if (!string.IsNullOrWhiteSpace(item.Subtitle)) { <small class="sf-accordion__item-subtitle">@item.Subtitle</small> }
+                            </span>
+                            <span class="sf-accordion__trailing">
+                                @if (!string.IsNullOrWhiteSpace(item.AmountText)) { <strong class="sf-accordion__amount">@item.AmountText</strong> }
+                                @if (!string.IsNullOrWhiteSpace(item.StatusText)) { <span class="sf-accordion__status is-@statusTone">@item.StatusText</span> }
+                            </span>
+                            <i class="fa-solid fa-chevron-down sf-accordion__chevron" aria-hidden="true"></i>
+                        </button>
+                        <div class="sf-accordion__body" id="@itemDetailId" data-sf-accordion-body hidden="@(!isOpen)">
+                            @if (item.Details?.Count > 0)
+                            {
+                                <dl class="sf-accordion__details">
+                                    @foreach (var field in item.Details)
+                                    {
+                                        <div class="sf-accordion__detail"><dt>@field.Label</dt><dd>@(field.Value ?? "—")</dd></div>
+                                    }
+                                </dl>
+                            }
+                            @if (accordion.Actions?.Count > 0)
+                            {
+                                <div class="sf-accordion__actions">
+                                    @foreach (var action in accordion.Actions.Where(a => !string.IsNullOrWhiteSpace(a.Key) && (string.IsNullOrWhiteSpace(a.VisibleWhenField) || (item.Values != null && item.Values.TryGetValue(a.VisibleWhenField, out var fieldValue) && string.Equals(fieldValue, a.VisibleWhenEquals, StringComparison.OrdinalIgnoreCase)))))
+                                    {
+                                        var tone = new[] { "primary", "danger" }.Contains(action.Tone?.ToLowerInvariant()) ? action.Tone!.ToLowerInvariant() : "default";
+                                        <button type="button" class="sf-accordion__action is-@tone"
+                                                data-sf-accordion-action="@action.Key" data-item-id="@item.Id">
+                                            @if (!string.IsNullOrWhiteSpace(action.Icon)) { <i class="@action.Icon" aria-hidden="true"></i> }
+                                            @action.Text
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </article>
+                }
+            </div>
+            <p class="sf-accordion__empty" data-sf-accordion-empty hidden="@(accordion.Items.Count > 0)">@accordion.EmptyText</p>
+            </div>
+            @if (accordion.EnablePagination)
+            {
+                <nav class="sf-accordion__pagination" data-sf-accordion-pagination
+                     aria-label="صفحات السجلات">
+                    <span class="sf-accordion__page-range" data-sf-accordion-page-range aria-live="polite"></span>
+                    <div class="sf-accordion__page-controls">
+                        <label class="sf-accordion__page-size-wrap">
+                            <span>عرض</span>
+                            <select data-sf-accordion-page-size aria-label="عدد السجلات في الصفحة"></select>
+                        </label>
+                        <button type="button" class="sf-accordion__page-btn"
+                                data-sf-accordion-prev aria-label="الصفحة السابقة">
+                            <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                        </button>
+                        <span data-sf-accordion-page-label class="sf-accordion__page-label"></span>
+                        <button type="button" class="sf-accordion__page-btn"
+                                data-sf-accordion-next aria-label="الصفحة التالية">
+                            <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </nav>
+            }
+        </section>
+    }
+}
+
+@if (Model.RenderInModal)
+{
+    <dialog id="@(Model.Id)-dialog"
+            class="sf-accordion-dialog"
+            data-sf-accordion-modal
+            aria-label="@(Model.ModalTitle ?? Model.Title ?? "سجل التفاصيل")">
+        <header class="sf-accordion-dialog__header">
+            <div class="sf-accordion-dialog__heading">
+                <h2>@(Model.ModalTitle ?? Model.Title ?? "سجل التفاصيل")</h2>
+                @if (!string.IsNullOrWhiteSpace(Model.Description))
+                {
+                    <p>@Model.Description</p>
+                }
+            </div>
+            <button type="button"
+                    class="sf-accordion-dialog__close"
+                    data-sf-accordion-modal-close
+                    aria-label="إغلاق">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+        </header>
+        <div class="sf-accordion-dialog__content">
+        <div class="sf-accordion__workspace" data-sf-accordion-workspace>
+            <div class="sf-accordion__list-pane" data-sf-accordion-list-pane>
+                @{ RenderAccordionContent(Model); }
+            </div>
+            @foreach (var action in Model.Actions.Where(a => !string.IsNullOrWhiteSpace(a.Key) && a.OpenForm != null))
+            {
+                <section class="sf-accordion__form-pane"
+                         data-sf-accordion-form-pane="@action.Key"
+                         aria-label="@action.OpenForm!.Title" hidden>
+                    <div class="sf-accordion__form-heading">
+                        <button type="button" class="sf-accordion__form-back"
+                                data-sf-accordion-form-back>
+                            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                            رجوع إلى سجل العمليات
+                        </button>
+                        <h3>@action.OpenForm.Title</h3>
+                        <p data-sf-accordion-form-record></p>
+                    </div>
+                    <p class="sf-accordion__form-error" data-sf-accordion-form-error hidden role="alert"></p>
+                    @await Component.InvokeAsync("SmartForm", new { model = action.OpenForm })
+                </section>
+            }
+        </div>
+        </div>
+    </dialog>
+}
+else
+{
+        <div class="sf-accordion__workspace" data-sf-accordion-workspace>
+            <div class="sf-accordion__list-pane" data-sf-accordion-list-pane>
+                @{ RenderAccordionContent(Model); }
+            </div>
+            @foreach (var action in Model.Actions.Where(a => !string.IsNullOrWhiteSpace(a.Key) && a.OpenForm != null))
+            {
+                <section class="sf-accordion__form-pane"
+                         data-sf-accordion-form-pane="@action.Key"
+                         aria-label="@action.OpenForm!.Title" hidden>
+                    <div class="sf-accordion__form-heading">
+                        <button type="button" class="sf-accordion__form-back"
+                                data-sf-accordion-form-back>
+                            <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                            رجوع إلى سجل العمليات
+                        </button>
+                        <h3>@action.OpenForm.Title</h3>
+                        <p data-sf-accordion-form-record></p>
+                    </div>
+                    <p class="sf-accordion__form-error" data-sf-accordion-form-error hidden role="alert"></p>
+                    @await Component.InvokeAsync("SmartForm", new { model = action.OpenForm })
+                </section>
+            }
+        </div>
+}

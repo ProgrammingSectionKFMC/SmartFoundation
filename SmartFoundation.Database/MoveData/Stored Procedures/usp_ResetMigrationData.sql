@@ -21,6 +21,20 @@ BEGIN
 
     INSERT @Before(TableOrder,TableName,RowCount_)
 
+    SELECT -18,
+       N'Housing.GeneralBalanceBuildingAllocation',
+       COUNT_BIG(*)
+FROM [Housing].[GeneralBalanceBuildingAllocation]
+
+UNION ALL
+
+    SELECT -17,
+       N'Housing.ExitFinancialProcessingCycle',
+       COUNT_BIG(*)
+FROM [Housing].[ExitFinancialProcessingCycle]
+
+UNION ALL
+
 SELECT -16,
        N'Housing.UnallocatedPaymentRefundDetail',
        COUNT_BIG(*)
@@ -80,9 +94,12 @@ FROM [dbo].[AuthenticationAuditLog]
     BEGIN TRY
     BEGIN TRANSACTION;
 
-    /* Unallocated payment refunds - delete children first. */
-    DELETE FROM [Housing].[UnallocatedPaymentRefundDetail];
-    DELETE FROM [Housing].[UnallocatedPaymentRefund];
+    /* General balance building allocations */
+DELETE FROM [Housing].[GeneralBalanceBuildingAllocation];
+
+/* Unallocated payment refunds - delete children first. */
+DELETE FROM [Housing].[UnallocatedPaymentRefundDetail];
+DELETE FROM [Housing].[UnallocatedPaymentRefund];
 
     /* Authentication activity generated during testing; users and user history are preserved. */
     DELETE FROM [dbo].[AuthenticationAuditLog];
@@ -102,6 +119,8 @@ FROM [dbo].[AuthenticationAuditLog]
         DELETE FROM [Housing].[MonthlyBillingRun];
         DELETE FROM [Housing].[ResidentRentExemptionPayment];
         DELETE FROM [Housing].[RentBillsAdjustment];
+        /* تنظيف سجلات إغلاق الإعفاء قبل حذف الإعفاءات الأصلية */
+        DELETE FROM [Housing].[ExitRentExemptionClosure];
         DELETE FROM [Housing].[ResidentRentExemption];
         DELETE FROM [Housing].[OccupantCustodyAction];
         DELETE FROM [Housing].[RentBills];
@@ -127,6 +146,7 @@ FROM [dbo].[AuthenticationAuditLog]
 
         /* Housing actions, buildings, residents, and their masters. */
         DELETE FROM [Housing].[BuildingAssign];
+        DELETE FROM [Housing].[ExitFinancialProcessingCycle];
         DELETE FROM [Housing].[BuildingAction];
         DELETE FROM [Housing].[AssignPeriod];
         DELETE FROM [Housing].[BuildingRent];
@@ -139,6 +159,21 @@ FROM [dbo].[AuthenticationAuditLog]
         DELETE FROM [dbo].[MilitaryUnit];
 
         /* DELETE does not reset identities; reseed empty tables so next value is 1. */
+
+        IF EXISTS
+(
+    SELECT 1
+    FROM sys.identity_columns
+    WHERE object_id =
+        OBJECT_ID(N'Housing.GeneralBalanceBuildingAllocation')
+)
+BEGIN
+    DBCC CHECKIDENT
+    (
+        N'Housing.GeneralBalanceBuildingAllocation',
+        RESEED, 0
+    ) WITH NO_INFOMSGS;
+END;
 
 IF EXISTS
 (

@@ -92,11 +92,17 @@
                     )
                 }
 
-                @if (Model.Table is null && Model.Form is null)
+                @if (Model.Table is null && Model.Form is null && Model.Accordion is null)
                 {
                     <div class="sf-drawer-empty">
                         @Model.EmptyText
                     </div>
+                }
+
+                @if (Model.Accordion is not null)
+                {
+                    @await Component.InvokeAsync(
+                        "SmartAccordion", new { model = Model.Accordion })
                 }
 
             </div>

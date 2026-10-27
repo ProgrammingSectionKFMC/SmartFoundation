@@ -269,6 +269,20 @@ namespace SmartFoundation.Mvc.Controllers
                 var (code, message) = ExtractResult(ds);
                 SetToastTempData(code, message);
 
+                // الرجوع إلى الاختيار الحالي عند فشل العملية فقط
+                // يعمل فقط للصفحات التي ترسل redirectErrorUrl
+                if (code != 1 &&
+                    f.TryGetValue("redirectErrorUrl", out var errorUrlValue))
+                {
+                    var errorUrl = errorUrlValue.ToString();
+
+                    if (!string.IsNullOrWhiteSpace(errorUrl) &&
+                        Url.IsLocalUrl(errorUrl))
+                    {
+                        return LocalRedirect(errorUrl);
+                    }
+                }
+
                 var redirectAction = f.TryGetValue("redirectAction", out var ra) ? ra.ToString() : null;
                 var redirectController = f.TryGetValue("redirectController", out var rc) ? rc.ToString() : null;
                 var redirectUrl = f.TryGetValue("redirectUrl", out var ru) ? ru.ToString() : null;
@@ -326,6 +340,19 @@ namespace SmartFoundation.Mvc.Controllers
             catch (Exception)
             {
                 SetToastTempData(0, "حدث خطأ أثناء إضافة البيانات. يرجى المحاولة مرة أخرى.");
+
+                if (Request.HasFormContentType)
+                {
+                    var errorUrl = Request.Form["redirectErrorUrl"].ToString();
+
+                    if (!string.IsNullOrWhiteSpace(errorUrl) &&
+                        Url.IsLocalUrl(errorUrl))
+                    {
+                        return LocalRedirect(errorUrl);
+                    }
+                }
+
+
                 var referer = Request.Headers["Referer"].ToString();
                 if (!string.IsNullOrWhiteSpace(referer)) return Redirect(referer);
                 return RedirectToAction("Index", "Home");
@@ -366,6 +393,20 @@ namespace SmartFoundation.Mvc.Controllers
                 var ds = await _mastersServies.GetCrudDataSetAsync(parameters);
                 var (code, message) = ExtractResult(ds);
                 SetToastTempData(code, message);
+
+                // الرجوع إلى الصفحة والسجل المحددين عند فشل العملية.
+                // يعمل فقط إذا أرسل النموذج redirectErrorUrl.
+                if (code != 1 &&
+                    f.TryGetValue("redirectErrorUrl", out var errorUrlValue))
+                {
+                    var errorUrl = errorUrlValue.ToString();
+
+                    if (!string.IsNullOrWhiteSpace(errorUrl) &&
+                        Url.IsLocalUrl(errorUrl))
+                    {
+                        return LocalRedirect(errorUrl);
+                    }
+                }
 
                 var redirectAction = f.TryGetValue("redirectAction", out var ra) ? ra.ToString() : null;
                 var redirectController = f.TryGetValue("redirectController", out var rc) ? rc.ToString() : null;
@@ -432,6 +473,20 @@ namespace SmartFoundation.Mvc.Controllers
                 var ds = await _mastersServies.GetCrudDataSetAsync(parameters);
                 var (code, message) = ExtractResult(ds);
                 SetToastTempData(code, message);
+
+                // الرجوع إلى السجل المحدد عند فشل العملية.
+                // لا يؤثر على الصفحات التي لا ترسل redirectErrorUrl.
+                if (code != 1 &&
+                    f.TryGetValue("redirectErrorUrl", out var errorUrlValue))
+                {
+                    var errorUrl = errorUrlValue.ToString();
+
+                    if (!string.IsNullOrWhiteSpace(errorUrl) &&
+                        Url.IsLocalUrl(errorUrl))
+                    {
+                        return LocalRedirect(errorUrl);
+                    }
+                }
 
                 var redirectAction = f.TryGetValue("redirectAction", out var ra) ? ra.ToString() : null;
                 var redirectController = f.TryGetValue("redirectController", out var rc) ? rc.ToString() : null;

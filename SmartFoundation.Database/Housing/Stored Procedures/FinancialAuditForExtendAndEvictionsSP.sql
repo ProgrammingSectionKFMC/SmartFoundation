@@ -136,6 +136,22 @@ BEGIN
             ;THROW 50001, N'العملية مطلوبة', 1;
         END
 
+        -- Validate the exact current request, department and latest workflow stage.
+        IF @Action IN (N'FINANCIALAUDITFOREXTENDANDEVICTIONS',
+                       N'PAYMENTANDREFUNDFOREXTENDANDEXIT', N'FINANCIALSETTLEMENT')
+           AND NOT EXISTS
+           (
+               SELECT 1
+               FROM Housing.V_WaitingList w
+               WHERE w.ActionID = @ActionID
+                 AND w.LastActionID = TRY_CONVERT(BIGINT, @LastActionID)
+                 AND w.residentInfoID = TRY_CONVERT(BIGINT, @residentInfoID)
+                 AND w.buildingDetailsID = TRY_CONVERT(BIGINT, @buildingDetailsID)
+                 AND w.IdaraId = @IdaraID_INT
+                 AND w.LastActionTypeID IN (51, 57)
+           )
+           THROW 50001, N'تغير طلب التدقيق أو لا يتطابق مع المستفيد والمنزل والإدارة؛ حدّث الصفحة.', 1;
+
    
 
 
@@ -217,7 +233,42 @@ BEGIN
           
 
             IF(@buildingActionTypeID_FK = 52)
-            begin
+BEGIN
+
+    ------------------------------------------------------------
+    -- منع اعتماد التدقيق المالي للإمهال عند وجود رصيد عام فائض
+    -- المرحلة 51 -> 52 فقط
+    ------------------------------------------------------------
+
+    DECLARE @ExtendAuditResidentID BIGINT =
+        TRY_CONVERT(BIGINT, @residentInfoID);
+
+    IF @ExtendAuditResidentID IS NULL
+       OR @IdaraID_INT IS NULL
+    BEGIN
+        ;THROW 50001,
+            N'بيانات المستفيد أو الإدارة غير صحيحة.',
+            1;
+    END;
+
+    IF EXISTS
+    (
+        SELECT 1
+        FROM Housing.V_SumBillsTotalPriceAndTotalPaidForResident e
+        WHERE e.residentInfoID = @ExtendAuditResidentID
+          AND e.buildingDetailsID IS NULL
+        GROUP BY e.BillChargeTypeID
+        HAVING
+            SUM(CONVERT(DECIMAL(38,2), e.Remaining)) < 0
+            OR COUNT_BIG(e.Remaining) <> COUNT_BIG(*)
+    )
+    BEGIN
+        ;THROW 50001,
+            N'لا يمكن اعتماد التدقيق المالي للإمهال لوجود رصيد عام فائض غير مرتبط بمبنى. يرجى معالجته من صفحة التدقيق المالي العام أولاً.',
+            1;
+    END;
+
+   
 
 
               INSERT INTO  Housing.BuildingAction
@@ -263,6 +314,10 @@ BEGIN
               from Housing.V_WaitingList w
             where w.residentInfoID = @residentInfoID 
             and w.buildingDetailsID = @buildingDetailsID
+            and w.ActionID = @ActionID
+            and w.LastActionID = TRY_CONVERT(BIGINT,@LastActionID)
+            and w.LastActionTypeID = 51
+            and w.IdaraId = @IdaraID_INT
             
             -- VALUES
             --(
@@ -286,7 +341,7 @@ BEGIN
 
 
             
-            IF @@ROWCOUNT = 0
+            IF @@ROWCOUNT <> 1
             BEGIN
                 ;THROW 50002, N'حصل خطأ في اعتماد التدقيق المالي للامهال ', 1; -- برمجي
             END
@@ -331,6 +386,9 @@ BEGIN
             );
             
 
+            IF @tc = 0 COMMIT TRANSACTION;
+            
+
             SELECT 1 AS IsSuccessful, N'تم اعتماد التدقيق المالي للامهال بنجاح' AS Message_;
             RETURN;
 
@@ -345,62 +403,47 @@ BEGIN
 
             
 -- التحقق المالي قبل اعتماد الإخلاء فقط (57 -> 58)
+DECLARE @AuditResidentID BIGINT = TRY_CONVERT(BIGINT, @residentInfoID);
+DECLARE @AuditBuildingID BIGINT = TRY_CONVERT(BIGINT, @buildingDetailsID);
 
-DECLARE @AuditResidentID BIGINT =
-    TRY_CONVERT(BIGINT, @residentInfoID);
+IF @AuditResidentID IS NULL OR @AuditBuildingID IS NULL OR @IdaraID_INT IS NULL
+    THROW 50001, N'بيانات المستفيد أو المبنى أو الإدارة غير صحيحة.', 1;
 
-DECLARE @AuditBuildingID BIGINT =
-    TRY_CONVERT(BIGINT, @buildingDetailsID);
-
-IF @AuditResidentID IS NULL
-   OR @AuditBuildingID IS NULL
-BEGIN
-    ;THROW 50001,
-        N'بيانات المستفيد أو المبنى غير صحيحة',
-        1;
-END;
-
--- عدم اعتبار غياب البيانات المالية إثباتًا
--- على أن جميع الأرصدة صفر
-IF NOT EXISTS
-(
-    SELECT 1
-    FROM Housing.V_SumBillsTotalPriceAndTotalPaidForResident e
-    WHERE e.residentInfoID = @AuditResidentID
-      AND (
-          e.buildingDetailsID = @AuditBuildingID
-          OR e.buildingDetailsID IS NULL
-      )
-)
-BEGIN
-    ;THROW 50001,
-        N'تعذر التحقق من الرصيد المالي للمبنى',
-        1;
-END;
-
--- يجب أن يكون صافي كل خدمة في كل نطاق مبنى صفرًا
+-- General credit/debt is processed only on FinancialAuditForUser.
 IF EXISTS
 (
     SELECT 1
     FROM Housing.V_SumBillsTotalPriceAndTotalPaidForResident e
     WHERE e.residentInfoID = @AuditResidentID
-      AND (
-          e.buildingDetailsID = @AuditBuildingID
-          OR e.buildingDetailsID IS NULL
-      )
-    GROUP BY
-        e.BillChargeTypeID,
-        e.buildingDetailsID
-    HAVING
-        SUM(e.Remaining) <> 0
+      AND e.buildingDetailsID IS NULL
+    GROUP BY e.BillChargeTypeID
+    HAVING SUM(CONVERT(DECIMAL(38,2),e.Remaining)) <> 0
         OR COUNT_BIG(e.Remaining) <> COUNT_BIG(*)
 )
-BEGIN
-    ;THROW 50001,
-        N'لا يمكن اعتماد الإخلاء حتى تصفية جميع أرصدة الخدمات وإتمام التسويات المالية',
-        1;
-END;
+    THROW 50001, N'يوجد رصيد عام غير معالج للمستفيد؛ يرجى معالجته أولاً من صفحة التدقيق المالي العام.', 1;
 
+-- Missing accounting data is not evidence of a zero balance.
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM Housing.V_SumBillsTotalPriceAndTotalPaidForResident e
+    WHERE e.residentInfoID = @AuditResidentID
+      AND e.buildingDetailsID = @AuditBuildingID
+)
+    THROW 50001, N'تعذر التحقق من الرصيد المالي للمنزل.', 1;
+
+-- Every service for the selected home must be settled independently.
+IF EXISTS
+(
+    SELECT 1
+    FROM Housing.V_SumBillsTotalPriceAndTotalPaidForResident e
+    WHERE e.residentInfoID = @AuditResidentID
+      AND e.buildingDetailsID = @AuditBuildingID
+    GROUP BY e.BillChargeTypeID
+    HAVING SUM(CONVERT(DECIMAL(38,2),e.Remaining)) <> 0
+        OR COUNT_BIG(e.Remaining) <> COUNT_BIG(*)
+)
+    THROW 50001, N'لا يمكن اعتماد الإخلاء حتى تصفية جميع أرصدة خدمات المنزل وإتمام التسويات المالية.', 1;
 
               INSERT INTO  Housing.BuildingAction
             (
@@ -444,6 +487,10 @@ END;
             from Housing.V_WaitingList w
             where w.residentInfoID = @residentInfoID 
             and w.buildingDetailsID = @buildingDetailsID
+            and w.ActionID = @ActionID
+            and w.LastActionID = TRY_CONVERT(BIGINT,@LastActionID)
+            and w.LastActionTypeID = 57
+            and w.IdaraId = @IdaraID_INT
             -- VALUES
             --(
             --      @buildingActionTypeID_FK
@@ -463,7 +510,7 @@ END;
 
 
             
-            IF @@ROWCOUNT = 0
+            IF @@ROWCOUNT <> 1
             BEGIN
                 ;THROW 50002, N'حصل خطأ في اعتماد التدقيق المالي للاخلاء ', 1; -- برمجي
             END
@@ -508,12 +555,17 @@ END;
             );
             
 
+            IF @tc = 0 COMMIT TRANSACTION;
+            
+
             SELECT 1 AS IsSuccessful, N'تم اعتماد التدقيق المالي للاخلاء بنجاح' AS Message_;
             RETURN;
 
             END
             ELSE
         BEGIN
+
+        IF @tc = 0 COMMIT TRANSACTION;
 
         SELECT 0 AS IsSuccessful, N'حصل خطأ ما - Not Exit Or Extend' AS Message_;
             RETURN;
@@ -574,20 +626,72 @@ END;
 
 
           
-           Declare @AvailableAmountForToChargeTypeForPayment decimal(18,2),@FinalAvailableAmountForToChargeTypeForPayment decimal(18,2);
-            set @AvailableAmountForToChargeTypeForPayment = 
-            (select TRY_CONVERT(DECIMAL(18,2),isnull(s.Remaining,0.00)) 
-               FROM Housing.BillChargeType bt
-               LEFT JOIN Housing.V_SumBillsTotalPriceAndTotalPaidForResident s
-                      ON s.BillChargeTypeID = bt.BillChargeTypeID
-                     AND s.residentInfoID = @residentInfoID
-                     AND (s.buildingDetailsID = @buildingDetailsID OR s.buildingDetailsID IS NULL)
-               LEFT JOIN Housing.V_GetGeneralListForBuilding b
-                      ON s.buildingDetailsID = b.buildingDetailsID
-                      where bt.BillChargeTypeID = @BillChargeTypeID_FK
-             )
+           -- All payment/refund balances are limited to the selected home.
+          -- All payment/refund balances are limited to the selected home.
+IF @Amount_Decimal IS NULL OR @Amount_Decimal <= 0
+    THROW 50001, N'يجب إدخال مبلغ أكبر من صفر.', 1;
 
-             IF (select b.buildingPaymentDestainationID_FK from [DATACORE].[Housing].[BuildingPaymentType] b where b.buildingPaymentTypeID = @PaymentType) = 1
+------------------------------------------------------------
+-- Shared financial concurrency lock.
+-- Same resource format as FinancialAuditForUserSP.
+-- Must be acquired BEFORE recalculating the balance.
+------------------------------------------------------------
+DECLARE @HFAResidentID BIGINT =
+    TRY_CONVERT(BIGINT, @residentInfoID);
+
+DECLARE @HFABuildingID BIGINT =
+    TRY_CONVERT(BIGINT, @buildingDetailsID);
+
+DECLARE @HFAServiceID BIGINT =
+    TRY_CONVERT(BIGINT, @BillChargeTypeID_FK);
+
+DECLARE @HFALockResult INT;
+DECLARE @HFALockResource NVARCHAR(255);
+
+IF @IdaraID_INT IS NULL OR @IdaraID_INT <= 0
+   OR @HFAResidentID IS NULL OR @HFAResidentID <= 0
+   OR @HFABuildingID IS NULL OR @HFABuildingID <= 0
+   OR @HFAServiceID IS NULL OR @HFAServiceID <= 0
+BEGIN
+    THROW 50001, N'بيانات المستفيد أو المبنى أو نوع الخدمة غير صحيحة.', 1;
+END;
+
+SET @HFALockResource =
+    CONCAT(
+        N'HFA|',
+        @IdaraID_INT, N'|',
+        @HFAResidentID, N'|',
+        @HFAServiceID, N'|',
+        CONVERT(NVARCHAR(30), @HFABuildingID)
+    );
+
+EXEC @HFALockResult = sys.sp_getapplock
+    @Resource = @HFALockResource,
+    @LockMode = N'Exclusive',
+    @LockOwner = N'Transaction',
+    @LockTimeout = 10000;
+
+IF @HFALockResult < 0
+BEGIN
+    THROW 50001,
+        N'تعذر حجز الرصيد المالي حاليًا، يرجى إعادة المحاولة.',
+        1;
+END;
+
+------------------------------------------------------------
+-- Recalculate the balance only AFTER acquiring the lock.
+------------------------------------------------------------
+DECLARE @AvailableAmountForToChargeTypeForPayment DECIMAL(38,2) = NULL,
+        @FinalAvailableAmountForToChargeTypeForPayment DECIMAL(38,2) = NULL;
+
+           SELECT @AvailableAmountForToChargeTypeForPayment =
+                  SUM(CONVERT(DECIMAL(38,2),s.Remaining))
+           FROM Housing.V_SumBillsTotalPriceAndTotalPaidForResident s
+           WHERE s.residentInfoID = TRY_CONVERT(BIGINT,@residentInfoID)
+             AND s.buildingDetailsID = TRY_CONVERT(BIGINT,@buildingDetailsID)
+             AND s.BillChargeTypeID = TRY_CONVERT(INT,@BillChargeTypeID_FK);
+
+         IF (select b.buildingPaymentDestainationID_FK from [DATACORE].[Housing].[BuildingPaymentType] b where b.buildingPaymentTypeID = @PaymentType) = 1
          BEGIN
            
            set @FinalAvailableAmountForToChargeTypeForPayment = @AvailableAmountForToChargeTypeForPayment
@@ -601,18 +705,10 @@ END;
          END
 
 
-         IF @Amount_Decimal > @FinalAvailableAmountForToChargeTypeForPayment
-             BEGIN
-             declare @msg1112 nvarchar(1000)
-             set @msg1112 = N'المبلغ المدخل اكبر من المبلغ المطلوب في الخدمه المعالجة والمبلغ المطلوب هو : ' + CONVERT(NVARCHAR(100), @FinalAvailableAmountForToChargeTypeForPayment)
-                 ;THROW 50001, @msg1112, 1;
-             END
-
-             
-            
-             
-
-
+         IF @FinalAvailableAmountForToChargeTypeForPayment IS NULL
+            OR @FinalAvailableAmountForToChargeTypeForPayment <= 0
+            OR @Amount_Decimal > @FinalAvailableAmountForToChargeTypeForPayment
+             THROW 50001, N'المبلغ يتجاوز الرصيد المتاح لهذا النوع من الخدمة في المنزل المحدد.', 1;
 
          IF (select b.buildingPaymentDestainationID_FK from [DATACORE].[Housing].[BuildingPaymentType] b where b.buildingPaymentTypeID = @PaymentType) = 1
          BEGIN
@@ -875,6 +971,12 @@ END;
 
            
 
+            IF @tc = 0 COMMIT TRANSACTION;
+
+
+
+           
+
             SELECT 1 AS IsSuccessful, N'تم تنفيذ العملية بنجاح' AS Message_;
             RETURN;
         END
@@ -917,61 +1019,185 @@ END;
              END
 
 
-              DECLARE @FullRemining_Decimal DECIMAL(18,2);
+            -- Recalculate both service balances on the server for this home only;
+            -- @FullRemining is user-supplied and must not authorize a transfer.
+            IF @Amount_Decimal IS NULL OR @Amount_Decimal <= 0
+    THROW 50001, N'مبلغ التسوية يجب أن يكون أكبر من صفر.', 1;
 
-    SET @FullRemining_Decimal = TRY_CONVERT(DECIMAL(18,2), @FullRemining);
-    
-    IF @FullRemining_Decimal IS NULL
-    BEGIN
-        ;THROW 50001, N'قيمة المبلغ غير صحيحة', 1;
-    END
+------------------------------------------------------------
+-- Shared HFA locks for financial settlement.
+-- Lock BOTH services before recalculating balances.
+------------------------------------------------------------
+DECLARE @ExitSetResidentID BIGINT =
+    TRY_CONVERT(BIGINT, @residentInfoID);
 
-               IF @Amount_Decimal > @FullRemining_Decimal
-             BEGIN
-             declare @msg nvarchar(1000)
-             set @msg = N'المبلغ المدخل اكبر من المبلغ المتوفر في هذه الخدمه : ' + CONVERT(NVARCHAR(100), @FullRemining_Decimal)
-                 ;THROW 50001, @msg, 1;
-             END
+DECLARE @ExitSetBuildingID BIGINT =
+    TRY_CONVERT(BIGINT, @buildingDetailsID);
 
-               IF @Amount_Decimal = 0.00
-             BEGIN
-              declare @msg3 nvarchar(1000)
-             set @msg3 = N'يجب ان يكون المبلغ اكبر من صفر ';
-                 ;THROW 50001, @msg3, 1;
-             END
+DECLARE @ExitSetFromServiceID INT =
+    TRY_CONVERT(INT, @BillChargeTypeID_FK);
+
+DECLARE @ExitSetToServiceID INT =
+    TRY_CONVERT(INT, @ToBillChargeTypeID_FK);
+
+DECLARE @ExitSetFirstServiceID INT;
+DECLARE @ExitSetSecondServiceID INT;
+DECLARE @ExitSetLockKey NVARCHAR(255);
+DECLARE @ExitSetLockResult INT;
+
+IF @IdaraID_INT IS NULL OR @IdaraID_INT <= 0
+   OR @ExitSetResidentID IS NULL OR @ExitSetResidentID <= 0
+   OR @ExitSetBuildingID IS NULL OR @ExitSetBuildingID <= 0
+   OR @ExitSetFromServiceID IS NULL OR @ExitSetFromServiceID <= 0
+   OR @ExitSetToServiceID IS NULL OR @ExitSetToServiceID <= 0
+   OR @ExitSetFromServiceID = @ExitSetToServiceID
+BEGIN
+    THROW 50001,
+        N'بيانات المستفيد أو المبنى أو خدمات التسوية غير صحيحة.',
+        1;
+END;
+
+-- Deterministic lock ordering prevents reciprocal
+-- settlements from acquiring the two locks in reverse order.
+
+SET @ExitSetFirstServiceID =
+    CASE
+        WHEN @ExitSetFromServiceID < @ExitSetToServiceID
+        THEN @ExitSetFromServiceID
+        ELSE @ExitSetToServiceID
+    END;
+
+SET @ExitSetSecondServiceID =
+    CASE
+        WHEN @ExitSetFromServiceID < @ExitSetToServiceID
+        THEN @ExitSetToServiceID
+        ELSE @ExitSetFromServiceID
+    END;
+
+-- Lock the first service.
+SET @ExitSetLockKey = CONCAT(
+    N'HFA|',
+    @IdaraID_INT, N'|',
+    @ExitSetResidentID, N'|',
+    @ExitSetFirstServiceID, N'|',
+    @ExitSetBuildingID
+);
+
+EXEC @ExitSetLockResult = sys.sp_getapplock
+    @Resource = @ExitSetLockKey,
+    @LockMode = N'Exclusive',
+    @LockOwner = N'Transaction',
+    @LockTimeout = 10000;
+
+IF @ExitSetLockResult < 0
+    THROW 50001,
+        N'تعذر حجز الرصيد للتسوية حاليًا، يرجى إعادة المحاولة.',
+        1;
+
+-- Lock the second service.
+SET @ExitSetLockKey = CONCAT(
+    N'HFA|',
+    @IdaraID_INT, N'|',
+    @ExitSetResidentID, N'|',
+    @ExitSetSecondServiceID, N'|',
+    @ExitSetBuildingID
+);
+
+EXEC @ExitSetLockResult = sys.sp_getapplock
+    @Resource = @ExitSetLockKey,
+    @LockMode = N'Exclusive',
+    @LockOwner = N'Transaction',
+    @LockTimeout = 10000;
+
+IF @ExitSetLockResult < 0
+    THROW 50001,
+        N'تعذر حجز الرصيد للتسوية حاليًا، يرجى إعادة المحاولة.',
+        1;
 
 
-         
-            Declare @AvailableAmountForToChargeType decimal(18,2);
-            set @AvailableAmountForToChargeType = 
-            (select TRY_CONVERT(DECIMAL(18,2),isnull(s.Remaining,0.00)) 
-               FROM Housing.BillChargeType bt
-               LEFT JOIN Housing.V_SumBillsTotalPriceAndTotalPaidForResident s
-                      ON s.BillChargeTypeID = bt.BillChargeTypeID
-                     AND s.residentInfoID = @residentInfoID
-                     AND (s.buildingDetailsID = @buildingDetailsID OR s.buildingDetailsID IS NULL)
-               LEFT JOIN Housing.V_GetGeneralListForBuilding b
-                      ON s.buildingDetailsID = b.buildingDetailsID
-                      where bt.BillChargeTypeID = @ToBillChargeTypeID_FK
-             )
+        ------------------------------------------------------------
+-- Settlement idempotency validation
+-- Must execute AFTER acquiring both HFA locks
+-- and BEFORE calculating balances or inserting movements.
+------------------------------------------------------------
+DECLARE @ExitSetReference NVARCHAR(50) =
+    NULLIF(LTRIM(RTRIM(@PaymentNo)), N'');
 
-                  IF @Amount_Decimal > @AvailableAmountForToChargeType
-             BEGIN
-             declare @msg1 nvarchar(1000)
-             set @msg1 = N'المبلغ المدخل اكبر من المبلغ المطلوب في الخدمه المعالجة والمبلغ المطلوب لسدادها هو : ' + CONVERT(NVARCHAR(100), @AvailableAmountForToChargeType)
-                 ;THROW 50001, @msg1, 1;
-             END
+IF @ExitSetReference IS NULL
+   OR LEN(LTRIM(RTRIM(@PaymentNo))) > 50
+BEGIN
+    THROW 50001,
+        N'معرف عملية التسوية مطلوب وبحد أقصى 50 حرفًا.',
+        1;
+END;
 
-                 
+-- Only the approved financial settlement payment type.
+IF ISNULL(TRY_CONVERT(INT, @PaymentType), 0) <> 6
+   OR NOT EXISTS
+   (
+       SELECT 1
+       FROM Housing.BuildingPaymentType t
+       WHERE t.buildingPaymentTypeID = 6
+         AND t.buildingPaymentTypeActive = 1
+         AND t.buildingPaymentDestainationID_FK = 1
+         AND t.deductTypeID_FK = 6
+   )
+BEGIN
+    THROW 50001,
+        N'نوع عملية التسوية المالية غير صحيح أو غير مفعل.',
+        1;
+END;
 
+-- Reject replaying an already registered settlement request.
+IF EXISTS
+(
+    SELECT 1
+    FROM Housing.DeductList d WITH (UPDLOCK, HOLDLOCK)
+    WHERE d.IdaraId_FK = @IdaraID_INT
+      AND d.paymentTypeID_FK = 6
+      AND d.paymentNo = @ExitSetReference
+)
+BEGIN
+    THROW 50001,
+        N'تم تنفيذ طلب التسوية بهذا المعرف مسبقًا.',
+        1;
+END;
 
-              IF 
+------------------------------------------------------------
+-- Existing balance calculations MUST run after both locks.
+------------------------------------------------------------
+DECLARE @SourceRemaining DECIMAL(38,2) = NULL,
+        @TargetRemaining DECIMAL(38,2) = NULL;
+
+            SELECT @SourceRemaining = SUM(CONVERT(DECIMAL(38,2),s.Remaining))
+            FROM Housing.V_SumBillsTotalPriceAndTotalPaidForResident s
+            WHERE s.residentInfoID = TRY_CONVERT(BIGINT,@residentInfoID)
+              AND s.buildingDetailsID = TRY_CONVERT(BIGINT,@buildingDetailsID)
+              AND s.BillChargeTypeID = TRY_CONVERT(INT,@BillChargeTypeID_FK);
+
+            SELECT @TargetRemaining = SUM(CONVERT(DECIMAL(38,2),s.Remaining))
+            FROM Housing.V_SumBillsTotalPriceAndTotalPaidForResident s
+            WHERE s.residentInfoID = TRY_CONVERT(BIGINT,@residentInfoID)
+              AND s.buildingDetailsID = TRY_CONVERT(BIGINT,@buildingDetailsID)
+              AND s.BillChargeTypeID = TRY_CONVERT(INT,@ToBillChargeTypeID_FK);
+
+            IF @SourceRemaining IS NULL OR @SourceRemaining >= 0
+                THROW 50001, N'لا يوجد فائض مؤهل للتسوية في الخدمة المصدر لهذا المنزل.', 1;
+
+            IF @TargetRemaining IS NULL OR @TargetRemaining <= 0
+                THROW 50001, N'لا توجد مديونية مؤهلة للتسوية في الخدمة المستهدفة لهذا المنزل.', 1;
+
+            IF @Amount_Decimal > -@SourceRemaining OR @Amount_Decimal > @TargetRemaining
+                THROW 50001, N'مبلغ التسوية يتجاوز فائض المصدر أو مديونية الوجهة لهذا المنزل.', 1;
+
+            IF NOT EXISTS
             (
-               select w.LastActionTypeID from Housing.V_WaitingList w where w.ActionID = @ActionID 
-            ) Not in (51,57)
-            BEGIN
-                ;THROW 50001, N'تم انهاء اجراءات الامهال / الاخلاء مسبقا', 1;
-            END
+               SELECT 1 FROM Housing.V_WaitingList w
+               WHERE w.ActionID=@ActionID AND w.LastActionID=TRY_CONVERT(BIGINT,@LastActionID)
+                 AND w.residentInfoID=TRY_CONVERT(BIGINT,@residentInfoID)
+                 AND w.buildingDetailsID=TRY_CONVERT(BIGINT,@buildingDetailsID)
+                 AND w.IdaraId=@IdaraID_INT AND w.LastActionTypeID IN (51,57)
+            ) THROW 50001, N'حالة طلب التدقيق تغيرت؛ حدّث الصفحة.', 1;
 
             Declare @AmountForFromChargeType decimal(18,2),@AmountForToChargeType decimal(18,2)
             
@@ -998,6 +1224,7 @@ END;
                  ,[paymentTypeID_FK]
                  ,[issueMonth]
                  ,[issueYear]
+                 ,[paymentNo]
                  ,[paymentDate]
                  ,[description]
                  ,[deductActive]
@@ -1017,6 +1244,7 @@ END;
                  @PaymentType,
                  MONTH(GETDATE()),
                  YEAR(GETDATE()),
+                 @ExitSetReference,
                  GETDATE(),
                  @description,
                  1,
@@ -1249,6 +1477,11 @@ END;
                 , @entryData
                 , @Note
             );
+
+
+           
+
+            IF @tc = 0 COMMIT TRANSACTION;
 
 
            

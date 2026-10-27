@@ -320,7 +320,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
     new FieldConfig { Name = "p04", Label = "المدينة", Type = "text", ColCss = "3", Required = true,Readonly = true },
     new FieldConfig { Name = "p03", Label = "الموقع / الحي", Type = "text", ColCss = "3", Required = true,Readonly = true },
     new FieldConfig { Name = "p06", Label = "نوع المبنى", Type = "text", ColCss = "3", Required = true,Readonly = true },
-    new FieldConfig { Name = "p07", Label = "الاجراء التالي", Type = "select", ColCss = "6", Required = true, Options = NextBuildingActionTypeIDOptions, Select2=true,Readonly = true },
+    new FieldConfig { Name = "p07", Label = "الاجراء التالي", Type = "select", ColCss = "6", Required = true, Options = NextBuildingActionTypeIDOptions, Select2=true },
     new FieldConfig { Name = "p08", Label = "حالة المبنى 1", Type = "hidden", ColCss = "6", Required = false ,Readonly = true},
     new FieldConfig { Name = "p09", Label = "حالة المبنى 2", Type = "hidden", ColCss = "6", Required = false,Readonly = true },
     new FieldConfig { Name = "p10", Label = "LastActionTypeID_", Type = "hidden", ColCss = "3", Required = false,Value =LastActionTypeID_,Readonly = true },

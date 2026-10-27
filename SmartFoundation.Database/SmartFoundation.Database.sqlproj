@@ -796,9 +796,17 @@
     <Build Include="Housing\Tables\UnallocatedPaymentRefund.sql" />
     <Build Include="MoveData\Stored Procedures\usp_MigrateWaitingClass.sql" />
     <Build Include="MoveData\Stored Procedures\usp_FinalValidateMigrationForEveryResident.sql" />
-    <Build Include="Housing\Stored Procedures\HousingUnallocatedPaymentsReviewSP.sql" />
-    <Build Include="Housing\Stored Procedures\HousingUnallocatedPaymentsReviewDL.sql" />
     <Build Include="Housing\Stored Procedures\HousingCommandCenterDashboardDL.sql" />
+    <Build Include="Housing\Tables\GeneralBalanceBuildingAllocation.sql" />
+    <Build Include="Housing\Tables\ExitRentExemptionClosure.sql" />
+    <Build Include="Housing\Tables\ExitMeterBillProration.sql" />
+    <Build Include="Housing\Tables\ExitFinancialProcessingCycle.sql" />
+    <Build Include="MoveData\Stored Procedures\usp_RegisterLegacyOpenExitCycles.sql" />
+    <Build Include="Housing\Stored Procedures\ManageExitRentExemptionClosure.sql" />
+    <Build Include="Housing\Stored Procedures\GenerateHistoricalServiceBillsForExitRequest.sql" />
+    <Build Include="Housing\Stored Procedures\GenerateExitServiceBillsForRequest.sql" />
+    <Build Include="Housing\Stored Procedures\GenerateExitRentBillsForRequest.sql" />
+    <Build Include="Housing\Stored Procedures\ExitMeterBillProrationSP.sql" />
   </ItemGroup>
   <ItemGroup>
     <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\150\SqlSchemas\master.dacpac">

@@ -218,6 +218,56 @@ drawer.dispatchEvent(new CustomEvent("sf-drawer:open", {
         const drawer = currentDrawer();
         if (!drawer) return;
 
+        // Modal opened from inside a SmartDrawer.
+        // Its content is teleported to document.body.
+        const activeModal = document.querySelector(
+            ".sf-modal-backdrop--drawer .sf-modal"
+        );
+
+        if (activeModal) {
+
+            // Close the Modal first, without closing the Drawer.
+            if (event.key === "Escape") {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+
+                activeModal
+                    .querySelector(".sf-modal-close")
+                    ?.click();
+
+                return;
+            }
+
+            // Keep keyboard navigation inside the active Modal.
+            if (event.key === "Tab") {
+                const elements = getFocusable(activeModal);
+
+                if (!elements.length) {
+                    event.preventDefault();
+                    activeModal.setAttribute("tabindex", "-1");
+                    activeModal.focus({ preventScroll: true });
+                    return;
+                }
+
+                const first = elements[0];
+                const last = elements[elements.length - 1];
+                const active = document.activeElement;
+
+                if (!activeModal.contains(active)) {
+                    event.preventDefault();
+                    (event.shiftKey ? last : first).focus();
+                } else if (event.shiftKey && active === first) {
+                    event.preventDefault();
+                    last.focus();
+                } else if (!event.shiftKey && active === last) {
+                    event.preventDefault();
+                    first.focus();
+                }
+
+                return;
+            }
+        }
+
         if (event.key === "Escape") {
             if (drawer.dataset.closeOnEscape !== "false") {
                 event.preventDefault();
@@ -265,3 +315,5 @@ drawer.dispatchEvent(new CustomEvent("sf-drawer:open", {
     });
 
 })();
+
+

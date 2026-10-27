@@ -10,6 +10,7 @@ CREATE PROCEDURE [Housing].[FinancialAuditForExtendAndEvictionsDL]
     , @entrydata      BIGINT
     , @hostname       NVARCHAR(400)
 	,@residentInfoID   BIGINT
+    ,@buildingDetailsID BIGINT = NULL
     
 AS
 BEGIN
@@ -19,12 +20,48 @@ BEGIN
 	    -- MeterReadForOccubentAndExit Data
  -- HousingExtend Data
         -- FinancialAuditForExtendAndEvictions Data
-        Declare @buildingDetailsID   BIGINT
-        set @buildingDetailsID = (
-        select Top(1) w.buildingDetailsID 
-        from Housing.V_WaitingList w 
-        where w.residentInfoID = @residentInfoID and w.LastActionTypeID in (51,57) 
-        order by w.LastActionID desc)
+        
+
+
+    -- PERFORMANCE ONLY: materialize resident financial rows once, preserving
+    -- the current financial view's FULL OUTER JOIN semantics and all idara values.
+    -- IMPORTANT: The original building totals do not filter idaraID and the
+    -- general-balance alert checks department eligibility separately; filtering
+    -- this materialization by @idaraID would silently change those results.
+    -- SELECT INTO does NOT emit an extra result set to the caller.
+    IF @residentInfoID IS NOT NULL
+    BEGIN
+        SELECT
+            COALESCE(br.residentInfoID, po.residentInfoID) AS residentInfoID,
+            COALESCE(br.BillChargeTypeID, po.BillChargeTypeID) AS BillChargeTypeID,
+            COALESCE(br.BillChargeTypeName_A, po.BillChargeTypeName_A)
+                AS BillChargeTypeName_A,
+            COALESCE(br.buildingDetailsID, po.buildingDetailsID) AS buildingDetailsID,
+            ISNULL(br.SumBillsTotalPrice, 0) AS SumBillsTotalPrice,
+            ISNULL(po.SumTotalPaidBills, 0) AS SumTotalPaidBills,
+            ISNULL(br.SumBillsTotalPrice, 0)
+                - ISNULL(po.SumTotalPaidBills, 0) AS Remaining,
+            COALESCE(br.idaraID, po.idaraID) AS idaraID
+        INTO #FinancialBalance
+        FROM
+        (
+            SELECT residentInfoID, BillChargeTypeID, BillChargeTypeName_A,
+                   buildingDetailsID, SumBillsTotalPrice, idaraID
+            FROM Housing.V_SumBillsTotalPriceForResident
+            WHERE residentInfoID = @residentInfoID
+        ) AS br
+        FULL OUTER JOIN
+        (
+            SELECT residentInfoID, BillChargeTypeID, BillChargeTypeName_A,
+                   buildingDetailsID, SumTotalPaidBills, idaraID
+            FROM Housing.V_SumBillsTotalPaidByResident
+            WHERE residentInfoID = @residentInfoID
+        ) AS po
+            ON br.residentInfoID = po.residentInfoID
+           AND br.BillChargeTypeID = po.BillChargeTypeID
+           AND br.idaraID = po.idaraID
+           AND br.buildingDetailsID = po.buildingDetailsID;
+    END;
 
         ------------------------------1--------------------------------------------
        
@@ -87,9 +124,11 @@ BEGIN
            FROM [DATACORE].[Housing].V_WaitingList w
            inner join [DATACORE].[Housing].V_GetFullResidentDetails fr on fr.residentInfoID = w.residentInfoID
            left join Housing.V_buildingWithRent r on w.buildingDetailsID = r.buildingDetailsID
-           where w.LastActionTypeID in (51,57) 
-           and fr.residentInfoID = @residentInfoID
-           and fr.IdaraID = @idaraID
+           WHERE w.LastActionTypeID IN (51,57)
+            AND w.residentInfoID = @residentInfoID
+            AND w.buildingDetailsID = @buildingDetailsID
+            AND w.IdaraId = @idaraID
+            AND fr.IdaraID = @idaraID
 
            
 
@@ -98,17 +137,42 @@ BEGIN
 
 
           
-        SELECT 
-           rd.rankNameA+' - ' +rd.FullName_A+' - '+rd.NationalID+' - '+case when w.LastActionTypeID = 51 then N'امهال' when w.LastActionTypeID = 57 then N'اخلاء' END as FullName_A,
-            w.residentInfoID
-          
-    FROM Housing.V_WaitingList w 
-    INNER JOIN Housing.V_GetFullResidentDetails rd 
-        ON w.residentInfoID = rd.residentInfoID
-        Inner Join Housing.BuildingActionType ba on w.LastActionTypeID = ba.buildingActionTypeID
-    WHERE w.IdaraId = @idaraID
-      AND  w.LastActionTypeID in (51,57)
-      order by   w.LastActionEntryDate desc
+        SELECT
+    CONCAT(
+        rd.rankNameA,
+        N' - ',
+        rd.FullName_A,
+        N' - ',
+        rd.NationalID,
+        N' - ',
+        CASE
+            WHEN w.LastActionTypeID = 51 THEN N'إمهال'
+            WHEN w.LastActionTypeID = 57 THEN N'إخلاء'
+        END,
+        N' - المنزل ',
+        w.buildingDetailsNo
+    ) AS FullName_A,
+
+    w.residentInfoID,
+
+    CONCAT(
+        CONVERT(NVARCHAR(20), w.residentInfoID),
+        N'|',
+        CONVERT(NVARCHAR(20), w.buildingDetailsID)
+    ) AS AuditSelectionKey
+
+FROM Housing.V_WaitingList w
+
+INNER JOIN Housing.V_GetFullResidentDetails rd
+    ON w.residentInfoID = rd.residentInfoID
+
+INNER JOIN Housing.BuildingActionType ba
+    ON w.LastActionTypeID = ba.buildingActionTypeID
+
+WHERE w.IdaraId = @idaraID
+  AND w.LastActionTypeID IN (51,57)
+
+ORDER BY w.LastActionEntryDate DESC;
 
 
       --or w.LastActionTypeID in (2,3,18,19,20,21,22,23,24,26,27,28,33,34,35)
@@ -144,62 +208,74 @@ SELECT
           ELSE 2
        END AS BillsStatusID
 FROM Housing.BillChargeType bt
-LEFT JOIN Housing.V_SumBillsTotalPriceAndTotalPaidForResident s
+LEFT JOIN #FinancialBalance s
        ON s.BillChargeTypeID = bt.BillChargeTypeID
       AND s.residentInfoID = @residentInfoID
-      AND (s.buildingDetailsID = @buildingDetailsID OR s.buildingDetailsID IS NULL)
+      AND s.buildingDetailsID = @buildingDetailsID
 LEFT JOIN Housing.V_GetGeneralListForBuilding b
        ON s.buildingDetailsID = b.buildingDetailsID
 ORDER BY bt.BillChargeTypeID ASC;
 END
 
 
+--------------------------------------4--------------------------------------
+-- Empty result set retained for DataSet compatibility.
+-- No dependency on Housing.V_ResidentFinancialSummary.
 
---------------------------------------4--------------------------------------------------------------------------------------------------------------
+SELECT
+    CAST(NULL AS DECIMAL(18,2)) AS AllAmountresidual,
+    CAST(NULL AS DECIMAL(18,2)) AS RentBillsAmountresidual,
+    CAST(NULL AS DECIMAL(18,2)) AS ServiceBillsAmountresidual
+WHERE 1 = 0;
+----------------------------------------4--------------------------------------------------------------------------------------------------------------
 
 
-         SELECT
+--         SELECT
       
-        (([TotalRentBillsAmount]+[TotalServiceBillsAmount]) - ([TotalRentBillsPaid]+[TotalServiceBillsPaid])) AllAmountresidual
+--        (([TotalRentBillsAmount]+[TotalServiceBillsAmount]) - ([TotalRentBillsPaid]+[TotalServiceBillsPaid])) AllAmountresidual
       
-      ,([TotalRentBillsAmount] - [TotalRentBillsPaid]) RentBillsAmountresidual
-      ,([TotalServiceBillsAmount] - [TotalServiceBillsPaid]) ServiceBillsAmountresidual
+--      ,([TotalRentBillsAmount] - [TotalRentBillsPaid]) RentBillsAmountresidual
+--      ,([TotalServiceBillsAmount] - [TotalServiceBillsPaid]) ServiceBillsAmountresidual
 
 
-        FROM [DATACORE].[Housing].V_WaitingList w
-           inner join [DATACORE].[Housing].V_GetFullResidentDetails fr on fr.residentInfoID = w.residentInfoID
-        inner join [DATACORE].[Housing].[V_ResidentFinancialSummary] s on fr.residentInfoID = s.residentInfoID
+--        FROM [DATACORE].[Housing].V_WaitingList w
+--           inner join [DATACORE].[Housing].V_GetFullResidentDetails fr on fr.residentInfoID = w.residentInfoID
+--        inner join [DATACORE].[Housing].[V_ResidentFinancialSummary] s on fr.residentInfoID = s.residentInfoID
 
-        where s.residentInfoID = @residentInfoID
-        AND  w.LastActionTypeID in (51,57)
-        and fr.IdaraID = @idaraID
-
-
+--        where s.residentInfoID = @residentInfoID
+--        AND  w.LastActionTypeID in (51,57)
+--        and fr.IdaraID = @idaraID
 
 
-        ------------------------------5----------------------------------------------------------------------------------------------------------------------
 
-        select 
-        t.billPaymentTypeID,
-        t.billPaymentTypeName_A
-        from Housing.billPaymentType t 
-        where t.billPaymentDestainationID_FK = 1
+
         
+----------------------------------5----------------------------------
 
-        ------------------------------6----------------------------------------------------------------------------------------------------------------------
+SELECT
+    t.buildingPaymentTypeID AS billPaymentTypeID,
+    t.buildingPaymentTypeName_A AS billPaymentTypeName_A
+FROM Housing.BuildingPaymentType t
+WHERE t.buildingPaymentDestainationID_FK = 1;
 
-         select 
-        t.billPaymentTypeID,
-        t.billPaymentTypeName_A
-        from Housing.billPaymentType t 
-        where t.billPaymentDestainationID_FK = 2
-     
-     ------------------------------------7----------------------------------------------------------------------------------------------------------------
-     select 
-        t.billPaymentTypeID,
-        t.billPaymentTypeName_A
-        from Housing.billPaymentType t 
-        where t.billPaymentTypeID in(1,2)
+
+----------------------------------6----------------------------------
+
+SELECT
+    t.buildingPaymentTypeID AS billPaymentTypeID,
+    t.buildingPaymentTypeName_A AS billPaymentTypeName_A
+FROM Housing.BuildingPaymentType t
+WHERE t.buildingPaymentDestainationID_FK = 2;
+
+
+----------------------------------7----------------------------------
+
+SELECT
+    t.buildingPaymentTypeID AS billPaymentTypeID,
+    t.buildingPaymentTypeName_A AS billPaymentTypeName_A
+FROM Housing.BuildingPaymentType t
+WHERE t.buildingPaymentTypeID IN (1, 2);
+
 
         ---------------------------------8-------------------------------------------------------------------------------------------------------------------
     Select e.BillChargeTypeID,e.BillChargeTypeName_A 
@@ -236,7 +312,7 @@ END
      if(@residentInfoID is null)
      begin
      
-     SELECT 
+     SELECT TOP (0) 
     e.residentInfoID,
     SUM(e.SumBillsTotalPrice) AS SumBillsTotalPrice,
     SUM(e.SumTotalPaidBills) AS SumTotalPaidBills,
@@ -257,7 +333,7 @@ END
     END AS BillsStatusID
 FROM Housing.V_SumBillsTotalPriceAndTotalPaidForResident e
 WHERE e.residentInfoID = @residentInfoID
-AND (e.buildingDetailsID = @buildingDetailsID OR e.buildingDetailsID IS NULL)
+AND e.buildingDetailsID = @buildingDetailsID
 GROUP BY e.residentInfoID;
      
      end
@@ -289,13 +365,49 @@ GROUP BY e.residentInfoID;
         ELSE 2
     END AS BillsStatusID
 
-FROM Housing.V_SumBillsTotalPriceAndTotalPaidForResident e
+FROM #FinancialBalance e
 WHERE e.residentInfoID = @residentInfoID
-AND (e.buildingDetailsID = @buildingDetailsID OR e.buildingDetailsID IS NULL)
+AND e.buildingDetailsID = @buildingDetailsID
 
      end
 
        ------------------------------------11----------------------------------------------------------------------------------------------------------------
       
-       
+       ------------------------------------------------------------
+-- GENERAL BALANCE ALERT
+-- رصيد المستفيد العام غير المرتبط بمبنى
+-- يضاف كآخر Result Set دون تغيير ترتيب النتائج السابقة
+------------------------------------------------------------
+IF @residentInfoID IS NULL
+BEGIN
+    -- Same one-row DECIMAL(18,2) result as the original aggregate on NULL.
+    SELECT CONVERT(DECIMAL(18,2), 0) AS UnlinkedGeneralCredit;
 END
+ELSE
+BEGIN
+SELECT
+    CONVERT(
+        DECIMAL(18,2),
+        COALESCE(
+            SUM(
+                CASE
+                    WHEN v.Remaining < 0
+                    THEN -CONVERT(DECIMAL(18,2), v.Remaining)
+                    ELSE CONVERT(DECIMAL(18,2), 0)
+                END
+            ),
+            0
+        )
+    ) AS UnlinkedGeneralCredit
+FROM #FinancialBalance v
+WHERE v.residentInfoID = @residentInfoID
+  AND v.buildingDetailsID IS NULL
+  AND EXISTS
+  (
+      SELECT 1
+      FROM Housing.V_GetFullResidentDetails r
+      WHERE r.residentInfoID = @residentInfoID
+        AND r.IdaraID = @idaraID
+  );
+END; -- END general-balance ELSE
+END; -- END procedure

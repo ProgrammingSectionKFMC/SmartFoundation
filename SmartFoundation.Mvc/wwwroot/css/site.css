@@ -18511,3 +18511,14 @@ body:has(#sf-refund-drawer.is-open) .sf-modal-backdrop {
     z-index: 10000030 !important;
 }
 
+
+/* ============================================================
+   SmartFoundation - Global Print Modal Priority
+   Print preparation modal must appear above all application
+   modals, drawers and PDF previews.
+   ============================================================ */
+
+.sf-modal-backdrop.sf-print-busy-top {
+    z-index: 2147483647 !important;
+}
+

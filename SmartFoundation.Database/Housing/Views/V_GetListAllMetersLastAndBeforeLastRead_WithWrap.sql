@@ -1,4 +1,5 @@
 ﻿
+
 CREATE VIEW [Housing].[V_GetListAllMetersLastAndBeforeLastRead_WithWrap]
 AS
 WITH Reads AS
@@ -77,7 +78,7 @@ SELECT
             WHEN l.LastReadValue >= b.BeforeLastReadValue
                 THEN l.LastReadValue - b.BeforeLastReadValue
             WHEN l.LastReadValue < b.BeforeLastReadValue
-                THEN (ISNULL(mm.meterMaxRead, 0) - b.BeforeLastReadValue) + l.LastReadValue
+                THEN (ISNULL(mm.meterMaxRead, 0) + 1 - b.BeforeLastReadValue) + l.LastReadValue
         END
 
 FROM LastRead l

@@ -1,25 +1,119 @@
 ﻿
-/* سدادات المباني: الحالة 1 فقط. */
-CREATE   VIEW [Housing].[V_SumBillsTotalPaidByResident]
+CREATE   VIEW Housing.V_SumBillsTotalPaidByResident
 AS
+WITH FirstOccupancy AS
+(
+    SELECT
+        a.residentInfoID_FK,
+        a.IdaraId_FK,
+        MIN(CONVERT(DATE, a.buildingActionDate))
+            AS FirstOccupancyDate
+    FROM Housing.BuildingAction a
+    WHERE a.buildingActionTypeID_FK = 2
+      AND a.buildingActionActive = 1
+      AND a.buildingActionDate IS NOT NULL
+      AND a.residentInfoID_FK IS NOT NULL
+      AND a.IdaraId_FK IS NOT NULL
+    GROUP BY
+        a.residentInfoID_FK,
+        a.IdaraId_FK
+),
+HijriMonths AS
+(
+    SELECT
+        yearH,
+        monthH,
+        MAX(CONVERT(DATE, gregorianDate)) AS MonthEnd
+    FROM dbo._GregorianHijriDate
+    GROUP BY yearH, monthH
+),
+PaymentPeriods AS
+(
+    SELECT
+        p.residentInfoID_FK AS residentInfoID,
+        p.BillChargeTypeID_FK AS BillChargeTypeID,
+        ct.BillChargeTypeName_A,
+
+        CASE
+            WHEN p.buildingPaymentLinkStatusID_FK = 1
+            THEN TRY_CONVERT(
+                BIGINT, p.buildingDetailsID_FK)
+            ELSE CAST(NULL AS BIGINT)
+        END AS buildingDetailsID,
+
+        p.IdaraId_FK AS idaraID,
+        p.buildingPaymentLinkStatusID_FK AS LinkStatus,
+        p.amount,
+        o.FirstOccupancyDate,
+
+        CASE
+            WHEN d.issueYear BETWEEN 1300 AND 1599
+                THEN h.MonthEnd
+
+            WHEN d.issueYear BETWEEN 1900 AND 9999
+             AND d.issueMonth BETWEEN 1 AND 12
+                THEN EOMONTH(DATEFROMPARTS(
+                    d.issueYear,
+                    d.issueMonth,
+                    1
+                ))
+
+            ELSE NULL
+        END AS PeriodEnd
+
+    FROM Housing.BuildingPayment p
+
+    INNER JOIN Housing.DeductList d
+        ON d.deductListID = p.deductListID_FK
+
+    INNER JOIN Housing.BillChargeType ct
+        ON ct.BillChargeTypeID = p.BillChargeTypeID_FK
+
+    INNER JOIN FirstOccupancy o
+        ON o.residentInfoID_FK = p.residentInfoID_FK
+       AND o.IdaraId_FK = p.IdaraId_FK
+
+    LEFT JOIN HijriMonths h
+        ON h.yearH = d.issueYear
+       AND h.monthH = d.issueMonth
+
+    WHERE p.buildingPayementActive = 1
+      AND d.deductActive = 1
+      AND p.residentInfoID_FK IS NOT NULL
+      AND p.IdaraId_FK IS NOT NULL
+      AND p.buildingPaymentLinkStatusID_FK IN (1,2)
+),
+EligiblePayments AS
+(
+    SELECT *
+    FROM PaymentPeriods
+    WHERE PeriodEnd IS NOT NULL
+      AND PeriodEnd >= FirstOccupancyDate
+      AND
+      (
+          LinkStatus = 2
+          OR
+          (
+              LinkStatus = 1
+              AND buildingDetailsID > 0
+          )
+      )
+)
 SELECT
-    SUM(paymentRow.[amount]) [SumTotalPaidBills],
-    paymentRow.[residentInfoID_FK] [residentInfoID],
-    paymentRow.[BillChargeTypeID_FK] [BillChargeTypeID],
-    chargeType.[BillChargeTypeName_A],
-    paymentRow.[buildingDetailsID_FK] [buildingDetailsID]
-FROM [Housing].[BuildingPayment] paymentRow
-JOIN [Housing].[DeductList] deductRow
-  ON deductRow.[deductListID] = paymentRow.[deductListID_FK]
-JOIN [Housing].[BillChargeType] chargeType
-  ON chargeType.[BillChargeTypeID] = paymentRow.[BillChargeTypeID_FK]
-WHERE deductRow.[deductActive] = 1
-  AND paymentRow.[buildingPayementActive] = 1
-  AND paymentRow.[buildingPaymentLinkStatusID_FK] = 1
-  AND paymentRow.[residentInfoID_FK] IS NOT NULL
-  AND NULLIF(LTRIM(RTRIM(paymentRow.[buildingDetailsID_FK])), N'') IS NOT NULL
-GROUP BY paymentRow.[residentInfoID_FK], paymentRow.[BillChargeTypeID_FK],
-         chargeType.[BillChargeTypeName_A], paymentRow.[buildingDetailsID_FK];
+    SUM(amount) AS SumTotalPaidBills,
+    residentInfoID,
+    BillChargeTypeID,
+    BillChargeTypeName_A,
+    buildingDetailsID,
+    idaraID
+
+FROM EligiblePayments
+GROUP BY
+    residentInfoID,
+    BillChargeTypeID,
+    BillChargeTypeName_A,
+    buildingDetailsID,
+    idaraID;
 
 GO
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane1', @value = N'[0E232FF0-B466-11cf-A24F-00AA00A3EFFF, 1.00]

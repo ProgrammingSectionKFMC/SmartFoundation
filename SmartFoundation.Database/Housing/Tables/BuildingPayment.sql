@@ -14,6 +14,7 @@
     [buildingPayementActive]         BIT              NULL,
     [BillChargeTypeID_FK]            BIGINT           NULL,
     [ExtendInsuranceID_FK]           BIGINT           NULL,
+    [UnallocatedRefundID_FK]         BIGINT           NULL,
     [IdaraId_FK]                     INT              NULL,
     [entryDate]                      DATETIME         CONSTRAINT [DF_BuildingPayment_entryDate] DEFAULT (getdate()) NULL,
     [entryData]                      NVARCHAR (2000)  NULL,
@@ -21,8 +22,11 @@
     [buildingPaymentLinkStatusID_FK] INT              NULL,
     [paymentLinkNote]                NVARCHAR (1000)  NULL,
     CONSTRAINT [PK_BuildingPayment] PRIMARY KEY CLUSTERED ([paymentID] ASC),
-    CONSTRAINT [FK_BuildingPayment_BuildingPaymentLinkStatus] FOREIGN KEY ([buildingPaymentLinkStatusID_FK]) REFERENCES [Housing].[BuildingPaymentLinkStatus] ([buildingPaymentLinkStatusID])
+    CONSTRAINT [FK_BuildingPayment_BuildingPaymentLinkStatus] FOREIGN KEY ([buildingPaymentLinkStatusID_FK]) REFERENCES [Housing].[BuildingPaymentLinkStatus] ([buildingPaymentLinkStatusID]),
+    CONSTRAINT [FK_BuildingPayment_UnallocatedRefund] FOREIGN KEY ([UnallocatedRefundID_FK]) REFERENCES [Housing].[UnallocatedPaymentRefund] ([RefundID])
 );
+
+
 
 
 
@@ -63,3 +67,7 @@ BEGIN
     JOIN inserted insertedRow ON insertedRow.[paymentID] = paymentRow.[paymentID]
     WHERE paymentRow.[buildingPaymentLinkStatusID_FK] IS NULL;
 END;
+GO
+CREATE UNIQUE NONCLUSTERED INDEX [UX_BuildingPayment_UnallocatedRefundID]
+    ON [Housing].[BuildingPayment]([UnallocatedRefundID_FK] ASC) WHERE ([UnallocatedRefundID_FK] IS NOT NULL);
+

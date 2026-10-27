@@ -1,5 +1,5 @@
 ﻿
-CREATE PROCEDURE [Housing].[RentExemptionSP] 
+CREATE  PROCEDURE [Housing].[RentExemptionSP] 
 (
       @Action                               NVARCHAR(200)
     , @residentRentExemptionID              BIGINT          = NULL
@@ -106,20 +106,112 @@ BEGIN
             END
 
             IF @Action IN (N'ADDRENTEXEMPTION', N'EDITRENTEXEMPTION')
-            BEGIN
-                SELECT TOP (1)
-                      @OccupentDate = TRY_CONVERT(DATE, occupant.OccupentDate)
-                    , @LastActionTypeID = occupant.LastActionTypeID
-                FROM Housing.V_Occupant occupant
-                WHERE occupant.residentInfoID = @residentInfoID_FK
-                  AND occupant.buildingDetailsID = TRY_CONVERT(BIGINT, NULLIF(@buildingDetailsID_FK, N''))
-                  AND (occupant.IdaraId = @IdaraID_INT OR @IdaraID_INT IS NULL)
-                ORDER BY occupant.OccupentDate DESC, occupant.ActionID DESC;
+             BEGIN
+                -- P2: validate current occupancy *chain* rather than any historical action 54.
+                -- Serialized with Housing.ManageExitRentExemptionClosure APPLY at 57.
+                DECLARE @ExemptionResidentID BIGINT = TRY_CONVERT(BIGINT, NULLIF(LTRIM(RTRIM(@residentInfoID_FK)), N''));
+                DECLARE @ExemptionBuildingID BIGINT = TRY_CONVERT(BIGINT, NULLIF(LTRIM(RTRIM(@buildingDetailsID_FK)), N''));
+                DECLARE @ExemptionLockResult INT;
+                DECLARE @ExemptionLockResource NVARCHAR(255);
+                DECLARE @ExemptionCurrent TABLE
+                (
+                    WaitingRoot BIGINT NOT NULL,
+                    CurrentActionID BIGINT NOT NULL,
+                    CurrentStage BIGINT NOT NULL,
+                    OccupancyStart DATE NOT NULL
+                );
 
-                IF @OccupentDate IS NULL OR @LastActionTypeID IN (3, 58)
-                BEGIN
-                    ;THROW 50001, N'لا يمكن إضافة أو تعديل الإعفاء؛ المستفيد غير ساكن حالياً أو بدأ إجراءات الإخلاء', 1;
-                END
+                IF @ExemptionResidentID IS NULL OR @ExemptionBuildingID IS NULL OR @IdaraID_INT IS NULL
+                    THROW 50001, N'بيانات المستفيد أو المنزل أو الإدارة غير صالحة', 1;
+
+                SET @ExemptionLockResource = CONCAT(N'EXIT_EXEMPTION:', @IdaraID_INT,
+                    N':', @ExemptionResidentID, N':', @ExemptionBuildingID);
+                EXEC @ExemptionLockResult = sys.sp_getapplock
+                      @Resource = @ExemptionLockResource
+                    , @LockMode = N'Exclusive'
+                    , @LockOwner = N'Transaction'
+                    , @LockTimeout = 15000;
+                IF @ExemptionLockResult < 0
+                    THROW 50001, N'تعذر حجز معالجة إعفاء المستفيد', 1;
+
+                -- V_Occupant is the ordinary eligibility path. Once it no longer
+                -- lists a physically vacated occupant at 54, the verified current
+                -- 54/59/60 chain is a limited fallback until submission at 57.
+                INSERT INTO @ExemptionCurrent
+                    (WaitingRoot, CurrentActionID, CurrentStage, OccupancyStart)
+                SELECT w.ActionID,
+                       TRY_CONVERT(BIGINT, w.LastActionID),
+                       TRY_CONVERT(BIGINT, w.LastActionTypeID),
+                       originalOccupancy.OccupancyStart
+                FROM Housing.V_WaitingList w
+                JOIN Housing.BuildingAction tip
+                  ON tip.buildingActionID = TRY_CONVERT(BIGINT, w.LastActionID)
+                 AND tip.buildingActionActive = 1
+                 AND tip.buildingActionTypeID_FK = TRY_CONVERT(BIGINT, w.LastActionTypeID)
+                 AND tip.residentInfoID_FK = @ExemptionResidentID
+                 AND tip.buildingDetailsID_FK = @ExemptionBuildingID
+                 AND tip.IdaraId_FK = @IdaraID_INT
+                CROSS APPLY
+                (
+                    SELECT TOP (1) TRY_CONVERT(DATE, occupancy.OccupentDate) AS OccupancyStart
+                    FROM Housing.fn_BuildingAction_ChainToRoot(tip.buildingActionID) ancestor
+                    JOIN Housing.BuildingAction occupancy
+                      ON occupancy.buildingActionID = ancestor.buildingActionID
+                    WHERE occupancy.buildingActionTypeID_FK = 2
+                      AND occupancy.buildingActionActive = 1
+                      AND occupancy.residentInfoID_FK = @ExemptionResidentID
+                      AND occupancy.buildingDetailsID_FK = @ExemptionBuildingID
+                      AND TRY_CONVERT(DATE, occupancy.OccupentDate) IS NOT NULL
+                    ORDER BY ancestor.Lvl ASC
+                ) originalOccupancy
+                WHERE w.residentInfoID = @ExemptionResidentID
+                  AND w.buildingDetailsID = @ExemptionBuildingID
+                  AND w.IdaraId = @IdaraID_INT
+                  AND
+                  (
+                      TRY_CONVERT(BIGINT, w.LastActionTypeID) IN (54, 59, 60)
+                      OR EXISTS
+                      (
+                          SELECT 1 FROM Housing.V_Occupant vo
+                          WHERE vo.ActionID = w.ActionID
+                            AND vo.residentInfoID = @ExemptionResidentID
+                            AND vo.buildingDetailsID = @ExemptionBuildingID
+                            AND vo.IdaraId = @IdaraID_INT
+                      )
+                  );
+
+                IF (SELECT COUNT_BIG(*) FROM @ExemptionCurrent) <> 1
+                    THROW 50001, N'تعذر تحديد دورة الإشغال الحالية للإعفاء بشكل فريد', 1;
+
+                SELECT @OccupentDate = OccupancyStart,
+                       @LastActionTypeID = CurrentStage
+                FROM @ExemptionCurrent;
+
+                IF @OccupentDate IS NULL OR @LastActionTypeID IN (3, 57, 58)
+                    THROW 50001, N'لا يمكن إضافة أو تعديل الإعفاء بعد إرساله للتدقيق المالي', 1;
+
+                -- EDIT must not replace another resident's or another home's exemption.
+                -- Hold the row lock through the existing EDIT_REPLACE operation.
+                IF @Action = N'EDITRENTEXEMPTION' AND NOT EXISTS
+                (
+                    SELECT 1 FROM Housing.ResidentRentExemption e WITH (UPDLOCK, HOLDLOCK)
+                    WHERE e.residentRentExemptionID = @residentRentExemptionID
+                      AND e.residentRentExemptionActive = 1
+                      AND e.residentInfoID_FK = @ExemptionResidentID
+                      AND e.buildingDetailsID_FK = @ExemptionBuildingID
+                      AND e.idaraID_FK = @IdaraID_INT
+                )
+                    THROW 50001, N'الإعفاء لا يتبع المستفيد والمنزل والإدارة المحددة', 1;
+
+                -- Reject changes to an exemption already capped by any v1 exit
+                -- cycle, even if a view is stale or a different chain is selected.
+                IF @Action = N'EDITRENTEXEMPTION' AND EXISTS
+                (
+                    SELECT 1 FROM Housing.ExitRentExemptionClosure c
+                    WHERE c.ResidentRentExemptionID_FK = @residentRentExemptionID
+                      AND c.RestoredAt IS NULL
+                )
+                    THROW 50001, N'لا يمكن تعديل إعفاء أُغلق ضمن دورة إخلاء لم تُستعد', 1;
 
                 IF @ExemptionStartDate < @OccupentDate
                 BEGIN
@@ -286,21 +378,10 @@ BEGIN
                 ;THROW 50001, N'الاعفاء غير موجود', 1;
             END
 
-            IF EXISTS
-            (
-                SELECT 1
-                FROM Housing.ResidentRentExemption currentExemption
-                INNER JOIN Housing.BuildingAction exitAction
-                    ON exitAction.residentInfoID_FK = currentExemption.residentInfoID_FK
-                   AND exitAction.buildingDetailsID_FK = currentExemption.buildingDetailsID_FK
-                WHERE currentExemption.residentRentExemptionID = @residentRentExemptionID
-                  AND exitAction.buildingActionActive = 1
-                  AND exitAction.buildingActionTypeID_FK IN (54, 56, 57, 58, 59, 60, 61, 3)
-            )
-            BEGIN
-                ;THROW 50001, N'لا يمكن تعديل الإعفاء بعد بدء إجراءات الإخلاء أو الإمهال لتنفيذ تأمين احترازي على الساكن بالمطالبات', 1;
-            END
-
+            -- The current occupancy/exit stage was verified and locked above.
+            -- Do not scan ANY historical 54/59/60/3 rows: canceled cycles
+            -- remain marked active in the action audit trail.
+            -- Preserve the existing EDIT_REPLACE settlement behavior separately.
             EXEC Housing.SyncRentExemptionPayments
                   @Action = N'CANCEL'
                 , @ResidentRentExemptionID = @residentRentExemptionID

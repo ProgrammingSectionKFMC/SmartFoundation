@@ -740,7 +740,7 @@ BEGIN
   inner join dbo.Menu m on m.menuID = md.menuID_FK and m.menuActive = 1
   inner join dbo.PermissionType pt on pt.permissionTypeID = t.permissionTypeID_FK
   inner join dbo.permissionAuthLvl pa on pa.permissionAuthLvlID = t.permissionAuthLvl and pa.permissionAuthLvlActive = 1
-  where t.distributorPermissionTypeActive = 1
+  --where t.distributorPermissionTypeActive = 1
   order by t.distributorPermissionTypeID desc
            
         
@@ -1219,6 +1219,7 @@ ELSE IF @pageName_ = 'buildingUtilityType'
                     , @entryData                      = @entrydata
                     , @hostName                       = @hostName
                     , @residentInfoID                 = @parameter_01
+                    , @buildingDetailsID              = @parameter_02
 
 
         END

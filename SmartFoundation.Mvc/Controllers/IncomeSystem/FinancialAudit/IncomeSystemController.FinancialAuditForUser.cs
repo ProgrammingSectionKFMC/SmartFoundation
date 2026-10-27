@@ -4,15 +4,27 @@ using SmartFoundation.MVC.Reports;
 using SmartFoundation.UI.ViewModels.SmartForm;
 using SmartFoundation.UI.ViewModels.SmartPage;
 using SmartFoundation.UI.ViewModels.SmartTable;
+using SmartFoundation.UI.ViewModels.SmartDrawer;
+using SmartFoundation.UI.ViewModels.SmartAccordion;
 using System.Data;
 using System.Linq;
 using System.Text.Json;
+using SmartFoundation.Mvc.Services.DataLoad;
+
+
+
 
 namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 {
     public partial class IncomeSystemController : Controller
     {
-        public async Task<IActionResult> FinancialAuditForUser(int pdf = 0)
+        //public async Task<IActionResult> FinancialAuditForUser(int pdf = 0)
+        public async Task<IActionResult> FinancialAuditForUser(
+    [FromServices] RequestScopedDataLoadService requestDataLoad,
+    int pdf = 0,
+    long? printResidentID = null,
+    long? printBuildingID = null,
+    int? printServiceID = null)
         {
             //  قراءة السيشن والكونتكست
             if (!InitPageContext(out var redirect))
@@ -38,27 +50,137 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             ControllerName = nameof(IncomeSystem);
             PageName = string.IsNullOrWhiteSpace(PageName) ? "FinancialAuditForUser" : PageName;
 
-            var spParameters = new object?[]
+            //var spParameters = new object?[]
+            //{
+            // PageName ?? "FinancialAuditForUser",
+            // IdaraId,
+            // usersId,
+            // HostName,
+            // NationalID_
+            //};
+
+            // معاملات تحميل القوائم دون رقم المستفيد.
+            // مطابقة للمعاملات التي كانت تمررها GetDDLValues.
+            var ddlParameters = new Dictionary<string, object?>(
+                StringComparer.OrdinalIgnoreCase)
             {
-             PageName ?? "FinancialAuditForUser",
-             IdaraId,
-             usersId,
-             HostName,
-             NationalID_
+                ["pageName_"] = PageName ?? "FinancialAuditForUser"
             };
+
+            if (IdaraId != null)
+                ddlParameters["idaraID"] = Convert.ToInt32(IdaraId);
+
+            if (usersId != null)
+                ddlParameters["entrydata"] = Convert.ToInt32(usersId);
+
+            if (HostName != null)
+                ddlParameters["hostname"] = HostName;
+
+            // معاملات تحميل بيانات الصفحة.
+            // نضيف رقم الهوية فقط عند وجوده.
+            var pageParameters = new Dictionary<string, object?>(
+                ddlParameters,
+                StringComparer.OrdinalIgnoreCase);
+
+            if (NationalID_ != null)
+                pageParameters["parameter_01"] = NationalID_;
 
             var rowsList = new List<Dictionary<string, object?>>();
             var rowsList_dt3 = new List<Dictionary<string, object?>>();
             var rowsList_dt10 = new List<Dictionary<string, object?>>();
+            var rowsList_general = new List<Dictionary<string, object?>>();
+
             var dynamicColumns = new List<TableColumn>();
             var dynamicColumns_dt3 = new List<TableColumn>();
             var dynamicColumns_dt10 = new List<TableColumn>();
+            var dynamicColumns_general = new List<TableColumn>();
 
-            DataSet ds = await _mastersServies.GetDataLoadDataSetAsync(spParameters);
+            //DataSet ds = await _mastersServies.GetDataLoadDataSetAsync(spParameters);
+            DataSet ds = await requestDataLoad.GetDataLoadDataSetAsync(pageParameters);
 
             //  تقسيم الداتا سيت للجدول الأول + جداول أخرى
+            // تقسيم الداتا سيت
             SplitDataSet(ds);
 
+            // اسم المستفيد لعرضه في عنوان Drawer الرصيد العام
+            string generalResidentName =
+                dt1 != null &&
+                dt1.Rows.Count > 0 &&
+                dt1.Columns.Contains("FullName_A") &&
+                dt1.Rows[0]["FullName_A"] != DBNull.Value
+                    ? dt1.Rows[0]["FullName_A"].ToString()?.Trim() ?? ""
+                    : "";
+
+            // اسم المستفيد لعرضه في عنوان Drawer الرصيد العام
+            string generalResidentNationalID =
+                dt1 != null &&
+                dt1.Rows.Count > 0 &&
+                dt1.Columns.Contains("NationalID") &&
+                dt1.Rows[0]["NationalID"] != DBNull.Value
+                    ? dt1.Rows[0]["NationalID"].ToString()?.Trim() ?? ""
+                    : "";
+
+            // الرصيد العام - Result Set 11
+            // محفوظ في dt10 دون تغيير ترتيب الجداول السابقة
+            if (dt10 != null &&
+                dt10.Columns.Contains("BillChargeTypeID") &&
+                dt10.Columns.Contains("Remaining"))
+            {
+                var generalHeaders = new Dictionary<string, string>(
+                    StringComparer.OrdinalIgnoreCase)
+                {
+                    ["BillChargeTypeName_A"] = "نوع الخدمة",
+                    ["SumBillsTotalPrice"] = "إجمالي المطالبات",
+                    ["SumTotalPaidBills"] = "إجمالي المدفوعات",
+                    ["Remaining"] = "الرصيد المتبقي / الفائض",
+                    ["BillsStatus"] = "الحالة"
+                };
+
+                foreach (DataColumn c in dt10.Columns)
+                {
+                    bool hidden =
+                        c.ColumnName.Equals("order_", StringComparison.OrdinalIgnoreCase) ||
+                        c.ColumnName.Equals("residentInfoID", StringComparison.OrdinalIgnoreCase) ||
+                        c.ColumnName.Equals("BillChargeTypeID", StringComparison.OrdinalIgnoreCase) ||
+                        c.ColumnName.Equals("BillsStatusID", StringComparison.OrdinalIgnoreCase);
+
+                    var type = c.DataType;
+
+                    dynamicColumns_general.Add(new TableColumn
+                    {
+                        Field = c.ColumnName,
+                        Label = generalHeaders.TryGetValue(c.ColumnName, out var label)
+                            ? label
+                            : c.ColumnName,
+
+                        Type = type == typeof(decimal) ||
+                               type == typeof(int) ||
+                               type == typeof(long)
+                            ? "number"
+                            : "text",
+
+                        Sortable = true,
+                        Visible = !hidden
+                    });
+                }
+
+                foreach (DataRow r in dt10.Rows)
+                {
+                    var row = new Dictionary<string, object?>(
+                        StringComparer.OrdinalIgnoreCase);
+
+                    foreach (DataColumn c in dt10.Columns)
+                    {
+                        row[c.ColumnName] =
+                            r[c] == DBNull.Value ? null : r[c];
+                    }
+
+                    row["FullName_A"] = generalResidentName;
+                    row["NationalID"] = generalResidentNationalID;
+
+                    rowsList_general.Add(row);
+                }
+            }
 
             bool hasresident = true;
 
@@ -265,27 +387,33 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             string rowIdField = "";
             string rowIdField_dt3 = "";
             string rowIdField_dt10 = "";
-            bool canFinancialAuditForUser = false;
+           // bool canFinancialAuditForUser = false;
             bool canFINANCIALSETTLEMENTFORUSER = false;
             bool canREVIEWCLAIMSANDPAYMENTSFORUSER = false;
             bool canPAYMENTANDREFUNDFORUSER = false;
-            
-           
+            bool canINSERTGENERALBALANCEREFUND = false;
+            bool canCANCELGENERALBALANCEREFUND = false;
+            bool canLINKGENERALBALANCETOBUILDING = false;
+            bool canCANCELGENERALBALANCEBUILDINGALLOCATION = false;
 
 
-            
+
+
+
+            //List<OptionItem> PayPaymentTypeOptions = new();
+            //List<OptionItem> RefundPaymentTypeOptions = new();
+            //List<OptionItem> BillChargeTypeOptions = new();
+            //List<OptionItem> billPaymentTypeOptions = new();
+            //List<OptionItem> SETTLEMENTOptions = new();
+
+
+            //JsonResult? result;
+            //string json;
+
+
             List<OptionItem> PayPaymentTypeOptions = new();
             List<OptionItem> RefundPaymentTypeOptions = new();
             List<OptionItem> BillChargeTypeOptions = new();
-            List<OptionItem> billPaymentTypeOptions = new();
-            List<OptionItem> SETTLEMENTOptions = new();
-
-
-            JsonResult? result;
-            string json;
-
-         
-
 
 
 
@@ -295,58 +423,137 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             try
             {
 
-                
+
+                // Load DDL data once using the request-scoped service.
+                // No NationalID: preserve the original GetDDLValues contract.
+                DataSet ddlDs = await requestDataLoad
+                    .GetDataLoadDataSetAsync(ddlParameters);
+
+                static List<OptionItem> ReadOptions(
+                    DataSet source,
+                    int tableIndex,
+                    string textColumn,
+                    string valueColumn)
+                {
+                    if (tableIndex < 0 ||
+                        tableIndex >= source.Tables.Count)
+                    {
+                        throw new InvalidOperationException(
+                            $"DDL table index {tableIndex} not found.");
+                    }
+
+                    DataTable table = source.Tables[tableIndex];
+
+                    if (!table.Columns.Contains(textColumn) ||
+                        !table.Columns.Contains(valueColumn))
+                    {
+                        throw new InvalidOperationException(
+                            $"DDL columns mismatch at table {tableIndex}.");
+                    }
+
+                    var options = new List<OptionItem>();
+
+                    foreach (DataRow row in table.Rows)
+                    {
+                        string value = row[valueColumn]
+                            ?.ToString()?.Trim() ?? "";
+
+                        string text = row[textColumn]
+                            ?.ToString()?.Trim() ?? "";
+
+                        if (!string.IsNullOrEmpty(value))
+                        {
+                            options.Add(new OptionItem
+                            {
+                                Value = value,
+                                Text = text
+                            });
+                        }
+                    }
+
+                    if (options.Count == 0)
+                    {
+                        options.Add(new OptionItem
+                        {
+                            Value = "-1",
+                            Text = "لاتوجد خيارات"
+                        });
+                    }
+
+                    return options;
+                }
+
+                RefundPaymentTypeOptions = ReadOptions(
+                    ddlDs,
+                    4,
+                    "billPaymentTypeName_A",
+                    "billPaymentTypeID");
+
+                PayPaymentTypeOptions = ReadOptions(
+                    ddlDs,
+                    5,
+                    "billPaymentTypeName_A",
+                    "billPaymentTypeID");
+
+                BillChargeTypeOptions = ReadOptions(
+                    ddlDs,
+                    6,
+                    "BillChargeTypeName_A",
+                    "BillChargeTypeID");
+
+                // END DDL
+
 
                 //// ---------------------- RentbillPaymentTypeOptions ----------------------
-               
-                    result = await _CrudController.GetDDLValues(
-                         "billPaymentTypeName_A", "billPaymentTypeID", "4", PageName, usersId, IdaraId, HostName
-                    ) as JsonResult;
+
+                //    result = await _CrudController.GetDDLValues(
+                //         "billPaymentTypeName_A", "billPaymentTypeID", "4", PageName, usersId, IdaraId, HostName
+                //    ) as JsonResult;
 
 
-                json = JsonSerializer.Serialize(result!.Value);
+                //json = JsonSerializer.Serialize(result!.Value);
 
-                RefundPaymentTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+                //RefundPaymentTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
-                //// ---------------------- ServicebillPaymentTypeOptions ----------------------
-               
-                    result = await _CrudController.GetDDLValues(
-                          "billPaymentTypeName_A", "billPaymentTypeID", "5", PageName, usersId, IdaraId, HostName
-                     ) as JsonResult;
+                ////// ---------------------- ServicebillPaymentTypeOptions ----------------------
 
-                json = JsonSerializer.Serialize(result!.Value);
+                //    result = await _CrudController.GetDDLValues(
+                //          "billPaymentTypeName_A", "billPaymentTypeID", "5", PageName, usersId, IdaraId, HostName
+                //     ) as JsonResult;
 
-                 PayPaymentTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+                //json = JsonSerializer.Serialize(result!.Value);
 
-                //// ---------------------- BillChargeTypeOptions ----------------------
+                // PayPaymentTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
-                result = await _CrudController.GetDDLValues(
-                         "BillChargeTypeName_A", "BillChargeTypeID", "6", PageName, usersId, IdaraId, HostName
-                    ) as JsonResult;
+                ////// ---------------------- BillChargeTypeOptions ----------------------
 
-                json = JsonSerializer.Serialize(result!.Value);
+                //result = await _CrudController.GetDDLValues(
+                //         "BillChargeTypeName_A", "BillChargeTypeID", "6", PageName, usersId, IdaraId, HostName
+                //    ) as JsonResult;
 
-                BillChargeTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+                //json = JsonSerializer.Serialize(result!.Value);
 
-                //// ---------------------- rankOptions ----------------------
-                result = await _CrudController.GetDDLValues(
-                    "billPaymentTypeName_A", "billPaymentTypeID", "8", nameof(FinancialAuditForUser), usersId, IdaraId, HostName
-               ) as JsonResult;
+                //BillChargeTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
-
-                json = JsonSerializer.Serialize(result!.Value);
-
-                billPaymentTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-
-                //// ---------------------- SETTLEMENTOptions ----------------------
-                result = await _CrudController.GetDDLValues(
-                    "billPaymentTypeName_A", "billPaymentTypeID", "10", nameof(FinancialAuditForUser), usersId, IdaraId, HostName
-               ) as JsonResult;
+                // //// ---------------------- rankOptions ----------------------
+                // result = await _CrudController.GetDDLValues(
+                //     "billPaymentTypeName_A", "billPaymentTypeID", "8", nameof(FinancialAuditForUser), usersId, IdaraId, HostName
+                //) as JsonResult;
 
 
-                json = JsonSerializer.Serialize(result!.Value);
+                // json = JsonSerializer.Serialize(result!.Value);
 
-                SETTLEMENTOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+                // billPaymentTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+
+                // //// ---------------------- SETTLEMENTOptions ----------------------
+                // result = await _CrudController.GetDDLValues(
+                //     "billPaymentTypeName_A", "billPaymentTypeID", "10", nameof(FinancialAuditForUser), usersId, IdaraId, HostName
+                //) as JsonResult;
+
+
+                // json = JsonSerializer.Serialize(result!.Value);
+
+                // SETTLEMENTOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
 
                 //// ---------------------- END DDL ----------------------
@@ -404,10 +611,10 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         if (string.IsNullOrWhiteSpace(permissionName))
                             continue;
 
-                        if (permissionName.Equals("FinancialAuditForUser", StringComparison.OrdinalIgnoreCase))
-                        {
-                            canFinancialAuditForUser = true;
-                        }
+                        //if (permissionName.Equals("FinancialAuditForUser", StringComparison.OrdinalIgnoreCase))
+                        //{
+                        //    canFinancialAuditForUser = true;
+                        //}
                         if (permissionName.Equals("FINANCIALSETTLEMENTFORUSER", StringComparison.OrdinalIgnoreCase))
                         {
                             canFINANCIALSETTLEMENTFORUSER = true;
@@ -420,8 +627,26 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         {
                             canPAYMENTANDREFUNDFORUSER = true;
                         }
+                        if (permissionName.Equals("INSERTGENERALBALANCEREFUND",StringComparison.OrdinalIgnoreCase))
+                        {
+                            canINSERTGENERALBALANCEREFUND = true;
+                        }
 
-                        
+                        if (permissionName.Equals("CANCELGENERALBALANCEREFUND",StringComparison.OrdinalIgnoreCase))
+                        {
+                            canCANCELGENERALBALANCEREFUND = true;
+                        }
+
+                        if (permissionName.Equals("LINKGENERALBALANCETOBUILDING", StringComparison.OrdinalIgnoreCase))
+                        {
+                            canLINKGENERALBALANCETOBUILDING = true;
+                        }
+
+                        if (permissionName.Equals("CANCELGENERALBALANCEBUILDINGALLOCATION",StringComparison.OrdinalIgnoreCase))
+                        {
+                            canCANCELGENERALBALANCEBUILDINGALLOCATION = true;
+                        }
+
                     }
 
 
@@ -724,6 +949,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                                            || c.ColumnName.Equals("buildingDetailsID", StringComparison.OrdinalIgnoreCase)
                                            || c.ColumnName.Equals("residentInfoID", StringComparison.OrdinalIgnoreCase)
                                            || c.ColumnName.Equals("order_", StringComparison.OrdinalIgnoreCase)
+                                           || c.ColumnName.Equals("CanLinkGeneralBalance", StringComparison.OrdinalIgnoreCase)
                                            || c.ColumnName.Equals("BillsStatusID", StringComparison.OrdinalIgnoreCase);
 
 
@@ -784,33 +1010,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
             var currentUrl = Request.Path + Request.QueryString;
 
-            var ApproveExtendOrExitFields = new List<FieldConfig>
-            {
-
-                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "FinancialAuditForUser" },
-                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
-                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
-                new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
-                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
-                // selection context
-                new FieldConfig { Name = rowIdField, Type = "hidden" },
-                // hidden p01 actually posted to SP
-                 new FieldConfig { Name = "p01", Label = "Order_", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true,Value=residentInfoIDvalue },
-                new FieldConfig { Name = "p03", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsIDvalue },
-                new FieldConfig { Name = "p11", Label = "ملاحظات", Type = "textarea", ColCss = "6",Required = true,HelpText="يجب ان لاتتجاوز 4000 حرف*",MaxLength=3900 },
-                new FieldConfig { Name = "p30", Label = "ملاحظات", Type = "text", ColCss = "6",Value = LastActionDatevalue },
-                //new FieldConfig { Name = "p40", Label = "سبب الامهال", Type = "select", ColCss = "4",Required = true,HelpText="المتقاعد والمفصول مطلوب تأمين احترازي يرجى الاختيار بدقة*",Options=billPaymentTypeOptions,Value=LastActionExtendReasonTypeIDvalue},
-                new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true,Value = LastActionTypeIDvalue },
-                new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p19", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true,Value = buildingDetailsNovalue },
-                new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true,Value=LastActionIDvalue },
-                new FieldConfig { Name = "p22", Label = "ActionID", Type = "hidden", ColCss = "3", Readonly = true,Value=ActionIDvalue },
-
-
-            };
+           
 
             // UPDATE fields
             var BillsFields = new List<FieldConfig>
@@ -983,7 +1183,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p03", Label = "BillChargeTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p04", Label = "الرصيد المسحوب منه", Type = "text", ColCss = "4", Readonly = true, },
-                new FieldConfig { Name = "p30", Label = "الرصيد المسحوب اليه", Type = "select", ColCss = "4", Readonly = true,Required = true,Options = BillChargeTypeOptions },
+                new FieldConfig { Name = "p30", Label = "الرصيد المسحوب اليه", Type = "select", ColCss = "4", Required = true,Options = BillChargeTypeOptions },
                 new FieldConfig { Name = "p05", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p06", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsNovalue },
                 new FieldConfig { Name = "p07", Label = "SumBillsTotalPrice", Type = "hidden", ColCss = "3", Readonly = true,Value=buildingDetailsIDvalue },
@@ -994,7 +1194,14 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
 
                 new FieldConfig { Name = "p12", Label = "نوع العملية", Type = "hidden", ColCss = "3", Required = true, Value="6" },
-                new FieldConfig { Name = "p13", Label = "رقم العملية", Type = "hidden", ColCss = "3", Required = true },
+               // new FieldConfig { Name = "p13", Label = "رقم العملية", Type = "hidden", ColCss = "3", Required = true },
+               new FieldConfig
+{
+    Name = "p13",
+    Label = "معرف عملية التسوية",
+    Type = "hidden",
+    Value = Guid.NewGuid().ToString("N")
+},
                 new FieldConfig { Name = "p14", Label = "تاريخ العملية", Type = "hidden", ColCss = "3", Required = true },
                 new FieldConfig { Name = "p39", Label = "المبلغ", Type = "text",TextMode="money_sar",Icon = "/img/Saudi_Riyal_Symbol.svg", ColCss = "4", Required = true },
                 new FieldConfig { Name = "p27", Label = "ملاحظات", Type = "textarea", ColCss = "6", Required = true },
@@ -1002,6 +1209,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true,Value = LastActionTypeIDvalue },
                 new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true,Value=LastActionIDvalue },
                 new FieldConfig { Name = "p22", Label = "ActionID", Type = "hidden", ColCss = "3", Readonly = true,Value=ActionIDvalue },
+
 
             };
 
@@ -1167,7 +1375,1035 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
               
             };
 
+            // جدول الرصيد العام المستقل
+            // عرض فقط، دون إجراءات مالية في هذه المرحلة
+
+            var dsModelGeneral = new SmartTableDsModel
+            {
+                PageTitle = "التدقيق المالي العام",
+                PanelTitle = "سدادت غير مرتبطه بمبنى",
+
+                Columns = dynamicColumns_general,
+                Rows = rowsList_general,
+                RowIdField = "order_",
+
+                PageSize = 10,
+                Searchable = false,
+                AllowExport = false,
+
+                ShowToolbar = true,
+                EnablePagination = false,
+                ShowPageSizeSelector = false,
+                ShowRowBorders = false,
+
+                Selectable = true,
+
+                RenderAsToggle = true,
+                ToggleLabel = "سدادت غير مرتبطه بمبنى",
+                ToggleIcon = "fa-solid fa-wallet",
+                ToggleDefaultOpen = true,
+                ShowToggleCount = false,
+
+                Toolbar = new TableToolbarConfig
+                {
+                    ShowRefresh = false,
+                    ShowColumns = false,
+                    ShowSearch = false,
+                    ShowExportCsv = false,
+                    ShowExportExcel = false,
+                    ShowExportPdf = false,
+                    ShowPrint = false,
+                    ShowPrint1 = false,
+                    ShowPrint2 = false,
+                    ShowPrint3 = false,
+                    ShowFullscreen = false,
+                    ShowDensityToggle = false,
+
+                    ShowEdit = true,
+
+                    Edit = new TableAction
+                    {
+                        Label = "إدارة السدادت غير مرتبطه بمبنى",
+                        Icon = "fa-solid fa-wallet",
+                        Color = "primary",
+                        Show = true,
+                        IsEdit = true,
+
+                        OpenModal = false,
+                        OpenDrawer = true,
+                        DrawerId = "sf-general-balance-drawer",
+
+                        RequireSelection = true,
+                        MinSelection = 1,
+                        MaxSelection = 1,
+
+                        DrawerTitleTemplate =
+                 "إدارة السدادت غير مرتبطه بمبنى - {BillChargeTypeName_A}",
+
+                        DrawerSubtitleTemplate =
+                 " للمستفيد:  {FullName_A} صاحب الهوية رقم : {NationalID} ",
+
+                        DrawerParamMap = new Dictionary<string, string>
+                        {
+                            ["parameter_01"] = "residentInfoID",
+                            ["parameter_02"] = "BillChargeTypeID"
+                        },
+
+                        Meta = new Dictionary<string, object?>
+                        {
+                            ["extraEndpoint"] = "/crud/extradataload",
+
+                            ["extraRequest"] = new Dictionary<string, object?>
+                            {
+                                ["pageName_"] = PageName,
+                                ["ActionType"] = "GetGeneralBalancePaymentsByResident",
+                                ["tableIndex"] = 0
+                            }
+                        }
+                    }
+                }
+            };
+
+
+            var generalRefundForm = new FormConfig
+            {
+                FormId = "GeneralBalanceRefundForm",
+                Title = "إعادة مبلغ للمستفيد",
+                Method = "post",
+                ActionUrl = "/crud/insert",
+
+
+                ShowSubmit = false,
+                ShowReset = false,
+
+                Fields = new List<FieldConfig>
+    {
+        new FieldConfig
+        {
+            Name = "pageName_",
+            Type = "hidden",
+            Value = PageName
+        },
+        new FieldConfig
+        {
+            Name = "ActionType",
+            Type = "hidden",
+            Value = "INSERTGENERALBALANCEREFUND"
+        },
+        new FieldConfig
+        {
+            Name = "redirectUrl",
+            Type = "hidden",
+            Value = currentUrl
+        },
+        new FieldConfig
+        {
+            Name = "p01",
+            Type = "hidden"
+        },
+        new FieldConfig
+        {
+            Name = "p02",
+            Type = "hidden"
+        },
+        new FieldConfig
+        {
+            Name = "p03",
+            Label = "رقم السداد الأصلي",
+            Type = "text",
+            Readonly = true,
+            Required = true,
+            ColCss = "2"
+        },
+        new FieldConfig
+        {
+            Name = "p09",
+            Label = "الرصيد المتاح للاعادة",
+            Type = "text",
+            Readonly = true,
+            ColCss = "2"
+        },
+        new FieldConfig
+        {
+            Name = "p04",
+            Label = "المبلغ المطلوب إعادته",
+            Type = "text",
+            TextMode = "money_sar",
+            Icon = "/img/Saudi_Riyal_Symbol.svg",
+            Required = true,
+            ColCss = "2"
+        },
+        new FieldConfig
+        {
+            Name = "p05",
+            Label = "تاريخ إعادة المبلغ",
+            Type = "date",
+            Required = true,
+            ColCss = "3"
+        },
+        new FieldConfig
+        {
+            Name = "p06",
+            Label = "رقم مستند الإعادة",
+            Type = "text",
+            Required = true,
+            MaxLength = 200,
+            ColCss = "3"
+        },
+        new FieldConfig
+        {
+            Name = "p07",
+            Label = "تفاصيل إعادة المبلغ",
+            Type = "textarea",
+            Required = true,
+            ColCss = "12"
+        },
+        new FieldConfig
+        {
+            Name = "p08",
+            Type = "hidden",
+            Value = Guid.NewGuid().ToString("D")
+        }
+    },
+
+                Buttons = new List<FormButtonConfig>
+{
+    new FormButtonConfig
+    {
+        Text = "تنفيذ الإعادة",
+        Type = "submit",
+        Color = "success",
+        Icon = "fa-solid fa-check"
+    },
+    new FormButtonConfig
+    {
+        Text = "إلغاء",
+        Type = "button",
+        Color = "secondary"
+    }
+}
+            };
+
+
+            var cancelGeneralBalanceRefundForm = new FormConfig
+            {
+                FormId = "GeneralBalanceRefundCancelForm",
+                Title = "إلغاء معالجة الإعادة",
+
+                LabelText = "سيؤدي الإلغاء إلى إلغاء العملية كاملة، حتى لو كانت موزعة على عدة سدادات.",
+
+                Method = "post",
+                ActionUrl = "/crud/insert",
+
+                // المعاينة فقط - لا يوجد تنفيذ مالي الآن
+                ShowSubmit = false,
+                ShowReset = false,
+
+                Buttons = new List<FormButtonConfig>
+{
+    new FormButtonConfig
+    {
+        Text = "تأكيد إلغاء المعالجة",
+        Type = "submit",
+        Color = "danger",
+        Icon = "fa-solid fa-ban"
+    }
+},
+
+                Fields = new List<FieldConfig>
+    {
+        new FieldConfig
+        {
+            Name = "pageName_",
+            Type = "hidden",
+            Value = PageName
+        },
+        new FieldConfig
+        {
+            Name = "ActionType",
+            Type = "hidden",
+            Value = "CANCELGENERALBALANCEREFUND"
+        },
+        new FieldConfig
+        {
+            Name = "redirectUrl",
+            Type = "hidden",
+            Value = currentUrl
+        },
+        new FieldConfig
+        {
+            Name = "p22",
+            Type = "hidden"
+        },
+        new FieldConfig
+        {
+            Name = "p07",
+            Label = "سبب إلغاء المعالجة",
+            Type = "textarea",
+            Required = true,
+            RequiredMsg = "سبب الإلغاء مطلوب",
+            MaxLength = 1000,
+            ColCss = "12"
+        }
+    }
+            };
+
+            // إلغاء ربط الرصيد بمبنى - مجهز ومخفي مؤقتًا
+            var cancelGeneralBalanceBuildingForm = new FormConfig
+            {
+                FormId = "GeneralBalanceBuildingCancelForm",
+                Title = "إلغاء ربط الرصيد بمبنى",
+                Method = "post",
+                ActionUrl = "/crud/insert",
+
+                ShowSubmit = false,
+                ShowReset = false,
+
+                Fields = new List<FieldConfig>
+    {
+        new FieldConfig
+        {
+            Name = "pageName_",
+            Type = "hidden",
+            Value = PageName
+        },
+        new FieldConfig
+        {
+            Name = "ActionType",
+            Type = "hidden",
+            Value = "CANCELGENERALBALANCEBUILDINGALLOCATION"
+        },
+        new FieldConfig
+        {
+            Name = "redirectUrl",
+            Type = "hidden",
+            Value = currentUrl
+        },
+        new FieldConfig
+        {
+            Name = "p22",
+            Type = "hidden"
+        },
+        new FieldConfig
+        {
+            Name = "p07",
+            Label = "سبب إلغاء الربط",
+            Type = "textarea",
+            Required = true,
+            RequiredMsg = "سبب الإلغاء مطلوب",
+            MaxLength = 1000,
+            ColCss = "12"
+        }
+    },
+
+                Buttons = new List<FormButtonConfig>
+    {
+        new FormButtonConfig
+        {
+            Text = "تأكيد إلغاء الربط",
+            Type = "submit",
+            Color = "danger",
+            Icon = "fa-solid fa-ban"
+        }
+    }
+            };
+
+            // ==============================================
+            // ربط الرصيد العام بمبنى - قائمة المباني المؤهلة
+            // ==============================================
+
+            var generalBalanceLinkBuildingOptions = new List<OptionItem>
+{
+    //new OptionItem
+    //{
+    //    Value = "-1",
+    //    Text = "اختر المبنى"
+    //}
+};
+
+            if (canLINKGENERALBALANCETOBUILDING &&
+                long.TryParse(residentInfoIDvalue, out var linkResidentId) &&
+                linkResidentId > 0)
+            {
+                var linkBuildingDs =
+                    await _mastersServies.GetExtraDataLoadDataSetAsync(
+                        new Dictionary<string, object?>
+                        {
+                            ["pageName_"] = "FinancialAuditForUser",
+                            ["ActionType"] =
+                                "GetGeneralBalanceLinkBuildingsByResident",
+                            ["idaraID"] = IdaraId,
+                            ["entrydata"] = usersId,
+                            ["hostname"] = HostName,
+                            ["parameter_01"] = linkResidentId
+                        });
+
+                if (linkBuildingDs.Tables.Count > 0)
+                {
+                    var linkBuildings = linkBuildingDs.Tables[0];
+
+                    if (linkBuildings.Columns.Contains("buildingDetailsID") &&
+                        linkBuildings.Columns.Contains("buildingDetailsNo"))
+                    {
+                        foreach (DataRow b in linkBuildings.Rows)
+                        {
+                            var id = b["buildingDetailsID"]?
+                                .ToString()?.Trim();
+
+                            var no = b["buildingDetailsNo"]?
+                                .ToString()?.Trim();
+
+                            if (string.IsNullOrWhiteSpace(id))
+                                continue;
+
+                            generalBalanceLinkBuildingOptions.Add(
+                                new OptionItem
+                                {
+                                    Value = id,
+                                    Text = string.IsNullOrWhiteSpace(no)
+                                        ? id
+                                        : no //+ " (" + id + ")"
+                                });
+                        }
+                    }
+                }
+            }
+
+
+            // ==============================================
+            // SmartForm - ربط الرصيد العام بمبنى
+            // ==============================================
+
+            var generalBalanceLinkForm = new FormConfig
+            {
+                FormId = "GeneralBalanceLinkBuildingForm",
+                Title = "ربط الرصيد العام بمبنى",
+                Method = "post",
+                ActionUrl = "/crud/insert",
+
+                ShowSubmit = false,
+                ShowReset = false,
+
+                Fields = new List<FieldConfig>
+    {
+        new FieldConfig
+        {
+            Name = "pageName_",
+            Type = "hidden",
+            Value = PageName
+        },
+
+        new FieldConfig
+        {
+            Name = "ActionType",
+            Type = "hidden",
+            Value = "LINKGENERALBALANCETOBUILDING"
+        },
+
+        new FieldConfig
+        {
+            Name = "redirectUrl",
+            Type = "hidden",
+            Value = currentUrl
+        },
+
+        new FieldConfig
+        {
+            Name = "p01",
+            Type = "hidden"
+        },
+
+        new FieldConfig
+        {
+            Name = "p02",
+            Type = "hidden"
+        },
+
+        new FieldConfig
+        {
+            Name = "p03",
+            Label = "رقم السداد الأصلي",
+            Type = "text",
+            Readonly = true,
+            Required = true,
+            ColCss = "3"
+        },
+
+        new FieldConfig
+        {
+            Name = "p10",
+            Label = "المبلغ المتاح",
+            Type = "text",
+            Readonly = true,
+            ColCss = "2"
+        },
+
+        new FieldConfig
+        {
+            Name = "p09",
+            Label = "المبنى المراد الربط به",
+            Type = "select",
+            Options = generalBalanceLinkBuildingOptions,
+            Select2 = false,
+            Placeholder = "اختر المبنى",
+            Required = true,
+            RejectValue = "-1",
+            RejectMsg = "اختر مبنى صحيحًا",
+            ColCss = "3"
+        },
+
+        new FieldConfig
+        {
+            Name = "p04",
+            Label = "مبلغ الربط",
+            Type = "text",
+            TextMode = "money_sar",
+            Icon = "/img/Saudi_Riyal_Symbol.svg",
+            Required = true,
+            ColCss = "2"
+        },
+
+        new FieldConfig
+        {
+            Name = "p05",
+            Label = "تاريخ الربط",
+            Type = "hidden",
+            Value = DateTime.Today.ToString("yyyy-MM-dd"),
+            Required = true,
+            ColCss = "3"
+        },
+
+        new FieldConfig
+        {
+            Name = "p06",
+            Label = "رقم مستند التحويل",
+            Type = "text",
+            MaxLength = 50,
+            Required = true,
+            ColCss = "2"
+        },
+
+        new FieldConfig
+        {
+            Name = "p07",
+            Label = "سبب / تفاصيل الربط",
+            Type = "textarea",
+            MaxLength = 1000,
+            Required = true,
+            ColCss = "12"
+        },
+
+        new FieldConfig
+        {
+            Name = "p08",
+            Type = "hidden",
+            Value = Guid.NewGuid().ToString("D")
+        }
+    },
+
+                Buttons = new List<FormButtonConfig>
+    {
+        new FormButtonConfig
+        {
+            Text = "تنفيذ الربط",
+            Type = "submit",
+            Color = "success",
+            Icon = "fa-solid fa-link"
+        },
+
+        new FormButtonConfig
+        {
+            Text = "إلغاء",
+            Type = "button",
+            Color = "secondary"
+        }
+    }
+            };
+
+            // Drawer الرصيد العام
+            // مرحلة أولى: اختبار العرض فقط، دون عمليات مالية.
+
+            dsModel.Toolbar.Drawers = new List<SmartDrawerConfig>
+{
+    new SmartDrawerConfig
+    {
+        Id = "sf-general-balance-drawer",
+        Show = true,
+
+        Title = "إدارة الرصيد العام",
+        Subtitle = "تفاصيل حركات الرصيد العام للمستفيد",
+        Icon = "fa-solid fa-wallet",
+
+        Size = SmartDrawerSize.Large,
+        Side = SmartDrawerSide.Left,
+
+        Table = new SmartTableDsModel
+        {
+            PageTitle = "تفاصيل الرصيد العام",
+            PanelTitle = "السدادات",
+
+            RowIdField = "paymentID",
+
+            Rows = new List<Dictionary<string, object?>>(),
+
+            Columns = new List<TableColumn>
+{
+    new TableColumn
+    {
+        Field = "paymentID",
+        Label = "رقم السداد",
+        Type = "number",
+        Visible = true
+    },
+    new TableColumn
+    {
+        Field = "issueYear",
+        Label = "السنة",
+        Type = "number",
+        Visible = true
+    },
+    new TableColumn
+    {
+        Field = "issueMonth",
+        Label = "الشهر",
+        Type = "number",
+        Visible = true
+    },
+    new TableColumn
+    {
+        Field = "paymentDate",
+        Label = "تاريخ السداد",
+        Type = "text",
+        Visible = true
+    },
+    new TableColumn
+    {
+        Field = "OriginalAmount",
+        Label = "المبلغ الأصلي",
+        Type = "number",
+        Visible = true
+    },
+    new TableColumn
+    {
+        Field = "LegacyUsed",
+        Label = "المعالج تاريخيًا",
+        Type = "number",
+        Visible = true
+    },
+    new TableColumn
+    {
+        Field = "NewRefundUsed",
+        Label = "الإعادات الجديدة",
+        Type = "number",
+        Visible = true
+    },
+    new TableColumn
+{
+    Field = "BuildingAllocated",
+    Label = "المرتبط بالمباني",
+    Type = "number",
+    Visible = true
+},
+    new TableColumn
+    {
+        Field = "AvailableAmount",
+        Label = "المبلغ المتاح",
+        Type = "number",
+        Visible = true
+    },
+        new TableColumn
+    {
+        Field = "ProcessingStatus",
+        Label = "حالة المعالجة",
+        Type = "text",
+        Visible = true
+    }
+},
+
+// =======================================
+// إجراءات صفوف جدول السدادات
+// =======================================
+RowActions = new List<TableAction>
+{
+    new TableAction
+    {
+        Label = "سجل الإعادات",
+        Icon = "fa-solid fa-clock-rotate-left",
+        Color = "info",
+
+        Placement = TableActionPlacement.ActionsMenu,
+
+        OpenAccordionModal = true,
+        AccordionId = "sf-refund-accordion-test"
+    }
+},
+
+PageSize = 10,
+Searchable = false,
+Selectable = true,
+ShowToolbar = true,
+AllowExport = false,
+
+Toolbar = new TableToolbarConfig
+{
+    ShowRefresh = false,
+    ShowColumns = false,
+    ShowSearch = false,
+    ShowExportCsv = false,
+    ShowExportExcel = false,
+    ShowExportPdf = false,
+    ShowPrint = false,
+    ShowFullscreen = false,
+    ShowDensityToggle = false,
+
+    ShowEdit = canINSERTGENERALBALANCEREFUND,
+    ShowEdit2 = canINSERTGENERALBALANCEREFUND,
+    ShowEdit1 = canLINKGENERALBALANCETOBUILDING
+    && generalBalanceLinkBuildingOptions.Count > 1,
+
+    Edit = new TableAction
+    {
+        Label = "إعادة مبلغ للمستفيد",
+        Icon = "fa-solid fa-money-bill-transfer",
+        Color = "warning",
+
+        Show = canINSERTGENERALBALANCEREFUND,
+        IsEdit = true,
+
+        OpenModal = true,
+        ModalTitle = "إعادة مبلغ للمستفيد",
+        OpenForm = generalRefundForm,
+
+        Meta = new Dictionary<string, object?>
+        {
+            ["formParamMap"] = new Dictionary<string, string>
+            {
+                ["p01"] = "residentInfoID",
+                ["p02"] = "BillChargeTypeID",
+                ["p03"] = "paymentID",
+                ["p09"] = "AvailableAmount"
+            }
+        },
+
+        RequireSelection = true,
+        MinSelection = 1,
+        MaxSelection = 1,
+
+        Guards = new TableActionGuards
+        {
+            AppliesTo = "any",
+
+            DisableWhenAny = new List<TableActionRule>
+            {
+                new TableActionRule
+                {
+                    Field = "IsEligible",
+                    Op = "eq",
+                    Value = "0",
+                    Message = "السداد غير مؤهل للمعالجة"
+                },
+                new TableActionRule
+                {
+                    Field = "ProcessingStatus",
+                    Op = "eq",
+                    Value = "تمت المعالجة",
+                    Message = "تمت معالجة كامل مبلغ السداد"
+                },
+                new TableActionRule
+                {
+                    Field = "ProcessingStatus",
+                    Op = "eq",
+                    Value = "تعارض مالي - يتطلب المراجعة",
+                    Message = "يجب مراجعة التعارض المالي أولاً"
+                }
+            }
+        }
+    }
+
+    ,
+
+// =======================================
+// زر استعراض عمليات إعادة المبالغ
+// =======================================
+
+
+Edit2 = new TableAction
+{
+    Label = "استعراض الإعادات",
+    Icon = "fa-solid fa-clock-rotate-left",
+    Color = "info",
+
+    Placement = TableActionPlacement.Button,
+
+    OpenAccordionModal = true,
+    AccordionId = "sf-refund-accordion-test",
+
+      RequireSelection = true,
+    MinSelection = 1,
+    MaxSelection = 1
+},
+
+// ==============================================
+// ربط الرصيد العام بمبنى
+// ==============================================
+Edit1 = new TableAction
+{
+    Label = "ربط الرصيد بمبنى",
+    Icon = "fa-solid fa-link",
+    Color = "success",
+
+    Show = canLINKGENERALBALANCETOBUILDING
+        && generalBalanceLinkBuildingOptions.Count > 1,
+
+    IsEdit = true,
+
+    OpenModal = true,
+ModalTitle = "ربط الرصيد العام بمبنى",
+
+ModalMessage =
+    "تنبيه: عند تنفيذ ربط الرصيد العام بالمبنى، " +
+    "سيتم تحويل المبلغ المحدد من الرصيد العام إلى رصيد المبنى. " +
+    "لا يمكن إلغاء هذا الربط أو التراجع عنه . " +
+    "يرجى التأكد من صحة السداد والمبنى والمبلغ قبل تنفيذ العملية.",
+
+ModalMessageIcon = "fa-solid fa-triangle-exclamation",
+
+ModalMessageClass =
+    "mb-4 rounded-lg border border-amber-200 " +
+    "bg-amber-50 p-4 text-amber-900",
+
+OpenForm = generalBalanceLinkForm,
+
+    Meta = new Dictionary<string, object?>
+    {
+        ["formParamMap"] = new Dictionary<string, string>
+        {
+            ["p01"] = "residentInfoID",
+            ["p02"] = "BillChargeTypeID",
+            ["p03"] = "paymentID",
+            ["p10"] = "AvailableAmount"
+        }
+    },
+
+    RequireSelection = true,
+    MinSelection = 1,
+    MaxSelection = 1,
+
+    Guards = new TableActionGuards
+    {
+        AppliesTo = "any",
+
+        DisableWhenAny = new List<TableActionRule>
+        {
+            new TableActionRule
+            {
+                Field = "IsEligible",
+                Op = "eq",
+                Value = "0",
+                Message = "السداد غير مؤهل للربط"
+            },
+            new TableActionRule
+            {
+                Field = "ProcessingStatus",
+                Op = "eq",
+                Value = "تمت المعالجة",
+                Message = "لا يوجد مبلغ متاح للربط"
+            },
+            new TableActionRule
+            {
+                Field = "ProcessingStatus",
+                Op = "eq",
+                Value = "تعارض مالي - يتطلب المراجعة",
+                Message = "يوجد تعارض مالي يتطلب المراجعة"
+            }
+        }
+    }
+}
+}
+        },
+
+       Accordion = new SmartAccordionConfig
+{
+    Id = "sf-refund-accordion-test",
+
+    Title = "سجل عمليات إعادة المبالغ",
+
+    Description = "عمليات إعادة المبالغ المرتبطة بالسداد المحدد",
+
+    RenderInModal = true,
+
+    ModalTitle = "سجل عمليات إعادة المبالغ",
+
+    AllowMultipleOpen = false,
+
+    // البحث والتصفية والترقيم
+    Searchable = true,
+    EnableStatusFilter = true,
+    ShowSummary = true,
+    EnablePagination = true,
+
+    PageSize = 5,
+    PageSizes = new List<int> { 5, 10, 20 },
+
+
+   Actions = (
+    canCANCELGENERALBALANCEREFUND
+    ? new List<SmartAccordionAction>
+    {
+        new SmartAccordionAction
+        {
+            Key = "CANCELGENERALBALANCEREFUND",
+            Text = "إلغاء المعالجة",
+            Icon = "fa-solid fa-ban",
+            Tone = "danger",
+
+            VisibleWhenField = "RefundStatusText",
+            VisibleWhenEquals = "مؤكدة",
+
+            OpenForm = cancelGeneralBalanceRefundForm,
+
+            FormParamMap = new Dictionary<string, string>
+            {
+                ["p22"] = "RefundID"
+            }
+        }
+    }
+    : new List<SmartAccordionAction>()
+)
+//.Concat(
+//    false && canCANCELGENERALBALANCEBUILDINGALLOCATION
+//    ? new List<SmartAccordionAction>
+.Concat(
+    canCANCELGENERALBALANCEBUILDINGALLOCATION
+    ? new List<SmartAccordionAction>
+    {
+        new SmartAccordionAction
+        {
+            Key = "CANCELGENERALBALANCEBUILDINGALLOCATION",
+            Text = "إلغاء ربط الرصيد بالمبنى",
+            Icon = "fa-solid fa-link-slash",
+            Tone = "danger",
+
+            VisibleWhenField = "RefundStatusText",
+            VisibleWhenEquals = "مرتبطة بمبنى",
+
+            OpenForm = cancelGeneralBalanceBuildingForm,
+
+            FormParamMap = new Dictionary<string, string>
+            {
+                ["p22"] = "RefundID"
+            }
+        }
+    }
+    : new List<SmartAccordionAction>()
+)
+.ToList(),
+    
+
+
+    // ==========================================
+    // تحميل الإعادات الحقيقية من قاعدة البيانات
+    // ==========================================
+    DataSource = new SmartAccordionDataSource
+    {
+        Endpoint = "/crud/extradataload",
+
+        PageName = "FinancialAuditForUser",
+
+        ActionType = "GetGeneralRefundsByPayment",
+
+        TableIndex = 0,
+
+        // إرسال رقم السداد الذي اختاره المستخدم
+        ParameterMap = new Dictionary<string, string>
+        {
+            ["parameter_01"] = "paymentID"
+        },
+
+        // معرف كل عملية إعادة
+        IdField = "RefundID",
+
+        // بيانات رأس البطاقة
+        TitleField = "AccordionTitle",
+        SubtitleField = "RefundDateText",
+        AmountField = "AllocatedAmountText",
+        StatusField = "RefundStatusText",
+        StatusToneField = "RefundStatusTone",
+
+        // ==========================================
+        // التفاصيل التي تظهر عند توسيع العملية
+        // ==========================================
+        DetailFields = new List<SmartAccordionFieldMap>
+        {
+            new SmartAccordionFieldMap
+            {
+                Label = "رقم مستند الإعادة",
+                Field = "RefundReference"
+            },
+
+            new SmartAccordionFieldMap
+            {
+                Label = "تاريخ الإعادة",
+                Field = "RefundDateText"
+            },
+
+            new SmartAccordionFieldMap
+            {
+                Label = "رقم السداد الأصلي",
+                Field = "SelectedPaymentID"
+            },
+
+            new SmartAccordionFieldMap
+            {
+                Label = "المبلغ المعاد من هذا السداد",
+                Field = "AllocatedAmountText"
+            },
+
+            new SmartAccordionFieldMap
+            {
+                Label = "إجمالي مبلغ عملية الإعادة",
+                Field = "RefundAmountText"
+            },
+
+            new SmartAccordionFieldMap
+            {
+                Label = "تفاصيل الإعادة",
+                Field = "RefundDetails"
+            },
+
+            new SmartAccordionFieldMap
+            {
+                Label = "رقم الحركة المالية",
+                Field = "LedgerPaymentIDText"
+            },
+
+            new SmartAccordionFieldMap
+            {
+                Label = "حالة المطابقة المحاسبية",
+                Field = "LedgerStatusText"
+            },
+
+            new SmartAccordionFieldMap
+            {
+                Label = "سبب الإلغاء",
+                Field = "CancellationReasonText"
+            }
+        },
+
+        // التحميل عند الضغط على زر الاستعراض فقط
+        LoadOnPageReady = false,
+
+        ReloadOnDrawerOpen = false
+    }
+},
+
+        EmptyText = "لا توجد حركات للعرض"
+    }
+};
+
             var selectedFields = AllRemaining < 0 ? PayMoneyFields : RefundMoneyFields;
+
+
 
             var dsModel3 = new SmartTableDsModel
             {
@@ -1250,7 +2486,28 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         Color = "info",
                         //Placement = TableActionPlacement.ActionsMenu, 
                         IsEdit = true,
-                        OpenModal = true,
+                        OpenModal = false,
+                        OpenDrawer = true,
+                        DrawerId = "sf-audit-bills-drawer",
+
+                        OnBeforeOpenJs =
+    "const d=document.getElementById('sf-audit-bills-drawer');" +
+    "if(d&&row){" +
+    "d.dataset.printResidentId=String(row.p02??'');" +
+    "d.dataset.printServiceId=String(row.p03??'');" +
+    "d.dataset.printBuildingId=String(row.p05??'');" +
+    "}",
+
+                        DrawerParamMap = new Dictionary<string, string>
+                        {
+                            ["parameter_01"] = "p02",
+                            ["parameter_02"] = "p03",
+                            ["parameter_03"] = "p05"
+                        },
+
+                        DrawerSubtitleTemplate =
+    "الخدمة: {BillChargeTypeName_A} | المبنى: {buildingDetailsNo}",
+
                         ModalTitle = "استعراض المطالبات",
                         //ModalMessage = msgrent,
                         //ModalMessageIcon = "fa-solid fa-circle-info",
@@ -1303,13 +2560,34 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                          Label = "استعراض السدادات",
                          Icon = "fa fa-money-bill",
                          Color = "info",
-                         //Placement = TableActionPlacement.ActionsMenu, 
-                         IsEdit = true,
-                         OpenModal = true,
-                         ModalTitle = "استعراض السدادات",
-                         //ModalMessage = msgservice,
-                         //ModalMessageIcon = "fa-solid fa-circle-info",
-                         //ModalMessageClass = colorservice,
+                        //Placement = TableActionPlacement.ActionsMenu, 
+                        IsEdit = true,
+                        OpenModal = false,
+                        OpenDrawer = true,
+                        DrawerId = "sf-audit-payments-drawer",
+
+                        OnBeforeOpenJs =
+    "const d=document.getElementById('sf-audit-payments-drawer');" +
+    "if(d&&row){" +
+    "d.dataset.printResidentId=String(row.p02??'');" +
+    "d.dataset.printServiceId=String(row.p03??'');" +
+    "d.dataset.printBuildingId=String(row.p05??'');" +
+    "}",
+
+                        DrawerParamMap = new Dictionary<string, string>
+                        {
+                            ["parameter_01"] = "p02",
+                            ["parameter_02"] = "p03",
+                            ["parameter_03"] = "p05"
+                        },
+
+                        DrawerSubtitleTemplate =
+    "الخدمة: {BillChargeTypeName_A} | المبنى: {buildingDetailsNo}",
+
+                        ModalTitle = "استعراض السدادات",
+                        //ModalMessage = msgservice,
+                        //ModalMessageIcon = "fa-solid fa-circle-info",
+                        //ModalMessageClass = colorservice,
                         Show = true,
                         OpenForm = new FormConfig
                          {
@@ -1483,8 +2761,284 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 }
 
             };
-            
-            
+
+
+            // ============================================================
+            // Financial Audit - Bills and Payments Drawers
+            // ============================================================
+
+            dsModel.Toolbar.Drawers = new List<SmartDrawerConfig>
+{
+    // ========================================
+    // 1. Bills Drawer
+    // ========================================
+    new SmartDrawerConfig
+    {
+        Id = "sf-audit-bills-drawer",
+        Show = true,
+        Title = "استعراض المطالبات",
+        Subtitle = "المطالبات المالية للمستفيد حسب الخدمة والمبنى",
+        Icon = "fa-solid fa-file-invoice",
+        Side = SmartDrawerSide.Left,
+        Size = SmartDrawerSize.Large,
+
+        Table = new SmartTableDsModel
+        {
+            StoredProcedureName = "",
+            Operation = "select",
+
+            Rows = new List<Dictionary<string, object?>>(),
+            RowIdField = "BillsID",
+
+            Columns = new List<TableColumn>
+            {
+                new TableColumn
+                {
+                    Field = "BillsID",
+                    Label = "الرقم المرجعي",
+                    Type = "number",
+                    Visible = true,
+                    Sortable = true
+                },
+                new TableColumn
+                {
+                    Field = "BillNumber",
+                    Label = "رقم الفاتورة",
+                    Type = "text",
+                    Visible = true,
+                    Sortable = true
+                },
+                new TableColumn
+                {
+                    Field = "BillChargeTypeName_A",
+                    Label = "الخدمة",
+                    Type = "text",
+                    Visible = true,
+                    Sortable = true
+                },
+                new TableColumn
+                {
+                    Field = "buildingDetailsNo",
+                    Label = "رقم المبنى",
+                    Type = "text",
+                    Visible = true,
+                    Sortable = true
+                },
+                new TableColumn
+                {
+                    Field = "TotalPrice",
+                    Label = "المبلغ",
+                    Type = "number",
+                    Visible = true,
+                    Sortable = true
+                }
+            },
+
+            PageSize = 10,
+            PageSizes = new List<int> { 10, 25, 50 },
+
+            Searchable = true,
+            Selectable = false,
+            ShowToolbar = true,
+            ShowColumnVisibility = true,
+            EnablePagination = true,
+            EnableCellCopy = true,
+            AllowExport = false,
+
+            Toolbar = new TableToolbarConfig
+            {
+                ShowRefresh = false,
+                ShowColumns = true,
+                ShowExportCsv = false,
+                ShowExportExcel = false,
+                ShowExportPdf = false,
+                ShowPrint = false,
+                ShowPrint1 = true,
+
+Print1 = new TableAction
+{
+    Label = "طباعة المطالبات",
+    Icon = "fa fa-print",
+    Color = "primary",
+
+   OnClickJs = @"
+    const d = document.getElementById('sf-audit-bills-drawer');
+    const r = Number(d?.dataset.printResidentId);
+    const b = Number(d?.dataset.printBuildingId);
+    const s = Number(d?.dataset.printServiceId);
+
+    const u = (
+        new URLSearchParams(window.location.search).get('U') ||
+        document.querySelector('[name=NationalID]')?.value ||
+        ''
+    ).trim();
+
+    if (!r || !b || !s || !u) {
+        table.showToast(
+            'بيانات المستفيد أو التقرير غير مكتملة، يرجى إعادة اختيار المستفيد',
+            'error'
+        );
+        return;
+    }
+
+    sfPrintWithBusy(table, {
+        pdf: 2,
+        extraParams: {
+            U: u,
+            printResidentID: r,
+            printBuildingID: b,
+            printServiceID: s
+        },
+        busy: {
+            title: 'طباعة المطالبات المالية'
+        }
+    });
+"
+},
+            }
+        }
+    },
+
+    // ========================================
+    // 2. Payments Drawer
+    // ========================================
+    new SmartDrawerConfig
+    {
+        Id = "sf-audit-payments-drawer",
+        Show = true,
+        Title = "استعراض السدادات",
+        Subtitle = "حركات السداد والتسويات المالية",
+        Icon = "fa-solid fa-money-bill-transfer",
+        Side = SmartDrawerSide.Left,
+        Size = SmartDrawerSize.Large,
+
+        Table = new SmartTableDsModel
+        {
+            StoredProcedureName = "",
+            Operation = "select",
+
+            Rows = new List<Dictionary<string, object?>>(),
+            RowIdField = "paymentID",
+
+            Columns = new List<TableColumn>
+            {
+                new TableColumn
+                {
+                    Field = "BillChargeTypeName_A",
+                    Label = "الخدمة",
+                    Type = "text",
+                    Visible = true,
+                    Sortable = true
+                },
+                new TableColumn
+                {
+                    Field = "deductName",
+                    Label = "نوع السداد",
+                    Type = "text",
+                    Visible = true,
+                    Sortable = true
+                },
+                new TableColumn
+                {
+                    Field = "FullName_A",
+                    Label = "الاسم",
+                    Type = "text",
+                    Visible = true,
+                    Sortable = true
+                },
+                new TableColumn
+                {
+                    Field = "buildingDetailsNo",
+                    Label = "المبنى",
+                    Type = "text",
+                    Visible = true,
+                    Sortable = true
+                },
+                new TableColumn
+                {
+                    Field = "amount",
+                    Label = "المبلغ",
+                    Type = "number",
+                    Visible = true,
+                    Sortable = true
+                },
+                new TableColumn
+                {
+                    Field = "buildingPaymentTypeName_A",
+                    Label = "طريقة السداد",
+                    Type = "text",
+                    Visible = true,
+                    Sortable = true
+                }
+            },
+
+            PageSize = 10,
+            PageSizes = new List<int> { 10, 25, 50 },
+
+            Searchable = true,
+            Selectable = false,
+            ShowToolbar = true,
+            ShowColumnVisibility = true,
+            EnablePagination = true,
+            EnableCellCopy = true,
+            AllowExport = false,
+
+            Toolbar = new TableToolbarConfig
+            {
+                ShowRefresh = false,
+                ShowColumns = true,
+                ShowExportCsv = false,
+                ShowExportExcel = false,
+                ShowExportPdf = false,
+                ShowPrint = false,
+                ShowPrint1 = true,
+
+Print1 = new TableAction
+{
+    Label = "طباعة السدادات",
+    Icon = "fa fa-print",
+    Color = "primary",
+
+    OnClickJs = @"
+    const d = document.getElementById('sf-audit-payments-drawer');
+    const r = Number(d?.dataset.printResidentId);
+    const b = Number(d?.dataset.printBuildingId);
+    const s = Number(d?.dataset.printServiceId);
+
+    const u = (
+        new URLSearchParams(window.location.search).get('U') ||
+        document.querySelector('[name=NationalID]')?.value ||
+        ''
+    ).trim();
+
+    if (!r || !b || !s || !u) {
+        table.showToast(
+            'بيانات المستفيد أو التقرير غير مكتملة، يرجى إعادة اختيار المستفيد',
+            'error'
+        );
+        return;
+    }
+
+    sfPrintWithBusy(table, {
+        pdf: 3,
+        extraParams: {
+            U: u,
+            printResidentID: r,
+            printBuildingID: b,
+            printServiceID: s
+        },
+        busy: {
+            title: 'طباعة السدادات المالية'
+        }
+    });
+"
+},
+            }
+        }
+    }
+};
+
+
             var dsModel10 = new SmartTableDsModel
             {
                 PageTitle = "التدقيق المالي العام",
@@ -1525,32 +3079,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                     ShowBulkDelete = false,
 
 
-                    Add = new TableAction
-                    {
-                        Label = "اعتماد التدقيق المالي وارساله لقسم الاسكان",
-                        Icon = "fa fa-check",
-                        Color = "success",
-                        IsEdit = false,
-                        OpenModal = true,
-                        ModalTitle = "اعتماد الامهال",
-                        ModalMessage = "لايمكن التراجع بعد اعتماد التدقيق المالي وارساله لقسم الاسكان",
-                        ModalMessageClass = "bg-red-50 text-red-700",
-                        ModalMessageIcon = "fa-solid fa-triangle-exclamation",
-                        OpenForm = new FormConfig
-                        {
-                            FormId = "employeeDeleteForm",
-                            Title = "تأكيد اعتماد التدقيق المالي وارساله لقسم الاسكان",
-                            Method = "post",
-                            ActionUrl = "/crud/delete",
-                            Buttons = new List<FormButtonConfig>
-                            {
-                                new FormButtonConfig { Text = "حفظ", Type = "submit", Color = "success", Icon = "fa fa-check" },
-                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
-                            },
-                            Fields = ApproveExtendOrExitFields
-                        },
-
-                    },
+                   
 
                 }
 
@@ -1751,13 +3280,17 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
 
 
-            bool dsModelHasRows = dt1 != null && dt1.Rows.Count > 0;
+            bool dsModelHasRows =
+                dt1 != null && dt1.Rows.Count > 0;
 
-            bool dsModel3HasRows = dt2 != null && dt2.Rows.Count > 0;
+            bool dsModelGeneralHasRows =
+                ready && dt10 != null && dt10.Rows.Count > 0;
 
-            bool dsModel10HasRows = dt9 != null && dt9.Rows.Count > 0;
+            bool dsModel3HasRows =
+                dt2 != null && dt2.Rows.Count > 0;
 
-
+            bool dsModel10HasRows =
+                dt9 != null && dt9.Rows.Count > 0;
 
             ViewBag.dsModelHasRows = dsModelHasRows;
             ViewBag.dsModel2HasRows = dsModel3HasRows;
@@ -1766,6 +3299,8 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
             //return View("HousingDefinitions/BuildingType", dsModel);
 
+           
+
             var page = new SmartPageViewModel
             {
                 PageTitle = dsModel3.PageTitle,
@@ -1773,11 +3308,302 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 PanelIcon = "fa fa-list",
 
                 Form = form,
-                TableDS = dsModelHasRows && hasresident ? dsModel : null,
-                TableDS1 = dsModel10HasRows && hasresident ? dsModel10 : null,
-                TableDS2 = dsModel3HasRows && hasresident ? dsModel3 : null
 
+                // 1. بيانات المستفيد
+                TableDS = dsModelHasRows && hasresident
+        ? dsModel : null,
+
+                // 2. الرصيد العام المستقل
+                TableDS1 = dsModelGeneralHasRows && hasresident
+        ? dsModelGeneral : null,
+
+                // 3. إجمالي مطالبات المباني
+                TableDS2 = dsModel10HasRows && hasresident
+        ? dsModel10 : null,
+
+                // 4. التسوية المالية للمباني
+                TableDS3 = dsModel3HasRows && hasresident
+        ? dsModel3 : null
             };
+
+
+
+            // ============================================================
+            // Official PDF: Claims (pdf=2) / Payments (pdf=3)
+            // ============================================================
+            if (pdf == 2 || pdf == 3)
+            {
+                // الصفحة الحالية تحدد مصدر الرصيد والصلاحية.
+                // عيّن هذين السطرين كما هو موضح أسفل الكود.
+                var auditPrintBalanceTable = dt2;
+                bool auditPrintCanReview = canREVIEWCLAIMSANDPAYMENTSFORUSER;
+
+                if (!auditPrintCanReview)
+                    return Forbid();
+
+                if (!ready)
+                {
+                    return BadRequest(
+                        "تعذر الطباعة: معامل U الخاص باختيار المستفيد غير موجود.");
+                }
+
+                if (!printResidentID.HasValue || printResidentID.Value <= 0)
+                {
+                    return BadRequest(
+                        "تعذر الطباعة: رقم المستفيد printResidentID غير صحيح.");
+                }
+
+                if (!printBuildingID.HasValue || printBuildingID.Value <= 0)
+                {
+                    return BadRequest(
+                        "تعذر الطباعة: رقم المبنى printBuildingID غير صحيح.");
+                }
+
+                if (!printServiceID.HasValue || printServiceID.Value <= 0)
+                {
+                    return BadRequest(
+                        "تعذر الطباعة: نوع الخدمة printServiceID غير صحيح.");
+                }
+
+                // لا نقبل طباعة مستفيد/خدمة/مبنى خارج نتائج
+                // التدقيق المحملة للمستخدم ضمن إدارته.
+                if (auditPrintBalanceTable == null ||
+                    !auditPrintBalanceTable.Columns.Contains("residentInfoID") ||
+                    !auditPrintBalanceTable.Columns.Contains("buildingDetailsID") ||
+                    !auditPrintBalanceTable.Columns.Contains("BillChargeTypeID"))
+                {
+                    return BadRequest("تعذر التحقق من نطاق التقرير.");
+                }
+
+                bool validPrintSelection =
+                    auditPrintBalanceTable.AsEnumerable().Any(r =>
+                        r["residentInfoID"]?.ToString() ==
+                            printResidentID.Value.ToString() &&
+                        r["buildingDetailsID"]?.ToString() ==
+                            printBuildingID.Value.ToString() &&
+                        r["BillChargeTypeID"]?.ToString() ==
+                            printServiceID.Value.ToString());
+
+                if (!validPrintSelection)
+                    return Forbid();
+
+                string actionType = pdf == 2
+                    ? "GetBillsTotalPriceForResident"
+                    : "GetBillsPaidByResident";
+
+                string reportTitle = pdf == 2
+                    ? "كشف المطالبات المالية"
+                    : "كشف السدادات والحركات المالية";
+
+                var printParameters = new Dictionary<string, object?>
+                {
+                    ["pageName_"] = PageName,
+                    ["ActionType"] = actionType,
+                    ["idaraID"] = IdaraId,
+                    ["entrydata"] = usersId,
+                    ["hostname"] = HostName,
+                    ["parameter_01"] = printResidentID.Value,
+                    ["parameter_02"] = printServiceID.Value,
+                    ["parameter_03"] = printBuildingID.Value
+                };
+
+                DataSet printDs =
+                    await _mastersServies.GetExtraDataLoadDataSetAsync(printParameters);
+
+                if (printDs.Tables.Count == 0 || printDs.Tables[0].Rows.Count == 0)
+                    return Content("لا توجد بيانات للطباعة.");
+
+                DataTable source = printDs.Tables[0];
+                DataTable printTable = new DataTable();
+                var columns = new List<ReportColumn>();
+
+                if (pdf == 2)
+                {
+                    string[] required =
+                    {
+            "BillNumber",
+            "BillChargeTypeName_A",
+            "buildingDetailsNo",
+            "TotalPrice"
+        };
+
+                    if (required.Any(c => !source.Columns.Contains(c)))
+                        return Content("أعمدة بيانات المطالبات غير مكتملة.");
+
+                    // جلب اسم المستفيد من بيانات التدقيق المحملة والموثقة
+                    DataRow? claimResidentRow =
+                        dt1 != null &&
+                        dt1.Columns.Contains("residentInfoID") &&
+                        dt1.Columns.Contains("FullName_A")
+                            ? dt1.AsEnumerable().FirstOrDefault(r =>
+                                r["residentInfoID"] != DBNull.Value &&
+                                r["residentInfoID"]?.ToString() ==
+                                    printResidentID.Value.ToString())
+                            : null;
+
+                    if (claimResidentRow == null ||
+                        claimResidentRow["FullName_A"] == DBNull.Value ||
+                        string.IsNullOrWhiteSpace(
+                            claimResidentRow["FullName_A"]?.ToString()))
+                    {
+                        return Content("تعذر تحديد اسم المستفيد للطباعة.");
+                    }
+
+                    string claimResidentName =
+                        claimResidentRow["FullName_A"].ToString()!.Trim();
+
+                    printTable.Columns.Add("BillNumber", typeof(string));
+                    printTable.Columns.Add("FullName_A", typeof(string));
+                    printTable.Columns.Add("BillChargeTypeName_A", typeof(string));
+                    printTable.Columns.Add("buildingDetailsNo", typeof(string));
+                    printTable.Columns.Add("TotalPrice", typeof(decimal));
+
+                    foreach (DataRow r in source.Rows)
+                    {
+                        printTable.Rows.Add(
+                            r["BillNumber"]?.ToString() ?? "",
+                            claimResidentName,
+                            r["BillChargeTypeName_A"]?.ToString() ?? "",
+                            r["buildingDetailsNo"]?.ToString() ?? "",
+                            r["TotalPrice"] == DBNull.Value
+                                ? 0m : Convert.ToDecimal(r["TotalPrice"])
+                        );
+                    }
+
+                    columns.Add(new("BillNumber", "رقم الفاتورة",
+    Align: "center", Weight: 2, FontSize: 8));
+
+                    columns.Add(new("FullName_A", "المستفيد",
+                        Align: "center", Weight: 4, FontSize: 8));
+
+                    columns.Add(new("BillChargeTypeName_A", "الخدمة",
+                        Align: "center", Weight: 2, FontSize: 8));
+
+                    columns.Add(new("buildingDetailsNo", "المنزل",
+                        Align: "center", Weight: 2, FontSize: 8));
+
+                    columns.Add(new("TotalPrice", "المبلغ",
+                        Align: "center", Weight: 2, FontSize: 8));
+                }
+                else
+                {
+                    string[] required =
+                    {
+            "BillChargeTypeName_A",
+            "deductName",
+            "FullName_A",
+            "buildingDetailsNo",
+            "amount",
+            "buildingPaymentTypeName_A"
+        };
+
+                    if (required.Any(c => !source.Columns.Contains(c)))
+                        return Content("أعمدة بيانات السدادات غير مكتملة.");
+
+                    printTable.Columns.Add("BillChargeTypeName_A", typeof(string));
+                    printTable.Columns.Add("deductName", typeof(string));
+                    printTable.Columns.Add("FullName_A", typeof(string));
+                    printTable.Columns.Add("buildingDetailsNo", typeof(string));
+                    printTable.Columns.Add("amount", typeof(decimal));
+                    printTable.Columns.Add("buildingPaymentTypeName_A", typeof(string));
+
+                    foreach (DataRow r in source.Rows)
+                    {
+                        printTable.Rows.Add(
+                            r["BillChargeTypeName_A"]?.ToString() ?? "",
+                            r["deductName"]?.ToString() ?? "",
+                            r["FullName_A"]?.ToString() ?? "",
+                            r["buildingDetailsNo"]?.ToString() ?? "",
+                            r["amount"] == DBNull.Value
+                                ? 0m : Convert.ToDecimal(r["amount"]),
+                            r["buildingPaymentTypeName_A"]?.ToString() ?? ""
+                        );
+                    }
+
+                    columns.Add(new("BillChargeTypeName_A", "الخدمة",
+                        Align: "center", Weight: 2, FontSize: 8));
+                    columns.Add(new("deductName", "نوع السداد",
+                        Align: "center", Weight: 4, FontSize: 8));
+                    columns.Add(new("FullName_A", "المستفيد",
+                        Align: "center", Weight: 4, FontSize: 8));
+                    columns.Add(new("buildingDetailsNo", "المنزل",
+                        Align: "center", Weight: 2, FontSize: 8));
+                    columns.Add(new("amount", "المبلغ",
+                        Align: "center", Weight: 2, FontSize: 8));
+                    columns.Add(new("buildingPaymentTypeName_A", "طريقة السداد",
+                        Align: "center", Weight: 3, FontSize: 8));
+                }
+
+                DataRow selectedBalance = auditPrintBalanceTable
+                    .AsEnumerable()
+                    .First(r =>
+                        r["residentInfoID"]?.ToString() ==
+                            printResidentID.Value.ToString() &&
+                        r["buildingDetailsID"]?.ToString() ==
+                            printBuildingID.Value.ToString() &&
+                        r["BillChargeTypeID"]?.ToString() ==
+                            printServiceID.Value.ToString());
+
+                string serviceName =
+                    auditPrintBalanceTable.Columns.Contains("BillChargeTypeName_A")
+                        ? selectedBalance["BillChargeTypeName_A"]?.ToString() ?? ""
+                        : "";
+
+                string homeNumber =
+                    auditPrintBalanceTable.Columns.Contains("buildingDetailsNo")
+                        ? selectedBalance["buildingDetailsNo"]?.ToString() ?? ""
+                        : "";
+
+                string subject =
+                    $"{reportTitle} - {serviceName} - المنزل {homeNumber}";
+
+                var logo = Path.Combine(
+                    _env.WebRootPath,
+                    "img",
+                    "Royal_Saudi_Land_Forces.png");
+
+                var header = new Dictionary<string, string>
+                {
+                    ["no"] = "—",
+                    ["date"] = DateTime.Now.ToString("yyyy/MM/dd"),
+                    ["attach"] = "—",
+                    ["subject"] = subject,
+                    ["right1"] = "المملكة العربية السعودية",
+                    ["right2"] = "وزارة الدفاع",
+                    ["right3"] = "القوات البرية الملكية السعودية",
+                    ["right4"] = OrganizationName,
+                    ["right5"] = IdaraName,
+                    ["midCaption"] = ""
+                };
+
+                var report = DataTableReportBuilder.FromDataTable(
+                    reportId:
+                        $"{PageName}_{actionType}_{printResidentID}_{printBuildingID}_{printServiceID}",
+                    title: subject,
+                    table: printTable,
+                    columns: columns,
+                    headerFields: header,
+                    footerFields: new Dictionary<string, string>
+                    {
+                        ["عدد السجلات"] = printTable.Rows.Count.ToString(),
+                        ["الرقم المرجعي للمستفيد"] = printResidentID.Value.ToString(),
+                        ["تمت الطباعة بواسطة"] = FullName ?? "",
+                        ["تاريخ ووقت الطباعة"] =
+                            DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")
+                    },
+                    orientation: ReportOrientation.Landscape,
+                    headerType: ReportHeaderType.LetterOfficial,
+                    logoPath: logo,
+                    headerRepeat: ReportHeaderRepeat.AllPages
+                );
+
+                byte[] bytes = QuestPdfReportRenderer.Render(report);
+
+                Response.Headers["Content-Disposition"] =
+                    $"inline; filename={PageName}_{actionType}.pdf";
+
+                return File(bytes, "application/pdf");
+            }
 
             return View("FinancialAudit/FinancialAuditForUser", page);
 

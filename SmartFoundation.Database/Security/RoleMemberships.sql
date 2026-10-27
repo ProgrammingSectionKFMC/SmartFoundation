@@ -1,4 +1,4 @@
-ALTER ROLE [db_owner] ADD MEMBER [NT AUTHORITY\NETWORK];
+﻿ALTER ROLE [db_owner] ADD MEMBER [NT AUTHORITY\NETWORK];
 
 
 GO
@@ -35,12 +35,20 @@ ALTER ROLE [db_datawriter] ADD MEMBER [NT AUTHORITY\NETWORK];
 
 
 
+
+
+
+
 GO
 ALTER ROLE [db_owner] ADD MEMBER [SAMIDEV];
 
 
+
+
 GO
 ALTER ROLE [db_datawriter] ADD MEMBER [SAMIDEV];
+
+
 
 
 GO

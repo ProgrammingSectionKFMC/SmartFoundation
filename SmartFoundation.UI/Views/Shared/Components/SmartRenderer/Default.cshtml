@@ -13,7 +13,8 @@
     || Model.TableDS3 is not null
     || Model.TableDS4 is not null
     || Model.TableDS5 is not null
-    || Model.Table is not null;
+    || Model.Table is not null
+    || Model.Accordions?.Any(a => a is not null) == true;
 
     var panel = Model.Panel ?? new SmartPagePanelConfig();
     var panelTitle = panel.Title ?? Model.PanelTitle ?? Model.PageTitle ?? "";
@@ -242,6 +243,14 @@
             @if (Model.Table is not null)
             {
                 @await Component.InvokeAsync("SmartTableDS", new { model = Model.Table, embedded = true })
+            }
+
+            @if (Model.Accordions is not null)
+            {
+                @foreach (var accordion in Model.Accordions.Where(a => a is not null))
+                {
+                    @await Component.InvokeAsync("SmartAccordion", new { model = accordion })
+                }
             }
         </div>
     </div>

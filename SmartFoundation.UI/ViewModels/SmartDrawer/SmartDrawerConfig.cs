@@ -1,6 +1,7 @@
 ﻿
 using SmartFoundation.UI.ViewModels.SmartForm;
 using SmartFoundation.UI.ViewModels.SmartTable;
+using SmartFoundation.UI.ViewModels.SmartAccordion;
 
 namespace SmartFoundation.UI.ViewModels.SmartDrawer
 {
@@ -50,5 +51,7 @@ namespace SmartFoundation.UI.ViewModels.SmartDrawer
         // Empty state
         public string EmptyText { get; set; }
             = "لا توجد بيانات للعرض";
+
+        public SmartAccordionConfig? Accordion { get; set; }
     }
 }

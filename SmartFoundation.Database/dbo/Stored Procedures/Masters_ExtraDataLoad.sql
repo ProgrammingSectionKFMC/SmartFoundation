@@ -470,10 +470,288 @@ END
     -------------------------------------------------------------------
 
 
-         ELSE IF @pageName_ = 'FinancialAuditForExtendAndEvictions'
-        BEGIN
-         IF @ActionType = 'GetBillsTotalPriceForResident'
-            BEGIN
+         ELSE IF @pageName_ = 'FinancialAuditForUser'
+BEGIN
+
+    ------------------------------------------------------------
+    -- GENERAL BALANCE - PAYMENT DETAILS
+    -- استعراض حركات الرصيد العام للمستفيد حسب نوع الخدمة
+    ------------------------------------------------------------
+
+    IF @ActionType = N'GetGeneralBalancePaymentsByResident'
+BEGIN
+    DECLARE @ResidentID BIGINT =
+        TRY_CONVERT(BIGINT, @parameter_01);
+
+    DECLARE @ServiceID INT =
+        TRY_CONVERT(INT, @parameter_02);
+
+    DECLARE @FirstOccupancy DATE;
+    DECLARE @OldRefunds DECIMAL(38,2) = 0;
+
+    IF @ResidentID IS NULL OR @ServiceID IS NULL
+       OR @ResidentID <= 0 OR @ServiceID <= 0
+        THROW 50001, N'بيانات الرصيد العام غير صحيحة', 1;
+
+    IF NOT EXISTS
+    (
+        SELECT 1
+        FROM Housing.V_GetFullResidentDetails r
+        WHERE r.residentInfoID = @ResidentID
+          AND r.IdaraID = @idaraID
+    )
+        THROW 50001, N'المستفيد خارج نطاق الإدارة', 1;
+
+    SELECT @FirstOccupancy =
+        MIN(CONVERT(DATE, a.buildingActionDate))
+    FROM Housing.BuildingAction a
+    WHERE a.residentInfoID_FK = @ResidentID
+      AND a.buildingActionTypeID_FK = 2
+      AND a.buildingActionActive = 1
+      AND a.buildingActionDate IS NOT NULL;
+
+    -- الإعادات التاريخية السالبة: تُخصم مرة واحدة.
+    SELECT @OldRefunds =
+        ISNULL(SUM(-CONVERT(DECIMAL(38,2), p.amount)), 0)
+    FROM Housing.BuildingPayment p
+    INNER JOIN Housing.DeductList d
+        ON d.deductListID = p.deductListID_FK
+    WHERE p.residentInfoID_FK = @ResidentID
+      AND p.BillChargeTypeID_FK = @ServiceID
+      AND p.IdaraId_FK = @idaraID
+      AND p.buildingPaymentLinkStatusID_FK = 2
+      AND p.buildingPayementActive = 1
+      AND d.deductActive = 1
+      AND p.amount < 0
+AND p.UnallocatedRefundID_FK IS NULL
+AND (
+    p.buildingPaymentTypeID_FK IS NULL
+    OR p.buildingPaymentTypeID_FK <> 7
+);
+
+    ;WITH HijriMonths AS
+    (
+        SELECT
+            g.yearH,
+            g.monthH,
+            MIN(CONVERT(DATE, g.gregorianDate)) AS StartDate,
+            MAX(CONVERT(DATE, g.gregorianDate)) AS EndDate
+        FROM dbo._GregorianHijriDate g
+        WHERE g.yearH BETWEEN 1400 AND 1499
+        GROUP BY g.yearH, g.monthH
+        HAVING COUNT(*) BETWEEN 29 AND 30
+           AND COUNT(DISTINCT g.dayH) = COUNT(*)
+           AND MIN(g.dayH) = 1
+           AND MAX(g.dayH) = COUNT(*)
+           AND COUNT(DISTINCT CONVERT(DATE, g.gregorianDate)) = COUNT(*)
+           AND DATEDIFF(
+                DAY,
+                MIN(CONVERT(DATE, g.gregorianDate)),
+                MAX(CONVERT(DATE, g.gregorianDate))
+           ) + 1 = COUNT(*)
+    ),
+    PositivePayments AS
+    (
+        SELECT
+            p.paymentID,
+            p.residentInfoID_FK AS residentInfoID,
+            p.BillChargeTypeID_FK AS BillChargeTypeID,
+            d.deductName,
+            bt.buildingPaymentTypeName_A,
+            d.issueYear,
+            d.issueMonth,
+            CONVERT(NVARCHAR(10), d.paymentDate, 23) AS paymentDate,
+            CONVERT(DECIMAL(38,2), p.amount) AS OriginalAmount,
+            dates.ReferenceDate,
+            CASE
+                WHEN @FirstOccupancy IS NOT NULL
+                 AND dates.PeriodEndDate >= @FirstOccupancy
+                THEN 1 ELSE 0
+            END AS IsEligible
+        FROM Housing.BuildingPayment p
+        INNER JOIN Housing.DeductList d
+            ON d.deductListID = p.deductListID_FK
+        LEFT JOIN Housing.BuildingPaymentType bt
+            ON bt.buildingPaymentTypeID =
+               p.buildingPaymentTypeID_FK
+        LEFT JOIN HijriMonths h
+            ON h.yearH = d.issueYear
+           AND h.monthH = d.issueMonth
+        CROSS APPLY
+        (
+            SELECT
+                CASE
+                    WHEN d.issueYear BETWEEN 1400 AND 1499
+                        THEN h.StartDate
+                    WHEN d.issueYear BETWEEN 1900 AND 9999
+                     AND d.issueMonth BETWEEN 1 AND 12
+                        THEN TRY_CONVERT(DATE, CONCAT(
+                            d.issueYear, N'-',
+                            RIGHT(N'0' + CONVERT(
+                                NVARCHAR(2), d.issueMonth), 2),
+                            N'-01'))
+                    ELSE CONVERT(DATE, d.paymentDate)
+                END AS ReferenceDate,
+                CASE
+                    WHEN d.issueYear BETWEEN 1400 AND 1499
+                        THEN h.EndDate
+                    WHEN d.issueYear BETWEEN 1900 AND 9999
+                     AND d.issueMonth BETWEEN 1 AND 12
+                        THEN EOMONTH(TRY_CONVERT(DATE, CONCAT(
+                            d.issueYear, N'-',
+                            RIGHT(N'0' + CONVERT(
+                                NVARCHAR(2), d.issueMonth), 2),
+                            N'-01')))
+                    ELSE CONVERT(DATE, d.paymentDate)
+                END AS PeriodEndDate
+        ) dates
+        WHERE p.residentInfoID_FK = @ResidentID
+          AND p.BillChargeTypeID_FK = @ServiceID
+          AND p.IdaraId_FK = @idaraID
+          AND p.buildingPaymentLinkStatusID_FK = 2
+          AND p.buildingPayementActive = 1
+          AND d.deductActive = 1
+          AND p.amount > 0
+          AND NULLIF(LTRIM(RTRIM(
+              p.buildingDetailsID_FK)), N'') IS NULL
+    ),
+    OrderedPayments AS
+    (
+        SELECT
+            p.paymentID,
+            p.OriginalAmount,
+            SUM(p.OriginalAmount) OVER
+            (
+                ORDER BY p.ReferenceDate, p.paymentID
+                ROWS UNBOUNDED PRECEDING
+            ) AS RunningGross
+        FROM PositivePayments p
+        WHERE p.IsEligible = 1
+    ),
+    LegacyAllocation AS
+    (
+        SELECT
+            o.paymentID,
+            CASE
+                WHEN @OldRefunds <=
+                     o.RunningGross - o.OriginalAmount
+                    THEN CONVERT(DECIMAL(38,2), 0)
+                WHEN @OldRefunds >= o.RunningGross
+                    THEN o.OriginalAmount
+                ELSE @OldRefunds -
+                     (o.RunningGross - o.OriginalAmount)
+            END AS LegacyUsed
+        FROM OrderedPayments o
+    ),
+    NewRefundAllocation AS
+(
+    SELECT
+        rd.PaymentID_FK,
+        SUM(
+            CONVERT(DECIMAL(38,2), rd.AllocatedAmount)
+        ) AS NewRefundUsed
+    FROM Housing.UnallocatedPaymentRefundDetail rd
+    INNER JOIN Housing.UnallocatedPaymentRefund r
+        ON r.RefundID = rd.RefundID_FK
+    WHERE r.ResidentInfoID_FK = @ResidentID
+      AND r.BillChargeTypeID_FK = @ServiceID
+      AND r.IdaraId_FK = @idaraID
+      AND r.RefundStatus = 1
+    GROUP BY rd.PaymentID_FK
+),
+
+-- المبالغ المحولة فعليًا من السداد العام إلى المباني
+BuildingAllocation AS
+(
+    SELECT
+        a.SourcePaymentID_FK,
+        SUM(
+            CONVERT(DECIMAL(38,2), a.AllocatedAmount)
+        ) AS BuildingAllocated
+    FROM Housing.GeneralBalanceBuildingAllocation a
+    WHERE a.ResidentInfoID_FK = @ResidentID
+      AND a.BillChargeTypeID_FK = @ServiceID
+      AND a.IdaraID_FK = @idaraID
+      AND a.AllocationStatus = 1
+    GROUP BY a.SourcePaymentID_FK
+),
+
+FinalBalance AS
+(
+    SELECT
+        p.*,
+
+        ISNULL(l.LegacyUsed, 0) AS LegacyUsed,
+
+        ISNULL(n.NewRefundUsed, 0) AS NewRefundUsed,
+
+        ISNULL(b.BuildingAllocated, 0) AS BuildingAllocated,
+
+        CASE
+            WHEN p.IsEligible = 0
+                THEN CONVERT(DECIMAL(38,2), 0)
+            ELSE
+                p.OriginalAmount
+                - ISNULL(l.LegacyUsed, 0)
+                - ISNULL(n.NewRefundUsed, 0)
+                - ISNULL(b.BuildingAllocated, 0)
+        END AS AvailableAmount
+
+    FROM PositivePayments p
+
+    LEFT JOIN LegacyAllocation l
+        ON l.paymentID = p.paymentID
+
+    LEFT JOIN NewRefundAllocation n
+        ON n.PaymentID_FK = p.paymentID
+
+    LEFT JOIN BuildingAllocation b
+        ON b.SourcePaymentID_FK = p.paymentID
+)
+
+SELECT
+    paymentID,
+    residentInfoID,
+    BillChargeTypeID,
+    deductName,
+    buildingPaymentTypeName_A,
+    issueYear,
+    issueMonth,
+    paymentDate,
+
+    OriginalAmount,
+    LegacyUsed,
+    NewRefundUsed,
+
+    -- العمود الجديد
+    BuildingAllocated,
+
+    AvailableAmount,
+    IsEligible,
+
+    CASE
+        WHEN IsEligible = 0
+            THEN N'غير مؤهل للمعالجة'
+
+        WHEN AvailableAmount < 0
+            THEN N'تعارض مالي - يتطلب المراجعة'
+
+        WHEN AvailableAmount = 0
+            THEN N'تمت المعالجة'
+
+        WHEN AvailableAmount < OriginalAmount
+            THEN N'معالج جزئيًا'
+
+        ELSE N'بانتظار المعالجة'
+
+    END AS ProcessingStatus
+
+FROM FinalBalance
+ORDER BY paymentID DESC;
+END
+
+    ELSE IF @ActionType = 'GetBillsTotalPriceForResident'
+    BEGIN
 
                    
         SELECT 
@@ -526,7 +804,7 @@ END
             AND (bp.buildingPayementActive = 1) 
             AND(bp.residentInfoID_FK = @parameter_01) 
             AND (bp.BillChargeTypeID_FK = @parameter_02) 
-            AND (bp.IdaraId_FK = 1) 
+            AND (bp.IdaraId_FK = @idaraID) 
             AND (bp.buildingDetailsID_FK = @parameter_03 or bp.buildingDetailsID_FK is null)
 
 
@@ -543,6 +821,260 @@ END
             END
 
 
+            ELSE IF @ActionType = N'GetGeneralBalanceLinkBuildingsByResident'
+BEGIN
+    DECLARE @LinkResidentID BIGINT =
+        TRY_CONVERT(BIGINT, @parameter_01);
+
+    IF @LinkResidentID IS NULL OR @LinkResidentID <= 0
+        THROW 50001, N'رقم المستفيد غير صحيح', 1;
+
+    -- حماية نطاق الإدارة
+    IF NOT EXISTS
+    (
+        SELECT 1
+        FROM Housing.V_GetFullResidentDetails r
+        WHERE r.residentInfoID = @LinkResidentID
+          AND r.IdaraID = @idaraID
+    )
+        THROW 50001, N'المستفيد خارج نطاق الإدارة', 1;
+
+    -- المباني النشطة ذات الإشغال الموثق للمستفيد
+    SELECT
+        b.buildingDetailsID,
+        b.buildingDetailsNo
+    FROM Housing.BuildingDetails b
+    WHERE b.IdaraId_FK = @idaraID
+      AND b.buildingDetailsActive = 1
+      AND EXISTS
+      (
+          SELECT 1
+          FROM Housing.BuildingAction a
+          WHERE a.residentInfoID_FK = @LinkResidentID
+            AND a.IdaraId_FK = @idaraID
+            AND a.buildingDetailsID_FK = b.buildingDetailsID
+            AND a.buildingActionTypeID_FK = 2
+            AND a.buildingActionActive = 1
+            AND a.buildingActionDate IS NOT NULL
+      )
+    ORDER BY
+        b.buildingDetailsNo,
+        b.buildingDetailsID;
+END
+
+            -- SQL SERVER / DATACORE / READ-ONLY BRANCH
+-- ADD ONLY this ELSE IF branch inside the FIRST/active
+-- @pageName_ = N'FinancialAuditForUser' block in dbo.Masters_ExtraDataLoad.
+-- Insert it AFTER the END of GetGeneralBalancePaymentsByResident
+-- and BEFORE the next ELSE IF @ActionType = 'GetBillsTotalPriceForResident'.
+-- Do not execute this fragment standalone; place it into the current live
+-- procedure ALTER definition and publish it as a whole.
+
+ELSE IF @ActionType = N'GetGeneralRefundsByPayment'
+BEGIN
+    DECLARE @SelectedRefundPaymentID BIGINT =
+        TRY_CONVERT(BIGINT, NULLIF(LTRIM(RTRIM(@parameter_01)), N''));
+    DECLARE @SelectedRefundResidentID BIGINT = NULL;
+    DECLARE @SelectedRefundServiceID BIGINT = NULL;
+
+    IF @SelectedRefundPaymentID IS NULL OR @SelectedRefundPaymentID <= 0
+        THROW 50001, N'رقم السداد المحدد غير صحيح', 1;
+
+    -- The trusted @idaraID must come from the existing gateway/session.
+    -- Verify the selected original credit and department before returning rows.
+    SELECT
+          @SelectedRefundResidentID = p.residentInfoID_FK
+        , @SelectedRefundServiceID  = p.BillChargeTypeID_FK
+    FROM Housing.BuildingPayment AS p
+    INNER JOIN Housing.DeductList AS dd
+        ON dd.deductListID = p.deductListID_FK
+    WHERE p.paymentID = @SelectedRefundPaymentID
+      AND p.IdaraId_FK = @idaraID
+      AND p.buildingPayementActive = 1
+      AND dd.deductActive = 1
+      AND p.buildingPaymentLinkStatusID_FK = 2
+      AND p.amount > 0
+      AND NULLIF(LTRIM(RTRIM(p.buildingDetailsID_FK)), N'') IS NULL;
+
+    IF @SelectedRefundResidentID IS NULL
+       OR @SelectedRefundServiceID IS NULL
+       OR NOT EXISTS
+       (
+           SELECT 1
+           FROM Housing.V_GetFullResidentDetails AS resident
+           WHERE resident.residentInfoID = @SelectedRefundResidentID
+             AND resident.IdaraID = @idaraID
+       )
+        THROW 50001, N'السداد غير موجود ضمن نطاق الإدارة المصرح بها', 1;
+
+    -- One accordion item per RefundID, NOT per allocation row.
+    -- A refund can span multiple original payments. The displayed primary
+    -- amount is its allocation to the SELECTED payment; total is separate.
+    SELECT
+          r.RefundID
+        , CONCAT(N'إعادة رقم ', CONVERT(NVARCHAR(30), r.RefundID)) AS AccordionTitle
+        , CONVERT(NVARCHAR(10), r.RefundDate, 23) AS RefundDateText
+        , CONCAT(CONVERT(NVARCHAR(40),
+              CONVERT(DECIMAL(18,2), allocations.AllocatedAmount)), N' ر.س') AS AllocatedAmountText
+        , CONCAT(CONVERT(NVARCHAR(40),
+              CONVERT(DECIMAL(18,2), r.RefundAmount)), N' ر.س') AS RefundAmountText
+        , CASE r.RefundStatus
+              WHEN 1 THEN N'مؤكدة'
+              WHEN 2 THEN N'ملغاة'
+              ELSE N'حالة غير معروفة'
+          END AS RefundStatusText
+        , CASE r.RefundStatus
+              WHEN 1 THEN N'success'
+              WHEN 2 THEN N'danger'
+              ELSE N'warning'
+          END AS RefundStatusTone
+        , r.RefundReference
+        , r.RefundDetails
+        , CONVERT(NVARCHAR(30), @SelectedRefundPaymentID) AS SelectedPaymentID
+        , COALESCE(CONVERT(NVARCHAR(30), ledger.paymentID), N'لا يوجد') AS LedgerPaymentIDText
+        , CASE
+              WHEN r.RefundStatus = 1
+               AND ledger.paymentID IS NOT NULL
+               AND ledger.amount = -r.RefundAmount
+               AND ledger.buildingPayementActive = 1
+               AND ledger.buildingPaymentTypeID_FK = 4
+               AND ledger.buildingPaymentLinkStatusID_FK = 2
+               AND ledger.buildingDetailsID_FK IS NULL
+               AND ledger.residentInfoID_FK = r.ResidentInfoID_FK
+               AND ledger.BillChargeTypeID_FK = r.BillChargeTypeID_FK
+               AND ledger.IdaraId_FK = r.IdaraId_FK
+               AND docs.deductActive = 1
+                   THEN N'متطابقة'
+              WHEN r.RefundStatus = 2
+               AND (ledger.paymentID IS NULL OR
+                    ledger.buildingPayementActive = 0 OR
+                    docs.deductActive = 0)
+                   THEN N'ملغاة محاسبيًا'
+              ELSE N'تحتاج مراجعة'
+          END AS LedgerStatusText
+        , COALESCE(NULLIF(r.CancellationReason, N''), N'—') AS CancellationReasonText
+    FROM Housing.UnallocatedPaymentRefund AS r
+    INNER JOIN
+    (
+        SELECT
+              rd.RefundID_FK
+            , SUM(CONVERT(DECIMAL(38,2), rd.AllocatedAmount)) AS AllocatedAmount
+        FROM Housing.UnallocatedPaymentRefundDetail AS rd
+        WHERE rd.PaymentID_FK = @SelectedRefundPaymentID
+        GROUP BY rd.RefundID_FK
+    ) AS allocations
+        ON allocations.RefundID_FK = r.RefundID
+    LEFT JOIN Housing.BuildingPayment AS ledger
+        ON ledger.UnallocatedRefundID_FK = r.RefundID
+    LEFT JOIN Housing.DeductList AS docs
+        ON docs.deductListID = ledger.deductListID_FK
+    WHERE r.ResidentInfoID_FK = @SelectedRefundResidentID
+      AND r.BillChargeTypeID_FK = @SelectedRefundServiceID
+      AND r.IdaraId_FK = @idaraID
+      AND r.RefundStatus IN (1, 2)
+      
+
+      -- إضافة عمليات ربط الرصيد بالمباني إلى نفس السجل
+UNION ALL
+
+SELECT
+    -a.AllocationID AS RefundID,
+
+    CONCAT(
+        N'ربط رقم ',
+        a.AllocationID,
+        N' بالمبنى ',
+        b.buildingDetailsNo
+    ) AS AccordionTitle,
+
+    CONVERT(NVARCHAR(10), a.EntryDate, 23)
+        AS RefundDateText,
+
+    CONCAT(
+        CONVERT(NVARCHAR(40),
+            CONVERT(DECIMAL(18,2), a.AllocatedAmount)),
+        N' ر.س'
+    ) AS AllocatedAmountText,
+
+    CONCAT(
+        CONVERT(NVARCHAR(40),
+            CONVERT(DECIMAL(18,2), a.AllocatedAmount)),
+        N' ر.س'
+    ) AS RefundAmountText,
+
+    CASE a.AllocationStatus
+        WHEN 1 THEN N'مرتبطة بمبنى'
+        WHEN 2 THEN N'ملغاة'
+        ELSE N'تحتاج مراجعة'
+    END AS RefundStatusText,
+
+    CASE a.AllocationStatus
+        WHEN 1 THEN N'info'
+        WHEN 2 THEN N'danger'
+        ELSE N'warning'
+    END AS RefundStatusTone,
+
+    a.AllocationReference AS RefundReference,
+
+    a.AllocationDetails AS RefundDetails,
+
+    CONVERT(NVARCHAR(30), a.SourcePaymentID_FK)
+        AS SelectedPaymentID,
+
+    CONCAT(
+        N'خصم: ',
+        COALESCE(CONVERT(NVARCHAR(30), debit.paymentID), N'غير موجود'),
+        N' / إضافة: ',
+        COALESCE(CONVERT(NVARCHAR(30), credit.paymentID), N'غير موجود')
+    ) AS LedgerPaymentIDText,
+
+    CASE
+        WHEN a.AllocationStatus = 1
+         AND debit.amount = -a.AllocatedAmount
+         AND credit.amount = a.AllocatedAmount
+         AND debit.buildingPaymentTypeID_FK = 7
+         AND credit.buildingPaymentTypeID_FK = 7
+         AND debit.buildingPaymentLinkStatusID_FK = 2
+         AND credit.buildingPaymentLinkStatusID_FK = 1
+         AND debit.buildingPayementActive = 1
+         AND credit.buildingPayementActive = 1
+         AND debit.deductListID_FK = a.DeductListID_FK
+         AND credit.deductListID_FK = a.DeductListID_FK
+         AND doc.deductActive = 1
+         AND TRY_CONVERT(BIGINT, credit.buildingDetailsID_FK)
+             = a.TargetBuildingID_FK
+        THEN N'متطابقة'
+
+        ELSE N'تحتاج مراجعة'
+    END AS LedgerStatusText,
+
+    N'—' AS CancellationReasonText
+
+FROM Housing.GeneralBalanceBuildingAllocation a
+
+INNER JOIN Housing.BuildingDetails b
+    ON b.buildingDetailsID = a.TargetBuildingID_FK
+   AND b.IdaraId_FK = @idaraID
+
+LEFT JOIN Housing.BuildingPayment debit
+    ON debit.paymentID = a.SourceMovementPaymentID_FK
+
+LEFT JOIN Housing.BuildingPayment credit
+    ON credit.paymentID = a.TargetMovementPaymentID_FK
+
+LEFT JOIN Housing.DeductList doc
+    ON doc.deductListID = a.DeductListID_FK
+
+WHERE a.SourcePaymentID_FK = @SelectedRefundPaymentID
+  AND a.ResidentInfoID_FK = @SelectedRefundResidentID
+  AND a.BillChargeTypeID_FK = @SelectedRefundServiceID
+  AND a.IdaraID_FK = @idaraID
+  AND a.AllocationStatus IN (1, 2)
+
+ORDER BY RefundDateText DESC, RefundID DESC;
+   -- ORDER BY r.RefundDate DESC, r.RefundID DESC;
+END
+
         END
 
 
@@ -551,7 +1083,7 @@ END
     -------------------------------------------------------------------
 
 
-         ELSE IF @pageName_ = 'FinancialAuditForUser'
+         ELSE IF @pageName_ = 'FinancialAuditForExtendAndEvictions'
         BEGIN
          IF @ActionType = 'GetBillsTotalPriceForResident'
             BEGIN

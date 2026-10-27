@@ -358,6 +358,10 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         public List<string> Roles { get; set; } = new();
         public string? Condition { get; set; }
         public TableActionGuards? Guards { get; set; }
+        public bool OpenAccordionModal { get; set; } = false;
+        public string? AccordionId { get; set; }
+
+
     }
 
     public class TableToolbarConfig

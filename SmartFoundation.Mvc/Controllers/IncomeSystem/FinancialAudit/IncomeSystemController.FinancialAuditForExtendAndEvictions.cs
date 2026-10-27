@@ -1,18 +1,27 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using SmartFoundation.Mvc.Services.DataLoad;
 using SmartFoundation.MVC.Reports;
 using SmartFoundation.UI.ViewModels.SmartForm;
 using SmartFoundation.UI.ViewModels.SmartPage;
 using SmartFoundation.UI.ViewModels.SmartTable;
+using SmartFoundation.UI.ViewModels.SmartDrawer;
+
 using System.Data;
 using System.Linq;
 using System.Text.Json;
+
 
 namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 {
     public partial class IncomeSystemController : Controller
     {
-        public async Task<IActionResult> FinancialAuditForExtendAndEvictions(int pdf = 0)
+        public async Task<IActionResult> FinancialAuditForExtendAndEvictions(
+    [FromServices] RequestScopedDataLoadService requestDataLoad,
+    int pdf = 0,
+    long? printResidentID = null,
+    long? printBuildingID = null,
+    int? printServiceID = null)
         {
             //  قراءة السيشن والكونتكست
             if (!InitPageContext(out var redirect))
@@ -25,27 +34,67 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
 
 
-            string? residentInfoID_ = Request.Query["U"].FirstOrDefault();
+            string? auditSelection_ = Request.Query["U"].FirstOrDefault();
 
-            residentInfoID_ = string.IsNullOrWhiteSpace(residentInfoID_) ? null : residentInfoID_.Trim();
+            string? residentInfoID_ = null;
+            string? buildingDetailsID_ = null;
 
-            bool ready = false;
+            if (!string.IsNullOrWhiteSpace(auditSelection_))
+            {
+                string[] parts = auditSelection_.Split('|');
+
+                if (parts.Length != 2 ||
+                    !long.TryParse(parts[0], out long residentID) ||
+                    !long.TryParse(parts[1], out long buildingID) ||
+                    residentID <= 0 ||
+                    buildingID <= 0)
+                {
+                    TempData["Error"] =
+                        "طلب التدقيق المحدد غير صالح. يرجى اختيار المستفيد والمنزل مجددًا.";
+
+                    return RedirectToAction(
+                        nameof(FinancialAuditForExtendAndEvictions),
+                        "IncomeSystem"
+                    );
+                }
+
+                residentInfoID_ = residentID.ToString();
+                buildingDetailsID_ = buildingID.ToString();
+            }
+
+            bool ready = residentInfoID_ != null && buildingDetailsID_ != null;
             bool readyToSend = false;
 
-            ready = !string.IsNullOrWhiteSpace(residentInfoID_);
 
-
-            ControllerName = nameof(Housing);
+            ControllerName = nameof(IncomeSystem);
             PageName = string.IsNullOrWhiteSpace(PageName) ? "FinancialAuditForExtendAndEvictions" : PageName;
 
-            var spParameters = new object?[]
+            var ddlParameters = new Dictionary<string, object?>(
+                StringComparer.OrdinalIgnoreCase)
             {
-             PageName ?? "FinancialAuditForExtendAndEvictions",
-             IdaraId,
-             usersId,
-             HostName,
-             residentInfoID_
+                ["pageName_"] = PageName ?? "FinancialAuditForExtendAndEvictions"
             };
+
+            if (IdaraId != null)
+                ddlParameters["idaraID"] = Convert.ToInt32(IdaraId);
+
+            if (usersId != null)
+                ddlParameters["entrydata"] = Convert.ToInt32(usersId);
+
+            if (HostName != null)
+                ddlParameters["hostname"] = HostName;
+
+            // معاملات تحميل بيانات الصفحة.
+            // تمرير المستفيد والمنزل المحددين معًا.
+            var pageParameters = new Dictionary<string, object?>(
+                ddlParameters,
+                StringComparer.OrdinalIgnoreCase);
+
+            if (ready)
+            {
+                pageParameters["parameter_01"] = residentInfoID_;
+                pageParameters["parameter_02"] = buildingDetailsID_;
+            }
 
             var rowsList = new List<Dictionary<string, object?>>();
             var rowsList_dt3 = new List<Dictionary<string, object?>>();
@@ -54,14 +103,38 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             var dynamicColumns_dt3 = new List<TableColumn>();
             var dynamicColumns_dt10 = new List<TableColumn>();
 
-            DataSet ds = await _mastersServies.GetDataLoadDataSetAsync(spParameters);
+            //DataSet ds = await _mastersServies.GetDataLoadDataSetAsync(spParameters);
+            DataSet ds = await requestDataLoad.GetDataLoadDataSetAsync(pageParameters);
 
-            //  تقسيم الداتا سيت للجدول الأول + جداول أخرى
+            // تقسيم الداتا سيت للجدول الأول + جداول أخرى
             SplitDataSet(ds);
 
-           
+            // يجب أن يطابق الاختيار طلب تدقيق واحدًا فقط.
+            // منع عرض أو اعتماد طلب خاطئ عند تكرار المستفيد أو المنزل.
+            if (ready && (dt1 == null || dt1.Rows.Count != 1))
+            {
+                if (dt1 != null && dt1.Rows.Count == 0)
+                {
+                    TempData["Warning"] =
+                        "طلب التدقيق المحدد لم يعد متاحًا، " +
+                        "ربما تم اعتماده أو انتقل إلى مرحلة أخرى.";
+                }
+                else
+                {
+                    TempData["Error"] =
+                        "تعذر تحديد طلب تدقيق واحد مطابق للمستفيد " +
+                        "والمنزل والإدارة. يرجى مراجعة البيانات.";
+                }
 
-           
+                return RedirectToAction(
+                    nameof(FinancialAuditForExtendAndEvictions),
+                    "IncomeSystem"
+                );
+            }
+
+
+
+
 
 
 
@@ -280,8 +353,8 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             List<OptionItem> SETTLEMENTOptions = new();
 
 
-            JsonResult? result;
-            string json;
+            //JsonResult? result;
+            //string json;
 
          
 
@@ -294,70 +367,102 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             try
             {
 
-                //// ---------------------- ResidentDetailsOptions ----------------------
-                result = await _CrudController.GetDDLValues(
-                     "FullName_A", "residentInfoID", "2", PageName, usersId, IdaraId, HostName
-                ) as JsonResult;
+                DataSet ddlDs = await requestDataLoad
+                   .GetDataLoadDataSetAsync(ddlParameters);
+
+                static List<OptionItem> ReadOptions(
+                    DataSet source,
+                    int tableIndex,
+                    string textColumn,
+                    string valueColumn)
+                {
+                    if (tableIndex < 0 ||
+                        tableIndex >= source.Tables.Count)
+                    {
+                        throw new InvalidOperationException(
+                            $"DDL table index {tableIndex} not found.");
+                    }
+
+                    DataTable table = source.Tables[tableIndex];
+
+                    if (!table.Columns.Contains(textColumn) ||
+                        !table.Columns.Contains(valueColumn))
+                    {
+                        throw new InvalidOperationException(
+                            $"DDL columns mismatch at table {tableIndex}.");
+                    }
+
+                    var options = new List<OptionItem>();
+
+                    foreach (DataRow row in table.Rows)
+                    {
+                        string value = row[valueColumn]
+                            ?.ToString()?.Trim() ?? "";
+
+                        string text = row[textColumn]
+                            ?.ToString()?.Trim() ?? "";
+
+                        if (!string.IsNullOrEmpty(value))
+                        {
+                            options.Add(new OptionItem
+                            {
+                                Value = value,
+                                Text = text
+                            });
+                        }
+                    }
+
+                    if (options.Count == 0)
+                    {
+                        options.Add(new OptionItem
+                        {
+                            Value = "-1",
+                            Text = "لاتوجد خيارات"
+                        });
+                    }
+
+                    return options;
+                }
+
+                ResidentDetailsOptions = ReadOptions(
+                ddlDs,
+                2,
+                "FullName_A",
+                "AuditSelectionKey");
+
+                RefundPaymentTypeOptions = ReadOptions(
+                    ddlDs,
+                    5,
+                    "billPaymentTypeName_A",
+                    "billPaymentTypeID");
+
+                PayPaymentTypeOptions = ReadOptions(
+                    ddlDs,
+                    6,
+                    "billPaymentTypeName_A",
+                    "billPaymentTypeID");
 
 
-                json = JsonSerializer.Serialize(result!.Value);
-
-                ResidentDetailsOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-
-
-                //// ---------------------- RentbillPaymentTypeOptions ----------------------
-               
-                    result = await _CrudController.GetDDLValues(
-                         "billPaymentTypeName_A", "billPaymentTypeID", "5", PageName, usersId, IdaraId, HostName
-                    ) as JsonResult;
+                BillChargeTypeOptions = ReadOptions(
+                    ddlDs,
+                    7,
+                    "BillChargeTypeName_A",
+                    "BillChargeTypeID");
 
 
-                json = JsonSerializer.Serialize(result!.Value);
+                BillChargeTypeSattlmentOptions = ReadOptions(
+                    ddlDs,
+                    8,
+                    "BillChargeTypeName_A",
+                    "BillChargeTypeID");
 
-                RefundPaymentTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+                //billPaymentTypeOptions = ReadOptions(
+                //    ddlDs,
+                //    9,
+                //    "billPaymentTypeName_A",
+                //    "billPaymentTypeID");
 
-                //// ---------------------- ServicebillPaymentTypeOptions ----------------------
-               
-                    result = await _CrudController.GetDDLValues(
-                          "billPaymentTypeName_A", "billPaymentTypeID", "6", PageName, usersId, IdaraId, HostName
-                     ) as JsonResult;
-
-                json = JsonSerializer.Serialize(result!.Value);
-
-                 PayPaymentTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-
-                //// ---------------------- BillChargeTypeOptions ----------------------
-
-                result = await _CrudController.GetDDLValues(
-                         "BillChargeTypeName_A", "BillChargeTypeID", "7", PageName, usersId, IdaraId, HostName
-                    ) as JsonResult;
-
-                json = JsonSerializer.Serialize(result!.Value);
-
-                BillChargeTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-
-                //// ---------------------- rankOptions ----------------------
-                result = await _CrudController.GetDDLValues(
-                    "billPaymentTypeName_A", "billPaymentTypeID", "9", nameof(FinancialAuditForExtendAndEvictions), usersId, IdaraId, HostName
-               ) as JsonResult;
-
-
-                json = JsonSerializer.Serialize(result!.Value);
-
-                billPaymentTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-
-               
-
-                //// ---------------------- BillChargeTypeOptions ----------------------
-
-                result = await _CrudController.GetDDLValues(
-                         "BillChargeTypeName_A", "BillChargeTypeID", "8", PageName, usersId, IdaraId, HostName
-                    ) as JsonResult;
-
-                json = JsonSerializer.Serialize(result!.Value);
-
-                BillChargeTypeSattlmentOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-
+              
 
                 //// ---------------------- END DDL ----------------------
 
@@ -368,15 +473,15 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                                 {
                                     new FieldConfig
                                     {
-                                        SectionTitle = "اختيار المستفيد",
+                                        SectionTitle = "اختيار طلب التدقيق",
                                         Name = "WaitingList",
                                         Type = "select",
                                         Select2 = true,
                                         Options = ResidentDetailsOptions,
                                         ColCss = "4",
-                                        Placeholder = "اختيار المستفيد",
+                                        Placeholder = "اختر المستفيد ونوع التدقيق والمنزل",
                                         Icon = "fa fa-user",
-                                        Value = residentInfoID_,
+                                        Value = auditSelection_,
                                         OnChangeJs = "sfNav(this)",
                                         NavUrl = "/IncomeSystem/FinancialAuditForExtendAndEvictions",
                                         NavKey = "U",
@@ -802,14 +907,18 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
             var currentUrl = Request.Path + Request.QueryString;
             var currentUrlonly = Request.Path;
+            var auditErrorUrl = ready
+    ? $"{Request.Path}?U={Uri.EscapeDataString(
+        $"{residentInfoID_}|{buildingDetailsID_}")}"
+    : currentUrl.ToString();
 
             var ApproveExtendOrExitFields = new List<FieldConfig>
             {
 
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
                 new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "FINANCIALAUDITFOREXTENDANDEVICTIONS" },
-                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrlonly },
-                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
+                new FieldConfig { Name = "redirectUrl", Type = "hidden", Value = currentUrlonly.ToString() },
+                new FieldConfig { Name = "redirectErrorUrl", Type = "hidden", Value = auditErrorUrl },                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
                 new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
                 new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
                 // selection context
@@ -1015,7 +1124,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
 
                 new FieldConfig { Name = "p12", Label = "نوع العملية", Type = "hidden", ColCss = "3", Required = true, Value="6" },
-                new FieldConfig { Name = "p13", Label = "رقم العملية", Type = "hidden", ColCss = "3", Required = true },
+                new FieldConfig{Name = "p13",Label = "معرف عملية التسوية",Type = "hidden",Value = Guid.NewGuid().ToString("N")},
                 new FieldConfig { Name = "p14", Label = "تاريخ العملية", Type = "hidden", ColCss = "3", Required = true },
                 new FieldConfig { Name = "p39", Label = "المبلغ", Type = "text",TextMode="money_sar",Icon = "/img/Saudi_Riyal_Symbol.svg", ColCss = "4", Required = true },
                 new FieldConfig { Name = "p27", Label = "ملاحظات", Type = "textarea", ColCss = "6", Required = true },
@@ -1245,7 +1354,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 //TabelLabel = "خطابات التسكين",
                 //TabelLabelIcon = "fa-solid fa-list",
                 ShowToolbar = true,
-                EnableCellCopy = false,
+                EnableCellCopy = true,
                 RenderAsToggle = false,
                 ToggleLabel = "بيانات المستفيد",
                 ToggleIcon = "fa-solid fa-newspaper",
@@ -1278,7 +1387,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 //TabelLabel = "خطابات التسكين",
                 //TabelLabelIcon = "fa-solid fa-list",
                 ShowToolbar = true,
-                EnableCellCopy = false,
+                EnableCellCopy = true,
                 ShowColumnVisibility = true,
                 EnableColumnReorder = true,
                 RenderAsToggle = true,
@@ -1287,6 +1396,8 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 ToggleDefaultOpen = true,
                 ShowToggleCount = false,
                 Selectable = true,
+
+                
                 /*HeaderColor = "#1e3a8a",*/ // تختار لون الهيدر بكيفك
 
                 Toolbar = new TableToolbarConfig
@@ -1344,7 +1455,28 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         Color = "info",
                         //Placement = TableActionPlacement.ActionsMenu, 
                         IsEdit = true,
-                        OpenModal = true,
+                        OpenModal = false,
+                        OpenDrawer = true,
+                        DrawerId = "sf-audit-bills-drawer",
+
+                        OnBeforeOpenJs =
+    "const d=document.getElementById('sf-audit-bills-drawer');" +
+    "if(d&&row){" +
+    "d.dataset.printResidentId=String(row.p02??'');" +
+    "d.dataset.printServiceId=String(row.p03??'');" +
+    "d.dataset.printBuildingId=String(row.p05??'');" +
+    "}",
+
+                        DrawerParamMap = new Dictionary<string, string>
+                        {
+                            ["parameter_01"] = "p02",
+                            ["parameter_02"] = "p03",
+                            ["parameter_03"] = "p05"
+                        },
+
+                        DrawerSubtitleTemplate =
+    "الخدمة: {BillChargeTypeName_A} | المبنى: {buildingDetailsNo}",
+
                         ModalTitle = "استعراض المطالبات",
                         //ModalMessage = msgrent,
                         //ModalMessageIcon = "fa-solid fa-circle-info",
@@ -1397,14 +1529,34 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                          Label = "استعراض السدادات",
                          Icon = "fa fa-money-bill",
                          Color = "info",
-                         //Placement = TableActionPlacement.ActionsMenu, 
-                         IsEdit = true,
-                         OpenModal = true,
-                         ModalTitle = "استعراض السدادات",
-                         
-                         //ModalMessage = msgservice,
-                         //ModalMessageIcon = "fa-solid fa-circle-info",
-                         //ModalMessageClass = colorservice,
+                        //Placement = TableActionPlacement.ActionsMenu, 
+                        IsEdit = true,
+                        OpenModal = false,
+                        OpenDrawer = true,
+                        DrawerId = "sf-audit-payments-drawer",
+
+                        OnBeforeOpenJs =
+    "const d=document.getElementById('sf-audit-payments-drawer');" +
+    "if(d&&row){" +
+    "d.dataset.printResidentId=String(row.p02??'');" +
+    "d.dataset.printServiceId=String(row.p03??'');" +
+    "d.dataset.printBuildingId=String(row.p05??'');" +
+    "}",
+
+                        DrawerParamMap = new Dictionary<string, string>
+                        {
+                            ["parameter_01"] = "p02",
+                            ["parameter_02"] = "p03",
+                            ["parameter_03"] = "p05"
+                        },
+
+                        DrawerSubtitleTemplate =
+    "الخدمة: {BillChargeTypeName_A} | المبنى: {buildingDetailsNo}",
+
+                        ModalTitle = "استعراض السدادات",
+                        //ModalMessage = msgservice,
+                        //ModalMessageIcon = "fa-solid fa-circle-info",
+                        //ModalMessageClass = colorservice,
                         Show = true,
                         OpenForm = new FormConfig
                          {
@@ -1578,8 +1730,200 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 }
 
             };
-            
-            
+
+
+            // ============================================================
+            // Financial Audit - Bills and Payments Drawers
+            // ============================================================
+
+            dsModel.Toolbar.Drawers = new List<SmartDrawerConfig>
+{
+    // ========================================
+    // 1. Bills Drawer
+    // ========================================
+    new SmartDrawerConfig
+    {
+        Id = "sf-audit-bills-drawer",
+        Show = true,
+        Title = "استعراض المطالبات",
+        Subtitle = "المطالبات المالية للمستفيد حسب الخدمة والمبنى",
+        Icon = "fa-solid fa-file-invoice",
+        Side = SmartDrawerSide.Left,
+        Size = SmartDrawerSize.Large,
+
+        Table = new SmartTableDsModel
+        {
+            StoredProcedureName = "",
+            Operation = "select",
+
+            Rows = new List<Dictionary<string, object?>>(),
+            RowIdField = "BillsID",
+
+            Columns = new List<TableColumn>
+            {
+                new TableColumn
+                {
+                    Field = "BillsID",
+                    Label = "الرقم المرجعي",
+                    Type = "number",
+                    Visible = true,
+                    Sortable = true
+                },
+                new TableColumn
+                {
+                    Field = "BillNumber",
+                    Label = "رقم الفاتورة",
+                    Type = "text",
+                    Visible = true,
+                    Sortable = true
+                },
+                new TableColumn
+                {
+                    Field = "BillChargeTypeName_A",
+                    Label = "الخدمة",
+                    Type = "text",
+                    Visible = true,
+                    Sortable = true
+                },
+                new TableColumn
+                {
+                    Field = "buildingDetailsNo",
+                    Label = "رقم المبنى",
+                    Type = "text",
+                    Visible = true,
+                    Sortable = true
+                },
+                new TableColumn
+                {
+                    Field = "TotalPrice",
+                    Label = "المبلغ",
+                    Type = "number",
+                    Visible = true,
+                    Sortable = true
+                }
+            },
+
+            PageSize = 10,
+            PageSizes = new List<int> { 10, 25, 50 },
+
+            Searchable = true,
+            Selectable = false,
+            ShowToolbar = true,
+            ShowColumnVisibility = true,
+            EnablePagination = true,
+            EnableCellCopy = true,
+            AllowExport = false,
+
+            Toolbar = new TableToolbarConfig
+            {
+                ShowRefresh = false,
+                ShowColumns = true,
+                ShowExportCsv = false,
+                ShowExportExcel = false,
+                ShowExportPdf = false,
+                ShowPrint = false
+            }
+        }
+    },
+
+    // ========================================
+    // 2. Payments Drawer
+    // ========================================
+    new SmartDrawerConfig
+    {
+        Id = "sf-audit-payments-drawer",
+        Show = true,
+        Title = "استعراض السدادات",
+        Subtitle = "حركات السداد والتسويات المالية",
+        Icon = "fa-solid fa-money-bill-transfer",
+        Side = SmartDrawerSide.Left,
+        Size = SmartDrawerSize.Large,
+
+        Table = new SmartTableDsModel
+        {
+            StoredProcedureName = "",
+            Operation = "select",
+
+            Rows = new List<Dictionary<string, object?>>(),
+            RowIdField = "paymentID",
+
+            Columns = new List<TableColumn>
+            {
+                new TableColumn
+                {
+                    Field = "BillChargeTypeName_A",
+                    Label = "الخدمة",
+                    Type = "text",
+                    Visible = true,
+                    Sortable = true
+                },
+                new TableColumn
+                {
+                    Field = "deductName",
+                    Label = "نوع السداد",
+                    Type = "text",
+                    Visible = true,
+                    Sortable = true
+                },
+                new TableColumn
+                {
+                    Field = "FullName_A",
+                    Label = "الاسم",
+                    Type = "text",
+                    Visible = true,
+                    Sortable = true
+                },
+                new TableColumn
+                {
+                    Field = "buildingDetailsNo",
+                    Label = "المبنى",
+                    Type = "text",
+                    Visible = true,
+                    Sortable = true
+                },
+                new TableColumn
+                {
+                    Field = "amount",
+                    Label = "المبلغ",
+                    Type = "number",
+                    Visible = true,
+                    Sortable = true
+                },
+                new TableColumn
+                {
+                    Field = "buildingPaymentTypeName_A",
+                    Label = "طريقة السداد",
+                    Type = "text",
+                    Visible = true,
+                    Sortable = true
+                }
+            },
+
+            PageSize = 10,
+            PageSizes = new List<int> { 10, 25, 50 },
+
+            Searchable = true,
+            Selectable = false,
+            ShowToolbar = true,
+            ShowColumnVisibility = true,
+            EnablePagination = true,
+            EnableCellCopy = true,
+            AllowExport = false,
+
+            Toolbar = new TableToolbarConfig
+            {
+                ShowRefresh = false,
+                ShowColumns = true,
+                ShowExportCsv = false,
+                ShowExportExcel = false,
+                ShowExportPdf = false,
+                ShowPrint = true
+            }
+        }
+    }
+};
+
+
             var dsModel10 = new SmartTableDsModel
             {
                 PageTitle = "التدقيق المالي لحالات الامهال والاخلاء",
@@ -1598,7 +1942,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 //TabelLabel = "خطابات التسكين",
                 //TabelLabelIcon = "fa-solid fa-list",
                 ShowToolbar = true,
-                EnableCellCopy = false,
+                EnableCellCopy = true,
                 RenderAsToggle = true,
                 ToggleLabel = "اجمالي المطالبات",
                 ToggleIcon = "fa-solid fa-file-signature",
@@ -1922,17 +2266,41 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
 
 
-            bool dsModelHasRows = dt1 != null && dt1.Rows.Count > 0;
+            bool hasAudit = ready && dt1 != null && dt1.Rows.Count == 1;
 
-            bool dsModel3HasRows = dt3 != null && dt3.Rows.Count > 0;
+            bool dsModelHasRows = hasAudit;
 
-            bool dsModel10HasRows = dt10 != null && dt10.Rows.Count > 0;
+            bool dsModel3HasRows =
+                hasAudit && dt3 != null && dt3.Rows.Count > 0;
+
+            bool dsModel10HasRows =
+                hasAudit && dt10 != null && dt10.Rows.Count > 0;
 
 
 
             ViewBag.dsModelHasRows = dsModelHasRows;
             ViewBag.dsModel2HasRows = dsModel3HasRows;
 
+
+            // رصيد عام غير مرتبط بمبنى - من مصدر التدقيق المالي المعتمد
+            decimal unlinkedGeneralCredit = 0m;
+
+            if (hasAudit)
+            {
+                var generalCreditTable = ds.Tables
+                    .Cast<DataTable>()
+                    .FirstOrDefault(t =>
+                        t.Columns.Contains("UnlinkedGeneralCredit"));
+
+                if (generalCreditTable != null &&
+                    generalCreditTable.Rows.Count == 1 &&
+                    generalCreditTable.Rows[0]["UnlinkedGeneralCredit"]
+                        != DBNull.Value)
+                {
+                    unlinkedGeneralCredit = Convert.ToDecimal(
+                        generalCreditTable.Rows[0]["UnlinkedGeneralCredit"]);
+                }
+            }
 
             //return View("HousingDefinitions/BuildingType", dsModel);
 
@@ -1942,120 +2310,265 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 PanelTitle = dsModel3.PanelTitle,
                 PanelIcon = "fa fa-list",
 
+                Alerts = hasAudit && unlinkedGeneralCredit > 0m
+        ? new List<SmartPageAlert>
+        {
+            new SmartPageAlert
+            {
+                Tone = "danger",
+                Title = "تنبيه الرصيد العام",
+                Message =
+                    $"يوجد لدى المستفيد رصيد عام غير مرتبط بمبنى " +
+                    $"بمبلغ {unlinkedGeneralCredit:N2} ريال. " +
+                    "يرجى معالجة الرصيد من صفحة التدقيق المالي العام " +
+                    "قبل اعتماد الامهال او الإخلاء.",
+                Icon = "fa-solid fa-circle-exclamation",
+                Dismissible = true
+            }
+        }
+        : new List<SmartPageAlert>(),
+
                 Form = form,
                 TableDS = dsModelHasRows ? dsModel : null,
                 TableDS1 = dsModel10HasRows ? dsModel10 : null,
                 TableDS2 = dsModel3HasRows ? dsModel3 : null
-
             };
 
 
 
 
-            if (pdf == 1)
+            // ============================================================
+            // Official PDF: Claims (pdf=2) / Payments (pdf=3)
+            // ============================================================
+            if (pdf == 2 || pdf == 3)
             {
-                //var printTable = dt1;
-                //int start1Based = 1; // يبدأ من الصف 200
-                //int count = 100;       // يطبع 50 سجل
+                // الصفحة الحالية تحدد مصدر الرصيد والصلاحية.
+                // عيّن هذين السطرين كما هو موضح أسفل الكود.
+                var auditPrintBalanceTable = dt3;
+                bool auditPrintCanReview = canREVIEWCLAIMSANDPAYMENTS;
 
-                //int startIndex = start1Based - 1;
-                //int endIndex = Math.Min(dt1.Rows.Count, startIndex + dt1.Rows.Count);
+                if (!auditPrintCanReview)
+                    return Forbid();
 
-                // جدول خفيف للطباعة
-                var printTable = new DataTable();
-                printTable.Columns.Add("NationalID", typeof(string));
-                printTable.Columns.Add("FullName_A", typeof(string));
-                printTable.Columns.Add("generalNo_FK", typeof(string));
-                printTable.Columns.Add("rankNameA", typeof(string));
-                printTable.Columns.Add("militaryUnitName_A", typeof(string));
-                printTable.Columns.Add("maritalStatusName_A", typeof(string));
-                printTable.Columns.Add("dependinceCounter", typeof(string));
-                printTable.Columns.Add("nationalityName_A", typeof(string));
-                printTable.Columns.Add("genderName_A", typeof(string));
-                printTable.Columns.Add("birthdate", typeof(string));
-                printTable.Columns.Add("residentcontactDetails", typeof(string));
-
-                //for (int i = startIndex; i < endIndex; i++)
-                foreach (DataRow r in dt1.Rows)
+                if (!ready ||
+                    !printResidentID.HasValue || printResidentID.Value <= 0 ||
+                    !printBuildingID.HasValue || printBuildingID.Value <= 0 ||
+                    !printServiceID.HasValue || printServiceID.Value <= 0)
                 {
-                    //var r = dt1.Rows[i];
-
-                    printTable.Rows.Add(
-                        r["NationalID"],
-                        r["FullName_A"],
-                        r["generalNo_FK"],
-                        r["rankNameA"],
-                        r["militaryUnitName_A"],
-                        r["maritalStatusName_A"],
-                        r["dependinceCounter"],
-                        r["nationalityName_A"],
-                        r["genderName_A"],
-                        r["birthdate"],
-                        r["residentcontactDetails"]
-                    );
+                    return BadRequest("بيانات اختيار التقرير غير صحيحة.");
                 }
 
-                if (printTable == null || printTable.Rows.Count == 0)
-                    return Content("لا توجد بيانات للطباعة.");
-                var reportColumns = new List<ReportColumn>
-                    {
-                        new("NationalID", "رقم الهوية", Align:"center", Weight:2, FontSize:9),
-                        new("FullName_A", "الاسم", Align:"center", Weight:5, FontSize:9),
-                        new("generalNo_FK", "الرقم العام", Align:"center", Weight:2, FontSize:9),
-                        new("rankNameA", "الرتبة", Align:"center", Weight:2, FontSize:9),
-                        new("militaryUnitName_A", "الوحدة", Align:"center", Weight:3, FontSize:9),
-                        new("maritalStatusName_A", "الحالة الاجتماعية", Align:"center", Weight:3, FontSize:9),
-                        new("dependinceCounter", "عدد التابعين", Align:"center", Weight:2, FontSize:9),
-                        new("nationalityName_A", "الجنسية", Align:"center", Weight:2, FontSize:9),
-                        new("genderName_A", "الجنس", Align:"center", Weight:2, FontSize:9),
-                        new("birthdate", "تاريخ الميلاد", Align:"center", Weight:2, FontSize:9),
-                        new("residentcontactDetails", "رقم الجوال", Align:"center", Weight:2, FontSize:9),
-                    };
+                // لا نقبل طباعة مستفيد/خدمة/مبنى خارج نتائج
+                // التدقيق المحملة للمستخدم ضمن إدارته.
+                if (auditPrintBalanceTable == null ||
+                    !auditPrintBalanceTable.Columns.Contains("residentInfoID") ||
+                    !auditPrintBalanceTable.Columns.Contains("buildingDetailsID") ||
+                    !auditPrintBalanceTable.Columns.Contains("BillChargeTypeID"))
+                {
+                    return BadRequest("تعذر التحقق من نطاق التقرير.");
+                }
 
-                var logo = Path.Combine(_env.WebRootPath, "img", "Royal_Saudi_Land_Forces.png");
+                bool validPrintSelection =
+                    auditPrintBalanceTable.AsEnumerable().Any(r =>
+                        r["residentInfoID"]?.ToString() ==
+                            printResidentID.Value.ToString() &&
+                        r["buildingDetailsID"]?.ToString() ==
+                            printBuildingID.Value.ToString() &&
+                        r["BillChargeTypeID"]?.ToString() ==
+                            printServiceID.Value.ToString());
+
+                if (!validPrintSelection)
+                    return Forbid();
+
+                string actionType = pdf == 2
+                    ? "GetBillsTotalPriceForResident"
+                    : "GetBillsPaidByResident";
+
+                string reportTitle = pdf == 2
+                    ? "كشف المطالبات المالية"
+                    : "كشف السدادات والحركات المالية";
+
+                var printParameters = new Dictionary<string, object?>
+                {
+                    ["pageName_"] = PageName,
+                    ["ActionType"] = actionType,
+                    ["idaraID"] = IdaraId,
+                    ["entrydata"] = usersId,
+                    ["hostname"] = HostName,
+                    ["parameter_01"] = printResidentID.Value,
+                    ["parameter_02"] = printServiceID.Value,
+                    ["parameter_03"] = printBuildingID.Value
+                };
+
+                DataSet printDs =
+                    await _mastersServies.GetExtraDataLoadDataSetAsync(printParameters);
+
+                if (printDs.Tables.Count == 0 || printDs.Tables[0].Rows.Count == 0)
+                    return Content("لا توجد بيانات للطباعة.");
+
+                DataTable source = printDs.Tables[0];
+                DataTable printTable = new DataTable();
+                var columns = new List<ReportColumn>();
+
+                if (pdf == 2)
+                {
+                    string[] required =
+                    {
+            "BillNumber",
+            "BillChargeTypeName_A",
+            "buildingDetailsNo",
+            "TotalPrice"
+        };
+
+                    if (required.Any(c => !source.Columns.Contains(c)))
+                        return Content("أعمدة بيانات المطالبات غير مكتملة.");
+
+                    printTable.Columns.Add("BillNumber", typeof(string));
+                    printTable.Columns.Add("BillChargeTypeName_A", typeof(string));
+                    printTable.Columns.Add("buildingDetailsNo", typeof(string));
+                    printTable.Columns.Add("TotalPrice", typeof(decimal));
+
+                    foreach (DataRow r in source.Rows)
+                    {
+                        printTable.Rows.Add(
+                            r["BillNumber"]?.ToString() ?? "",
+                            r["BillChargeTypeName_A"]?.ToString() ?? "",
+                            r["buildingDetailsNo"]?.ToString() ?? "",
+                            r["TotalPrice"] == DBNull.Value
+                                ? 0m : Convert.ToDecimal(r["TotalPrice"])
+                        );
+                    }
+
+                    columns.Add(new("BillNumber", "رقم الفاتورة",
+                        Align: "center", Weight: 2, FontSize: 9));
+                    columns.Add(new("BillChargeTypeName_A", "الخدمة",
+                        Align: "center", Weight: 3, FontSize: 9));
+                    columns.Add(new("buildingDetailsNo", "المنزل",
+                        Align: "center", Weight: 2, FontSize: 9));
+                    columns.Add(new("TotalPrice", "المبلغ",
+                        Align: "center", Weight: 2, FontSize: 9));
+                }
+                else
+                {
+                    string[] required =
+                    {
+            "BillChargeTypeName_A",
+            "deductName",
+            "FullName_A",
+            "buildingDetailsNo",
+            "amount",
+            "buildingPaymentTypeName_A"
+        };
+
+                    if (required.Any(c => !source.Columns.Contains(c)))
+                        return Content("أعمدة بيانات السدادات غير مكتملة.");
+
+                    printTable.Columns.Add("BillChargeTypeName_A", typeof(string));
+                    printTable.Columns.Add("deductName", typeof(string));
+                    printTable.Columns.Add("FullName_A", typeof(string));
+                    printTable.Columns.Add("buildingDetailsNo", typeof(string));
+                    printTable.Columns.Add("amount", typeof(decimal));
+                    printTable.Columns.Add("buildingPaymentTypeName_A", typeof(string));
+
+                    foreach (DataRow r in source.Rows)
+                    {
+                        printTable.Rows.Add(
+                            r["BillChargeTypeName_A"]?.ToString() ?? "",
+                            r["deductName"]?.ToString() ?? "",
+                            r["FullName_A"]?.ToString() ?? "",
+                            r["buildingDetailsNo"]?.ToString() ?? "",
+                            r["amount"] == DBNull.Value
+                                ? 0m : Convert.ToDecimal(r["amount"]),
+                            r["buildingPaymentTypeName_A"]?.ToString() ?? ""
+                        );
+                    }
+
+                    columns.Add(new("BillChargeTypeName_A", "الخدمة",
+                        Align: "center", Weight: 2, FontSize: 8));
+                    columns.Add(new("deductName", "نوع السداد",
+                        Align: "center", Weight: 4, FontSize: 8));
+                    columns.Add(new("FullName_A", "المستفيد",
+                        Align: "center", Weight: 4, FontSize: 8));
+                    columns.Add(new("buildingDetailsNo", "المنزل",
+                        Align: "center", Weight: 2, FontSize: 8));
+                    columns.Add(new("amount", "المبلغ",
+                        Align: "center", Weight: 2, FontSize: 8));
+                    columns.Add(new("buildingPaymentTypeName_A", "طريقة السداد",
+                        Align: "center", Weight: 3, FontSize: 8));
+                }
+
+                DataRow selectedBalance = auditPrintBalanceTable
+                    .AsEnumerable()
+                    .First(r =>
+                        r["residentInfoID"]?.ToString() ==
+                            printResidentID.Value.ToString() &&
+                        r["buildingDetailsID"]?.ToString() ==
+                            printBuildingID.Value.ToString() &&
+                        r["BillChargeTypeID"]?.ToString() ==
+                            printServiceID.Value.ToString());
+
+                string serviceName =
+                    auditPrintBalanceTable.Columns.Contains("BillChargeTypeName_A")
+                        ? selectedBalance["BillChargeTypeName_A"]?.ToString() ?? ""
+                        : "";
+
+                string homeNumber =
+                    auditPrintBalanceTable.Columns.Contains("buildingDetailsNo")
+                        ? selectedBalance["buildingDetailsNo"]?.ToString() ?? ""
+                        : "";
+
+                string subject =
+                    $"{reportTitle} - {serviceName} - المنزل {homeNumber}";
+
+                var logo = Path.Combine(
+                    _env.WebRootPath,
+                    "img",
+                    "Royal_Saudi_Land_Forces.png");
+
                 var header = new Dictionary<string, string>
                 {
-                    ["no"] = usersId,//"١٢٣/٤٥",
+                    ["no"] = "—",
                     ["date"] = DateTime.Now.ToString("yyyy/MM/dd"),
                     ["attach"] = "—",
-                    ["subject"] = "قائمة المستفيدين",
-
+                    ["subject"] = subject,
                     ["right1"] = "المملكة العربية السعودية",
                     ["right2"] = "وزارة الدفاع",
                     ["right3"] = "القوات البرية الملكية السعودية",
                     ["right4"] = OrganizationName,
                     ["right5"] = IdaraName,
-
-                    //["bismillah"] = "بسم الله الرحمن الرحيم",
                     ["midCaption"] = ""
                 };
 
                 var report = DataTableReportBuilder.FromDataTable(
-                    reportId: "BuildingType",
-                    title: "قائمة المستفيدين",
+                    reportId:
+                        $"{PageName}_{actionType}_{printResidentID}_{printBuildingID}_{printServiceID}",
+                    title: subject,
                     table: printTable,
-                    columns: reportColumns,
+                    columns: columns,
                     headerFields: header,
-                   //footerFields: new(),
-                   footerFields: new Dictionary<string, string>
-                   {
-                       ["تمت الطباعة بواسطة"] = FullName,
-                       ["ملاحظة"] = " هذا التقرير للاستخدام الرسمي",
-                       ["عدد السجلات"] = dt1.Rows.Count.ToString(),
-                       ["تاريخ ووقت الطباعة"] = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")
-                   },
-
+                    footerFields: new Dictionary<string, string>
+                    {
+                        ["عدد السجلات"] = printTable.Rows.Count.ToString(),
+                        ["الرقم المرجعي للمستفيد"] = printResidentID.Value.ToString(),
+                        ["تمت الطباعة بواسطة"] = FullName ?? "",
+                        ["تاريخ ووقت الطباعة"] =
+                            DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")
+                    },
                     orientation: ReportOrientation.Landscape,
                     headerType: ReportHeaderType.LetterOfficial,
                     logoPath: logo,
-                    headerRepeat: ReportHeaderRepeat.FirstPageOnly
-                    //headerRepeat: ReportHeaderRepeat.AllPages
+                    headerRepeat: ReportHeaderRepeat.AllPages
                 );
 
-                var pdfBytes = QuestPdfReportRenderer.Render(report);
-                Response.Headers["Content-Disposition"] = "inline; filename=BuildingType.pdf";
-                return File(pdfBytes, "application/pdf");
+                byte[] bytes = QuestPdfReportRenderer.Render(report);
+
+                Response.Headers["Content-Disposition"] =
+                    $"inline; filename={PageName}_{actionType}.pdf";
+
+                return File(bytes, "application/pdf");
             }
+
+
             return View("FinancialAudit/FinancialAuditForExtendAndEvictions", page);
         }
     }

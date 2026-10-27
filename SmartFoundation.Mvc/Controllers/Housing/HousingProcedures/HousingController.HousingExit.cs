@@ -8,11 +8,14 @@ using System.Data;
 using System.Linq;
 using System.Text.Json;
 
+using SmartFoundation.Mvc.Services.DataLoad;
+
+
 namespace SmartFoundation.Mvc.Controllers.Housing
 {
     public partial class HousingController : Controller
     {
-        public async Task<IActionResult> HousingExit(int pdf = 0, int? rowId = null)
+        public async Task<IActionResult> HousingExit([FromServices] RequestScopedDataLoadService requestDataLoad, int pdf = 0, int? rowId = null)
         {
             //  قراءة السيشن والكونتكست
             if (!InitPageContext(out var redirect))
@@ -25,19 +28,45 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             ControllerName = nameof(Housing);
             PageName = string.IsNullOrWhiteSpace(PageName) ? "HousingExit" : PageName;
 
-            var spParameters = new object?[]
+            //var spParameters = new object?[]
+            //{
+            // PageName ?? "HousingExit",
+            // IdaraId,
+            // usersId,
+            // HostName,
+            // NationalID_
+            //};
+
+            var ddlParameters = new Dictionary<string, object?>(
+               StringComparer.OrdinalIgnoreCase)
             {
-             PageName ?? "HousingExit",
-             IdaraId,
-             usersId,
-             HostName,
-             NationalID_
+                ["pageName_"] = PageName ?? "FinancialAuditForUser"
             };
+
+            if (IdaraId != null)
+                ddlParameters["idaraID"] = Convert.ToInt32(IdaraId);
+
+            if (usersId != null)
+                ddlParameters["entrydata"] = Convert.ToInt32(usersId);
+
+            if (HostName != null)
+                ddlParameters["hostname"] = HostName;
+
+            // معاملات تحميل بيانات الصفحة.
+            // نضيف رقم الهوية فقط عند وجوده.
+            var pageParameters = new Dictionary<string, object?>(
+                ddlParameters,
+                StringComparer.OrdinalIgnoreCase);
+
+            if (NationalID_ != null)
+                pageParameters["parameter_01"] = NationalID_;
 
             var rowsList = new List<Dictionary<string, object?>>();
             var dynamicColumns = new List<TableColumn>();
 
-            DataSet ds = await _mastersServies.GetDataLoadDataSetAsync(spParameters);
+            //DataSet ds = await _mastersServies.GetDataLoadDataSetAsync(spParameters);
+            DataSet ds = await requestDataLoad.GetDataLoadDataSetAsync(pageParameters);
+
 
             //  تقسيم الداتا سيت للجدول الأول + جداول أخرى
             SplitDataSet(ds);
@@ -66,62 +95,157 @@ namespace SmartFoundation.Mvc.Controllers.Housing
            
 
 
-            List<OptionItem> rankOptions = new();
-            List<OptionItem> militaryUnitOptions = new();
-            List<OptionItem> MaritalStatusOptions = new();
-            List<OptionItem> NationalityOptions = new();
-            List<OptionItem> GenderOptions = new();
+            //List<OptionItem> rankOptions = new();
+            //List<OptionItem> militaryUnitOptions = new();
+            //List<OptionItem> MaritalStatusOptions = new();
+            //List<OptionItem> NationalityOptions = new();
+            //List<OptionItem> GenderOptions = new();
+
+
+            //DataSet ddlDs = await requestDataLoad
+            //      .GetDataLoadDataSetAsync(ddlParameters);
+
+            //static List<OptionItem> ReadOptions(
+            //    DataSet source,
+            //    int tableIndex,
+            //    string textColumn,
+            //    string valueColumn)
+            //{
+            //    if (tableIndex < 0 ||
+            //        tableIndex >= source.Tables.Count)
+            //    {
+            //        throw new InvalidOperationException(
+            //            $"DDL table index {tableIndex} not found.");
+            //    }
+
+            //    DataTable table = source.Tables[tableIndex];
+
+            //    if (!table.Columns.Contains(textColumn) ||
+            //        !table.Columns.Contains(valueColumn))
+            //    {
+            //        throw new InvalidOperationException(
+            //            $"DDL columns mismatch at table {tableIndex}.");
+            //    }
+
+            //    var options = new List<OptionItem>();
+
+            //    foreach (DataRow row in table.Rows)
+            //    {
+            //        string value = row[valueColumn]
+            //            ?.ToString()?.Trim() ?? "";
+
+            //        string text = row[textColumn]
+            //            ?.ToString()?.Trim() ?? "";
+
+            //        if (!string.IsNullOrEmpty(value))
+            //        {
+            //            options.Add(new OptionItem
+            //            {
+            //                Value = value,
+            //                Text = text
+            //            });
+            //        }
+            //    }
+
+            //    if (options.Count == 0)
+            //    {
+            //        options.Add(new OptionItem
+            //        {
+            //            Value = "-1",
+            //            Text = "لاتوجد خيارات"
+            //        });
+            //    }
+
+            //    return options;
+            //}
+
+            ////rankOptions = ReadOptions(
+            ////    ddlDs,
+            ////    2,
+            ////    "rankNameA",
+            ////    "rankID");
+
+            //militaryUnitOptions = ReadOptions(
+            //    ddlDs,
+            //    3,
+            //    "militaryUnitName_A",
+            //    "militaryUnitID");
+
+            //MaritalStatusOptions = ReadOptions(
+            //    ddlDs,
+            //    4,
+            //    "maritalStatusName_A",
+            //    "maritalStatusID");
+
+            //NationalityOptions = ReadOptions(
+            //    ddlDs,
+            //    5,
+            //    "nationalityName_A",
+            //    "nationalityID");
+
+            //GenderOptions = ReadOptions(
+            //    ddlDs,
+            //    6,
+            //    "genderName_A",
+            //    "genderID");
+
+           
+
+
+
+
+            // END DDL
 
             // ---------------------- DDLValues ----------------------
 
-            JsonResult? result;
-            string json;
+            // JsonResult? result;
+            // string json;
 
-            //// ---------------------- rankOptions ----------------------
-            result = await _CrudController.GetDDLValues(
-                "rankNameA", "rankID", "2", nameof(Residents), usersId, IdaraId, HostName
-           ) as JsonResult;
-
-
-            json = JsonSerializer.Serialize(result!.Value);
-
-            rankOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-            //// ---------------------- militaryUnitOptions ----------------------
-            result = await _CrudController.GetDDLValues(
-                "militaryUnitName_A", "militaryUnitID", "3", nameof(Residents), usersId, IdaraId, HostName
-           ) as JsonResult;
+            // //// ---------------------- rankOptions ----------------------
+            // result = await _CrudController.GetDDLValues(
+            //     "rankNameA", "rankID", "2", nameof(Residents), usersId, IdaraId, HostName
+            //) as JsonResult;
 
 
-            json = JsonSerializer.Serialize(result!.Value);
+            // json = JsonSerializer.Serialize(result!.Value);
 
-            militaryUnitOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-            //// ---------------------- MaritalStatus ----------------------
-            result = await _CrudController.GetDDLValues(
-                "maritalStatusName_A", "maritalStatusID", "4", nameof(Residents), usersId, IdaraId, HostName
-           ) as JsonResult;
-
-
-            json = JsonSerializer.Serialize(result!.Value);
-
-            MaritalStatusOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-            //// ---------------------- Nationality ----------------------
-            result = await _CrudController.GetDDLValues(
-                "nationalityName_A", "nationalityID", "5", nameof(Residents), usersId, IdaraId, HostName
-           ) as JsonResult;
+            // rankOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+            // //// ---------------------- militaryUnitOptions ----------------------
+            // result = await _CrudController.GetDDLValues(
+            //     "militaryUnitName_A", "militaryUnitID", "3", nameof(Residents), usersId, IdaraId, HostName
+            //) as JsonResult;
 
 
-            json = JsonSerializer.Serialize(result!.Value);
+            // json = JsonSerializer.Serialize(result!.Value);
 
-            NationalityOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-            //// ---------------------- Gender ----------------------
-            result = await _CrudController.GetDDLValues(
-                "genderName_A", "genderID", "6", nameof(Residents), usersId, IdaraId, HostName
-           ) as JsonResult;
+            // militaryUnitOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+            // //// ---------------------- MaritalStatus ----------------------
+            // result = await _CrudController.GetDDLValues(
+            //     "maritalStatusName_A", "maritalStatusID", "4", nameof(Residents), usersId, IdaraId, HostName
+            //) as JsonResult;
 
 
-            json = JsonSerializer.Serialize(result!.Value);
+            // json = JsonSerializer.Serialize(result!.Value);
 
-            GenderOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+            // MaritalStatusOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+            // //// ---------------------- Nationality ----------------------
+            // result = await _CrudController.GetDDLValues(
+            //     "nationalityName_A", "nationalityID", "5", nameof(Residents), usersId, IdaraId, HostName
+            //) as JsonResult;
+
+
+            // json = JsonSerializer.Serialize(result!.Value);
+
+            // NationalityOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+            // //// ---------------------- Gender ----------------------
+            // result = await _CrudController.GetDDLValues(
+            //     "genderName_A", "genderID", "6", nameof(Residents), usersId, IdaraId, HostName
+            //) as JsonResult;
+
+
+            // json = JsonSerializer.Serialize(result!.Value);
+
+            // GenderOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
 
             //// ---------------------- END DDL ----------------------
             ///
@@ -336,28 +460,28 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p01", Type = "hidden", MirrorName = "ActionID" },
                 new FieldConfig { Name = "p02", Label = "residentInfoID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p14", Label = "الترتيب", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p15", Label = "الاسم", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p15", Label = "الاسم", Type = "text", ColCss = "4", Readonly = true },
+                new FieldConfig { Name = "p03", Label = "رقم الهوية الوطنية", Type = "text", ColCss = "2", Readonly = true },
+                new FieldConfig { Name = "p04", Label = "الرقم العام", Type = "text", ColCss = "2", Readonly = true },
                 new FieldConfig { Name = "p07", Label = "WaitingClassID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p43", Label = "تاريخ السكن", Type = "date", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p44", Label = "ExitDate", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p19", Label = "رقم المبنى", Type = "text", ColCss = "2", Readonly = true },
+                new FieldConfig { Name = "p43", Label = "تاريخ السكن", Type = "date", ColCss = "2", Readonly = true },
+                new FieldConfig { Name = "p44", Label = "تاريخ الاخلاء", Type = "hidden", ColCss = "3",Required=false },
 
 
                 
-                new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "date", ColCss = "3",Required = true },
+                new FieldConfig { Name = "p22", Label = "LastActionDate", Type = "hidden", ColCss = "3",Required = false },
 
 
-                new FieldConfig { Name = "p12", Label = "ملاحظات", Type = "textarea", ColCss = "6",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
+                new FieldConfig { Name = "p12", Label = "ملاحظات", Type = "textarea", ColCss = "12",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
 
                 new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p19", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true },
 
@@ -387,23 +511,24 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p19", Label = "رقم المبنى", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p43", Label = "تاريخ السكن", Type = "date", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p44", Label = "ExitDate", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p44", Label = "تاريخ الاخلاء", Type = "date", ColCss = "3", Readonly = true },
 
 
-                new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "text", ColCss = "3",Required = true,Readonly = true },
+                new FieldConfig { Name = "p22", Label = "LastActionDate", Type = "hidden", ColCss = "3",Required = true,Readonly = true },
 
 
-                new FieldConfig { Name = "p40", Label = "اجمالي مبلغ الغرامة", Type = "text",TextMode="money_sar", ColCss = "6",Required = true,HelpText="يجب كتابة مجموع اجمالي الغرامات على الساكن وفي حال عدم وجود غرامات كتابة المبلغ صفر*",Icon = "/img/Saudi_Riyal_Symbol.svg",MaxLength=18 },
+                new FieldConfig { Name = "p40", Label = "اجمالي مبلغ الغرامة", Type = "text",TextMode="money_sar", ColCss = "2",Required = true,HelpText="يجب كتابة مجموع اجمالي الغرامات على الساكن وفي حال عدم وجود غرامات كتابة المبلغ صفر*",Icon = "/img/Saudi_Riyal_Symbol.svg",MaxLength=18 },
 
                 new FieldConfig { Name = "p41", Label = "BillsID", Type = "hidden", ColCss = "6",Required = true },
 
-                new FieldConfig { Name = "p31", Label = "تفاصيل الغرامة", Type = "textarea", ColCss = "6",Required = true,HelpText="يجب كتابة اسباب الغرامة لاظهارها للمستفيد وقت التحصيل*",MaxLength=4000,Icon="fa fa-pen" },
+                new FieldConfig { Name = "p31", Label = "تفاصيل الغرامة", Type = "textarea", ColCss = "4",Required = true,HelpText="يجب كتابة اسباب الغرامة لاظهارها للمستفيد وقت التحصيل*",MaxLength=4000,Icon="fa fa-pen" },
 
                 new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p17", Label = "buildingActionTypeResidentAlias", Type = "hidden", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p19", Label = "buildingDetailsNo", Type = "hidden", ColCss = "3", Readonly = true },
+                
                 new FieldConfig { Name = "p20", Label = "AssignPeriodID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p42", Label = "meterscount", Type = "hidden", ColCss = "3", Readonly = true },
@@ -435,10 +560,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p43", Label = "تاريخ السكن", Type = "date", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p44", Label = "ExitDate", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p44", Label = "تاريخ الاخلاء", Type = "hidden", ColCss = "3" },
 
 
-                new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "date", ColCss = "3",Required = true },
+                new FieldConfig { Name = "p22", Label = "LastActionDate", Type = "hidden", ColCss = "3",Required = true },
 
 
                 new FieldConfig { Name = "p12", Label = "ملاحظات", Type = "textarea", ColCss = "12",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
@@ -477,14 +602,15 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p19", Label = "رقم المبنى", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p43", Label = "تاريخ السكن", Type = "date", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p44", Label = "ExitDate", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p44", Label = "تاريخ الاخلاء", Type = "date", ColCss = "3", Readonly = true },
 
 
-                new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "text", ColCss = "3",Required = true, Readonly = true },
+                new FieldConfig { Name = "p22", Label = "LastActionDate", Type = "hidden", ColCss = "3",Required = true, Readonly = true },
 
 
-                new FieldConfig { Name = "p26", Label = "ملاحظات", Type = "textarea", ColCss = "12",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
+                new FieldConfig { Name = "p26", Label = "ملاحظات", Type = "textarea", ColCss = "6",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
 
                 new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true },
@@ -521,10 +647,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p18", Label = "buildingDetailsID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p43", Label = "تاريخ السكن", Type = "date", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p44", Label = "ExitDate", Type = "hidden", ColCss = "3", Readonly = true },
+                new FieldConfig { Name = "p44", Label = "تاريخ الاخلاء", Type = "date", ColCss = "3", Readonly = true },
 
 
-                new FieldConfig { Name = "p22", Label = "تاريخ الاخلاء", Type = "text", ColCss = "3",Required = true, Readonly = true},
+                new FieldConfig { Name = "p22", Label = "LastActionDate", Type = "hidden", ColCss = "3",Required = true, Readonly = true},
 
 
                 new FieldConfig { Name = "p26", Label = "ملاحظات", Type = "textarea", ColCss = "6",Required = true,HelpText="لايجب ان يتجاوز النص 1000 حرف*",MaxLength=1000 },
@@ -612,7 +738,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
                     ShowEdit = canHOUSINGHousingExit,
                     ShowEdit1 = canHOUSINGEXITPENALTYRECORD,
-                    ShowEdit2 = canEDITHOUSINGHousingExit,
+                    ShowEdit2 = false,
+                    //ShowEdit2 = canEDITHOUSINGHousingExit,
                     ShowDelete = canCANCELHOUSINGHousingExit,
                     ShowDelete1 = canSENDHOUSINGHousingExitTOFINANCE,
                     ShowDelete2 = canAPPROVEHousingExit,
@@ -749,8 +876,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         IsEdit = true,
                         OpenModal = true,
 
-                        ModalTitle = "",
-                        ModalMessage = "",
+                        ModalTitle = "طلب اخلاء جديد",
+                        ModalMessage = "تنبيه : تاريخ الاخلاء هو تاريخ تسجيل الاخلاء بالنظام ولايمكن التراجع عن ذلك ",
                         ModalMessageClass = "bg-red-50 text-red-700",
                         ModalMessageIcon = "fa-solid fa-triangle-exclamation",
 
@@ -802,8 +929,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         IsEdit = true,
                         OpenModal = true,
 
-                        ModalTitle = "",
-                        ModalMessage = "",
+                        ModalTitle = "تسجيل / تعديل الغرامات",
+                        ModalMessage = "تنبيه: لايمكن تعديل مبلغ الغرامه بعد ارسال طلب الاخلاء للتدقيق المالي .",
                         ModalMessageClass = "bg-red-50 text-red-700",
                         ModalMessageIcon = "fa-solid fa-triangle-exclamation",
 
@@ -836,7 +963,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             {
                                 Field = "LastActionTypeID",
                                 Op = "notin",
-                                Value = "54,59,60",
+                                Value = "54,59,60,3",
                                 Message = "لايمكن تسجيل او تعديل غرامات الاخلاء",
                                 Priority = 3
                             },
@@ -856,7 +983,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         OpenModal = true,
 
                         ModalTitle = "",
-                        ModalMessage = "",
+                        ModalMessage = "تعديل تاريخ الاخلاء بعد انتهاء التدقيق المالي سوف يعيد الطلب للقسم المسوؤل عن التدقيق المالي لاعادة النظر",
                         ModalMessageClass = "bg-red-50 text-red-700",
                         ModalMessageIcon = "fa-solid fa-triangle-exclamation",
 
@@ -887,7 +1014,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             {
                                  Field = "LastActionTypeID",
                                 Op = "notin",
-                                Value = "54,59,60",
+                                //Value = "54,59,60",
+                                Value = "999",
                                 Message = "لايمكن تعديل اخلاء مستفيد",
                                 Priority = 3
                             },
@@ -906,8 +1034,9 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         IsEdit = true,
                         OpenModal = true,
 
-                        ModalTitle = "",
-                        ModalMessage = "",
+                        ModalTitle = "الغاء اخلاء مستفيد",
+                        ModalMessage = "تنبيه : عند الغاء طلب الاخلاء لايمكن وتنفيذ طلب جديد سيعتبر الاخلاء الجديد بتاريخ يوم تسجيل الاخلاء بالنظام",
+                        
                         ModalMessageClass = "bg-red-50 text-red-700",
                         ModalMessageIcon = "fa-solid fa-triangle-exclamation",
 
@@ -916,7 +1045,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         OpenForm = new FormConfig
                         {
                             FormId = "BuildingTypeEditForm",
-                            Title = "",
+                            Title = "الغاء اخلاء مستفيد",
                             Method = "post",
                             ActionUrl = "/crud/update",
                             SubmitText = "حفظ التعديلات",
@@ -939,7 +1068,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 Field = "LastActionTypeID",
                                 Op = "notin",
                                 Value = "54,59,60",
-                                Message = "لايمكن الغاء اخلاء مستفيد",
+                                
+                                Message = "لايمكن الغاء اخلاء مستفيد بعد ارسال الطلب للتدقيق المالي",
                                 Priority = 3
                             },
                           }
@@ -1227,13 +1357,22 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 PillCssClass="pill pill-gray",
                                 PillMode="replace"
                             },
+                                new TableStyleRule
+                            {
+                                Target="row", Field="LastActionTypeID", Op="eq", Value="57", Priority=1,
+                                PillEnabled=true,
+                                PillField="buildingActionTypeResidentAlias",
+                                PillTextField="buildingActionTypeResidentAlias",
+                                PillCssClass="pill pill-red",
+                                PillMode="replace"
+                            },
                                new TableStyleRule
                             {
                                 Target="row", Field="LastActionTypeID", Op="eq", Value="54", Priority=1,
                                 PillEnabled=true,
                                 PillField="buildingActionTypeResidentAlias",
                                 PillTextField="buildingActionTypeResidentAlias",
-                                PillCssClass="pill pill-red",
+                                PillCssClass="pill pill-orange",
                                 PillMode="replace"
                             }
                         };
@@ -1247,6 +1386,26 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 PageTitle = dsModel.PageTitle,
                 PanelTitle = dsModel.PanelTitle,
                 PanelIcon = "fa-solid fa-user-group",
+                Panel = new SmartPagePanelConfig
+                {
+                    Show = true,
+                    ShowIcon = true,
+                    ShowSubtitle = true,
+                    ShowDescription = true,
+                    ShowBadges = true,
+                    Layout = "compact",
+                    Title = "اخلاء المستفيدين",
+                    Subtitle = "تنفيذ الاخلاء للمستفيدين الساكنين حاليا ",
+                    Description = "تنبيه مهم: تاريخ الاخلاء هو تاريخ يوم تنفيذه بالنظام ولايمكن الغاءه بعد ارسال الطلب للتدقيق المالي او بعد تغيير حالة المنزل ",
+                    Icon = "fa-user-group",
+                    Badges = new List<SmartPagePanelBadge>
+                    {
+                        new() { Label = "البحث", Value = "البحث عن المستفيد", Icon = "fa-solid fa-search", Tone = "success" },
+                        new() { Label = "بدء الاجراء", Value = "انشاء طلب الاخلاء", Icon = "fa-solid fa-sign-out", Tone = "info" },
+                        new() { Label = "اكمال الاجراء", Value = "التدقيق المالي وتنفيذ القراءات في حال وجود عدادات مقروءة", Icon = "fa-solid fa-money-bill-wave", Tone = "default" },
+                        new() { Label = "اعتماد الاخلاء", Value = "اعتماد الاخلاء بعد انتهاء التدقيق المالي وتحصيل كل مطالبات المستفيد", Icon = "fa-solid fa-check", Tone = "default" },
+                    }
+                },
                 TableDS = dsModelHasRows ? dsModel : null
             };
 
