@@ -263,7 +263,7 @@ WHERE t.buildingPaymentTypeID IN (1, 2);
         ---------------------------------8-------------------------------------------------------------------------------------------------------------------
     Select e.BillChargeTypeID,e.BillChargeTypeName_A 
       from Housing.BillChargeType e
-      where e.BillChargeTypeActive  = 1
+      where e.BillChargeTypeActive  = 1 and e.BillChargeTypeID <> 6
 
     
     

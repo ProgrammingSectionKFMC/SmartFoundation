@@ -288,6 +288,9 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
         public string? LinkTemplate { get; set; }
         public string? ImageTemplate { get; set; }
         public bool truncate { get; set; } = false;
+
+        public bool WrapText { get; set; } = false;
+
         public Dictionary<string, object> CustomProperties { get; set; } = new();
     }
 

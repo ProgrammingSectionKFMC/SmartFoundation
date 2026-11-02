@@ -1,5 +1,5 @@
 ﻿
-CREATE  PROCEDURE [Housing].[RentExemptionSP] 
+CREATE PROCEDURE [Housing].[RentExemptionSP] 
 (
       @Action                               NVARCHAR(200)
     , @residentRentExemptionID              BIGINT          = NULL
@@ -189,6 +189,10 @@ BEGIN
 
                 IF @OccupentDate IS NULL OR @LastActionTypeID IN (3, 57, 58)
                     THROW 50001, N'لا يمكن إضافة أو تعديل الإعفاء بعد إرساله للتدقيق المالي', 1;
+
+                -- Preserve historical exemptions; refuse a new exemption after stage 54.
+                IF @Action = N'ADDRENTEXEMPTION' AND @LastActionTypeID IN (54, 59, 60)
+                    THROW 50001, N'لا يمكن إضافة إعفاء جديد بعد بدء إجراءات الإخلاء؛ تبقى الإعفاءات السابقة محفوظة.', 1;
 
                 -- EDIT must not replace another resident's or another home's exemption.
                 -- Hold the row lock through the existing EDIT_REPLACE operation.

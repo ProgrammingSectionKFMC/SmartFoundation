@@ -20,6 +20,7 @@ BEGIN
         AND bill.meterServiceTypeID=@ServiceID
         AND bill.PeriodYear=@Year
         AND bill.PeriodMonth=@Month
+        AND bill.BillTypeID_FK <> 3
         AND bill.meterID IS NOT NULL
         AND NOT EXISTS
         (
@@ -48,12 +49,8 @@ BEGIN
         AND bill.meterServiceTypeID=@ServiceID
         AND bill.PeriodYear=@Year
         AND bill.PeriodMonth=@Month
-        AND EXISTS
-        (
-            SELECT 1 FROM Housing.V_Occupant occupant
-            WHERE occupant.residentInfoID=bill.residentInfoID_FK
-              AND occupant.IdaraId=@IdaraID
-        )
+AND bill.BillTypeID_FK <> 3
+
   ) THROW 50001,N'لا توجد فواتير مرصودة ومؤهلة لهذه الخدمة في الشهر المحدد.',1;
   IF EXISTS(SELECT 1 FROM Housing.DeductListReport WHERE IdaraID_FK=@IdaraID AND PeriodYear=@Year AND PeriodMonth=@Month AND BillingType=@BillingType AND ISNULL(MeterServiceTypeID_FK,0)=ISNULL(@ServiceID,0) AND IsCurrent=1) THROW 50001,N'يوجد مسير حالي لهذه الخدمة والشهر.',1;
   SET @ReportNo=CONVERT(NVARCHAR(50),NEXT VALUE FOR Housing.DeductListReportNoSequence);
@@ -90,14 +87,13 @@ ISNULL(b.TotalPrice, 0)
       WHERE details.residentInfoID_FK=b.residentInfoID_FK AND details.IdaraId_FK=@IdaraID
       ORDER BY ISNULL(details.residentDetailsActive,0) DESC,details.residentDetailsID DESC
   ) person
-  WHERE b.BillActive=1 AND b.IdaraID_FK=@IdaraID AND b.PeriodYear=@Year AND b.PeriodMonth=@Month AND b.meterServiceTypeID=@ServiceID
-    AND EXISTS
-    (
-        SELECT 1
-        FROM Housing.V_Occupant occupant
-        WHERE occupant.residentInfoID=b.residentInfoID_FK
-          AND occupant.IdaraId=@IdaraID
-    );
+  WHERE b.BillActive=1
+  AND b.IdaraID_FK=@IdaraID
+  AND b.PeriodYear=@Year
+  AND b.PeriodMonth=@Month
+  AND b.meterServiceTypeID=@ServiceID
+  AND b.BillTypeID_FK <> 3;
+
   IF NOT EXISTS(SELECT 1 FROM Housing.DeductListReportDetails WHERE DeductListReportID_FK=@ReportID) THROW 50001,N'لا توجد فواتير مؤهلة للمسير المحدد.',1;
 
   

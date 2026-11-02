@@ -2310,6 +2310,28 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 PanelTitle = dsModel3.PanelTitle,
                 PanelIcon = "fa fa-list",
 
+                Panel = new SmartPagePanelConfig
+                {
+                    Show = true,
+                    ShowIcon = true,
+                    ShowSubtitle = true,
+                    ShowDescription = true,
+                    ShowBadges = true,
+                    Layout = "compact",
+                    Title = "التدقيق المالي لحالات الاخلاء والامهال فقط",
+                    Subtitle = "الاستعلام عن المستفيد لديه طلب اخلاء او امهال وانجاز اجراءاته الماليه لاكمال طلبه.",
+                    Description = " تُستخدم هذه الصفحة للاستعلام عن مطالبات الساكن وسداداته بشرط ان يكون لديه طلب اخلاء او امهال  لدى ادارتكم ويجب اخذ الحذر لانه لايمكن التراجع عن اي اجراء مالي يتم عن طريق هذه الصفحه",
+                    Icon = "fa-user-group",
+                    Badges = new List<SmartPagePanelBadge>
+                    {
+                        new() { Label = "البحث عن المستفيد", Value = "البحث عن المستفيد في قائمة الطلبات", Icon = "fa-solid fa-search", Tone = "success" },
+                        new() { Label = "استعراض البيانات الماليه", Value = "استعراض جميع بيانات المستفيد المالية", Icon = "fa-solid fa-pen-to-square", Tone = "info" },
+                        new() { Label = "سداد او اعادة المبالغ او اجراء تسويات ماليه", Value = "انجاز العمليات الماليه المطلوبة للساكن", Icon = "fa-solid fa-shield-halved", Tone = "default" },
+                    }
+                },
+
+
+
                 Alerts = hasAudit && unlinkedGeneralCredit > 0m
         ? new List<SmartPageAlert>
         {

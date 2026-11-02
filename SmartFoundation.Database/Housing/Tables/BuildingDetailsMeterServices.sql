@@ -12,3 +12,9 @@
     CONSTRAINT [PK_BuildingDetailsMeterServices] PRIMARY KEY CLUSTERED ([BuildingDetailsMeterServicesID] ASC)
 );
 
+
+GO
+CREATE NONCLUSTERED INDEX [IX_BuildingDetailsMeterServices_HistoricalBilling]
+    ON [Housing].[BuildingDetailsMeterServices]([BuildingDetailsID_FK] ASC, [IdaraId_FK] ASC, [MeterServicesTypeID_FK] ASC)
+    INCLUDE([BuildingDetailsMeterServicesActive], [BuildingDetailsMeterServicesStartDate], [BuildingDetailsMeterServicesEndDate]);
+

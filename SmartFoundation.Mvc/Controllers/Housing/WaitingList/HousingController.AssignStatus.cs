@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
+using SmartFoundation.Mvc.Services.DataLoad;
 using SmartFoundation.MVC.Reports;
 using SmartFoundation.UI.ViewModels.SmartForm;
 using SmartFoundation.UI.ViewModels.SmartPage;
@@ -14,7 +15,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 {
     public partial class HousingController : Controller
     {
-        public async Task<IActionResult> AssignStatus(int pdf = 0, int? rowId = null)
+        public async Task<IActionResult> AssignStatus([FromServices] RequestScopedDataLoadService requestDataLoad, int pdf = 0, int? rowId = null)
         {
 
             if (!InitPageContext(out IActionResult? redirectResult))
@@ -36,16 +37,40 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             ControllerName = nameof(AssignStatus);
             PageName = nameof(AssignStatus);
 
-            var spParameters = new object?[] { "AssignStatus", IdaraId, usersId, HostName, AssignPeriodOptionsID_ };
+            var ddlParameters = new Dictionary<string, object?>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+                ["pageName_"] = PageName ?? "FinancialAuditForExtendAndEvictions"
+            };
 
-            DataSet ds;
+            if (IdaraId != null)
+                ddlParameters["idaraID"] = Convert.ToInt32(IdaraId);
+
+            if (usersId != null)
+                ddlParameters["entrydata"] = Convert.ToInt32(usersId);
+
+            if (HostName != null)
+                ddlParameters["hostname"] = HostName;
+
+            // معاملات تحميل بيانات الصفحة.
+            // تمرير المستفيد والمنزل المحددين معًا.
+            var pageParameters = new Dictionary<string, object?>(
+                ddlParameters,
+                StringComparer.OrdinalIgnoreCase);
+
+            if (ready)
+            {
+                pageParameters["parameter_01"] = AssignPeriodOptionsID_;
+
+            }
+
 
 
             var rowsList = new List<Dictionary<string, object?>>();
             var dynamicColumns = new List<TableColumn>();
 
 
-            ds = await _mastersServies.GetDataLoadDataSetAsync(spParameters);
+            DataSet ds = await requestDataLoad.GetDataLoadDataSetAsync(pageParameters);
 
 
 
@@ -53,32 +78,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
 
-            //string? AssignPeriodID = null;  // تعريف المتغير هنا
-
-            //if (dt3 != null && dt3.Rows.Count > 0)
-            //{
-            //    var value = dt3.Rows[0]["AssignPeriodID"];
-            //    AssignPeriodID = dt3.Rows[0]["AssignPeriodID"].ToString();
-            //    var AssignPeriodStartdate = dt3.Rows[0]["AssignPeriodStartdate"];
-            //    var FullName = dt3.Rows[0]["FullName"];
-
-            //    TempData["AssignPeriodAvaliable"] = $"محضر التخصيص منشئ بواسطة {FullName} نشط منذ {AssignPeriodStartdate} ";
-            //}
-            //else
-            //{
-            //    TempData["NoAssignPeriod"] = "لا يوجد محضر تخصيص نشط";
-            //}
-
-            // ✅ LINQ - واضح وآمن
-            //var count = dt1.AsEnumerable()
-            //    .Count(row =>
-            //    {
-            //        var actionTypeId = row["LastActionTypeID"];
-            //        if (actionTypeId == DBNull.Value) return false;
-
-            //        int value = Convert.ToInt32(actionTypeId);
-            //        return value == 38 || value == 40;
-            //    });
+            
 
             int count = 0;
 
@@ -103,19 +103,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     });
             }
 
-            //if (dt1 != null && dt1.Rows.Count > 0)
-            //{
-            //    if (count > 0)
-            //    {
-            //        TempData["countBiggerThanzero"] = $"متبقي لديك عدد {count} مستفيد في هذا المحضر لم تقم بإنهاء اجراءاتهم لحد الان !! ";
-            //    }
-            //    else if (count == 0 && AssignPeriodOptionsID_ != null)  // ✅ تصحيح: == بدلاً من =
-            //    {
-            //        TempData["countEqualzero"] = "تم انهاء اجراءات جميع المستفيدين بنجاح قم باغلاق المحضر الان";
-            //    }
-            //}
-
-
+            
 
             string rowIdField = "";
             bool canENDASSIGNPERIOD = false;
@@ -142,33 +130,83 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
 
-                JsonResult? result;
-                string json;
+
+
+
+                DataSet ddlDs = await requestDataLoad
+                   .GetDataLoadDataSetAsync(ddlParameters);
+
+                static List<OptionItem> ReadOptions(
+                    DataSet source,
+                    int tableIndex,
+                    string textColumn,
+                    string valueColumn)
+                {
+                    if (tableIndex < 0 ||
+                        tableIndex >= source.Tables.Count)
+                    {
+                        throw new InvalidOperationException(
+                            $"DDL table index {tableIndex} not found.");
+                    }
+
+                    DataTable table = source.Tables[tableIndex];
+
+                    if (!table.Columns.Contains(textColumn) ||
+                        !table.Columns.Contains(valueColumn))
+                    {
+                        throw new InvalidOperationException(
+                            $"DDL columns mismatch at table {tableIndex}.");
+                    }
+
+                    var options = new List<OptionItem>();
+
+                    foreach (DataRow row in table.Rows)
+                    {
+                        string value = row[valueColumn]
+                            ?.ToString()?.Trim() ?? "";
+
+                        string text = row[textColumn]
+                            ?.ToString()?.Trim() ?? "";
+
+                        if (!string.IsNullOrEmpty(value))
+                        {
+                            options.Add(new OptionItem
+                            {
+                                Value = value,
+                                Text = text
+                            });
+                        }
+                    }
+
+                    if (options.Count == 0)
+                    {
+                        options.Add(new OptionItem
+                        {
+                            Value = "-1",
+                            Text = "لاتوجد خيارات"
+                        });
+                    }
+
+                    return options;
+                }
+
+                AssignPeriodOptions = ReadOptions(
+                ddlDs,
+                2,
+                "AssignPeriodDescrptionText",
+                "AssignPeriodID");
+
+                BuildingActionTypeCasesOptions = ReadOptions(
+                    ddlDs,
+                    3,
+                    "buildingActionTypeName_A",
+                    "buildingActionTypeID");
 
 
 
 
-                //// ---------------------- AssignPeriodType ----------------------
-                result = await _CrudController.GetDDLValues(
-                    "AssignPeriodDescrptionText", "AssignPeriodID", "2", PageName, usersId, IdaraId, HostName
-               ) as JsonResult;
 
-
-                json = JsonSerializer.Serialize(result!.Value);
-
-                AssignPeriodOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-
-
-                //// ---------------------- BuildingActionTypeCases ----------------------
-                result = await _CrudController.GetDDLValues(
-                    "buildingActionTypeName_A", "buildingActionTypeID", "3", PageName, usersId, IdaraId, HostName
-               ) as JsonResult;
-
-
-                json = JsonSerializer.Serialize(result!.Value);
-
-                BuildingActionTypeCasesOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-
+             
 
                 // ----------------------END DDLValues ----------------------
 
@@ -262,6 +300,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ["ActionNote"] = "ملاحظات",
                             ["FullName_A"] = "الاسم",
                             ["buildingActionTypeResidentAlias"] = "الحالة",
+                            ["AssignmentPeriodStatus"] = "حالة التخصيص",
                             ["buildingDetailsNo"] = "رقم المنزل",
                             ["rankNameA"] = "الرتبة",
                             ["militaryLocationName_A"] = "الحي",
@@ -294,6 +333,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             bool isCount_ = c.ColumnName.Equals("Count_", StringComparison.OrdinalIgnoreCase);
                             bool isrankNameA = c.ColumnName.Equals("rankNameA", StringComparison.OrdinalIgnoreCase);
                             bool ismilitaryUnitName_A = c.ColumnName.Equals("militaryUnitName_A", StringComparison.OrdinalIgnoreCase);
+                            bool isAssignmentPeriodStatusint = c.ColumnName.Equals("AssignmentPeriodStatusint", StringComparison.OrdinalIgnoreCase);
                             bool isWaitingOrderTypeName = c.ColumnName.Equals("WaitingOrderTypeName", StringComparison.OrdinalIgnoreCase);
                             
                             
@@ -307,7 +347,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID || isLastActionTypeID  || isbuildingDetailsID || isLastActionID || isAssignPeriodID || isCount_ || ismilitaryUnitName_A || isWaitingOrderTypeName)
+                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID || isLastActionTypeID  || isbuildingDetailsID || isLastActionID || isAssignPeriodID || isCount_ || ismilitaryUnitName_A || isWaitingOrderTypeName || isAssignmentPeriodStatusint)
                             });
                         }
 
@@ -589,7 +629,14 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             AppliesTo = "any",
                             DisableWhenAny = new List<TableActionRule>
                             {
-
+                                new TableActionRule
+                                {
+                                    Field = "LastActionTypeID",
+                                    Op = "eq",
+                                    Value = "27",
+                                    Message = "لم يتم تخصيص منزل للمستفيد في هذا المحضر.",
+                                    Priority = 1
+                                },
                                   new TableActionRule
                                 {
                                     Field = "LastActionTypeID",
@@ -669,6 +716,15 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             AppliesTo = "any",
                             DisableWhenAny = new List<TableActionRule>
                            {
+
+                                new TableActionRule
+                                {
+                                    Field = "LastActionTypeID",
+                                    Op = "eq",
+                                    Value = "27",
+                                    Message = "لم يتم تخصيص منزل للمستفيد في هذا المحضر.",
+                                    Priority = 1
+                                },
 
                                 new TableActionRule
                               {
@@ -831,7 +887,57 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             //PillText = "مرفوض",
                             PillCssClass = "pill pill-red",
                             PillMode = "replace"
-                        }
+                        },
+
+                        new TableStyleRule
+                        {
+                            Target = "row",
+                            Field = "AssignmentPeriodStatusint",
+                            Op = "eq",
+                            Value = "1",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "AssignmentPeriodStatus",
+                            PillTextField = "AssignmentPeriodStatus", 
+                            //PillText = "مرفوض",
+                            PillCssClass = "pill pill-yellow",
+                            PillMode = "replace"
+                        },
+
+                        new TableStyleRule
+                        {
+                            Target = "row",
+                            Field = "AssignmentPeriodStatusint",
+                            Op = "eq",
+                            Value = "2",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "AssignmentPeriodStatus",
+                            PillTextField = "AssignmentPeriodStatus", 
+                            //PillText = "مرفوض",
+                            PillCssClass = "pill pill-green",
+                            PillMode = "replace"
+                        },
+                        new TableStyleRule
+                        {
+                            Target = "row",
+                            Field = "AssignmentPeriodStatusint",
+                            Op = "eq",
+                            Value = "3",
+                            Priority = 1,
+
+                            PillEnabled = true,
+                            PillField = "AssignmentPeriodStatus",
+                            PillTextField = "AssignmentPeriodStatus", 
+                            //PillText = "مرفوض",
+                            PillCssClass = "pill pill-red",
+                            PillMode = "replace"
+                        },
+
+
+
             };
                    
 
@@ -843,6 +949,29 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 PageTitle = dsModel.PageTitle,
                 PanelTitle = dsModel.PanelTitle,
                 PanelIcon = "fa-home",
+
+                Panel = new SmartPagePanelConfig
+                {
+                    Show = true,
+                    ShowIcon = true,
+                    ShowSubtitle = true,
+                    ShowDescription = true,
+                    ShowBadges = true,
+                    Layout = "compact",
+                    Title = "معالجة محاضر التخصيص ",
+                    Subtitle = "شاشه مخصصه لمعالجة محاضر التخصيص ",
+                    Description = " تُستخدم هذه الصفحة لمعالجة محاضر التخصيص وابلاغ المستفيد لاستلام المنزل او رفضه ",
+                    Icon = "fa-user-group",
+                    Badges = new List<SmartPagePanelBadge>
+                    {
+                        new() { Label = "التحقق من الموافقة", Value = "اخذ الموافقة للبدء بابلاغ المستفيد بالتخصيص", Icon = "fa-solid fas fa-hands-helping", Tone = "success" },
+                        new() { Label = "طباعة اشعار المراجعة", Value = "طباعة اشعار المراجعة وابلاغ المستفيد بالتخصيص لاكمال الاجراءات", Icon = "fa-solid fa-paper-plane", Tone = "info" },
+                        new() { Label = "معالجة طلب التخصيص", Value = "البدء بتخصيص المنازل معالجة طلب التخصيص بناء على موافقة المستفيد او رفضه او عدم المراجعه", Icon = "fa-solid fa-play", Tone = "info" },
+                        new() { Label = "انهاء محضر التخصيص", Value = "انهاء محضر التخصيص بعد معالجة كل الطلبات", Icon = "fa-solid fa-shield-halved", Tone = "default" },
+                    }
+                },
+
+
                 Form = form,
                 TableDS = ready ? dsModel : null
             };

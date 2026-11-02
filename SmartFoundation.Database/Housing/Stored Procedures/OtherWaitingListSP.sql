@@ -128,24 +128,122 @@ BEGIN
               select 1
               from Housing.V_WaitingList v 
               where v.residentInfoID = @residentInfoID_FK
-              and (v.buildingActionRoot = 2 or v.LastActionTypeID in (38,40,45,46,47))
+              and (v.buildingActionRoot = 2 OR v.LastActionTypeID IN (38,40,45,46,47,57,58))
             )
             BEGIN
                 ;THROW 50001, N'المستفيد ساكن او تحت اجراءات التسكين بسجل انتظار اخر او مسجل بمحضر تخصيص لفئة اخرى', 1;
             END
 
-             IF NOT EXISTS
-            (
-                 SELECT 1
-                FROM [DATACORE].[Housing].[V_GetGeneralListForBuilding] c
-                where c.buildingDetailsID = TRY_CONVERT(BIGINT, @buildingDetailsID)
-                  and c.BuildingIdaraID = @IdaraID_INT
-                  and c.buildingDetailsActive = 1
-                  and c.LastActionTypeID in (5,39,41,42,43,44)
+             
+-- Validate the selected house before creating action 45.
+-- Use the same occupancy lock as AssignSP.
+
+DECLARE @OtherHouseID BIGINT =
+    TRY_CONVERT(BIGINT, NULLIF(@buildingDetailsID, N''));
+
+IF @OtherHouseID IS NULL OR @OtherHouseID <= 0
+    THROW 50001, N'يجب اختيار منزل صالح.', 1;
+
+DECLARE @OtherHouseLockResult INT;
+DECLARE @OtherHouseLockResource NVARCHAR(255) =
+    CONCAT(
+        N'Housing.Occupancy:',
+        @IdaraID_INT,
+        N':',
+        @OtherHouseID
+    );
+
+EXEC @OtherHouseLockResult = sys.sp_getapplock
+    @Resource = @OtherHouseLockResource,
+    @LockMode = N'Exclusive',
+    @LockOwner = N'Transaction',
+    @LockTimeout = 10000;
+
+IF @OtherHouseLockResult < 0
+    THROW 50001,
+        N'تجري معالجة أخرى للمنزل؛ حدّث الصفحة وأعد المحاولة.',
+        1;
+
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM Housing.V_GetGeneralListForBuilding c
+    WHERE c.buildingDetailsID = @OtherHouseID
+      AND c.BuildingIdaraID = @IdaraID_INT
+      AND c.buildingDetailsActive = 1
+      AND c.LastActionTypeID = 5
+
+      AND EXISTS
+      (
+          SELECT 1
+          FROM Housing.BuildingSpace bs
+          INNER JOIN Housing.BuildingSpaceType bst
+              ON bst.BuildingSpaceTypeID =
+                 bs.BuildingSpaceTypeID_FK
+          WHERE bs.BuildingDetailsID_FK = c.buildingDetailsID
+            AND bs.BuildingSpaceActive = 1
+            AND bs.BuildingSpaceTypeID_FK = 1
+            AND bst.BuildingSpaceTypeCode = N'BEDROOM'
+            AND bst.BuildingSpaceTypeActive = 1
+
+            AND (
+                bs.BuildingSpaceStartDate IS NULL
+                OR bs.BuildingSpaceStartDate <= CAST(GETDATE() AS DATE)
             )
-            BEGIN
-                ;THROW 50001, N'لا يمكن التخصيص؛ المنزل غير متاح أو تم تخصيصه لمستفيد اخر قم بتحديث الصفحه', 1;
-            END
+            AND (
+                bs.BuildingSpaceEndDate IS NULL
+                OR bs.BuildingSpaceEndDate >= CAST(GETDATE() AS DATE)
+            )
+            AND (
+                bst.BuildingSpaceTypeStartDate IS NULL
+                OR bst.BuildingSpaceTypeStartDate <= CAST(GETDATE() AS DATE)
+            )
+            AND (
+                bst.BuildingSpaceTypeEndDate IS NULL
+                OR bst.BuildingSpaceTypeEndDate >= CAST(GETDATE() AS DATE)
+            )
+      )
+
+      AND NOT EXISTS
+      (
+          SELECT 1
+          FROM Housing.V_Occupant occupant
+          WHERE occupant.buildingDetailsID = c.buildingDetailsID
+            AND (
+                occupant.LastActionTypeID IS NULL
+                OR occupant.LastActionTypeID NOT IN (57, 58)
+            )
+      )
+
+      AND NOT EXISTS
+      (
+          SELECT 1
+          FROM Housing.V_WaitingList holding
+          WHERE holding.buildingDetailsID = c.buildingDetailsID
+            AND holding.LastActionTypeID IN (38, 40, 45, 46, 47)
+
+            AND NOT EXISTS
+            (
+                SELECT 1
+                FROM Housing.BuildingAction oldMigrationAction
+                INNER JOIN Housing.AssignPeriod oldMigrationPeriod
+                    ON oldMigrationPeriod.AssignPeriodID =
+                       oldMigrationAction.AssignPeriodID_FK
+                WHERE oldMigrationAction.buildingActionID =
+                      holding.LastActionID
+                  AND oldMigrationAction.buildingActionExtraText5 =
+                      N'MIGRATION_GENERATED'
+                  AND oldMigrationPeriod.AssignPeriodDescrption LIKE
+                      N'Legacy allocation migration - WaitingClass %'
+            )
+      )
+)
+BEGIN
+    THROW 50001,
+        N'المنزل غير مؤهل للتسكين: يلزم أن يكون جاهزًا بالإجراء 5، وبه غرفة نوم نشطة، وغير مشغول أو مرتبط بتخصيص قائم.',
+        1;
+END;
+
 
               
                 DECLARE @MyOrder int;

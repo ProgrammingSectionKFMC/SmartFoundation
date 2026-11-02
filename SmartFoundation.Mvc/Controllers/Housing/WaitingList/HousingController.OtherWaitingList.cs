@@ -374,7 +374,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p08", Label = "فئة سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p09", Label = "WaitingOrderTypeID", Type = "hidden", ColCss = "3", Readonly = true },
                 new FieldConfig { Name = "p10", Label = "نوع سجل الانتظار", Type = "text", ColCss = "3", Readonly = true },
-                new FieldConfig { Name = "p20", Label = "المبنى", Type = "select",Select2 = true, ColCss = "3", Readonly = true,Required = true,Options = buildingDetailsNoOptions },
+                new FieldConfig { Name = "p20", Label = "المبنى", Type = "select",Select2 = true, ColCss = "3",Required = true,Options = buildingDetailsNoOptions },
                 new FieldConfig { Name = "p12", Label = "ملاحظات", Type = "text", ColCss = "6",Required = true },
                 new FieldConfig { Name = "p13", Label = "IdaraId", Type = "hidden", ColCss = "3", Readonly = true },
 

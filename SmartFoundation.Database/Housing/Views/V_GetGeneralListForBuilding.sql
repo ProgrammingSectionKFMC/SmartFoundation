@@ -9,6 +9,7 @@
 
 
 
+
 CREATE VIEW [Housing].[V_GetGeneralListForBuilding]
 AS
 
@@ -71,7 +72,32 @@ OUTER APPLY (
     FROM Housing.BuildingAction ba
     WHERE ba.buildingDetailsID_FK = bd.buildingDetailsID
       AND ba.buildingActionActive = 1
-    ORDER BY ba.buildingActionID DESC
+    
+        AND NOT
+        (
+            ba.buildingActionTypeID_FK IN (3, 58)
+            AND EXISTS
+            (
+                SELECT 1
+                FROM Housing.fn_BuildingAction_ChainToRoot(ba.buildingActionID) ancestor
+                JOIN Housing.BuildingAction stage57
+                  ON stage57.buildingActionID = ancestor.buildingActionID
+                 AND stage57.buildingActionTypeID_FK = 57
+                 AND stage57.buildingActionActive = 1
+                 AND stage57.buildingDetailsID_FK = bd.buildingDetailsID
+                 AND stage57.IdaraId_FK = bd.IdaraId_FK
+                JOIN Housing.BuildingAction operatingRoot
+                  ON operatingRoot.buildingDetailsID_FK = bd.buildingDetailsID
+                 AND operatingRoot.IdaraId_FK = bd.IdaraId_FK
+                 AND operatingRoot.buildingActionActive = 1
+                 AND operatingRoot.buildingActionParentID IS NULL
+                 AND operatingRoot.residentInfoID_FK IS NULL
+                 AND operatingRoot.buildingActionTypeID_FK IN (4, 5, 62)
+                 AND operatingRoot.buildingActionID > stage57.buildingActionID
+                 AND operatingRoot.buildingActionID < ba.buildingActionID
+            )
+        )
+      ORDER BY ba.buildingActionID DESC
 ) lb
 left JOIN Housing.BuildingActionType bat   -- ✅ بدل INNER JOIN
     ON bat.buildingActionTypeID = lb.buildingActionTypeID_FK

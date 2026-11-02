@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using SmartFoundation.Mvc.Services.DataLoad;
 using SmartFoundation.MVC.Reports;
 using SmartFoundation.UI.ViewModels.SmartForm;
 using SmartFoundation.UI.ViewModels.SmartPage;
@@ -14,7 +15,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 {
     public partial class HousingController : Controller
     {
-        public async Task<IActionResult> Assign(int pdf = 0)
+        public async Task<IActionResult> Assign([FromServices] RequestScopedDataLoadService requestDataLoad, int pdf = 0)
         {
 
             if (!InitPageContext(out IActionResult? redirectResult))
@@ -41,16 +42,41 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             ControllerName = nameof(Housing);
             PageName = nameof(Assign);
 
-            var spParameters = new object?[] { "Assign", IdaraId, usersId, HostName, waitingClassID_ };
+            var ddlParameters = new Dictionary<string, object?>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+                ["pageName_"] = PageName ?? "FinancialAuditForExtendAndEvictions"
+            };
 
-            DataSet ds;
+            if (IdaraId != null)
+                ddlParameters["idaraID"] = Convert.ToInt32(IdaraId);
+
+            if (usersId != null)
+                ddlParameters["entrydata"] = Convert.ToInt32(usersId);
+
+            if (HostName != null)
+                ddlParameters["hostname"] = HostName;
+
+            // معاملات تحميل بيانات الصفحة.
+            // تمرير المستفيد والمنزل المحددين معًا.
+            var pageParameters = new Dictionary<string, object?>(
+                ddlParameters,
+                StringComparer.OrdinalIgnoreCase);
+
+            if (ready)
+            {
+                pageParameters["parameter_01"] = waitingClassID_;
+                
+            }
+
+            
 
 
             var rowsList = new List<Dictionary<string, object?>>();
             var dynamicColumns = new List<TableColumn>();
 
 
-            ds = await _mastersServies.GetDataLoadDataSetAsync(spParameters);
+            DataSet ds = await requestDataLoad.GetDataLoadDataSetAsync(pageParameters);
 
 
 
@@ -126,32 +152,76 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
 
-                JsonResult? result;
-                string json;
+                DataSet ddlDs = await requestDataLoad
+                   .GetDataLoadDataSetAsync(ddlParameters);
 
+                static List<OptionItem> ReadOptions(
+                    DataSet source,
+                    int tableIndex,
+                    string textColumn,
+                    string valueColumn)
+                {
+                    if (tableIndex < 0 ||
+                        tableIndex >= source.Tables.Count)
+                    {
+                        throw new InvalidOperationException(
+                            $"DDL table index {tableIndex} not found.");
+                    }
 
+                    DataTable table = source.Tables[tableIndex];
 
+                    if (!table.Columns.Contains(textColumn) ||
+                        !table.Columns.Contains(valueColumn))
+                    {
+                        throw new InvalidOperationException(
+                            $"DDL columns mismatch at table {tableIndex}.");
+                    }
 
-                //// ---------------------- WaitingListOptions ----------------------
-                result = await _CrudController.GetDDLValues(
-                    "waitingClassName_A", "waitingClassID", "2", PageName, usersId, IdaraId, HostName,null
-               ) as JsonResult;
+                    var options = new List<OptionItem>();
 
+                    foreach (DataRow row in table.Rows)
+                    {
+                        string value = row[valueColumn]
+                            ?.ToString()?.Trim() ?? "";
 
-                json = JsonSerializer.Serialize(result!.Value);
+                        string text = row[textColumn]
+                            ?.ToString()?.Trim() ?? "";
 
-                WaitingListOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+                        if (!string.IsNullOrEmpty(value))
+                        {
+                            options.Add(new OptionItem
+                            {
+                                Value = value,
+                                Text = text
+                            });
+                        }
+                    }
 
+                    if (options.Count == 0)
+                    {
+                        options.Add(new OptionItem
+                        {
+                            Value = "-1",
+                            Text = "لاتوجد خيارات"
+                        });
+                    }
 
-                //// ---------------------- HousesType ----------------------
-                result = await _CrudController.GetDDLValues(
-                    "buildingDetailsNo", "buildingDetailsID", "4", PageName, usersId, IdaraId, HostName,null
-               ) as JsonResult;
+                    return options;
+                }
 
+                WaitingListOptions = ReadOptions(
+                ddlDs,
+                2,
+                "waitingClassName_A",
+                "waitingClassID");
 
-                json = JsonSerializer.Serialize(result!.Value);
+                buildingDetailsNoOptions = ReadOptions(
+                    ddlDs,
+                    4,
+                    "buildingDetailsNo",
+                    "buildingDetailsID");
 
-                buildingDetailsNoOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
+                
 
 
                 // ----------------------END DDLValues ----------------------
@@ -254,6 +324,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             ["WaitingOrderTypeName"] = "نوع سجل الانتظار",
                             ["ActionNote"] = "ملاحظات",
                             ["FullName_A"] = "الاسم",
+                            ["rankNameA"] = "الرتبة",
                             ["buildingActionTypeResidentAlias"] = "الحالة",
                             ["buildingDetailsNo"] = "رقم المنزل (إن وجد)",
                             ["WaitingListOrder"] = "الترتيب"
@@ -284,6 +355,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             bool isLastActionID = c.ColumnName.Equals("LastActionID", StringComparison.OrdinalIgnoreCase);
                             bool isAssignStatus = c.ColumnName.Equals("AssignStatus", StringComparison.OrdinalIgnoreCase);
                             bool isbuildingActionTypeResidentAlias = c.ColumnName.Equals("buildingActionTypeResidentAlias", StringComparison.OrdinalIgnoreCase);
+                            bool isAssignmentBlocked =c.ColumnName.Equals("IsAssignmentBlocked",StringComparison.OrdinalIgnoreCase);
+                            bool isAssignmentBlockReason =c.ColumnName.Equals("AssignmentBlockReason",StringComparison.OrdinalIgnoreCase);
 
 
                             List<OptionItem> filterOpts = new();
@@ -303,20 +376,34 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                     .ToList();
                             }
 
+
                             dynamicColumns.Add(new TableColumn
                             {
                                 Field = c.ColumnName,
-                                Label = headerMap.TryGetValue(c.ColumnName, out var label) ? label : c.ColumnName,
-                                Type = colType,
-                                Sortable = true
-                                //if u want to hide any column 
-                                ,
-                                Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                || isresidentInfoID_FK || isIdaraId || isresidentInfoID || isLastActionTypeID || isAssignPeriodID || isbuildingDetailsID || isLastActionID|| isAssignStatus),
-                                truncate = isbuildingActionTypeResidentAlias,
+                                Label = headerMap.TryGetValue(c.ColumnName, out var label)
+                                    ? label
+                                    : c.ColumnName,
 
-                                //  فلتر للرتبة + الوحدة + الجنسية
-                                Filter = (isbuildingActionTypeResidentAlias)
+                                Type = colType,
+                                Sortable = true,
+
+                                // Text wrapping
+                                WrapText = isbuildingActionTypeResidentAlias,
+                                Width = isbuildingActionTypeResidentAlias ? "450px" : null,
+                                MinWidth = isbuildingActionTypeResidentAlias ? "450px" : "80px",
+                                MaxWidth = isbuildingActionTypeResidentAlias ? "450px" : null,
+                                truncate = false,
+
+                                // Hidden columns
+                                Visible = !(isActionID || isWaitingClassID ||
+                                    isWaitingOrderTypeID || iswaitingClassSequence ||
+                                    isresidentInfoID_FK || isIdaraId || isresidentInfoID ||
+                                    isLastActionTypeID || isAssignPeriodID ||
+                                    isbuildingDetailsID || isLastActionID ||
+                                    isAssignStatus || isAssignmentBlocked ||
+                                    isAssignmentBlockReason),
+
+                                Filter = isbuildingActionTypeResidentAlias
                                     ? new TableColumnFilter
                                     {
                                         Enabled = true,
@@ -328,6 +415,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                         Enabled = false
                                     }
                             });
+
                         }
 
 
@@ -776,7 +864,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         OpenModal = true,
                         //ModalTitle = "رسالة تحذيرية",
                         ModalTitle = "تخصيص منزل للمستفيد",
-                        ModalMessage = "ملاحظة : لايمكن التراجع عن هذا الاجراء",
+                        ModalMessage = "ملاحظة : تظهر فقط المباني التي حالتها جاهزة للتسكين وتم اضافة لها فراغات بشرط اضافة غرفة نوم واحده على الاقل",
                         ModalMessageClass = "bg-red-50 text-red-700",
                         ModalMessageIcon = "fa-solid fa-triangle-exclamation",
                         OpenForm = new FormConfig
@@ -803,7 +891,16 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             DisableWhenAny = new List<TableActionRule>
                             {
 
-                                  new TableActionRule
+                                new TableActionRule
+                                {
+                                    Field = "IsAssignmentBlocked",
+                                    Op = "eq",
+                                    Value = "1",
+                                    Message = "غير مؤهل للتخصيص؛ راجع عمود الحالة لمعرفة جميع أسباب المنع.",
+                                    Priority = 1
+                                },
+
+                                new TableActionRule
                                 {
                                     Field = "LastActionTypeID",
                                     Op = "eq",
@@ -884,6 +981,16 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             AppliesTo = "any",
                             DisableWhenAny = new List<TableActionRule>
                             {
+
+                                new TableActionRule
+                                {
+                                    Field = "IsAssignmentBlocked",
+                                    Op = "eq",
+                                    Value = "1",
+                                    Message = "لا يمكن تعديل التخصيص؛ راجع حالة المستفيد وأسباب المنع.",
+                                    Priority = 1
+                                },
+
 
                                  new TableActionRule
                                 {
@@ -1217,6 +1324,19 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             dsModel.StyleRules = new List<TableStyleRule>
                     {
+
+                        new TableStyleRule
+                        {
+                            Target = "cell",
+                            Field = "buildingActionTypeResidentAlias",
+                            ConditionField = "IsAssignmentBlocked",
+                            Op = "eq",
+                            Value = "1",
+                            Priority = 0,
+                            CssClass = "cell-red",
+                            StopOnMatch = true
+                        },
+
                         new TableStyleRule
                         {
                             Target = "cell",
@@ -1228,7 +1348,6 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             CssClass = "cell-green",
                             StopOnMatch = true
                         },
-
                         new TableStyleRule
                         {
                             Target = "cell",
@@ -1237,9 +1356,11 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             Op     = "eq",
                             Value  = "40",
                             Priority = 1,
-                            CssClass = "cell-yellow",
+                            CssClass = "cell-green",
                             StopOnMatch = true
                         },
+
+                        
 
                         new TableStyleRule
                         {
@@ -1296,6 +1417,28 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 PageTitle = dsModel.PageTitle,
                 PanelTitle = dsModel.PanelTitle,
                 PanelIcon = "fa-home",
+
+                Panel = new SmartPagePanelConfig
+                {
+                    Show = true,
+                    ShowIcon = true,
+                    ShowSubtitle = true,
+                    ShowDescription = true,
+                    ShowBadges = true,
+                    Layout = "compact",
+                    Title = "اجراءات تخصيص المنازل للمستفيدين",
+                    Subtitle = "شاشه مخصصه لتخصيص المنازل للمستفيدين بعد نقلهم من قوائم الانتظار",
+                    Description = " تُستخدم هذه الصفحة لانشاء محاضر التخصيص ومن ثم تخصيص المنازل للمستفيدين حسب المنازل المتاحه ",
+                    Icon = "fa-user-group",
+                    Badges = new List<SmartPagePanelBadge>
+                    {
+                        new() { Label = "اختيار فئة الانتظار", Value = "اختيار الفئة المراد البدء بالتخصيص للمنتمين لها", Icon = "fa-solid fa-search", Tone = "success" },
+                        new() { Label = "انشاء محضر التخصيص", Value = "انشاء محضر تخصيص جديد للبدء بالتخصيص للمستفيدين المؤهلين", Icon = "fa-solid fa-pen-to-square", Tone = "info" },
+                        new() { Label = "استعراض قوائم المستفيدين المنقولين من قوائم الانتظار للتخصيص", Value = "البدء بتخصيص المنازل", Icon = "fa-solid fa-list", Tone = "info" },
+                        new() { Label = "اغلاق محضر التخصيص", Value = "بعد الانتهاء من اجراءات التخصيص للمستفيدين المؤهلين يتم اغلاق محضر التخصيص للبدء بمعالجة محضر التخصيص وابلاغ المستفيدين في صفحه معالجة محاضر التخصيص", Icon = "fa-solid fa-shield-halved", Tone = "default" },
+                    }
+                },
+
                 Form = form,
                 TableDS = ready ? dsModel : null
             };

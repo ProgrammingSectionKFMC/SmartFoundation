@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using SmartFoundation.Application.Mapping;
 using SmartFoundation.Application.Services.Models;
 using SmartFoundation.DataEngine.Core.Interfaces;
@@ -174,7 +174,7 @@ namespace SmartFoundation.Application.Services
                 for (int i = 0; i < response.Datasets.Count; i++)
                 {
                     var rows = response.Datasets[i];
-                    ds.Tables.Add(CreateDataTableFromRowList(rows, $"Table{i}"));
+                    ds.Tables.Add(CreateDataTableFromRowList(rows, $"Table{i}", response.DatasetSchemas.ElementAtOrDefault(i)));
                 }
             }
             else if (response.Data is { Count: > 0 })
@@ -189,10 +189,21 @@ namespace SmartFoundation.Application.Services
             return ds;
         }
 
-        private static DataTable CreateDataTableFromRowList(List<Dictionary<string, object?>> rows, string tableName)
+        private static DataTable CreateDataTableFromRowList(List<Dictionary<string, object?>> rows, string tableName, IReadOnlyList<string>? columns = null)
         {
             var dt = new DataTable(tableName);
-            if (rows == null || rows.Count == 0) return dt;
+            if (rows == null || rows.Count == 0)
+            {
+                if (columns != null)
+                {
+                    foreach (var column in columns)
+                    {
+                        if (!dt.Columns.Contains(column))
+                            dt.Columns.Add(column, typeof(object));
+                    }
+                }
+                return dt;
+            }
 
             var allKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var row in rows)
@@ -309,7 +320,7 @@ namespace SmartFoundation.Application.Services
                 for (var i = 0; i < response.Datasets.Count; i++)
                 {
                     var rows = response.Datasets[i];
-                    var dt = CreateDataTableFromRowList(rows, $"Table{i}");
+                    var dt = CreateDataTableFromRowList(rows, $"Table{i}", response.DatasetSchemas.ElementAtOrDefault(i));
                     ds.Tables.Add(dt);
                 }
             }
@@ -412,7 +423,7 @@ namespace SmartFoundation.Application.Services
                 for (var i = 0; i < response.Datasets.Count; i++)
                 {
                     var rows = response.Datasets[i];
-                    var dt = CreateDataTableFromRowList(rows, $"Table{i}");
+                    var dt = CreateDataTableFromRowList(rows, $"Table{i}", response.DatasetSchemas.ElementAtOrDefault(i));
                     ds.Tables.Add(dt);
                 }
             }
@@ -674,7 +685,7 @@ namespace SmartFoundation.Application.Services
                 for (var i = 0; i < response.Datasets.Count; i++)
                 {
                     var rows = response.Datasets[i];
-                    var dt = CreateDataTableFromRowList(rows, $"Table{i}");
+                    var dt = CreateDataTableFromRowList(rows, $"Table{i}", response.DatasetSchemas.ElementAtOrDefault(i));
                     ds.Tables.Add(dt);
                 }
             }

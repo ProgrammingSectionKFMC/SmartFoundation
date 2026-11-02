@@ -508,27 +508,7 @@ IF EXISTS
             )
                 THROW 50001, N'لا يسمح بإصدار فواتير الخدمات بعد إحالة الإخلاء للتدقيق المالي.', 1;
 
-            -- EXIT_SERVICE_OWN_OUTPUT_GUARD_V2: reading-meter bills do not
-             -- block eligible non-meter exit services. Unknown active output
-             -- must be examined by the separate overlap/eligibility checks.
-             IF EXISTS (
-                 SELECT 1
-                 FROM Housing.Bills b WITH (UPDLOCK, HOLDLOCK)
-                 INNER JOIN Housing.BillCalculation calc
-                     ON calc.BillsID_FK = b.BillsID
-                    AND calc.CalculationMethod IN
-                        (N'SPACE_ESTIMATED', N'METER_FIXED', N'SERVICE_FIXED_FALLBACK')
-                 WHERE b.ExitRequestActionID_FK = @ExitRequestActionID
-                   AND b.BillTypeID_FK = 3
-                   AND b.BillChargeTypeID_FK IN (2,3,4)
-                   AND b.BillActive = 1
-                   AND b.residentInfoID_FK = @ResidentInfoID
-                   AND b.generalNo_FK = @GeneralNo
-                   AND b.buildingDetailsID = @BuildingDetailsID
-                   AND b.idaraID_FK = @IdaraID
-             )
-                 THROW 50001, N'تم إصدار خدمات الإخلاء لهذه الدورة مسبقًا؛ يمنع إصدارها مرتين.', 1;
- 
+             -- Existing cycle output is checked day-by-day for idempotency below.
              -- Fail closed on unclassified active cycle service bills. Only a
              -- proven reading-meter invoice or known exit-service output is accepted.
              IF EXISTS (
@@ -556,288 +536,205 @@ IF EXISTS
              )
                  THROW 50001, N'توجد فاتورة خدمة لدورة الإخلاء غير مصنفة كقراءة عداد أو خدمة إخلاء؛ يلزم مراجعتها.', 1;
 
-            DECLARE @DaysInWindow INT = DATEDIFF(DAY,@MonthStart,@ExitDate)+1;
-            DECLARE @BillingDays INT =
-                  (YEAR(@ExitDate) - YEAR(@MonthStart)) * 360
-                + (MONTH(@ExitDate) - MONTH(@MonthStart)) * 30
-                + CASE WHEN @ExitDate = EOMONTH(@ExitDate) AND DAY(@ExitDate)<30 THEN 30
-                       WHEN DAY(@ExitDate)>30 THEN 30 ELSE DAY(@ExitDate) END
-                - CASE WHEN @MonthStart = EOMONTH(@MonthStart) AND DAY(@MonthStart)<30 THEN 30
-                       WHEN DAY(@MonthStart)>30 THEN 30 ELSE DAY(@MonthStart) END + 1;
-            IF @BillingDays NOT BETWEEN 1 AND 30
-                THROW 50001, N'مدة احتساب خدمات الإخلاء غير صحيحة.', 1;
-
-            -- Any active reading meter in the period excludes that entire service from THIS engine.
-            -- Reading meter invoices remain owned by MeterReadForOccubentAndExitSP.
-            CREATE TABLE #ServiceSummary
-            (
-                ServiceID INT NOT NULL PRIMARY KEY,
-                Method VARCHAR(25) NOT NULL,
-                PolicyID BIGINT NULL,
-                ReadingDays INT NOT NULL,
-                EligibleDays INT NOT NULL,
-                DistinctMethods INT NOT NULL,
-                DistinctPolicies INT NOT NULL
-            );
-            INSERT INTO #ServiceSummary
-            SELECT ServiceID,MAX(ProposedMethod),MAX(SelectedPolicyID),
-                   SUM(CASE WHEN ReadingMeters>0 THEN 1 ELSE 0 END),
-                   SUM(CASE WHEN ProposedMethod IN
-                         ('FIXED_METER','SPACE_ESTIMATED','SERVICE_FIXED_FALLBACK')
-                         THEN 1 ELSE 0 END),
-                   COUNT(DISTINCT ProposedMethod),
-                   COUNT(DISTINCT ISNULL(SelectedPolicyID,-1))
-            FROM #ExitServiceDayPreview GROUP BY ServiceID;
-
+            -- EXIT_SERVICE_DAY_SEGMENTS_V2 (DRAFT): charge only uncovered eligible days.
+            -- All authorization, cycle-state and locking guards above remain unchanged.
+            -- Fail closed when an existing active bill cannot be assigned a trustworthy period.
             IF EXISTS
             (
-                SELECT 1 FROM #ServiceSummary s
-                WHERE s.ReadingDays = 0 AND s.EligibleDays > 0
-                  AND (s.EligibleDays <> @DaysInWindow OR s.DistinctMethods <> 1
-                       OR (s.Method = 'SPACE_ESTIMATED' AND s.DistinctPolicies <> 1))
-            )
-                THROW 50001, N'تغيرت طريقة فوترة الخدمة خلال فترة الإخلاء؛ يلزم تقسيم الفترة قبل إصدار الفاتورة.', 1;
-
-            IF EXISTS
-            (
-                SELECT 1 FROM #ExitServiceDayPreview
-                WHERE LinkedToIdara=1 AND LinkedToBuilding=1
-                  AND ReadingMeters=0 AND ProposedMethod='NO_ELIGIBLE_RATE'
-            )
-                THROW 50001, N'توجد خدمة مفعلة للمبنى دون تعرفة مؤهلة؛ لا يجوز إصدار حساب ناقص.', 1;
-
-            -- No reading-meters: a previously issued overlapping active invoice for this
-            -- resident/building/service blocks the new bill; old paid invoices are immutable.
-            IF EXISTS
-            (
-                SELECT 1 FROM #ServiceSummary s
-                JOIN Housing.Bills b WITH (UPDLOCK,HOLDLOCK)
-                  ON b.residentInfoID_FK=@ResidentInfoID AND b.buildingDetailsID=@BuildingDetailsID
-                 AND b.idaraID_FK=@IdaraID AND b.BillActive=1
+                SELECT 1 FROM Housing.Bills b WITH (UPDLOCK,HOLDLOCK)
                 LEFT JOIN Housing.BillChargeType ct ON ct.BillChargeTypeID=b.BillChargeTypeID_FK
-                WHERE s.ReadingDays=0 AND s.EligibleDays>0
-                  AND (b.meterServiceTypeID=s.ServiceID
-                       OR (b.meterServiceTypeID IS NULL AND ct.MeterServiceTypeID_FK=s.ServiceID))
+                WHERE b.residentInfoID_FK=@ResidentInfoID AND b.buildingDetailsID=@BuildingDetailsID
+                  AND b.idaraID_FK=@IdaraID AND b.BillActive=1
                   AND b.BillChargeTypeID_FK IN (2,3,4)
-                  AND (
-                    (COALESCE(CONVERT(date,b.BillsFromDate),
-                       CASE WHEN b.PeriodYear BETWEEN 1900 AND 9999 AND b.PeriodMonth BETWEEN 1 AND 12
-                            THEN DATEFROMPARTS(b.PeriodYear,b.PeriodMonth,1) END) <= @ExitDate
-                     AND
-                     COALESCE(CONVERT(date,b.BillsToDate),
-                       CASE WHEN b.PeriodYear BETWEEN 1900 AND 9999 AND b.PeriodMonth BETWEEN 1 AND 12
-                            THEN EOMONTH(DATEFROMPARTS(b.PeriodYear,b.PeriodMonth,1)) END) >= @MonthStart)
-                    OR (b.BillsFromDate IS NULL AND b.BillsToDate IS NULL
-                        AND (b.PeriodYear IS NULL OR b.PeriodMonth NOT BETWEEN 1 AND 12))
+                  AND (b.meterServiceTypeID IS NOT NULL OR ct.MeterServiceTypeID_FK IS NOT NULL)
+                  AND
+                  (
+                    (b.BillsFromDate IS NULL AND (b.PeriodYear NOT BETWEEN 1900 AND 9999 OR b.PeriodMonth NOT BETWEEN 1 AND 12))
+                    OR (b.BillsToDate IS NULL AND (b.PeriodYear NOT BETWEEN 1900 AND 9999 OR b.PeriodMonth NOT BETWEEN 1 AND 12))
                   )
             )
-                THROW 50001, N'توجد فاتورة خدمة نشطة متداخلة مع فترة الإخلاء؛ يمنع إصدار فاتورة مكررة.', 1;
+                THROW 50001, N'توجد فاتورة خدمة نشطة لا يمكن تحديد فترة تغطيتها؛ يلزم مراجعتها قبل إصدار الإخلاء.', 1;
 
             DECLARE @TaxID INT=NULL, @TaxRatePercent DECIMAL(18,6)=NULL;
             SELECT TOP (1) @TaxID=t.taxID, @TaxRatePercent=t.taxRate
-            FROM dbo.Tax t
-            WHERE t.taxActive=1 AND CONVERT(date,t.taxStartDate)<=@ExitDate
+            FROM dbo.Tax t WHERE t.taxActive=1
+              AND CONVERT(date,t.taxStartDate)<=@ExitDate
               AND (t.taxEndDate IS NULL OR CONVERT(date,t.taxEndDate)>=@ExitDate)
             ORDER BY t.taxStartDate DESC,t.taxID DESC;
 
-            CREATE TABLE #BillTargets
+            -- Daily candidates. The reading-meter billing route owns all reading-meter days.
+            -- Fixed-meter rows must be generated per meter, not just per service.
+            CREATE TABLE #ExitChargeDays
             (
-                TargetID INT IDENTITY(1,1) PRIMARY KEY,
+                BillDay DATE NOT NULL,
                 ServiceID INT NOT NULL,
                 Method VARCHAR(25) NOT NULL,
-                ChargeTypeID INT NOT NULL,
                 PolicyID BIGINT NULL,
                 MeterID BIGINT NULL,
                 MeterTypeID INT NULL,
                 MeterNo NVARCHAR(100) NULL,
                 MeterName NVARCHAR(200) NULL,
                 FixedAmount DECIMAL(18,2) NULL,
-                TaxApplicable BIT NOT NULL,
-                TaxInclusive BIT NOT NULL
+                RateStatus NVARCHAR(30) NULL
+            );
+            -- For SERVICE_FIXED_FALLBACK / SPACE_ESTIMATED / missing-rate service paths.
+            INSERT INTO #ExitChargeDays
+                (BillDay,ServiceID,Method,PolicyID,FixedAmount,RateStatus)
+            SELECT p.BillDay,p.ServiceID,
+                   CASE WHEN p.ProposedMethod='SPACE_ESTIMATED'
+                        THEN 'SPACE_ESTIMATED' ELSE 'SERVICE_FIXED_FALLBACK' END,
+                   CASE WHEN p.ProposedMethod='SPACE_ESTIMATED' THEN p.SelectedPolicyID ELSE NULL END,
+                   CASE WHEN p.ProposedMethod='SPACE_ESTIMATED' THEN NULL
+                        ELSE COALESCE(rate.FixedAmount,0) END,
+                   CASE WHEN p.ProposedMethod='SPACE_ESTIMATED' THEN NULL
+                        WHEN rate.FixedAmount IS NULL THEN N'MISSING_RATE_ZERO'
+                        WHEN rate.FixedAmount=0 THEN N'ZERO_CONFIGURED_RATE'
+                        ELSE N'POSITIVE_RATE' END
+            FROM #ExitServiceDayPreview p
+            OUTER APPLY
+            (
+                SELECT TOP (1) fr.FixedAmount
+                FROM Housing.MeterServiceTypeFixedAmount fr
+                WHERE fr.MeterServiceTypeID_FK=p.ServiceID
+                  AND (fr.idaraID_FK=@IdaraID OR fr.idaraID_FK IS NULL)
+                  AND (fr.MeterServiceTypeFixedAmountActive=1 OR fr.MeterServiceTypeFixedAmountEndDate IS NOT NULL)
+                  AND (fr.MeterServiceTypeFixedAmountStartDate IS NULL OR CONVERT(date,fr.MeterServiceTypeFixedAmountStartDate)<=p.BillDay)
+                  AND (fr.MeterServiceTypeFixedAmountEndDate IS NULL OR CONVERT(date,fr.MeterServiceTypeFixedAmountEndDate)>=p.BillDay)
+                ORDER BY CASE WHEN fr.idaraID_FK=@IdaraID THEN 0 ELSE 1 END,
+                         fr.MeterServiceTypeFixedAmountStartDate DESC,fr.MeterServiceTypeFixedAmountID DESC
+            ) rate
+            WHERE p.LinkedToIdara=1 AND p.LinkedToBuilding=1
+              AND p.ReadingMeters=0 AND p.FixedMeters=0
+              AND p.ProposedMethod IN ('SPACE_ESTIMATED','SERVICE_FIXED_FALLBACK','NO_ELIGIBLE_RATE');
+
+            -- FIXED_METER rows: one day per eligible physical fixed meter.
+            INSERT INTO #ExitChargeDays
+                (BillDay,ServiceID,Method,MeterID,MeterTypeID,MeterNo,MeterName,FixedAmount,RateStatus)
+            SELECT DISTINCT p.BillDay,p.ServiceID,'FIXED_METER',m.meterID,mt.meterTypeID,
+                   m.meterNo,m.meterName_A,COALESCE(rate.FixedAmount,0),
+                   CASE WHEN rate.FixedAmount IS NULL THEN N'MISSING_RATE_ZERO'
+                        WHEN rate.FixedAmount=0 THEN N'ZERO_CONFIGURED_RATE'
+                        ELSE N'POSITIVE_RATE' END
+            FROM #ExitServiceDayPreview p
+            JOIN Housing.MeterForBuilding link
+              ON link.buildingDetailsID_FK=@BuildingDetailsID AND link.IdaraID_FK=@IdaraID
+            JOIN Housing.Meter m ON m.meterID=link.meterID_FK
+            JOIN Housing.MeterType mt ON mt.meterTypeID=m.meterTypeID_FK
+            OUTER APPLY
+            (
+                SELECT TOP (1) fr.FixedAmount
+                FROM Housing.MeterTypeFixedAmount fr
+                WHERE fr.MeterTypeID_FK=mt.meterTypeID
+                  AND (fr.idaraID_FK=@IdaraID OR fr.idaraID_FK IS NULL)
+                  AND (fr.MeterTypeFixedAmountActive=1 OR fr.MeterTypeFixedAmountEndDate IS NOT NULL)
+                  AND (fr.MeterTypeFixedAmountStartDate IS NULL OR CONVERT(date,fr.MeterTypeFixedAmountStartDate)<=p.BillDay)
+                  AND (fr.MeterTypeFixedAmountEndDate IS NULL OR CONVERT(date,fr.MeterTypeFixedAmountEndDate)>=p.BillDay)
+                ORDER BY CASE WHEN fr.idaraID_FK=@IdaraID THEN 0 ELSE 1 END,
+                         fr.MeterTypeFixedAmountStartDate DESC,fr.MeterTypeFixedAmountID DESC
+            ) rate
+            WHERE p.LinkedToIdara=1 AND p.ReadingMeters=0 AND p.FixedMeters>0
+              AND mt.meterServiceTypeID_FK=p.ServiceID AND mt.MeterCalculateTypeID_FK=2
+              AND mt.IdaraId_FK=@IdaraID
+              AND link.meterForBuildingActive=1 AND m.meterActive=1 AND mt.meterTypeActive=1
+              AND (link.meterForBuildingStartDate IS NULL OR CONVERT(date,link.meterForBuildingStartDate)<=p.BillDay)
+              AND (link.meterForBuildingEndDate IS NULL OR CONVERT(date,link.meterForBuildingEndDate)>=p.BillDay)
+              AND (m.meterStartDate IS NULL OR CONVERT(date,m.meterStartDate)<=p.BillDay)
+              AND (m.meterEndDate IS NULL OR CONVERT(date,m.meterEndDate)>=p.BillDay);
+
+            -- Prevent accidental omission if preview says fixed meters exist, but none is enumerable.
+            IF EXISTS
+            (
+                SELECT 1 FROM #ExitServiceDayPreview p
+                WHERE p.ReadingMeters=0 AND p.FixedMeters>0
+                  AND (SELECT COUNT(*) FROM #ExitChargeDays d
+                       WHERE d.BillDay=p.BillDay AND d.ServiceID=p.ServiceID AND d.Method='FIXED_METER')<>p.FixedMeters
+            )
+                THROW 50001, N'تعذر مطابقة جميع العدادات الثابتة خلال فترة الإخلاء.', 1;
+
+            -- Coverage is per service for non-meter services; per meter for fixed-meter services.
+            -- A reading-meter bill must NOT silently mask a different fixed meter.
+            -- Explicit dates win; period fallback is used only for legacy null dates.
+            CREATE TABLE #ExitUncoveredDays
+            (
+                BillDay DATE NOT NULL, ServiceID INT NOT NULL, Method VARCHAR(25) NOT NULL,
+                PolicyID BIGINT NULL, MeterID BIGINT NULL, MeterTypeID INT NULL,
+                MeterNo NVARCHAR(100) NULL, MeterName NVARCHAR(200) NULL,
+                FixedAmount DECIMAL(18,2) NULL, RateStatus NVARCHAR(30) NULL
+            );
+            INSERT INTO #ExitUncoveredDays
+            SELECT d.* FROM #ExitChargeDays d
+            WHERE NOT EXISTS
+            (
+                SELECT 1
+                FROM Housing.Bills b WITH (UPDLOCK,HOLDLOCK)
+                LEFT JOIN Housing.BillChargeType ct ON ct.BillChargeTypeID=b.BillChargeTypeID_FK
+                WHERE b.residentInfoID_FK=@ResidentInfoID AND b.buildingDetailsID=@BuildingDetailsID
+                  AND b.idaraID_FK=@IdaraID AND b.BillActive=1
+                  AND b.BillChargeTypeID_FK IN (2,3,4)
+                  AND (b.meterServiceTypeID=d.ServiceID
+                       OR (b.meterServiceTypeID IS NULL AND ct.MeterServiceTypeID_FK=d.ServiceID))
+                  AND ( (d.MeterID IS NULL AND b.meterID IS NULL)
+                        OR (d.MeterID IS NOT NULL AND b.meterID=d.MeterID) )
+                  AND COALESCE(CONVERT(date,b.BillsFromDate),
+                        CASE WHEN b.PeriodYear BETWEEN 1900 AND 9999 AND b.PeriodMonth BETWEEN 1 AND 12
+                             THEN DATEFROMPARTS(b.PeriodYear,b.PeriodMonth,1) END)<=d.BillDay
+                  AND COALESCE(CONVERT(date,b.BillsToDate),
+                        CASE WHEN b.PeriodYear BETWEEN 1900 AND 9999 AND b.PeriodMonth BETWEEN 1 AND 12
+                             THEN EOMONTH(DATEFROMPARTS(b.PeriodYear,b.PeriodMonth,1)) END)>=d.BillDay
             );
 
-            DECLARE @ServiceID INT, @Method VARCHAR(25), @PolicyID BIGINT;
-            DECLARE ServiceCursor CURSOR LOCAL FAST_FORWARD FOR
-                SELECT ServiceID,Method,PolicyID
-                FROM #ServiceSummary
-                WHERE ReadingDays=0 AND EligibleDays=@DaysInWindow
-                  AND Method IN ('FIXED_METER','SPACE_ESTIMATED','SERVICE_FIXED_FALLBACK')
-                ORDER BY ServiceID;
-            OPEN ServiceCursor;
-            FETCH NEXT FROM ServiceCursor INTO @ServiceID,@Method,@PolicyID;
-            WHILE @@FETCH_STATUS=0
-            BEGIN
-                DECLARE @ChargeTypeID INT=NULL;
-                SELECT TOP(1) @ChargeTypeID=ct.BillChargeTypeID
-                FROM Housing.BillChargeType ct
-                WHERE ct.MeterServiceTypeID_FK=@ServiceID AND ct.BillChargeTypeActive=1
+            -- Group consecutive missing dates with matching method, meter, rate and policy.
+            CREATE TABLE #BillTargets
+            (
+                TargetID INT IDENTITY(1,1) PRIMARY KEY,
+                ServiceID INT NOT NULL, Method VARCHAR(25) NOT NULL,
+                ChargeTypeID INT NULL,
+                SegmentFrom DATE NOT NULL, SegmentTo DATE NOT NULL,
+                PolicyID BIGINT NULL, MeterID BIGINT NULL, MeterTypeID INT NULL,
+                MeterNo NVARCHAR(100) NULL, MeterName NVARCHAR(200) NULL,
+                FixedAmount DECIMAL(18,2) NULL, RateStatus NVARCHAR(30) NULL,
+                TaxApplicable BIT NOT NULL, TaxInclusive BIT NOT NULL
+            );
+            ;WITH Islands AS
+            (
+                SELECT d.*,
+                       DATEDIFF(DAY,CONVERT(date,'20000101',112),d.BillDay)
+                        - ROW_NUMBER() OVER
+                          (PARTITION BY d.ServiceID,d.Method,ISNULL(d.MeterID,-1),
+                                        ISNULL(d.PolicyID,-1),ISNULL(d.FixedAmount,-1),ISNULL(d.RateStatus,N'-')
+                           ORDER BY d.BillDay) AS IslandKey
+                FROM #ExitUncoveredDays d
+            ), Segments AS
+            (
+                SELECT ServiceID,Method,PolicyID,MeterID,MeterTypeID,
+                       MAX(MeterNo) MeterNo,MAX(MeterName) MeterName,
+                       FixedAmount,RateStatus, MIN(BillDay) SegmentFrom,MAX(BillDay) SegmentTo
+                FROM Islands
+                GROUP BY ServiceID,Method,PolicyID,MeterID,MeterTypeID,FixedAmount,RateStatus,IslandKey
+            )
+            INSERT INTO #BillTargets
+                (ServiceID,Method,ChargeTypeID,SegmentFrom,SegmentTo,PolicyID,MeterID,MeterTypeID,
+                 MeterNo,MeterName,FixedAmount,RateStatus,TaxApplicable,TaxInclusive)
+            SELECT s.ServiceID,s.Method,ct.BillChargeTypeID,s.SegmentFrom,s.SegmentTo,
+                   s.PolicyID,s.MeterID,s.MeterTypeID,s.MeterNo,s.MeterName,s.FixedAmount,s.RateStatus,
+                   COALESCE(p.TaxApplicable,CONVERT(bit,1)),COALESCE(p.TaxInclusive,CONVERT(bit,0))
+            FROM Segments s
+            OUTER APPLY
+            (
+                SELECT TOP (1) BillChargeTypeID FROM Housing.BillChargeType ct
+                WHERE ct.MeterServiceTypeID_FK=s.ServiceID AND ct.BillChargeTypeActive=1
                   AND ct.BillChargeTypeID IN (2,3,4)
-                ORDER BY ct.BillChargeTypeID;
-                IF @ChargeTypeID IS NULL
-                    THROW 50001, N'لا يوجد نوع رسم نشط مطابق للخدمة.', 1;
+                ORDER BY ct.BillChargeTypeID
+            ) ct
+            LEFT JOIN Housing.EstimatedBillingPolicy p
+              ON s.Method='SPACE_ESTIMATED'
+             AND p.EstimatedBillingPolicyID=s.PolicyID AND p.EstimatedBillingPolicyActive=1;
 
-                IF @Method='SPACE_ESTIMATED'
-                BEGIN
-                    INSERT INTO #BillTargets
-                    (ServiceID,Method,ChargeTypeID,PolicyID,TaxApplicable,TaxInclusive)
-                    SELECT @ServiceID,@Method,@ChargeTypeID,p.EstimatedBillingPolicyID,
-                           p.TaxApplicable,p.TaxInclusive
-                    FROM Housing.EstimatedBillingPolicy p
-                    WHERE p.EstimatedBillingPolicyID=@PolicyID
-                      AND p.EstimatedBillingPolicyActive=1;
-                    IF @@ROWCOUNT<>1
-                        THROW 50001, N'سياسة تقدير الخدمات المختارة غير متاحة.', 1;
-                END;
-                ELSE IF @Method='SERVICE_FIXED_FALLBACK'
-                BEGIN
-                    INSERT INTO #BillTargets
-                    (ServiceID,Method,ChargeTypeID,FixedAmount,TaxApplicable,TaxInclusive)
-                    SELECT TOP(1) @ServiceID,@Method,@ChargeTypeID,amount.FixedAmount,1,0
-                    FROM Housing.MeterServiceTypeFixedAmount amount
-                    WHERE amount.MeterServiceTypeID_FK=@ServiceID
-                      AND (amount.idaraID_FK=@IdaraID OR amount.idaraID_FK IS NULL)
-                      AND amount.FixedAmount>0
-                      AND (amount.MeterServiceTypeFixedAmountActive=1
-                           OR amount.MeterServiceTypeFixedAmountEndDate IS NOT NULL)
-                      AND (amount.MeterServiceTypeFixedAmountStartDate IS NULL
-                           OR CONVERT(date,amount.MeterServiceTypeFixedAmountStartDate)<=@MonthStart)
-                      AND (amount.MeterServiceTypeFixedAmountEndDate IS NULL
-                           OR CONVERT(date,amount.MeterServiceTypeFixedAmountEndDate)>=@ExitDate)
-                    ORDER BY CASE WHEN amount.idaraID_FK=@IdaraID THEN 0 ELSE 1 END,
-                             amount.MeterServiceTypeFixedAmountStartDate DESC,
-                             amount.MeterServiceTypeFixedAmountID DESC;
-                    IF @@ROWCOUNT<>1
-                        THROW 50001, N'لا توجد تعرفة ثابتة سارية طوال فترة الإخلاء.', 1;
-                END;
-                ELSE IF @Method='FIXED_METER'
-                BEGIN
-                    INSERT INTO #BillTargets
-                    (ServiceID,Method,ChargeTypeID,MeterID,MeterTypeID,MeterNo,MeterName,
-                     FixedAmount,TaxApplicable,TaxInclusive)
-                    SELECT DISTINCT @ServiceID,@Method,@ChargeTypeID,m.meterID,mt.meterTypeID,
-                           m.meterNo,m.meterName_A,rate.FixedAmount,1,0
-                    FROM Housing.MeterForBuilding link
-                    JOIN Housing.Meter m ON m.meterID=link.meterID_FK
-                    JOIN Housing.MeterType mt ON mt.meterTypeID=m.meterTypeID_FK
-                    CROSS APPLY
-                    (
-                        SELECT TOP(1) fr.FixedAmount
-                        FROM Housing.MeterTypeFixedAmount fr
-                        WHERE fr.MeterTypeID_FK=mt.meterTypeID
-                          AND (fr.idaraID_FK=@IdaraID OR fr.idaraID_FK IS NULL)
-                          AND fr.FixedAmount>0
-                          AND (fr.MeterTypeFixedAmountActive=1
-                               OR fr.MeterTypeFixedAmountEndDate IS NOT NULL)
-                          AND (fr.MeterTypeFixedAmountStartDate IS NULL
-                               OR CONVERT(date,fr.MeterTypeFixedAmountStartDate)<=@MonthStart)
-                          AND (fr.MeterTypeFixedAmountEndDate IS NULL
-                               OR CONVERT(date,fr.MeterTypeFixedAmountEndDate)>=@ExitDate)
-                        ORDER BY CASE WHEN fr.idaraID_FK=@IdaraID THEN 0 ELSE 1 END,
-                                 fr.MeterTypeFixedAmountStartDate DESC,fr.MeterTypeFixedAmountID DESC
-                    ) rate
-                    WHERE link.buildingDetailsID_FK=@BuildingDetailsID
-                      AND link.IdaraID_FK=@IdaraID AND link.meterForBuildingActive=1
-                      AND m.meterActive=1 AND mt.meterTypeActive=1
-                      AND mt.meterServiceTypeID_FK=@ServiceID AND mt.MeterCalculateTypeID_FK=2
-                      AND mt.IdaraId_FK=@IdaraID
-                      AND (link.meterForBuildingStartDate IS NULL
-                           OR CONVERT(date,link.meterForBuildingStartDate)<=@MonthStart)
-                      AND (link.meterForBuildingEndDate IS NULL
-                           OR CONVERT(date,link.meterForBuildingEndDate)>=@ExitDate)
-                      AND (m.meterStartDate IS NULL
-                           OR CONVERT(date,m.meterStartDate)<=@MonthStart)
-                      AND (m.meterEndDate IS NULL
-                           OR CONVERT(date,m.meterEndDate)>=@ExitDate);
-                    IF @@ROWCOUNT=0
-                        THROW 50001, N'تعرفة العداد الثابت غير متاحة طوال فترة الإخلاء.', 1;
-                END;
-                FETCH NEXT FROM ServiceCursor INTO @ServiceID,@Method,@PolicyID;
-            END;
-            CLOSE ServiceCursor;
-            DEALLOCATE ServiceCursor;
-
-            -- Ensure fixed-meter coverage stays stable throughout the period.
-            -- Do not silently drop a meter attached for only part of the month.
-            IF EXISTS
-            (
-                SELECT 1
-                FROM #ServiceSummary summary_
-                CROSS APPLY
-                (
-                    SELECT MIN(d.FixedMeters) AS MinMeters, MAX(d.FixedMeters) AS MaxMeters
-                    FROM #ExitServiceDayPreview d WHERE d.ServiceID=summary_.ServiceID
-                ) dayCount
-                OUTER APPLY
-                (
-                    SELECT COUNT(*) AS TargetMeters FROM #BillTargets t
-                    WHERE t.ServiceID=summary_.ServiceID AND t.Method='FIXED_METER'
-                ) targets
-                WHERE summary_.ReadingDays=0 AND summary_.Method='FIXED_METER'
-                  AND (dayCount.MinMeters<>dayCount.MaxMeters
-                       OR ISNULL(targets.TargetMeters,0)<>dayCount.MaxMeters)
-            )
-                THROW 50001, N'تغيرت عدادات الخدمة الثابتة خلال فترة الإخلاء؛ يلزم معالجة الفترات أولاً.', 1;
-
-            -- Reject midperiod fixed-rate overrides. A full-window older rate
-            -- must not override a newer department-specific rate during part of the month.
-            IF EXISTS
-            (
-                SELECT 1
-                FROM #BillTargets target_
-                JOIN #ExitServiceDayPreview day_ ON day_.ServiceID=target_.ServiceID
-                OUTER APPLY
-                (
-                    SELECT TOP(1) amount.FixedAmount
-                    FROM Housing.MeterServiceTypeFixedAmount amount
-                    WHERE amount.MeterServiceTypeID_FK=target_.ServiceID
-                      AND (amount.idaraID_FK=@IdaraID OR amount.idaraID_FK IS NULL)
-                      AND amount.FixedAmount>0
-                      AND (amount.MeterServiceTypeFixedAmountActive=1
-                           OR amount.MeterServiceTypeFixedAmountEndDate IS NOT NULL)
-                      AND (amount.MeterServiceTypeFixedAmountStartDate IS NULL
-                           OR CONVERT(date,amount.MeterServiceTypeFixedAmountStartDate)<=day_.BillDay)
-                      AND (amount.MeterServiceTypeFixedAmountEndDate IS NULL
-                           OR CONVERT(date,amount.MeterServiceTypeFixedAmountEndDate)>=day_.BillDay)
-                    ORDER BY CASE WHEN amount.idaraID_FK=@IdaraID THEN 0 ELSE 1 END,
-                             amount.MeterServiceTypeFixedAmountStartDate DESC,
-                             amount.MeterServiceTypeFixedAmountID DESC
-                ) dailyRate
-                WHERE target_.Method='SERVICE_FIXED_FALLBACK'
-                  AND (dailyRate.FixedAmount IS NULL
-                       OR dailyRate.FixedAmount<>target_.FixedAmount)
-            )
-                THROW 50001, N'تغير مبلغ الخدمة الثابت خلال فترة الإخلاء؛ يلزم تقسيم الفترة.', 1;
-
-            IF EXISTS
-            (
-                SELECT 1
-                FROM #BillTargets target_
-                JOIN #ExitServiceDayPreview day_ ON day_.ServiceID=target_.ServiceID
-                OUTER APPLY
-                (
-                    SELECT TOP(1) amount.FixedAmount
-                    FROM Housing.MeterTypeFixedAmount amount
-                    WHERE amount.MeterTypeID_FK=target_.MeterTypeID
-                      AND (amount.idaraID_FK=@IdaraID OR amount.idaraID_FK IS NULL)
-                      AND amount.FixedAmount>0
-                      AND (amount.MeterTypeFixedAmountActive=1
-                           OR amount.MeterTypeFixedAmountEndDate IS NOT NULL)
-                      AND (amount.MeterTypeFixedAmountStartDate IS NULL
-                           OR CONVERT(date,amount.MeterTypeFixedAmountStartDate)<=day_.BillDay)
-                      AND (amount.MeterTypeFixedAmountEndDate IS NULL
-                           OR CONVERT(date,amount.MeterTypeFixedAmountEndDate)>=day_.BillDay)
-                    ORDER BY CASE WHEN amount.idaraID_FK=@IdaraID THEN 0 ELSE 1 END,
-                             amount.MeterTypeFixedAmountStartDate DESC,
-                             amount.MeterTypeFixedAmountID DESC
-                ) dailyRate
-                WHERE target_.Method='FIXED_METER'
-                  AND (dailyRate.FixedAmount IS NULL
-                       OR dailyRate.FixedAmount<>target_.FixedAmount)
-            )
-                THROW 50001, N'تغير مبلغ العداد الثابت خلال فترة الإخلاء؛ يلزم تقسيم الفترة.', 1;
-
-            IF @TaxRatePercent IS NULL
-               AND EXISTS (SELECT 1 FROM #BillTargets WHERE TaxApplicable=1)
+            IF EXISTS (SELECT 1 FROM #BillTargets WHERE ChargeTypeID IS NULL)
+                THROW 50001, N'لا يوجد نوع رسم نشط مطابق للخدمة.', 1;
+            IF EXISTS (SELECT 1 FROM #BillTargets WHERE Method='SPACE_ESTIMATED' AND PolicyID IS NULL)
+                THROW 50001, N'سياسة تقدير الخدمات غير متاحة.', 1;
+            IF @TaxRatePercent IS NULL AND EXISTS (SELECT 1 FROM #BillTargets WHERE TaxApplicable=1)
                 THROW 50001, N'تعذر تحديد ضريبة الخدمات السارية في تاريخ الإخلاء.', 1;
 
             DECLARE @BillID BIGINT, @TargetID INT=0, @TotalTargets INT;
@@ -853,13 +750,27 @@ IF EXISTS
                 DECLARE @TargetService INT,@TargetCharge INT,@TargetMethod VARCHAR(25),
                         @TargetPolicy BIGINT,@TargetMeter BIGINT,@TargetMeterType INT,
                         @TargetMeterNo NVARCHAR(100),@TargetMeterName NVARCHAR(200),
-                        @TargetFixed DECIMAL(18,2),@TaxApp BIT,@TaxIncl BIT;
+                        @TargetFixed DECIMAL(18,2),@TargetRateStatus NVARCHAR(30),
+                        @SegmentFrom DATE,@SegmentTo DATE,@TaxApp BIT,@TaxIncl BIT;
                 SELECT @TargetService=ServiceID,@TargetCharge=ChargeTypeID,
                        @TargetMethod=Method,@TargetPolicy=PolicyID,
                        @TargetMeter=MeterID,@TargetMeterType=MeterTypeID,
                        @TargetMeterNo=MeterNo,@TargetMeterName=MeterName,
-                       @TargetFixed=FixedAmount,@TaxApp=TaxApplicable,@TaxIncl=TaxInclusive
+                       @TargetFixed=FixedAmount,@TargetRateStatus=RateStatus,
+                       @SegmentFrom=SegmentFrom,@SegmentTo=SegmentTo,
+                       @TaxApp=TaxApplicable,@TaxIncl=TaxInclusive
                 FROM #BillTargets WHERE TargetID=@TargetID;
+
+                -- 30/360 segment convention, mirroring the existing fixed billing engine.
+                DECLARE @SegmentBillingDays INT =
+                      (YEAR(@SegmentTo)-YEAR(@SegmentFrom))*360
+                    + (MONTH(@SegmentTo)-MONTH(@SegmentFrom))*30
+                    + CASE WHEN @SegmentTo=EOMONTH(@SegmentTo) AND DAY(@SegmentTo)<30 THEN 30
+                           WHEN DAY(@SegmentTo)>30 THEN 30 ELSE DAY(@SegmentTo) END
+                    - CASE WHEN @SegmentFrom=EOMONTH(@SegmentFrom) AND DAY(@SegmentFrom)<30 THEN 30
+                           WHEN DAY(@SegmentFrom)>30 THEN 30 ELSE DAY(@SegmentFrom) END+1;
+                IF @SegmentBillingDays NOT BETWEEN 1 AND 30
+                    THROW 50001, N'مدة شريحة فوترة خدمات الإخلاء غير صحيحة.', 1;
 
                 DECLARE @BeforeTax DECIMAL(18,2)=0,@AmountTax DECIMAL(18,2)=0,
                         @AmountTotal DECIMAL(18,2)=0;
@@ -880,8 +791,8 @@ IF EXISTS
                         SELECT sp.BuildingSpaceTypeID_FK,COUNT(*) AS SpaceCount
                         FROM Housing.BuildingSpace sp
                         WHERE sp.BuildingDetailsID_FK=@BuildingDetailsID AND sp.BuildingSpaceActive=1
-                          AND (sp.BuildingSpaceStartDate IS NULL OR sp.BuildingSpaceStartDate<=@ExitDate)
-                          AND (sp.BuildingSpaceEndDate IS NULL OR sp.BuildingSpaceEndDate>=@MonthStart)
+                          AND (sp.BuildingSpaceStartDate IS NULL OR sp.BuildingSpaceStartDate<=@SegmentTo)
+                          AND (sp.BuildingSpaceEndDate IS NULL OR sp.BuildingSpaceEndDate>=@SegmentFrom)
                         GROUP BY sp.BuildingSpaceTypeID_FK
                     )
                     INSERT #SpaceAmounts
@@ -909,23 +820,23 @@ IF EXISTS
                     CROSS APPLY
                     (
                         SELECT CAST(c.SpaceCount*rule_.AverageDailyConsumption*
-                          rule_.UsageFactor*rule_.UnitPrice*@BillingDays AS DECIMAL(18,6)) AS RawAmount
+                          rule_.UsageFactor*rule_.UnitPrice*@SegmentBillingDays AS DECIMAL(18,6)) AS RawAmount
                     ) raw_;
                     IF NOT EXISTS(SELECT 1 FROM #SpaceAmounts)
-                        THROW 50001, N'لا توجد فراغات مؤهلة لفاتورة الإخلاء التقديرية.', 1;
+                        THROW 50001, N'لا توجد فراغات مؤهلة لشريحة فاتورة الإخلاء التقديرية.', 1;
                     SELECT @BeforeTax=SUM(BeforeTax),@AmountTax=SUM(Tax),
                            @AmountTotal=SUM(Total) FROM #SpaceAmounts;
                 END
                 ELSE
                 BEGIN
-                    SET @BeforeTax=CAST(@TargetFixed*@BillingDays/30.0 AS DECIMAL(18,2));
+                    SET @BeforeTax=CAST(@TargetFixed*@SegmentBillingDays/30.0 AS DECIMAL(18,2));
                     SET @AmountTax=CASE WHEN @TaxApp=1
                          THEN CAST(@BeforeTax*@TaxRatePercent/100.0 AS DECIMAL(18,2))
                          ELSE 0 END;
                     SET @AmountTotal=@BeforeTax+@AmountTax;
                 END;
-                IF @AmountTotal<=0 OR @AmountTotal IS NULL
-                    THROW 50001, N'المبلغ المحتسب لفاتورة الإخلاء غير صالح.', 1;
+                IF @AmountTotal<0 OR @AmountTotal IS NULL
+                    THROW 50001, N'المبلغ المحتسب لشريحة فاتورة الإخلاء غير صالح.', 1;
 
                 DECLARE @PeriodID INT=NULL;
                 SELECT TOP(1) @PeriodID=period.billPeriodID
@@ -933,8 +844,8 @@ IF EXISTS
                 JOIN Housing.BillPeriod period ON period.billPeriodTypeID_FK=periodType.billPeriodTypeID
                                            AND period.IdaraId_FK=@IdaraID
                 WHERE periodType.meterServiceTypeID_FK=@TargetService
-                  AND period.billPeriodStartDate<=@ExitDate
-                  AND period.billPeriodEndDate>=@MonthStart
+                  AND period.billPeriodStartDate<=@SegmentTo
+                  AND period.billPeriodEndDate>=@SegmentFrom
                 ORDER BY period.billPeriodID DESC;
 
                 INSERT INTO Housing.Bills
@@ -946,12 +857,12 @@ IF EXISTS
                  BillsFromDate,BillsToDate,BillActive,idaraID_FK,entryData,hostName,
                  ExitRequestActionID_FK)
                 VALUES
-                (NEWID(),@TargetCharge,3,@PeriodID,MONTH(@ExitDate),YEAR(@ExitDate),
+                (NEWID(),@TargetCharge,3,@PeriodID,MONTH(@SegmentFrom),YEAR(@SegmentFrom),
                  ISNULL(@TaxRatePercent,0),@TargetMeterNo,@TargetMeter,@TargetMeterName,
                  @BuildingNo,@UtilityTypeID,@BuildingDetailsID,@TargetMeterType,@TargetService,
                  @ResidentInfoID,@GeneralNo,0,0,0,
                  @BeforeTax,@AmountTax,0,0,@AmountTotal,
-                 @MonthStart,@ExitDate,1,@IdaraID,@EntryData,@HostName,@ExitRequestActionID);
+                 @SegmentFrom,@SegmentTo,1,@IdaraID,@EntryData,@HostName,@ExitRequestActionID);
                 SET @BillID=SCOPE_IDENTITY();
 
                 INSERT INTO Housing.BillCalculation
@@ -959,21 +870,28 @@ IF EXISTS
                  TaxApplicable,TaxInclusive,TaxID_FK,TaxRate,
                  AmountBeforeTax,TaxAmount,TotalAmount,CalculationReason,entryData,hostName)
                 VALUES
-                (@BillID,CONVERT(NVARCHAR(40),@TargetMethod),@TargetPolicy,@BillingDays,
+                (@BillID,CASE WHEN @TargetMethod='FIXED_METER' THEN N'METER_FIXED'
+                              ELSE CONVERT(NVARCHAR(40),@TargetMethod) END,
+                 @TargetPolicy,@SegmentBillingDays,
                  @TaxApp,@TaxIncl,CASE WHEN @TaxApp=1 THEN @TaxID ELSE NULL END,
                  CASE WHEN @TaxApp=1 THEN @TaxRatePercent/100.0 ELSE 0 END,
                  @BeforeTax,@AmountTax,@AmountTotal,
-                 N'فاتورة خدمة الإخلاء المرتبطة بدورة الإخلاء',@EntryData,@HostName);
+                 CASE WHEN @TargetRateStatus=N'MISSING_RATE_ZERO'
+                      THEN N'MISSING_RATE_ZERO | لم توجد تعرفة مؤهلة؛ رصدت الفترة بقيمة صفرية دون مطالبة.'
+                      WHEN @TargetRateStatus=N'ZERO_CONFIGURED_RATE'
+                      THEN N'ZERO_CONFIGURED_RATE | التعرفة المعتمدة صفرية لهذه الفترة.'
+                      ELSE N'فاتورة خدمات الإخلاء عن أيام غير مغطاة بفواتير سابقة.' END,
+                 @EntryData,@HostName);
 
                 IF @TargetMethod='SPACE_ESTIMATED'
                 BEGIN
                     DECLARE @CalculationID BIGINT=SCOPE_IDENTITY();
                     INSERT INTO Housing.BillCalculationDetails
                     (BillCalculationID_FK,BuildingSpaceTypeID_FK,SpaceTypeCode,SpaceTypeName_A,
-                     SpaceCount,AverageDailyConsumption,UsageFactor,UnitPrice,UnitCode,BillingDays,
+                     SpaceCount,AverageConsumption,UsageFactor,UnitPrice,UnitCode,BillingDays,
                      AmountBeforeTax,TaxAmount,TotalAmount,entryData,hostName)
                     SELECT @CalculationID,BuildingSpaceTypeID,SpaceCode,SpaceName,
-                           SpaceCount,AverageConsumption,UsageFactor,UnitPrice,UnitCode,@BillingDays,
+                           SpaceCount,AverageConsumption,UsageFactor,UnitPrice,UnitCode,@SegmentBillingDays,
                            BeforeTax,Tax,Total,@EntryData,@HostName FROM #SpaceAmounts;
                     DROP TABLE #SpaceAmounts;
                 END;

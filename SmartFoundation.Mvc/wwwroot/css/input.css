@@ -8651,5 +8651,24 @@ body {
     opacity: 1 !important;
 }
 
+
+
 /* ================== End column reorder styles ================== */
 
+/* SmartTableDS - Global optional column text wrapping */
+.sf-table .td-cell.sf-wrap-cell {
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    height: auto;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    line-height: 1.7;
+}
+
+    .sf-table .td-cell.sf-wrap-cell > span {
+        display: block;
+        width: 100%;
+        white-space: normal !important;
+        overflow-wrap: anywhere;
+    }

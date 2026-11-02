@@ -442,6 +442,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
             var currentUrl = Request.Path + Request.QueryString;
+            var selectedResidentUrl = !string.IsNullOrWhiteSpace(NationalID_)
+    ? Url.Action(
+        "HousingExit",
+        "Housing",
+        new { NID = NationalID_.Trim() }) ?? currentUrl
+    : currentUrl;
 
 
             // UPDATE fields
@@ -451,6 +457,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
                 new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "HOUSINGEXIT" },
                 new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+
                 new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
                 new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
                 new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
@@ -629,6 +636,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "pageName_",          Type = "hidden", Value = PageName },
                 new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "SENDHOUSINGEXITTOFINANCE" },
                 new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectErrorUrl", Type = "hidden", Value = selectedResidentUrl },
                 new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = PageName },
                 new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName },
                 new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") },
@@ -1085,8 +1093,8 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                         IsEdit = true,
                         OpenModal = true,
 
-                        ModalTitle = "",
-                        ModalMessage = "",
+                        ModalTitle = "ارسال للتدقيق المالي",
+                        ModalMessage = "تنبيه : بعد ارسال الطلب للتدقيق المالي لايمكن التراجع عنه ولايمكن الغاء الاخلاء. ولايمكن اضافة اعفاء او اتخاذ اي اجراء اخر",
                         ModalMessageClass = "bg-red-50 text-red-700",
                         ModalMessageIcon = "fa-solid fa-triangle-exclamation",
 

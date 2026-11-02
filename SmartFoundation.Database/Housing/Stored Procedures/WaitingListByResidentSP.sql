@@ -1,5 +1,4 @@
-﻿
-CREATE PROCEDURE [Housing].[WaitingListByResidentSP] 
+﻿CREATE PROCEDURE [Housing].[WaitingListByResidentSP] 
 (
       @Action                       NVARCHAR(200)
     , @ActionID                     BIGINT          = NULL
@@ -1231,7 +1230,11 @@ BEGIN
               if exists (SELECT 1
                 FROM  Housing.V_WaitingList w
                 WHERE w.residentInfoID = @residentInfoID_FK
-                  AND w.buildingActionRoot in (2)
+                  AND
+(
+    w.buildingActionRoot = 2
+    OR w.LastActionTypeID IN (57,58)
+)
                   AND w.IdaraId = @idaraID_FK)
 
                   BEGIN
@@ -1644,7 +1647,11 @@ BEGIN
                 FROM Housing.V_WaitingList w
                 WHERE w.residentInfoID = @residentInfoID_FK
                   AND w.IdaraId = @idaraID_FK
-                  AND w.buildingActionRoot = 2
+                  AND
+(
+    w.buildingActionRoot = 2
+    OR w.LastActionTypeID IN (57,58)
+)
             )
             OR EXISTS
             (
@@ -1652,7 +1659,11 @@ BEGIN
                 FROM Housing.V_WaitingListByLetter w
                 WHERE w.residentInfoID = @residentInfoID_FK
                   AND w.IdaraId = @idaraID_FK
-                  AND w.buildingActionRoot = 2
+                  AND
+(
+    w.buildingActionRoot = 2
+    OR w.LastActionTypeID IN (57,58)
+)
             )
             BEGIN
                 ;THROW 50001, N'لايمكن إلغاء سجلات الانتظار لوجود سجل أو خطاب تسكين مرتبط بسكن أو بإجراءات تسكين أو إخلاء', 1;

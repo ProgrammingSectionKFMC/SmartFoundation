@@ -1,3 +1,4 @@
+﻿using SmartFoundation.Mvc.Services.MonthlyBilling;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -109,6 +110,8 @@ builder.Services.AddHsts(o =>
 });
 
 builder.Services.AddSingleton<ConnectionFactory>();
+builder.Services.AddSingleton<MonthlyBillingQueue>();
+builder.Services.AddHostedService<MonthlyBillingWorker>();
 builder.Services.AddScoped<ISmartComponentService, SmartComponentService>();
 builder.Services.AddScoped<CrudController>();
 builder.Services.AddScoped<RequestScopedDataLoadService>();

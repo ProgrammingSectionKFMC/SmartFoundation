@@ -117,13 +117,7 @@ BEGIN
          AND bill.meterServiceTypeID=serviceType.meterServiceTypeID
          AND bill.PeriodYear=@Year
          AND bill.PeriodMonth=@Month
-         AND EXISTS
-         (
-             SELECT 1
-             FROM Housing.V_Occupant occupant
-             WHERE occupant.residentInfoID=bill.residentInfoID_FK
-               AND occupant.IdaraId=@IdaraID
-         )
+AND bill.BillTypeID_FK <> 3
    )
  ORDER BY serviceType.meterServiceTypeName_A;
 

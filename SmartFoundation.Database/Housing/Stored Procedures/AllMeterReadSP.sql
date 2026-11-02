@@ -1,4 +1,5 @@
-﻿CREATE PROCEDURE [Housing].[AllMeterReadSP] 
+﻿
+CREATE PROCEDURE [Housing].[AllMeterReadSP] 
 (
       @Action                                     NVARCHAR(100) = NULL
      ,@MeterServiceTypeID                        NVARCHAR(100)   = NULL
@@ -377,6 +378,10 @@ AND EXISTS
                 , @entryData
                 , @Note
             );
+
+            -- إغلاق المعاملة فقط عندما يكون هذا الإجراء هو من بدأها.
+            IF @tc = 0
+                COMMIT TRANSACTION;
 
             SELECT 1 AS IsSuccessful, N'تم فتح فترة قراءة عدادات بنجاح' AS Message_;
             RETURN;
@@ -1447,6 +1452,10 @@ END;
                 , @Note
             );
 
+            -- إغلاق المعاملة فقط عندما يكون هذا الإجراء هو من بدأها.
+            IF @tc = 0
+                COMMIT TRANSACTION;
+
             SELECT 1 AS IsSuccessful, N'تم اغلاق فترة قراءة عدادات بنجاح' AS Message_;
             RETURN;
         END
@@ -1454,8 +1463,101 @@ END;
          ----------------------------------------------------------------
         -- READ
         ----------------------------------------------------------------
-         ELSE IF @Action in(N'READELECTRICITYMETER',N'READWATERMETER',N'READGASMETER')
-         BEGIN
+          ELSE IF @Action in(N'READELECTRICITYMETER',N'READWATERMETER',N'READGASMETER')
+          BEGIN
+
+          IF @buildingDetailsID IS NOT NULL
+          BEGIN
+              DECLARE @MonthlyOccupancyLockResult INT;
+              DECLARE @MonthlyOccupancyLockResource NVARCHAR(255)=
+                  CONCAT(N'Housing.Occupancy:',@IdaraID_INT,N':',@buildingDetailsID);
+              EXEC @MonthlyOccupancyLockResult=sys.sp_getapplock
+                   @Resource=@MonthlyOccupancyLockResource,
+                   @LockMode='Exclusive',@LockOwner='Transaction',@LockTimeout=10000;
+              IF @MonthlyOccupancyLockResult<0
+                  THROW 50001,N'تجري معالجة أخرى للمنزل؛ يرجى إعادة المحاولة.',1;
+          END;
+
+          -- V4: server-side responsibility boundary, based on BuildingAction.ExitDate at 54.
+          -- V_Occupant may still expose the former resident while finance is pending.
+          DECLARE @PostExit54ID BIGINT = NULL;
+          -- Fixed service fee is not suppressed because another monthly bill exists.
+          SELECT TOP (1) @PostExit54ID=exit54.buildingActionID
+          FROM Housing.BuildingAction exit54 WITH (UPDLOCK,HOLDLOCK)
+          WHERE exit54.buildingDetailsID_FK=@buildingDetailsID
+            AND exit54.IdaraId_FK=@IdaraID_INT
+            AND exit54.buildingActionTypeID_FK=54
+            AND exit54.buildingActionActive=1
+            AND TRY_CONVERT(DATE,exit54.ExitDate)<=CONVERT(DATE,GETDATE())
+            AND NOT EXISTS
+            (
+               SELECT 1 FROM Housing.BuildingAction cancelled
+               WHERE cancelled.buildingActionTypeID_FK=55
+                 AND cancelled.buildingActionActive=1
+                 AND cancelled.buildingDetailsID_FK=exit54.buildingDetailsID_FK
+                 AND cancelled.IdaraId_FK=exit54.IdaraId_FK
+                 AND EXISTS
+                 (
+                    SELECT 1 FROM Housing.fn_BuildingAction_ChainToRoot(cancelled.buildingActionID) x
+                    WHERE x.buildingActionID=exit54.buildingActionID
+                 )
+            )
+            AND NOT EXISTS
+            (
+               SELECT 1 FROM Housing.BuildingAction nextOccupancy
+               WHERE nextOccupancy.buildingDetailsID_FK=exit54.buildingDetailsID_FK
+                 AND nextOccupancy.IdaraId_FK=exit54.IdaraId_FK
+                 AND nextOccupancy.buildingActionTypeID_FK=2
+                 AND nextOccupancy.buildingActionActive=1
+                 AND nextOccupancy.entryDate>exit54.entryDate
+            )
+          ORDER BY exit54.buildingActionID DESC;
+
+          -- 54 alone must never stop regular meter readings.
+          -- Until a valid meter-specific exit bill 59 exists, the regular invoice
+          -- belongs to the outgoing resident; subsequent reads belong to Idara.
+          DECLARE @PostExit59ActionID BIGINT=NULL;
+          IF @PostExit54ID IS NOT NULL
+          BEGIN
+              SELECT TOP (1) @PostExit59ActionID=stage59.buildingActionID
+              FROM Housing.BuildingAction stage59 WITH (UPDLOCK,HOLDLOCK)
+                  JOIN Housing.MeterRead exitRead WITH (UPDLOCK,HOLDLOCK)
+                    ON exitRead.buildingActionID_FK=stage59.buildingActionID
+                   AND exitRead.meterReadTypeID_FK=3 AND exitRead.meterReadActive=1
+                   AND exitRead.meterID_FK=TRY_CONVERT(BIGINT,@meterID)
+                   AND exitRead.buildingDetailsID=@buildingDetailsID
+                   AND exitRead.IdaraID_FK=@IdaraID_INT
+                  JOIN Housing.Bills exitBill WITH (UPDLOCK,HOLDLOCK)
+                    ON exitBill.meterReadID=exitRead.meterReadID
+                   AND exitBill.BillTypeID_FK=3 AND exitBill.BillActive=1
+                   AND exitBill.meterID=exitRead.meterID_FK
+                   AND exitBill.buildingDetailsID=@buildingDetailsID
+                   AND exitBill.idaraID_FK=@IdaraID_INT
+                   AND exitBill.meterServiceTypeID=TRY_CONVERT(INT,@MeterServiceTypeID)
+                   AND exitBill.residentInfoID_FK=stage59.residentInfoID_FK
+                  WHERE stage59.buildingActionParentID=@PostExit54ID
+                    AND stage59.buildingActionTypeID_FK=59
+                    AND stage59.buildingActionActive=1
+                    AND stage59.buildingDetailsID_FK=@buildingDetailsID
+                    AND stage59.IdaraId_FK=@IdaraID_INT
+              ORDER BY stage59.buildingActionID DESC;
+
+              IF @PostExit59ActionID IS NOT NULL
+              BEGIN
+                  SET @residentInfoID=NULL;
+                  SET @GeneralNo=NULL;
+              END
+              ELSE IF NOT EXISTS
+              (
+                  SELECT 1 FROM Housing.BuildingAction exit54 WITH (UPDLOCK,HOLDLOCK)
+                  WHERE exit54.buildingActionID=@PostExit54ID
+                    AND exit54.residentInfoID_FK=@residentInfoID
+                    AND exit54.generalNo_FK=TRY_CONVERT(BIGINT,@GeneralNo)
+              )
+                  THROW 50001,N'تعذر إثبات المستفيد المسؤول عن القراءة قبل إصدار فاتورة الإخلاء؛ لم تُسجل القراءة.',1;
+          END;
+
+          -- Fixed meter fee remains calculated by tariff, without automatic zeroing.
 
           IF NOT EXISTS (
                 SELECT 1
@@ -1480,6 +1582,9 @@ END;
       AND b.idaraID_FK = @IdaraId_FK
       AND b.BillActive = 1
       AND b.BillTypeID_FK = 2
+      -- Separate a former resident's monthly bill from an Idara bill after 59.
+      AND ((@residentInfoID IS NULL AND b.residentInfoID_FK IS NULL)
+           OR (@residentInfoID IS NOT NULL AND b.residentInfoID_FK=@residentInfoID))
                       )
 
             BEGIN
@@ -1536,7 +1641,7 @@ END;
                 , @buildingDetailsNo
                 , GETDATE()
                 , @MeterReadValue
-                , null
+                , @PostExit59ActionID  -- explicit 59 cycle link for Idara period reading
                 , 1
                 , @IdaraID_INT
                 , @entryData
@@ -1568,7 +1673,7 @@ END;
                             + N',"buildingDetailsNo": "' + ISNULL(CONVERT(NVARCHAR(MAX), @buildingDetailsNo), N'') + N'"'
                             + N',"dateOfRead": "' + CONVERT(NVARCHAR(19), GETDATE(), 120) + N'"'
                             + N',"meterReadValue": "' + ISNULL(CONVERT(NVARCHAR(MAX), @MeterReadValue), N'') + N'"'
-                            + N',"buildingActionID_FK": ""'
+                            + N',"buildingActionID_FK": "' + ISNULL(CONVERT(NVARCHAR(MAX), @PostExit59ActionID), N'') + N'"'
                             + N',"meterReadActive": "1"'
                             + N',"IdaraID_FK": "' + ISNULL(CONVERT(NVARCHAR(MAX), @IdaraID_INT), N'') + N'"'
                             + N',"entryData": "' + ISNULL(CONVERT(NVARCHAR(MAX), @entryData), N'') + N'"'
@@ -2024,6 +2129,10 @@ FROM Housing.CalculteElectrictyBills_ByNewReadValue_ForInsert(@meterID, @meterRe
 
 
 
+            -- إغلاق المعاملة فقط عندما يكون هذا الإجراء هو من بدأها.
+            IF @tc = 0
+                COMMIT TRANSACTION;
+
             SELECT 1 AS IsSuccessful, N'تم تسجيل القراءة واصدار الفاتورة بنجاح' AS Message_;
             RETURN;
 
@@ -2073,6 +2182,64 @@ FROM Housing.CalculteElectrictyBills_ByNewReadValue_ForInsert(@meterID, @meterRe
           
          
           
+            -- Prioritize the 59 protection message even when the old monthly period is closed.
+            IF EXISTS
+            (
+                SELECT 1 FROM Housing.MeterRead currentRead WITH (UPDLOCK,HOLDLOCK)
+                JOIN Housing.MeterRead exitRead WITH (UPDLOCK,HOLDLOCK)
+                  ON exitRead.meterID_FK=currentRead.meterID_FK
+                 AND exitRead.meterReadTypeID_FK=3 AND exitRead.meterReadActive=1
+                WHERE currentRead.meterReadID=TRY_CONVERT(BIGINT,@MeterReadID)
+                  AND currentRead.meterReadTypeID_FK=2
+                  AND currentRead.meterReadActive=1
+                  AND exitRead.buildingDetailsID=currentRead.buildingDetailsID
+                  AND exitRead.IdaraID_FK=currentRead.IdaraID_FK
+                  -- Both reads must be in the same resident/house/administration cycle.
+                  AND exitRead.residentInfoID_FK=currentRead.residentInfoID_FK
+                  -- MeterReadID breaks ties ONLY when the actual timestamps are equal.
+                  AND (
+                       COALESCE(exitRead.dateOfRead,exitRead.entryDate)
+                           > COALESCE(currentRead.dateOfRead,currentRead.entryDate)
+                       OR (
+                         COALESCE(exitRead.dateOfRead,exitRead.entryDate)
+                           = COALESCE(currentRead.dateOfRead,currentRead.entryDate)
+                         AND exitRead.meterReadID>currentRead.meterReadID
+                       )
+                  )
+                  AND EXISTS
+                  (
+                      SELECT 1 FROM Housing.Bills exitBill WITH (UPDLOCK,HOLDLOCK)
+                      WHERE exitBill.meterReadID=exitRead.meterReadID
+                        AND exitBill.meterID=exitRead.meterID_FK
+                        AND exitBill.buildingDetailsID=currentRead.buildingDetailsID
+                        AND exitBill.idaraID_FK=currentRead.IdaraID_FK
+                        AND exitBill.residentInfoID_FK=currentRead.residentInfoID_FK
+                        AND exitBill.BillActive=1 AND exitBill.BillTypeID_FK=3
+                  )
+            )
+                THROW 50001,N'لا يمكن تعديل أو حذف القراءة الدورية؛ صدرت فاتورة إخلاء نشطة لهذا العداد والمنزل، وتعتمد على تسلسل القراءات. يرجى معالجة فاتورة الإخلاء نظاميًا أولًا.',1;
+
+            IF EXISTS
+            (
+                SELECT 1 FROM Housing.MeterRead currentRead WITH (UPDLOCK,HOLDLOCK)
+                JOIN Housing.BuildingAction stage59 WITH (UPDLOCK,HOLDLOCK)
+                  ON stage59.buildingActionID=currentRead.buildingActionID_FK
+                 AND stage59.buildingActionTypeID_FK=59 AND stage59.buildingActionActive=1
+                JOIN Housing.MeterRead exitRead WITH (UPDLOCK,HOLDLOCK)
+                  ON exitRead.buildingActionID_FK=stage59.buildingActionID
+                 AND exitRead.meterID_FK=currentRead.meterID_FK
+                 AND exitRead.meterReadTypeID_FK=3 AND exitRead.meterReadActive=1
+                JOIN Housing.Bills exitBill WITH (UPDLOCK,HOLDLOCK)
+                  ON exitBill.meterReadID=exitRead.meterReadID
+                 AND exitBill.BillTypeID_FK=3 AND exitBill.BillActive=1
+                WHERE currentRead.meterReadID=TRY_CONVERT(BIGINT,@MeterReadID)
+                  AND currentRead.meterReadTypeID_FK=2
+                  AND currentRead.residentInfoID_FK IS NULL
+                  AND currentRead.buildingDetailsID=stage59.buildingDetailsID_FK
+                  AND currentRead.IdaraID_FK=stage59.IdaraId_FK
+            )
+                THROW 50001,N'لا يمكن تعديل أو حذف قراءة الإدارة المرتبطة بدورة إخلاء نشطة؛ يلزم تصحيح دورة الإخلاء من مسارها المعتمد.',1;
+
             IF NOT EXISTS
             (
                 SELECT 1
@@ -2093,7 +2260,47 @@ FROM Housing.CalculteElectrictyBills_ByNewReadValue_ForInsert(@meterID, @meterRe
             ----------------------------------------------------------------
             -- Disable old bill
             ----------------------------------------------------------------
-            UPDATE Housing.Bills
+            -- V4: protect confirmed invoice chains and deduction schedules.
+            IF NOT EXISTS
+            (
+                SELECT 1 FROM Housing.Bills b WITH (UPDLOCK,HOLDLOCK)
+                JOIN Housing.MeterRead mr WITH (UPDLOCK,HOLDLOCK)
+                  ON mr.meterReadID=b.meterReadID
+                WHERE b.BillsID=TRY_CONVERT(BIGINT,@BillsID)
+                  AND mr.meterReadID=TRY_CONVERT(BIGINT,@MeterReadID)
+                  AND b.meterID=TRY_CONVERT(BIGINT,@meterID)
+                  AND mr.meterID_FK=TRY_CONVERT(BIGINT,@meterID)
+                  AND b.idaraID_FK=@IdaraID_INT
+                  AND mr.IdaraID_FK=@IdaraID_INT
+                  AND b.CurrentPeriodID=TRY_CONVERT(BIGINT,@billPeriodID)
+                  AND b.BillActive=1 AND mr.meterReadActive=1
+                  AND b.BillTypeID_FK=2 AND mr.meterReadTypeID_FK=2
+            )
+                THROW 50001,N'الفاتورة أو القراءة غير متطابقتين مع العداد والفترة والإدارة.',1;
+
+            IF EXISTS
+            (
+                SELECT 1 FROM Housing.DeductListReportDetails d WITH (UPDLOCK,HOLDLOCK)
+                WHERE d.BillsID_FK=TRY_CONVERT(BIGINT,@BillsID)
+            )
+            OR EXISTS
+            (
+                SELECT 1 FROM Housing.BillsDeductListDetails d WITH (UPDLOCK,HOLDLOCK)
+                WHERE d.billsID_FK=TRY_CONVERT(BIGINT,@BillsID) AND d.billActive=1
+            )
+            OR EXISTS
+            (
+                SELECT 1 FROM Housing.ResidentRentExemptionPayment p WITH (UPDLOCK,HOLDLOCK)
+                WHERE p.billsID_FK=TRY_CONVERT(BIGINT,@BillsID)
+            )
+            OR EXISTS
+            (
+                SELECT 1 FROM Housing.Bills child WITH (UPDLOCK,HOLDLOCK)
+                WHERE child.ParentBillsID_FK=TRY_CONVERT(BIGINT,@BillsID)
+            )
+                THROW 50001,N'الفاتورة مرتبطة بمعالجة مالية؛ لا يمكن تغيير القراءة أو حذفها.',1;
+
+UPDATE Housing.Bills
                SET BillActive = 0
              WHERE BillsID = @billsID
                AND BillActive = 1;
@@ -2705,6 +2912,10 @@ FROM Housing.CalculteElectrictyBills_ByNewReadValue_ForInsert(@meterID, @meterRe
             );
             
 
+            -- إغلاق المعاملة فقط عندما يكون هذا الإجراء هو من بدأها.
+            IF @tc = 0
+                COMMIT TRANSACTION;
+
             SELECT 1 AS IsSuccessful, N'تم تعديل القراءة بنجاح وتعطيل الفاتورة السابقة وإصدار فاتورة جديدة' AS Message_;
             RETURN;
 
@@ -2754,6 +2965,64 @@ FROM Housing.CalculteElectrictyBills_ByNewReadValue_ForInsert(@meterID, @meterRe
           
          
           
+            -- Prioritize the 59 protection message even when the old monthly period is closed.
+            IF EXISTS
+            (
+                SELECT 1 FROM Housing.MeterRead currentRead WITH (UPDLOCK,HOLDLOCK)
+                JOIN Housing.MeterRead exitRead WITH (UPDLOCK,HOLDLOCK)
+                  ON exitRead.meterID_FK=currentRead.meterID_FK
+                 AND exitRead.meterReadTypeID_FK=3 AND exitRead.meterReadActive=1
+                WHERE currentRead.meterReadID=TRY_CONVERT(BIGINT,@MeterReadID)
+                  AND currentRead.meterReadTypeID_FK=2
+                  AND currentRead.meterReadActive=1
+                  AND exitRead.buildingDetailsID=currentRead.buildingDetailsID
+                  AND exitRead.IdaraID_FK=currentRead.IdaraID_FK
+                  -- Both reads must be in the same resident/house/administration cycle.
+                  AND exitRead.residentInfoID_FK=currentRead.residentInfoID_FK
+                  -- MeterReadID breaks ties ONLY when the actual timestamps are equal.
+                  AND (
+                       COALESCE(exitRead.dateOfRead,exitRead.entryDate)
+                           > COALESCE(currentRead.dateOfRead,currentRead.entryDate)
+                       OR (
+                         COALESCE(exitRead.dateOfRead,exitRead.entryDate)
+                           = COALESCE(currentRead.dateOfRead,currentRead.entryDate)
+                         AND exitRead.meterReadID>currentRead.meterReadID
+                       )
+                  )
+                  AND EXISTS
+                  (
+                      SELECT 1 FROM Housing.Bills exitBill WITH (UPDLOCK,HOLDLOCK)
+                      WHERE exitBill.meterReadID=exitRead.meterReadID
+                        AND exitBill.meterID=exitRead.meterID_FK
+                        AND exitBill.buildingDetailsID=currentRead.buildingDetailsID
+                        AND exitBill.idaraID_FK=currentRead.IdaraID_FK
+                        AND exitBill.residentInfoID_FK=currentRead.residentInfoID_FK
+                        AND exitBill.BillActive=1 AND exitBill.BillTypeID_FK=3
+                  )
+            )
+                THROW 50001,N'لا يمكن تعديل أو حذف القراءة الدورية؛ صدرت فاتورة إخلاء نشطة لهذا العداد والمنزل، وتعتمد على تسلسل القراءات. يرجى معالجة فاتورة الإخلاء نظاميًا أولًا.',1;
+
+            IF EXISTS
+            (
+                SELECT 1 FROM Housing.MeterRead currentRead WITH (UPDLOCK,HOLDLOCK)
+                JOIN Housing.BuildingAction stage59 WITH (UPDLOCK,HOLDLOCK)
+                  ON stage59.buildingActionID=currentRead.buildingActionID_FK
+                 AND stage59.buildingActionTypeID_FK=59 AND stage59.buildingActionActive=1
+                JOIN Housing.MeterRead exitRead WITH (UPDLOCK,HOLDLOCK)
+                  ON exitRead.buildingActionID_FK=stage59.buildingActionID
+                 AND exitRead.meterID_FK=currentRead.meterID_FK
+                 AND exitRead.meterReadTypeID_FK=3 AND exitRead.meterReadActive=1
+                JOIN Housing.Bills exitBill WITH (UPDLOCK,HOLDLOCK)
+                  ON exitBill.meterReadID=exitRead.meterReadID
+                 AND exitBill.BillTypeID_FK=3 AND exitBill.BillActive=1
+                WHERE currentRead.meterReadID=TRY_CONVERT(BIGINT,@MeterReadID)
+                  AND currentRead.meterReadTypeID_FK=2
+                  AND currentRead.residentInfoID_FK IS NULL
+                  AND currentRead.buildingDetailsID=stage59.buildingDetailsID_FK
+                  AND currentRead.IdaraID_FK=stage59.IdaraId_FK
+            )
+                THROW 50001,N'لا يمكن تعديل أو حذف قراءة الإدارة المرتبطة بدورة إخلاء نشطة؛ يلزم تصحيح دورة الإخلاء من مسارها المعتمد.',1;
+
             IF NOT EXISTS
             (
                 SELECT 1
@@ -2774,7 +3043,47 @@ FROM Housing.CalculteElectrictyBills_ByNewReadValue_ForInsert(@meterID, @meterRe
             ----------------------------------------------------------------
             -- Disable old bill
             ----------------------------------------------------------------
-            UPDATE Housing.Bills
+            -- V4: protect confirmed invoice chains and deduction schedules.
+            IF NOT EXISTS
+            (
+                SELECT 1 FROM Housing.Bills b WITH (UPDLOCK,HOLDLOCK)
+                JOIN Housing.MeterRead mr WITH (UPDLOCK,HOLDLOCK)
+                  ON mr.meterReadID=b.meterReadID
+                WHERE b.BillsID=TRY_CONVERT(BIGINT,@BillsID)
+                  AND mr.meterReadID=TRY_CONVERT(BIGINT,@MeterReadID)
+                  AND b.meterID=TRY_CONVERT(BIGINT,@meterID)
+                  AND mr.meterID_FK=TRY_CONVERT(BIGINT,@meterID)
+                  AND b.idaraID_FK=@IdaraID_INT
+                  AND mr.IdaraID_FK=@IdaraID_INT
+                  AND b.CurrentPeriodID=TRY_CONVERT(BIGINT,@billPeriodID)
+                  AND b.BillActive=1 AND mr.meterReadActive=1
+                  AND b.BillTypeID_FK=2 AND mr.meterReadTypeID_FK=2
+            )
+                THROW 50001,N'الفاتورة أو القراءة غير متطابقتين مع العداد والفترة والإدارة.',1;
+
+            IF EXISTS
+            (
+                SELECT 1 FROM Housing.DeductListReportDetails d WITH (UPDLOCK,HOLDLOCK)
+                WHERE d.BillsID_FK=TRY_CONVERT(BIGINT,@BillsID)
+            )
+            OR EXISTS
+            (
+                SELECT 1 FROM Housing.BillsDeductListDetails d WITH (UPDLOCK,HOLDLOCK)
+                WHERE d.billsID_FK=TRY_CONVERT(BIGINT,@BillsID) AND d.billActive=1
+            )
+            OR EXISTS
+            (
+                SELECT 1 FROM Housing.ResidentRentExemptionPayment p WITH (UPDLOCK,HOLDLOCK)
+                WHERE p.billsID_FK=TRY_CONVERT(BIGINT,@BillsID)
+            )
+            OR EXISTS
+            (
+                SELECT 1 FROM Housing.Bills child WITH (UPDLOCK,HOLDLOCK)
+                WHERE child.ParentBillsID_FK=TRY_CONVERT(BIGINT,@BillsID)
+            )
+                THROW 50001,N'الفاتورة مرتبطة بمعالجة مالية؛ لا يمكن تغيير القراءة أو حذفها.',1;
+
+UPDATE Housing.Bills
                SET BillActive = 0
              WHERE BillsID = @billsID
                AND BillActive = 1;
@@ -2865,6 +3174,10 @@ FROM Housing.CalculteElectrictyBills_ByNewReadValue_ForInsert(@meterID, @meterRe
                 , @Note1
             );
 
+
+            -- إغلاق المعاملة فقط عندما يكون هذا الإجراء هو من بدأها.
+            IF @tc = 0
+                COMMIT TRANSACTION;
 
             SELECT 1 AS IsSuccessful, N'تم حذف القراءة بنجاح وتعطيل الفاتورة السابقة بنجاح' AS Message_;
             RETURN;

@@ -6937,12 +6937,36 @@ if (subtitleElement) {
                             ? `<input type="hidden" name="${fieldName}" value="${this.escapeHtml(value)}" />`
                             : "";
 
-                        options += `<option value="" disabled ${!value ? "selected" : ""}>${this.escapeHtml(field.placeholder || "الرجاء الاختيار")}</option>`;
+                        const sourceOptions = field.options || field.Options || [];
 
-                        (field.options || []).forEach(opt => {
+                        const isNoOptionsMarker = opt => {
+                            const v = String(opt.value ?? opt.Value ?? "").trim();
+                            const t = String(opt.text ?? opt.Text ?? "").trim();
+
+                            return v === "-1" && /^لا\s*توجد/u.test(t);
+                        };
+
+                        const validOptions = sourceOptions.filter(
+                            opt => !isNoOptionsMarker(opt)
+                        );
+
+                        const hasValidSelection = validOptions.some(
+                            opt => String(opt.value ?? opt.Value ?? "") === String(value)
+                        );
+
+                        const emptyMarker = sourceOptions.find(isNoOptionsMarker);
+
+                        const placeholderText = validOptions.length === 0
+                            ? (emptyMarker?.text ?? emptyMarker?.Text ?? "لا توجد خيارات")
+                            : (field.placeholder || "الرجاء الاختيار");
+
+                        options += `<option value="" disabled ${!hasValidSelection ? "selected" : ""}>${this.escapeHtml(placeholderText)}</option>`;
+
+                        validOptions.forEach(opt => {
                             const optValue = opt.value ?? opt.Value ?? "";
                             const optText = opt.text ?? opt.Text ?? "";
                             const selected = String(value) === String(optValue) ? "selected" : "";
+
                             options += `<option value="${this.escapeHtml(optValue)}" ${selected}>${this.escapeHtml(optText)}</option>`;
                         });
 
@@ -8100,7 +8124,7 @@ if (subtitleElement) {
                     borderRadius: '6px',
                     color: 'white',
                     background: bg,
-                    zIndex: '99999',
+                    zIndex: '2147483647',
                     fontSize: '0.95rem',
                     fontWeight: '500',
                     boxShadow: '0 6px 18px rgba(0,0,0,0.2)',

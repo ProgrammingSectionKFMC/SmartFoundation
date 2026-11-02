@@ -1,5 +1,4 @@
-﻿
-CREATE PROCEDURE [Housing].[AssignStatusSP] 
+﻿CREATE PROCEDURE [Housing].[AssignStatusSP] 
 (
       @Action                               NVARCHAR(200)
     , @ActionID                             BIGINT          = NULL
@@ -50,6 +49,26 @@ BEGIN
         ----------------------------------------------------------------
         -- Business validations => THROW 50001
         ----------------------------------------------------------------
+        
+        /* APH_STAGE03B_BEGIN: serialized status/end paths */
+        IF @Action IN (N'ASSIGNSTATUS',N'ENDASSIGNPERIOD')
+        BEGIN
+            DECLARE @APHLockResult INT;
+            EXEC @APHLockResult=sys.sp_getapplock
+                @Resource=N'Housing.AssignPeriodHistory',
+                @LockMode=N'Exclusive',@LockOwner=N'Transaction',@LockTimeout=10000;
+            IF @APHLockResult<0
+                THROW 51407,N'تعذر قفل سجل محاضر التخصيص مؤقتًا.',1;
+            IF NOT EXISTS
+            (
+                SELECT 1 FROM Housing.AssignPeriod p
+                WHERE p.AssignPeriodID=TRY_CONVERT(BIGINT,@AssignPeriodID)
+                  AND p.IdaraId_FK=@IdaraID_INT
+                  AND p.AssignPeriodActive=1
+            )
+                THROW 51408,N'محضر التخصيص غير موجود أو لا يتبع لإدارتك.',1;
+        END;
+        /* APH_STAGE03B_END */
         IF NULLIF(LTRIM(RTRIM(@Action)), N'') IS NULL
         BEGIN
             ;THROW 50001, N'العملية مطلوبة', 1;
@@ -90,17 +109,31 @@ BEGIN
                 ;THROW 50001, N'تم انهاء هذا المحضر مسبقا', 1;
             END
 
+            
+            /* APH_STAGE03C1_BEGIN: historical pending guard */
+            -- The same Stage03B transaction app-lock is already held.
+            -- Sync does NOT return a result set in apply mode (INSERT EXEC safe).
+            EXEC Housing.SyncAssignPeriodHistory
+                 @AssignPeriodID = @AssignPeriodID,
+                 @ApplyChanges = 1;
+
             IF EXISTS
             (
                 SELECT 1
-                 FROM Housing.V_WaitingList w 
-                     WHERE w.AssignPeriodID = @AssignPeriodID
-                       AND w.IdaraId = @IdaraID_INT
-                       AND  w.LastActionTypeID in (38,40)
+                FROM Housing.AssignPeriodMember h WITH (HOLDLOCK)
+                JOIN Housing.AssignPeriodAllocation a WITH (HOLDLOCK)
+                  ON a.AssignPeriodMemberID_FK = h.AssignPeriodMemberID
+                JOIN Housing.AssignPeriod p WITH (HOLDLOCK)
+                  ON p.AssignPeriodID = h.AssignPeriodID_FK
+                WHERE h.AssignPeriodID_FK = TRY_CONVERT(BIGINT,@AssignPeriodID)
+                  AND p.IdaraId_FK = @IdaraID_INT
+                  AND p.AssignPeriodActive=1
+                  AND a.OutcomeActionID_FK IS NULL
             )
             BEGIN
-                ;THROW 50001, N'لايمكن انهاء محضر التخصيص لوجود مستفيدين لم يتم معالجتهم لحد الان', 1;
-            END
+                ;THROW 50001,N'لا يمكن إنهاء محضر التخصيص لوجود تخصيصات لم تُعالج بعد.',1;
+            END;
+            /* APH_STAGE03C1_END */
 
             SET @NewID = (SELECT TOP(1) a.AssignPeriodID 
             FROM Housing.AssignPeriod a 
@@ -302,6 +335,7 @@ BEGIN
             );
             
 
+            EXEC Housing.SyncAssignPeriodHistory @AssignPeriodID=@AssignPeriodID, @ApplyChanges=1;
             SELECT 1 AS IsSuccessful, N'تم معالجة تخصيص المستفيد بنجاح' AS Message_;
             RETURN;
         END

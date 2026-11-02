@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using SmartFoundation.Application.Services;
 using SmartFoundation.UI.ViewModels.SmartForm;
 using System.Data;
@@ -337,9 +337,16 @@ namespace SmartFoundation.Mvc.Controllers
                 if (!string.IsNullOrWhiteSpace(referer)) return Redirect(referer);
                 return RedirectToAction("Index", "Home");
             }
-            catch (Exception)
-            {
-                SetToastTempData(0, "حدث خطأ أثناء إضافة البيانات. يرجى المحاولة مرة أخرى.");
+            catch (Exception ex)
+            {                var errorId = await SmartFoundation.Mvc.Middleware.GlobalExceptionMiddleware.TryLogHandledExceptionAsync(
+                    HttpContext,
+                    ex,
+                    HttpContext.RequestServices.GetRequiredService<IConfiguration>(),
+                    HttpContext.RequestServices.GetRequiredService<ILogger<SmartFoundation.Mvc.Middleware.GlobalExceptionMiddleware>>());
+                var errorMessage = errorId.HasValue
+                    ? $"حدث خطأ أثناء تنفيذ العملية. رمز الخطأ: {errorId.Value}"
+                    : "حدث خطأ أثناء تنفيذ العملية. تعذر تسجيل رقم مرجعي؛ يرجى التواصل مع الدعم الفني.";
+                SetToastTempData(0, errorMessage);
 
                 if (Request.HasFormContentType)
                 {
@@ -433,13 +440,41 @@ namespace SmartFoundation.Mvc.Controllers
                     return RedirectToAction("Index", "Home");
                 }
             }
-            catch (Exception)
-            {
-                SetToastTempData(0, "حدث خطأ أثناء تعديل البيانات. يرجى المحاولة مرة أخرى.");
+
+            catch (Exception ex)
+            {               
+                var errorId = await SmartFoundation.Mvc.Middleware.GlobalExceptionMiddleware.TryLogHandledExceptionAsync(
+                    HttpContext,
+                    ex,
+                    HttpContext.RequestServices.GetRequiredService<IConfiguration>(),
+                    HttpContext.RequestServices.GetRequiredService<ILogger<SmartFoundation.Mvc.Middleware.GlobalExceptionMiddleware>>());
+                var errorMessage = errorId.HasValue
+                    ? $"حدث خطأ أثناء تنفيذ العملية. رمز الخطأ: {errorId.Value}"
+                    : "حدث خطأ أثناء تنفيذ العملية. تعذر تسجيل رقم مرجعي؛ يرجى التواصل مع الدعم الفني.";
+                SetToastTempData(0, errorMessage);
+
+                if (Request.HasFormContentType)
+                {
+                    var errorUrl = Request.Form["redirectErrorUrl"].ToString();
+
+                    if (!string.IsNullOrWhiteSpace(errorUrl) &&
+                        Url.IsLocalUrl(errorUrl))
+                    {
+                        return LocalRedirect(errorUrl);
+                    }
+                }
+
                 var referer = Request.Headers["Referer"].ToString();
-                if (!string.IsNullOrWhiteSpace(referer)) return Redirect(referer);
+
+                if (!string.IsNullOrWhiteSpace(referer) &&
+                    Url.IsLocalUrl(referer))
+                {
+                    return LocalRedirect(referer);
+                }
+
                 return RedirectToAction("Index", "Home");
             }
+
         }
 
         [HttpPost("delete")]
@@ -513,13 +548,40 @@ namespace SmartFoundation.Mvc.Controllers
                     return RedirectToAction("Index", "Home");
                 }
             }
-            catch (Exception)
-            {
-                SetToastTempData(0, "حدث خطأ أثناء حذف البيانات. يرجى المحاولة مرة أخرى.");
+
+            catch (Exception ex)
+            {                var errorId = await SmartFoundation.Mvc.Middleware.GlobalExceptionMiddleware.TryLogHandledExceptionAsync(
+                    HttpContext,
+                    ex,
+                    HttpContext.RequestServices.GetRequiredService<IConfiguration>(),
+                    HttpContext.RequestServices.GetRequiredService<ILogger<SmartFoundation.Mvc.Middleware.GlobalExceptionMiddleware>>());
+                var errorMessage = errorId.HasValue
+                    ? $"حدث خطأ أثناء تنفيذ العملية. رمز الخطأ: {errorId.Value}"
+                    : "حدث خطأ أثناء تنفيذ العملية. تعذر تسجيل رقم مرجعي؛ يرجى التواصل مع الدعم الفني.";
+                SetToastTempData(0, errorMessage);
+
+                if (Request.HasFormContentType)
+                {
+                    var errorUrl = Request.Form["redirectErrorUrl"].ToString();
+
+                    if (!string.IsNullOrWhiteSpace(errorUrl) &&
+                        Url.IsLocalUrl(errorUrl))
+                    {
+                        return LocalRedirect(errorUrl);
+                    }
+                }
+
                 var referer = Request.Headers["Referer"].ToString();
-                if (!string.IsNullOrWhiteSpace(referer)) return Redirect(referer);
+
+                if (!string.IsNullOrWhiteSpace(referer) &&
+                    Url.IsLocalUrl(referer))
+                {
+                    return LocalRedirect(referer);
+                }
+
                 return RedirectToAction("Index", "Home");
             }
+
         }
 
         [HttpGet("DDLFiltered")]

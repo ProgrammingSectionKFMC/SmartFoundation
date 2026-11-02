@@ -1,5 +1,4 @@
-﻿
-CREATE PROCEDURE [Housing].[AssignSP] 
+﻿CREATE PROCEDURE [Housing].[AssignSP] 
 (
       @Action                               NVARCHAR(200)
     , @ActionID                             BIGINT          = NULL
@@ -49,10 +48,135 @@ BEGIN
         ----------------------------------------------------------------
         -- Business validations => THROW 50001
         ----------------------------------------------------------------
+        
+        /* APH_STAGE03B_BEGIN: serialized write paths */
+        IF @Action IN (N'CLOSEASSIGNPERIOD',N'ASSIGNHOUSE',N'UPDATEASSIGNHOUSE',N'CANCLEASSIGNHOUSE')
+        BEGIN
+            DECLARE @APHLockResult INT;
+            EXEC @APHLockResult=sys.sp_getapplock
+                @Resource=N'Housing.AssignPeriodHistory',
+                @LockMode=N'Exclusive',@LockOwner=N'Transaction',@LockTimeout=10000;
+            IF @APHLockResult<0
+                THROW 51405,N'تعذر قفل سجل محاضر التخصيص مؤقتًا.',1;
+            IF NOT EXISTS
+            (
+                SELECT 1 FROM Housing.AssignPeriod p
+                WHERE p.AssignPeriodID=TRY_CONVERT(BIGINT,@AssignPeriodID)
+                  AND p.IdaraId_FK=@IdaraID_INT
+                  AND p.WaitingClassID_FK=TRY_CONVERT(INT,@WaitingClassID)
+                  AND p.AssignPeriodActive=1
+                  AND p.AssignPeriodClose=1
+                  AND p.AssignPeriodEnddate IS NULL
+            )
+                THROW 51406,N'محضر التخصيص لا يتبع للإدارة والفئة المحددتين أو ليس مفتوحًا.',1;
+        END;
+        /* APH_STAGE03B_END */
         IF NULLIF(LTRIM(RTRIM(@Action)), N'') IS NULL
         BEGIN
             ;THROW 50001, N'العملية مطلوبة', 1;
         END
+
+
+        
+-- حماية التخصيص من ازدواج السكن عبر جميع الإدارات
+IF @Action IN
+(
+    N'ASSIGNHOUSE',
+    N'UPDATEASSIGNHOUSE'
+)
+BEGIN
+    DECLARE @GuardResidentID BIGINT =
+        TRY_CONVERT(BIGINT, NULLIF(@residentInfoID, N''));
+
+    IF @GuardResidentID IS NULL OR @GuardResidentID <= 0
+        THROW 50001, N'معرف المستفيد غير صحيح.', 1;
+
+    IF @ActionID IS NULL
+        THROW 50001, N'رقم سجل الانتظار مطلوب.', 1;
+
+    -- قفل موحد على المستفيد، دون ربطه بإدارة
+    DECLARE @GuardLockResult INT;
+    DECLARE @GuardLockName NVARCHAR(255) =
+        CONCAT(N'Housing.ResidentHousing:', @GuardResidentID);
+
+    EXEC @GuardLockResult = sys.sp_getapplock
+          @Resource = @GuardLockName,
+          @LockMode = N'Exclusive',
+          @LockOwner = N'Transaction',
+          @LockTimeout = 10000;
+
+    IF @GuardLockResult < 0
+        THROW 50001,
+            N'تجري عملية إسكان أخرى للمستفيد؛ يرجى إعادة المحاولة.',
+            1;
+
+    DECLARE
+        @GuardConflictID BIGINT = NULL,
+        @GuardStage INT,
+        @GuardHouse NVARCHAR(200),
+        @GuardIdara NVARCHAR(300),
+        @GuardStageName NVARCHAR(300),
+        @GuardMessage NVARCHAR(2048);
+
+    SELECT TOP (1)
+        @GuardConflictID = w.ActionID,
+        @GuardStage = w.LastActionTypeID,
+        @GuardHouse = COALESCE(
+            NULLIF(w.buildingDetailsNo, N''),
+            CONVERT(NVARCHAR(30), w.buildingDetailsID),
+            N'غير محدد'
+        ),
+        @GuardIdara = COALESCE(
+            i.idaraLongName_A,
+            N'غير محددة'
+        ),
+        @GuardStageName = COALESCE(
+            w.LastActionTypeName,
+            N'غير محددة'
+        )
+    FROM Housing.V_WaitingList w
+    LEFT JOIN Housing.BuildingDetails b
+        ON b.buildingDetailsID = w.buildingDetailsID
+    LEFT JOIN dbo.Idara i
+        ON i.idaraID = COALESCE(b.IdaraId_FK, w.IdaraId)
+    WHERE w.residentInfoID = @GuardResidentID
+      AND w.ActionID <> @ActionID
+      AND
+      (
+          w.buildingActionRoot = 2
+          OR w.LastActionTypeID IN
+          (38,40,45,46,47,57,58)
+      )
+    ORDER BY
+        CASE
+            WHEN w.LastActionTypeID IN (57,58) THEN 0
+            WHEN w.buildingActionRoot = 2 THEN 1
+            ELSE 2
+        END,
+        w.LastActionID DESC;
+
+    IF @GuardConflictID IS NOT NULL
+    BEGIN
+        SET @GuardMessage = CONCAT(
+            N'لا يمكن تخصيص المنزل للمستفيد.',
+            N' يوجد ارتباط سكني آخر.',
+            N' الإدارة: ', @GuardIdara,
+            N'، المنزل: ', @GuardHouse,
+            N'، آخر إجراء: ', @GuardStageName,
+            N' (', @GuardStage, N'). ',
+            CASE
+                WHEN @GuardStage IN (57,58)
+                    THEN N'إخلاء المستفيد لازال تحت الإجراء ولم يعتمد الاخلاء نهائياً .'
+                WHEN @GuardStage IN (38,40,45,46,47)
+                    THEN N'المستفيد مرتبط بطلب تخصيص أو تسكين آخر لم تكتمل إجراءاته. يجب مراجعة الطلب السابق واستكماله أو إلغاؤه نظامياً قبل إجراء تخصيص جديد.'
+                ELSE
+                    N'يجب اكتمال الإخلاء النهائي  قبل تخصيص منزل جديد.'
+            END
+        );
+
+        THROW 50001, @GuardMessage, 1;
+    END;
+END;
 
    
 
@@ -285,6 +409,7 @@ BEGIN
                 , @Note
             );
 
+            EXEC Housing.SyncAssignPeriodHistory @AssignPeriodID=@AssignPeriodID, @ApplyChanges=1;
             SELECT 1 AS IsSuccessful, N'تم اغلاق محضر التخصيص بنجاح' AS Message_;
             RETURN;
         END
@@ -294,6 +419,104 @@ BEGIN
         ----------------------------------------------------------------
         ELSE IF @Action = N'ASSIGNHOUSE'
         BEGIN
+        /* APH_EXCLUSIVITY_20261028_BEGIN */
+        -- Server-side identity: NEVER trust residentInfoID / LastActionID submitted by browser.
+        DECLARE @APH_ResidentID BIGINT;
+        SELECT @APH_ResidentID=ba.residentInfoID_FK
+        FROM Housing.BuildingAction ba
+        WHERE ba.buildingActionID=@ActionID
+          AND ba.buildingActionTypeID_FK IN (1,7,25)
+          AND ba.buildingActionActive=1
+          AND ba.IdaraId_FK=@IdaraID_INT;
+        IF @APH_ResidentID IS NULL
+          THROW 50001,N'سجل الانتظار غير صالح أو لا يتبع لإدارتك.',1;
+        IF TRY_CONVERT(BIGINT,@residentInfoID) IS NULL OR
+           TRY_CONVERT(BIGINT,@residentInfoID)<>@APH_ResidentID
+          THROW 50001,N'بيانات المستفيد لا تطابق سجل الانتظار المعتمد.',1;
+
+        -- Restrict allocation to the EXACT active/open minute in this department/class.
+        -- The previous code only checked that SOME minute was open in the department.
+        IF NOT EXISTS
+        (
+          SELECT 1 FROM Housing.AssignPeriod ap WITH (UPDLOCK, HOLDLOCK)
+          WHERE ap.AssignPeriodID=TRY_CONVERT(BIGINT,@AssignPeriodID)
+            AND ap.WaitingClassID_FK=TRY_CONVERT(INT,@WaitingClassID)
+            AND ap.IdaraId_FK=@IdaraID_INT
+            AND ap.AssignPeriodActive=1 AND ap.AssignPeriodClose=1
+            AND ap.AssignPeriodEnddate IS NULL
+        )
+          THROW 50001,N'المحضر المختار غير مفتوح أو لا يتبع لفئة الانتظار أو الإدارة الحالية.',1;
+
+        -- Serialize operations for the same resident, across waiting classes and departments.
+        DECLARE @APH_ResidentLockResult INT;
+        DECLARE @APH_ResidentLockResource NVARCHAR(255) =
+            CONCAT(N'Housing.ResidentHousing:',@APH_ResidentID);
+        EXEC @APH_ResidentLockResult=sys.sp_getapplock
+           @Resource=@APH_ResidentLockResource,
+           @LockMode=N'Exclusive',@LockOwner=N'Transaction',@LockTimeout=10000;
+        IF @APH_ResidentLockResult<0
+          THROW 50001,N'تجري معالجة سكنية أخرى للمستفيد؛ يرجى إعادة المحاولة.',1;
+
+        -- Fresh and authorized waiting root; client-provided parent cannot be stale or forged.
+        IF NOT EXISTS
+        (
+          SELECT 1 FROM Housing.V_WaitingList w
+          WHERE w.ActionID=@ActionID AND w.residentInfoID=@APH_ResidentID
+            AND w.IdaraId=@IdaraID_INT
+            AND w.WaitingClassID=TRY_CONVERT(INT,@WaitingClassID)
+            AND w.LastActionID=TRY_CONVERT(BIGINT,@LastActionID)
+            AND w.LastActionTypeID IN (27,39)
+        )
+          THROW 50001,N'بيانات طلب الانتظار تغيرت أو لم تعد مؤهلة للتخصيص؛ حدّث الصفحة.',1;
+
+        -- Current OPERATIONAL allocations in ANY minute, class, root, or department.
+        -- Legacy reconstructed minutes intentionally excluded: they can have historical
+        -- missing outcomes and do not establish a current housing commitment alone.
+        IF EXISTS
+        (
+          SELECT 1
+          FROM Housing.AssignPeriodMember m
+          JOIN Housing.AssignPeriodAllocation a
+            ON a.AssignPeriodMemberID_FK=m.AssignPeriodMemberID
+          WHERE m.ResidentInfoID_FK=@APH_ResidentID
+            AND m.DataOrigin=N'OPERATIONAL'
+            AND a.OutcomeActionID_FK IS NULL
+        )
+          THROW 50001,N'للمستفيد تخصيص تشغيلي سابق لم تتم معالجته، ولو في محضر أو إدارة أخرى.',1;
+
+        -- No approved housing/ongoing occupancy / pending exit until FINAL action 3.
+        -- 54=physical receipt, 57=available for operational house workflow; neither
+        -- releases the resident to be allocated another house until 3.
+        IF EXISTS
+        (
+          SELECT 1 FROM Housing.V_WaitingList w
+          WHERE w.residentInfoID=@APH_ResidentID
+            AND
+            (
+              w.LastActionTypeID IN (45,46,47)
+              OR (w.LastActionTypeID<>3
+                  AND (w.buildingActionRoot=2
+                       OR w.LastActionTypeID IN (2,24,48,49,50,51,52,54,55,56,57,58,59,60,61)))
+              OR
+              (
+                w.LastActionTypeID IN (38,40)
+                AND NOT EXISTS
+                (
+                    SELECT 1
+                    FROM Housing.BuildingAction legacyAction
+                    JOIN Housing.AssignPeriod legacyPeriod
+                      ON legacyPeriod.AssignPeriodID=legacyAction.AssignPeriodID_FK
+                    WHERE legacyAction.buildingActionID=w.LastActionID
+                      AND legacyAction.buildingActionExtraText5=N'MIGRATION_GENERATED'
+                      AND legacyPeriod.AssignPeriodDescrption LIKE
+                          N'Legacy allocation migration - WaitingClass %'
+                )
+              )
+            )
+        )
+          THROW 50001,N'المستفيد لديه تخصيص أو موافقة أو إشغال لم يكتمل إخلاؤه نهائياً بالإجراء 3، ولو في إدارة أخرى.',1;
+        /* APH_EXCLUSIVITY_20261028_END */
+
        
 
 
@@ -399,20 +622,77 @@ BEGIN
                 ;THROW 50001, N'لا يمكن التخصيص؛ المنزل غير متاح أو تم تخصيصه لمستفيد اخر قم بتحديث الصفحه', 1;
             END
 
-            IF EXISTS
+            
+
+
+              
+            /* APH_HOUSE_ELIGIBILITY_20261028_A_BEGIN */
+            DECLARE @APH_HouseID_A BIGINT = TRY_CONVERT(BIGINT, NULLIF(@buildingDetailsID,N''));
+            IF @APH_HouseID_A IS NULL OR @APH_HouseID_A <= 0
+                THROW 50001, N'يجب اختيار منزل صالح.', 1;
+
+            DECLARE @APH_HouseLockResult_A INT;
+            DECLARE @APH_HouseLockResource_A NVARCHAR(255) =
+                CONCAT(N'Housing.Occupancy:',@IdaraID_INT,N':',@APH_HouseID_A);
+            EXEC @APH_HouseLockResult_A = sys.sp_getapplock
+                  @Resource = @APH_HouseLockResource_A,
+                  @LockMode = N'Exclusive', @LockOwner = N'Transaction', @LockTimeout = 10000;
+            IF @APH_HouseLockResult_A < 0
+                THROW 50001,N'تجري معالجة أخرى للمنزل؛ حدّث الصفحة وأعد المحاولة.',1;
+
+            IF NOT EXISTS
             (
-              select 1
-              from Housing.V_WaitingList v 
-              where v.residentInfoID = @residentInfoID
-              and (v.buildingActionRoot = 2 or v.LastActionTypeID in (38,40,45,46,47))
+               SELECT 1
+               FROM Housing.V_GetGeneralListForBuilding c
+               WHERE c.buildingDetailsID = @APH_HouseID_A
+                 AND c.BuildingIdaraID = @IdaraID_INT
+                 AND c.buildingDetailsActive = 1
+                 AND c.LastActionTypeID = 5
+                 AND EXISTS
+                 (
+                     SELECT 1
+                     FROM Housing.BuildingSpace bs
+                     INNER JOIN Housing.BuildingSpaceType bst
+                       ON bst.BuildingSpaceTypeID = bs.BuildingSpaceTypeID_FK
+                     WHERE bs.BuildingDetailsID_FK = c.buildingDetailsID
+                       AND bs.BuildingSpaceActive = 1
+                       AND bs.BuildingSpaceTypeID_FK = 1
+                       AND bst.BuildingSpaceTypeCode = N'BEDROOM'
+                       AND bst.BuildingSpaceTypeActive = 1
+                       AND (bs.BuildingSpaceStartDate IS NULL OR bs.BuildingSpaceStartDate <= CAST(GETDATE() AS date))
+                       AND (bs.BuildingSpaceEndDate IS NULL OR bs.BuildingSpaceEndDate >= CAST(GETDATE() AS date))
+                       AND (bst.BuildingSpaceTypeStartDate IS NULL OR bst.BuildingSpaceTypeStartDate <= CAST(GETDATE() AS date))
+                       AND (bst.BuildingSpaceTypeEndDate IS NULL OR bst.BuildingSpaceTypeEndDate >= CAST(GETDATE() AS date))
+                 )
+                 AND NOT EXISTS
+                 (
+                     SELECT 1 FROM Housing.V_Occupant occupant
+                     WHERE occupant.buildingDetailsID = c.buildingDetailsID
+                       AND (occupant.LastActionTypeID IS NULL
+                            OR occupant.LastActionTypeID NOT IN (57,58))
+                 )
+                              AND NOT EXISTS
+               (
+                   SELECT 1 FROM Housing.V_WaitingList holding
+                   WHERE holding.buildingDetailsID = c.buildingDetailsID
+                     AND holding.LastActionTypeID IN (38,40,45,46,47)
+                     AND NOT EXISTS
+                     (
+                         SELECT 1
+                         FROM Housing.BuildingAction oldMigrationAction
+                         JOIN Housing.AssignPeriod oldMigrationPeriod
+                           ON oldMigrationPeriod.AssignPeriodID = oldMigrationAction.AssignPeriodID_FK
+                         WHERE oldMigrationAction.buildingActionID = holding.LastActionID
+                           AND oldMigrationAction.buildingActionExtraText5 = N'MIGRATION_GENERATED'
+                           AND oldMigrationPeriod.AssignPeriodDescrption LIKE
+                                 N'Legacy allocation migration - WaitingClass %'
+                     )
+               )
             )
-            BEGIN
-                ;THROW 50001, N'المستفيد ساكن او تحت اجراءات التسكين بسجل انتظار اخر او مسجل بمحضر تخصيص لفئة اخرى قم بتحديث الصفحه', 1;
-            END
-
-
-
-              INSERT INTO  Housing.BuildingAction
+                THROW 50001,N'المنزل غير مؤهل: يلزم إجراء 5 وغرفة نوم نشطة، ونشاط المنزل والإدارة، وألا يكون مشغولاً.',1;
+            
+            /* APH_HOUSE_ELIGIBILITY_20261028_A_END */
+INSERT INTO  Housing.BuildingAction
             (
                   buildingActionTypeID_FK
                 , residentInfoID_FK
@@ -496,6 +776,7 @@ BEGIN
             );
             
 
+            EXEC Housing.SyncAssignPeriodHistory @AssignPeriodID=@AssignPeriodID, @ApplyChanges=1;
             SELECT 1 AS IsSuccessful, N'تم تخصيص المنزل للمستفيد بنجاح' AS Message_;
             RETURN;
         END
@@ -708,6 +989,7 @@ BEGIN
              --END
 
              set @msg6 = N'تم استبعاد المستفيد'+cast(@FullName_A as nvarchar(1000))+N' من محضر التخصيص بنجاح'
+            EXEC Housing.SyncAssignPeriodHistory @AssignPeriodID=@AssignPeriodID, @ApplyChanges=1;
             SELECT 1 AS IsSuccessful, @msg6 AS Message_;
             RETURN;
         END
@@ -769,7 +1051,7 @@ BEGIN
             BEGIN
             Declare @msg4 nvarchar(1000)
             set @msg4 = N'تم الغاء أحقية السكن للمستفيد'+cast(@FullName_A as nvarchar(1000))+N' مسبقا '
-                ;THROW 50001, @msg1, 1;
+                ;THROW 50001, @msg4, 1;
             END
 
 
@@ -779,7 +1061,79 @@ BEGIN
             from BuildingAction ba where ba.buildingActionID = @LastActionID
 
 
-            INSERT INTO  Housing.BuildingAction
+            
+            /* APH_HOUSE_ELIGIBILITY_20261028_U_BEGIN */
+            DECLARE @APH_HouseID_U BIGINT = TRY_CONVERT(BIGINT, NULLIF(@buildingDetailsID,N''));
+            IF @APH_HouseID_U IS NULL OR @APH_HouseID_U <= 0
+                THROW 50001, N'يجب اختيار منزل صالح.', 1;
+
+            DECLARE @APH_HouseLockResult_U INT;
+            DECLARE @APH_HouseLockResource_U NVARCHAR(255) =
+                CONCAT(N'Housing.Occupancy:',@IdaraID_INT,N':',@APH_HouseID_U);
+            EXEC @APH_HouseLockResult_U = sys.sp_getapplock
+                  @Resource = @APH_HouseLockResource_U,
+                  @LockMode = N'Exclusive', @LockOwner = N'Transaction', @LockTimeout = 10000;
+            IF @APH_HouseLockResult_U < 0
+                THROW 50001,N'تجري معالجة أخرى للمنزل؛ حدّث الصفحة وأعد المحاولة.',1;
+
+            IF NOT EXISTS
+            (
+               SELECT 1
+               FROM Housing.V_GetGeneralListForBuilding c
+               WHERE c.buildingDetailsID = @APH_HouseID_U
+                 AND c.BuildingIdaraID = @IdaraID_INT
+                 AND c.buildingDetailsActive = 1
+                 AND c.LastActionTypeID = 5
+                 AND EXISTS
+                 (
+                     SELECT 1
+                     FROM Housing.BuildingSpace bs
+                     INNER JOIN Housing.BuildingSpaceType bst
+                       ON bst.BuildingSpaceTypeID = bs.BuildingSpaceTypeID_FK
+                     WHERE bs.BuildingDetailsID_FK = c.buildingDetailsID
+                       AND bs.BuildingSpaceActive = 1
+                       AND bs.BuildingSpaceTypeID_FK = 1
+                       AND bst.BuildingSpaceTypeCode = N'BEDROOM'
+                       AND bst.BuildingSpaceTypeActive = 1
+                       AND (bs.BuildingSpaceStartDate IS NULL OR bs.BuildingSpaceStartDate <= CAST(GETDATE() AS date))
+                       AND (bs.BuildingSpaceEndDate IS NULL OR bs.BuildingSpaceEndDate >= CAST(GETDATE() AS date))
+                       AND (bst.BuildingSpaceTypeStartDate IS NULL OR bst.BuildingSpaceTypeStartDate <= CAST(GETDATE() AS date))
+                       AND (bst.BuildingSpaceTypeEndDate IS NULL OR bst.BuildingSpaceTypeEndDate >= CAST(GETDATE() AS date))
+                 )
+                 AND NOT EXISTS
+                 (
+                     SELECT 1 FROM Housing.V_Occupant occupant
+                     WHERE occupant.buildingDetailsID = c.buildingDetailsID
+                       AND (occupant.LastActionTypeID IS NULL
+                            OR occupant.LastActionTypeID NOT IN (57,58))
+                 )
+                              AND NOT EXISTS
+               (
+                   SELECT 1 FROM Housing.V_WaitingList holding
+                   WHERE holding.buildingDetailsID = c.buildingDetailsID
+                     AND holding.LastActionTypeID IN (38,40,45,46,47)
+                     AND NOT EXISTS
+                     (
+                         SELECT 1
+                         FROM Housing.BuildingAction oldMigrationAction
+                         JOIN Housing.AssignPeriod oldMigrationPeriod
+                           ON oldMigrationPeriod.AssignPeriodID = oldMigrationAction.AssignPeriodID_FK
+                         WHERE oldMigrationAction.buildingActionID = holding.LastActionID
+                           AND oldMigrationAction.buildingActionExtraText5 = N'MIGRATION_GENERATED'
+                           AND oldMigrationPeriod.AssignPeriodDescrption LIKE
+                                 N'Legacy allocation migration - WaitingClass %'
+                     )
+               )
+            )
+                THROW 50001,N'المنزل غير مؤهل: يلزم إجراء 5 وغرفة نوم نشطة، ونشاط المنزل والإدارة، وألا يكون مشغولاً.',1;
+            
+            IF @APH_HouseID_U =
+               (SELECT buildingDetailsID_FK FROM Housing.BuildingAction
+                WHERE buildingActionID = TRY_CONVERT(BIGINT,@LastActionID))
+                THROW 50001,N'يجب اختيار منزل مختلف عند تعديل التخصيص.',1;
+
+            /* APH_HOUSE_ELIGIBILITY_20261028_U_END */
+INSERT INTO  Housing.BuildingAction
             (
                   buildingActionTypeID_FK
                 , residentInfoID_FK
@@ -924,6 +1278,7 @@ BEGIN
              --END
 
              set @msg5 = N'تم تبديل المنزل للمستفيد'+cast(@FullName_A as nvarchar(1000))+N' بنجاح'
+            EXEC Housing.SyncAssignPeriodHistory @AssignPeriodID=@AssignPeriodID, @ApplyChanges=1;
             SELECT 1 AS IsSuccessful, @msg5 AS Message_;
             RETURN;
         END

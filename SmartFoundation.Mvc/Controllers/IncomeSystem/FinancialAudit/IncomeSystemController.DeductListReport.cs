@@ -2295,8 +2295,17 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
 
                 foreach (DataRow detailRow in reportDetailsTable.Rows)
                 {
+                    decimal billTotal =
+       detailRow["TotalAmount"] == DBNull.Value
+           ? 0m
+           : Convert.ToDecimal(detailRow["TotalAmount"]);
+
+                    // لا تُطبع الفواتير الصفرية في مسير الحسم المرسل للفرع المالي
+                    if (billTotal == 0m)
+                        continue;
+
                     printTable.Rows.Add(
-                        detailRow["BillNumber"]?.ToString() ?? "",
+                                        detailRow["BillNumber"]?.ToString() ?? "",
                         detailRow["ResidentFullName_A"]?.ToString() ?? "",
                         detailRow["GeneralNo_FK"]?.ToString() ?? "",
                         detailRow["MilitaryUnitName_A"]?.ToString() ?? "غير محددة",
@@ -2320,6 +2329,9 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                             : Convert.ToDecimal(detailRow["TotalAmount"])
                     );
                 }
+
+                if (printTable.Rows.Count == 0)
+                    return Content("لا توجد مبالغ حسم غير صفرية في المسير المحدد.");
 
                 var reportColumns = new List<ReportColumn>
     {
@@ -2363,8 +2375,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                     headerFields: header,
                     footerFields: new Dictionary<string, string>
                     {
-                        ["عدد الفواتير"] =
-                            reportRow["InvoiceCount"]?.ToString() ?? "0",
+                        ["عدد الفواتير"] = printTable.Rows.Count.ToString(),
 
                         //["إجمالي المسير"] =
                         //    Convert.ToDecimal(

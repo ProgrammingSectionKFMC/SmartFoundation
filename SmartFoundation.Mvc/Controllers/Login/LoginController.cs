@@ -1,5 +1,8 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using SmartFoundation.Mvc.Services.MonthlyBilling;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Configuration;
 using SmartFoundation.Application.Services;
 using SmartFoundation.Application.Services.Models; // ✅ ADD THIS LINE
 using System.Data;
@@ -18,16 +21,22 @@ namespace SmartFoundation.Mvc.Controllers.Login
         private readonly MastersServies _mastersServies;
         private readonly AuthenticationAuditService _authenticationAuditService;
         private readonly ILogger<LoginController> _logger;
+        private readonly IConfiguration _configuration;
+        private readonly MonthlyBillingQueue _monthlyBillingQueue;
 
 
         public LoginController(
             MastersServies mastersServies,
             AuthenticationAuditService authenticationAuditService,
-            ILogger<LoginController> logger)
+            ILogger<LoginController> logger,
+            IConfiguration configuration,
+            MonthlyBillingQueue monthlyBillingQueue)
         {
             _mastersServies = mastersServies;
             _authenticationAuditService = authenticationAuditService;
             _logger = logger;
+            _configuration = configuration;
+            _monthlyBillingQueue = monthlyBillingQueue;
         }
 
         private static readonly Dictionary<string, string> _dnsCache = new(StringComparer.OrdinalIgnoreCase);
@@ -348,6 +357,21 @@ namespace SmartFoundation.Mvc.Controllers.Login
                 true,
                 auth.nationalID ?? NationalID,
                 auth.usersId);
+
+            // Durable enqueue only; never wait for invoice generation during login.
+            if (_configuration.GetValue<bool>("MonthlyBilling:RunOnLogin") &&
+                long.TryParse(auth.IdaraID, out var billingIdara) && billingIdara > 0)
+            {
+                try
+                {
+                    await _monthlyBillingQueue.EnqueuePreviousMonthAsync(
+                        billingIdara, auth.usersId, clientHostName, ct);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Monthly billing enqueue failed for IdaraID={IdaraID}", billingIdara);
+                }
+            }
 
 
 

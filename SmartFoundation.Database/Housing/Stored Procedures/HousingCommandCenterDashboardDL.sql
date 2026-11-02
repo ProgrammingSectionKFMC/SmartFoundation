@@ -780,19 +780,12 @@ BEGIN
                   WHEN a.buildingActionTypeID_FK IS NULL
                       THEN N'NO_ACTIVE_ACTION'
 
-                  WHEN a.buildingActionTypeID_FK IN
-                       (
-                           2,
-                           24,
-                           54,
-                           55,
-                           56,
-                           57,
-                           58,
-                           59,
-                           60,
-                           61
-                       )
+                 WHEN a.buildingActionTypeID_FK IN
+(
+    2, 24,
+    48, 49, 50, 51, 52,
+    54, 55, 56, 57, 58, 59, 60, 61
+)
                       THEN N'OCCUPIED'
 
                   WHEN a.buildingActionTypeID_FK IN
@@ -852,7 +845,7 @@ BEGIN
                        )
                       THEN N'EXECUTION'
 
-                  WHEN a.buildingActionTypeID_FK = 3
+                  WHEN a.buildingActionTypeID_FK IN (3, 62)
                       THEN N'VACANT_PENDING'
 
                   ELSE N'OTHER'
@@ -866,18 +859,8 @@ BEGIN
                       THEN N'لا يوجد إجراء نشط'
 
                   WHEN a.buildingActionTypeID_FK IN
-                       (
-                           2,
-                           24,
-                           54,
-                           55,
-                           56,
-                           57,
-                           58,
-                           59,
-                           60,
-                           61
-                       )
+                       (2, 24, 48, 49, 50, 51, 52,
+ 54, 55, 56, 57, 58, 59, 60, 61)
                       THEN N'مسكون حاليًا'
 
                   WHEN a.buildingActionTypeID_FK IN
@@ -937,7 +920,7 @@ BEGIN
                        )
                       THEN N'ضمن دورة قسم التنفيذ'
 
-                  WHEN a.buildingActionTypeID_FK = 3
+                  WHEN a.buildingActionTypeID_FK IN (3, 62)
                       THEN N'خالٍ بانتظار اتخاذ إجراء'
 
                   ELSE N'حالة أخرى'
@@ -968,14 +951,12 @@ BEGIN
                b.buildingClassID_FK
 
 
-        LEFT JOIN Housing.V_LastActionForBuilding la
-            ON la.buildingDetailsID =
-               b.buildingDetailsID
+        LEFT JOIN Housing.V_GetGeneralListForBuilding operational
+    ON operational.buildingDetailsID = b.buildingDetailsID
+   AND operational.BuildingIdaraID = b.IdaraId_FK
 
-
-        LEFT JOIN Housing.BuildingAction a
-            ON a.buildingActionID =
-               la.buildingActionID
+LEFT JOIN Housing.BuildingAction a
+    ON a.buildingActionID = operational.LastActionID
 
 
         LEFT JOIN Housing.BuildingActionType at
@@ -7096,7 +7077,10 @@ ORDER BY
 
             /* مسكون حاليًا */
             WHEN a.buildingActionTypeID_FK IN
-                 (2, 24, 54, 55, 56, 57, 58, 59, 60, 61)
+                 (
+    2, 24, 48, 49, 50, 51, 52,
+    54, 55, 56, 57, 58, 59, 60, 61
+)
                 THEN N'OCCUPIED'
 
             /* جاهز للتسكين */
@@ -7135,7 +7119,7 @@ ORDER BY
                 THEN N'EXECUTION'
 
             /* خالٍ بانتظار اتخاذ إجراء */
-            WHEN a.buildingActionTypeID_FK = 3
+            WHEN a.buildingActionTypeID_FK IN (3, 62)
                 THEN N'VACANT_PENDING'
 
             /* أي حالة لم نصنفها بعد */
@@ -7149,7 +7133,10 @@ ORDER BY
                 THEN N'لا يوجد إجراء نشط'
 
             WHEN a.buildingActionTypeID_FK IN
-                 (2, 24, 54, 55, 56, 57, 58, 59, 60, 61)
+                 (
+    2, 24, 48, 49, 50, 51, 52,
+    54, 55, 56, 57, 58, 59, 60, 61
+)
                 THEN N'مسكون حاليًا'
 
             WHEN a.buildingActionTypeID_FK IN
@@ -7180,7 +7167,7 @@ ORDER BY
                  (29, 30)
                 THEN N'ضمن دورة قسم التنفيذ'
 
-            WHEN a.buildingActionTypeID_FK = 3
+            WHEN a.buildingActionTypeID_FK IN (3, 62)
                 THEN N'خالٍ بانتظار اتخاذ إجراء'
 
             ELSE N'حالة أخرى'
@@ -7190,7 +7177,10 @@ ORDER BY
         , CASE
 
             WHEN a.buildingActionTypeID_FK IN
-                 (2, 24, 54, 55, 56, 57, 58, 59, 60, 61)
+                 (
+    2, 24, 48, 49, 50, 51, 52,
+    54, 55, 56, 57, 58, 59, 60, 61
+)
                 THEN 1
 
             WHEN a.buildingActionTypeID_FK IN
@@ -7221,7 +7211,7 @@ ORDER BY
                  (29, 30)
                 THEN 8
 
-            WHEN a.buildingActionTypeID_FK = 3
+            WHEN a.buildingActionTypeID_FK IN (3, 62)
                 THEN 9
 
             WHEN a.buildingActionTypeID_FK IS NULL
@@ -7238,11 +7228,12 @@ ORDER BY
        AND b.buildingDetailsActive = 1
        AND b.buildingUtilityTypeID_FK IN (1,11,13,15)
 
-    LEFT JOIN Housing.V_LastActionForBuilding la
-        ON la.buildingDetailsID = b.buildingDetailsID
+    LEFT JOIN Housing.V_GetGeneralListForBuilding operational
+    ON operational.buildingDetailsID = b.buildingDetailsID
+   AND operational.BuildingIdaraID = b.IdaraId_FK
 
-    LEFT JOIN Housing.BuildingAction a
-        ON a.buildingActionID = la.buildingActionID
+LEFT JOIN Housing.BuildingAction a
+    ON a.buildingActionID = operational.LastActionID
 
     LEFT JOIN Housing.BuildingActionType t
         ON t.buildingActionTypeID =

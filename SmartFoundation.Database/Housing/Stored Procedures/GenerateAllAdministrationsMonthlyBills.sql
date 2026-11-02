@@ -1,4 +1,4 @@
-CREATE PROCEDURE [Housing].[GenerateAllAdministrationsMonthlyBills]
+﻿CREATE PROCEDURE [Housing].[GenerateAllAdministrationsMonthlyBills]
 (
       @Month INT = NULL
     , @Year INT = NULL
@@ -7,6 +7,7 @@ CREATE PROCEDURE [Housing].[GenerateAllAdministrationsMonthlyBills]
     , @RetryFailed BIT = 1
     , @OnlyRunID BIGINT = NULL
     , @ReturnSummary BIT = 1
+    , @OnlyIdaraID BIGINT = NULL
 )
 AS
 BEGIN
@@ -16,6 +17,8 @@ BEGIN
     DECLARE @TargetDate DATE = DATEADD(MONTH, -1, CONVERT(date, GETDATE()));
     SET @Month = ISNULL(@Month, MONTH(@TargetDate));
     SET @Year = ISNULL(@Year, YEAR(@TargetDate));
+    IF @OnlyIdaraID IS NOT NULL AND @OnlyIdaraID <= 0
+        THROW 50001, N'معرف الإدارة غير صحيح', 1;
     IF @Month NOT BETWEEN 1 AND 12 OR EOMONTH(DATEFROMPARTS(@Year,@Month,1)) >= EOMONTH(GETDATE())
         THROW 50001, N'يجب أن تكون فترة الرصد شهراً مكتملاً سابقاً', 1;
 
@@ -30,7 +33,8 @@ BEGIN
     (
         SELECT CONVERT(bigint,IdaraId) IdaraID FROM Housing.V_Occupant WHERE IdaraId IS NOT NULL
         UNION SELECT CONVERT(bigint,Idara_FK) FROM Housing.MeterServiceTypeLinkedWithIdara WHERE Idara_FK IS NOT NULL
-    ) source;
+    ) source
+    WHERE (@OnlyIdaraID IS NULL OR source.IdaraID=@OnlyIdaraID);
 
     INSERT @Scopes (IdaraID,BillingType,ServiceID,CalculationMethod)
     SELECT DISTINCT administration.IdaraID,N'SERVICE',link.MeterServiceTypeID_FK,method.MethodName
@@ -46,6 +50,7 @@ BEGIN
     JOIN Housing.MeterServiceType serviceType ON serviceType.meterServiceTypeID=link.MeterServiceTypeID_FK
     CROSS JOIN (VALUES(N'SERVICE_FIXED'),(N'METER_FIXED')) method(MethodName)
     WHERE serviceType.meterServiceTypeActive=1
+      AND (@OnlyIdaraID IS NULL OR administration.IdaraID=@OnlyIdaraID)
       AND (link.MeterServiceTypeLinkedWithIdaraActive=1 OR link.MeterServiceTypeLinkedWithIdaraEndDate IS NOT NULL)
       AND (link.MeterServiceTypeLinkedWithIdaraStartDate IS NULL OR CONVERT(date,link.MeterServiceTypeLinkedWithIdaraStartDate)<=EOMONTH(DATEFROMPARTS(@Year,@Month,1)))
       AND (link.MeterServiceTypeLinkedWithIdaraEndDate IS NULL OR CONVERT(date,link.MeterServiceTypeLinkedWithIdaraEndDate)>=DATEFROMPARTS(@Year,@Month,1));
@@ -234,6 +239,7 @@ BEGIN
         LEFT JOIN dbo.Idara idara ON idara.idaraID=runRow.IdaraID_FK
         LEFT JOIN Housing.MeterServiceType serviceType ON serviceType.meterServiceTypeID=runRow.MeterServiceTypeID_FK
         WHERE runRow.PeriodYear=@Year AND runRow.PeriodMonth=@Month
+          AND (@OnlyIdaraID IS NULL OR runRow.IdaraID_FK=@OnlyIdaraID)
           AND (@OnlyRunID IS NULL OR runRow.MonthlyBillingRunID=@OnlyRunID)
         ORDER BY runRow.IdaraID_FK,runRow.BillingType,runRow.MeterServiceTypeID_FK,runRow.CalculationMethod;
     ELSE

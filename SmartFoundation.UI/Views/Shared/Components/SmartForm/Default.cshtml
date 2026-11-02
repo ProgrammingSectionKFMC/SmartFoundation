@@ -161,7 +161,20 @@
                                                 var name = field.Name;
                                                 var value = field.Value ?? "";
                                                 var placeholder = field.Placeholder ?? "الرجاء الاختيار";
+                                                var validOptions = field.Options.Where(opt =>
+    !(opt.Value?.Trim() == "-1" &&
+      (opt.Text?.TrimStart().StartsWith("لاتوجد", StringComparison.Ordinal) == true ||
+       opt.Text?.TrimStart().StartsWith("لا توجد", StringComparison.Ordinal) == true)))
+    .ToList();
 
+var hasValidSelection = validOptions.Any(opt =>
+    opt.Selected ||
+    string.Equals(value, opt.Value, StringComparison.OrdinalIgnoreCase));
+
+var noOptionsText = validOptions.Count == 0
+    ? field.Options.FirstOrDefault(opt =>
+        opt.Value?.Trim() == "-1")?.Text ?? "لا توجد خيارات"
+    : placeholder;
                                                 var required = field.Required ? "required" : "";
                                                 var disabled = field.Disabled ? "disabled" : "";
 
@@ -213,11 +226,11 @@
 
                                                         onchange="@onchangeJs">
 
-                                                        <option value="" disabled @(string.IsNullOrWhiteSpace(value) ? "selected" : "")>
-                                                            @placeholder
-                                                        </option>
+                                                        <option value="" disabled @(!hasValidSelection ? "selected" : "")>
+    @noOptionsText
+                            </option>
 
-                                                        @foreach (var opt in field.Options)
+                            @foreach (var opt in validOptions)
                                                         {
                                                             var optValue = opt.Value ?? "";
                                                             var optText = opt.Text ?? "";

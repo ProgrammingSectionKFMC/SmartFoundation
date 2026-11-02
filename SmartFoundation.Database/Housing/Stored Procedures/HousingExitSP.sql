@@ -1,4 +1,4 @@
-﻿CREATE  PROCEDURE [Housing].[HousingExitSP] 
+﻿CREATE PROCEDURE [Housing].[HousingExitSP] 
 (
       @Action                               NVARCHAR(200)
     , @ActionID                             BIGINT          = NULL
@@ -397,6 +397,30 @@ END;
                     )
                   )
 
+                  -- An already issued reading-meter bill is a valid monthly baseline,
+                  -- not a reason to block physical exit. Its original ID/status stay unchanged.
+                  AND NOT
+                  (
+                      b.BillActive = 1
+                      AND b.BillTypeID_FK = 2
+                      AND b.BillChargeTypeID_FK IN (2,3,4)
+                      AND b.residentInfoID_FK = @ResidentInfoID_BIGINT
+                      AND b.generalNo_FK = @GeneralNo_BIGINT
+                      AND b.PeriodYear = YEAR(@ExitDate_DATE)
+                      AND b.PeriodMonth = MONTH(@ExitDate_DATE)
+                      AND EXISTS
+                      (
+                          SELECT 1 FROM Housing.MeterRead baseline WITH (UPDLOCK, HOLDLOCK)
+                          WHERE baseline.meterReadID = b.meterReadID
+                            AND baseline.meterID_FK = b.meterID
+                            AND baseline.meterReadTypeID_FK = 2
+                            AND baseline.meterReadActive = 1
+                            AND baseline.buildingDetailsID = @BuildingDetailsID_BIGINT
+                            AND baseline.IdaraID_FK = @IdaraID_INT
+                            AND baseline.residentInfoID_FK = @ResidentInfoID_BIGINT
+                            AND CONVERT(DATE, COALESCE(baseline.dateOfRead,baseline.entryDate)) <= @ExitDate_DATE
+                      )
+                  )
                   AND
                   (
                       (b.PeriodYear = YEAR(@ExitMonthStartForBillGuard)
@@ -455,6 +479,28 @@ END;
                   AND b.BillChargeTypeID_FK IN (1, 2, 3, 4)
                   AND (b.BillTypeID_FK = 2
                        OR (@Action = N'HOUSINGEXIT' AND b.BillTypeID_FK = 3))
+                  -- Do not mistake a calendar-month end for the actual time of an
+                  -- earlier periodic meter reading. Keep the active original bill.
+                  AND NOT
+                  (
+                      b.BillTypeID_FK = 2
+                      AND b.BillChargeTypeID_FK IN (2,3,4)
+                      AND b.generalNo_FK = @GeneralNo_BIGINT
+                      AND b.PeriodYear = YEAR(@ExitDate_DATE)
+                      AND b.PeriodMonth = MONTH(@ExitDate_DATE)
+                      AND EXISTS
+                      (
+                          SELECT 1 FROM Housing.MeterRead baseline WITH (UPDLOCK, HOLDLOCK)
+                          WHERE baseline.meterReadID=b.meterReadID
+                            AND baseline.meterID_FK=b.meterID
+                            AND baseline.meterReadTypeID_FK=2
+                            AND baseline.meterReadActive=1
+                            AND baseline.buildingDetailsID=@BuildingDetailsID_BIGINT
+                            AND baseline.IdaraID_FK=@IdaraID_INT
+                            AND baseline.residentInfoID_FK=@ResidentInfoID_BIGINT
+                            AND CONVERT(DATE,COALESCE(baseline.dateOfRead,baseline.entryDate))<=@ExitDate_DATE
+                      )
+                  )
                   AND b.BillsToDate IS NULL
                   AND (b.PeriodYear IS NULL OR b.PeriodYear NOT BETWEEN 1900 AND 9999
                        OR b.PeriodMonth IS NULL OR b.PeriodMonth NOT BETWEEN 1 AND 12)
@@ -484,6 +530,28 @@ END;
               AND b.BillChargeTypeID_FK IN (1, 2, 3, 4)
               AND (b.BillTypeID_FK = 2
                    OR (@Action = N'HOUSINGEXIT' AND b.BillTypeID_FK = 3))
+                  -- Do not mistake a calendar-month end for the actual time of an
+                  -- earlier periodic meter reading. Keep the active original bill.
+                  AND NOT
+                  (
+                      b.BillTypeID_FK = 2
+                      AND b.BillChargeTypeID_FK IN (2,3,4)
+                      AND b.generalNo_FK = @GeneralNo_BIGINT
+                      AND b.PeriodYear = YEAR(@ExitDate_DATE)
+                      AND b.PeriodMonth = MONTH(@ExitDate_DATE)
+                      AND EXISTS
+                      (
+                          SELECT 1 FROM Housing.MeterRead baseline WITH (UPDLOCK, HOLDLOCK)
+                          WHERE baseline.meterReadID=b.meterReadID
+                            AND baseline.meterID_FK=b.meterID
+                            AND baseline.meterReadTypeID_FK=2
+                            AND baseline.meterReadActive=1
+                            AND baseline.buildingDetailsID=@BuildingDetailsID_BIGINT
+                            AND baseline.IdaraID_FK=@IdaraID_INT
+                            AND baseline.residentInfoID_FK=@ResidentInfoID_BIGINT
+                            AND CONVERT(DATE,COALESCE(baseline.dateOfRead,baseline.entryDate))<=@ExitDate_DATE
+                      )
+                  )
               AND bEnd.BilledThrough >= @StoredOccupentDate;
 
             IF @LastIndependentBilledThrough IS NOT NULL
@@ -1044,6 +1112,10 @@ ORDER BY a.Lvl DESC;
 IF @Cancel_CurrentExit54ID IS NULL
     THROW 50001, N'تعذر تحديد دورة طلب الإخلاء الحالية لإلغائها بأمان.', 1;
 
+-- Periodic readings posted after 54 but before the exit invoice can remain
+-- with the outgoing resident when the exit is cancelled. Admin readings made
+-- AFTER the 59 invoice must be reversed (with financial guards) below.
+
 -- Current-cycle meter readings: stage-59 action must descend from this request-54
 -- and be an ancestor of the current last action.
 DECLARE @Cancel_CurrentReadIDs TABLE (meterReadID BIGINT NOT NULL PRIMARY KEY);
@@ -1080,6 +1152,115 @@ WHERE b.BillActive = 1
   AND b.buildingDetailsID = @BuildingDetailsID_BIGINT
   AND b.idaraID_FK = @IdaraID_INT;
 
+-- Cycle-safe reversal. New Idara readings after invoice 59 carry the exact
+-- stage59 action as MeterRead.buildingActionID_FK, not a time-based guess.
+-- A legacy/unlinked Idara reading after 54 is not auto-deactivated.
+IF EXISTS
+(
+ SELECT 1
+ FROM Housing.MeterRead monthly WITH (UPDLOCK,HOLDLOCK)
+ JOIN Housing.BuildingAction exit54 WITH (UPDLOCK,HOLDLOCK)
+   ON exit54.buildingActionID=@Cancel_CurrentExit54ID
+ WHERE monthly.buildingDetailsID=@BuildingDetailsID_BIGINT
+   AND monthly.IdaraID_FK=@IdaraID_INT
+   AND monthly.meterReadTypeID_FK=2 AND monthly.meterReadActive=1
+   AND monthly.residentInfoID_FK IS NULL
+   AND (monthly.entryDate>exit54.entryDate OR monthly.dateOfRead>exit54.entryDate)
+   AND NOT EXISTS
+   (
+     SELECT 1
+     FROM @Cancel_CurrentReadIDs r
+     JOIN Housing.MeterRead exitRead WITH (UPDLOCK,HOLDLOCK)
+       ON exitRead.meterReadID=r.meterReadID
+     WHERE exitRead.meterID_FK=monthly.meterID_FK
+       AND exitRead.buildingDetailsID=monthly.buildingDetailsID
+       AND exitRead.IdaraID_FK=monthly.IdaraID_FK
+       AND exitRead.buildingActionID_FK=monthly.buildingActionID_FK
+       AND monthly.buildingActionID_FK IS NOT NULL
+       AND monthly.entryDate>=exitRead.entryDate
+   )
+)
+ THROW 50001,N'توجد قراءة دورية للإدارة بعد الاستلام لا ترتبط بدورة الإخلاء الحالية ربطًا موثقًا؛ يلزم إجراء تصحيحي قبل الإلغاء.',1;
+
+DECLARE @Cancel_AdminReadIDs TABLE (meterReadID BIGINT NOT NULL PRIMARY KEY);
+INSERT INTO @Cancel_AdminReadIDs(meterReadID)
+SELECT DISTINCT monthly.meterReadID
+FROM Housing.MeterRead monthly WITH (UPDLOCK,HOLDLOCK)
+JOIN @Cancel_CurrentReadIDs r ON 1=1
+JOIN Housing.MeterRead exitRead WITH (UPDLOCK,HOLDLOCK)
+  ON exitRead.meterReadID=r.meterReadID
+ AND exitRead.meterID_FK=monthly.meterID_FK
+ AND exitRead.buildingDetailsID=monthly.buildingDetailsID
+ AND exitRead.IdaraID_FK=monthly.IdaraID_FK
+ AND exitRead.buildingActionID_FK=monthly.buildingActionID_FK
+WHERE monthly.buildingDetailsID=@BuildingDetailsID_BIGINT
+  AND monthly.IdaraID_FK=@IdaraID_INT
+  AND monthly.meterReadTypeID_FK=2 AND monthly.meterReadActive=1
+  AND monthly.residentInfoID_FK IS NULL AND monthly.generalNo_FK IS NULL
+  AND monthly.buildingActionID_FK IS NOT NULL
+  AND monthly.entryDate>=exitRead.entryDate;
+
+-- Verify exact same-meter active exit invoice before reversing any linked Idara bill.
+IF EXISTS
+(
+ SELECT 1 FROM @Cancel_AdminReadIDs r
+ JOIN Housing.MeterRead monthly WITH (UPDLOCK,HOLDLOCK) ON monthly.meterReadID=r.meterReadID
+ WHERE NOT EXISTS
+ (
+    SELECT 1 FROM @Cancel_CurrentReadIDs e
+    JOIN Housing.MeterRead exitRead WITH (UPDLOCK,HOLDLOCK)
+      ON exitRead.meterReadID=e.meterReadID
+     AND exitRead.meterID_FK=monthly.meterID_FK
+     AND exitRead.buildingActionID_FK=monthly.buildingActionID_FK
+    JOIN Housing.Bills exitBill WITH (UPDLOCK,HOLDLOCK)
+      ON exitBill.meterReadID=exitRead.meterReadID
+     AND exitBill.BillActive=1 AND exitBill.BillTypeID_FK=3
+     AND exitBill.residentInfoID_FK=@ResidentInfoID_BIGINT
+     AND exitBill.buildingDetailsID=@BuildingDetailsID_BIGINT
+     AND exitBill.idaraID_FK=@IdaraID_INT
+     AND exitBill.meterID=monthly.meterID_FK
+ )
+)
+ THROW 50001,N'قراءة الإدارة لا ترتبط بفاتورة إخلاء نشطة للعداد ودورة الإخلاء نفسيهما؛ تعذر الإلغاء الآلي.',1;
+
+-- Every admin read selected for reversal must have exactly one active Idara bill.
+IF EXISTS
+(
+ SELECT 1 FROM @Cancel_AdminReadIDs r
+ OUTER APPLY
+ (
+   SELECT COUNT_BIG(*) AS BillCount
+   FROM Housing.Bills b WITH (UPDLOCK,HOLDLOCK)
+   WHERE b.meterReadID=r.meterReadID AND b.BillActive=1
+     AND b.BillTypeID_FK=2 AND b.residentInfoID_FK IS NULL
+     AND b.buildingDetailsID=@BuildingDetailsID_BIGINT
+     AND b.idaraID_FK=@IdaraID_INT
+ ) z
+ WHERE z.BillCount<>1
+)
+    THROW 50001,N'توجد قراءة دورية للإدارة لا تملك فاتورة واحدة قابلة للإلغاء بأمان؛ لم يُلغ طلب الإخلاء.',1;
+
+INSERT INTO @Cancel_CurrentBillIDs(BillsID)
+SELECT b.BillsID
+FROM Housing.Bills b WITH (UPDLOCK,HOLDLOCK)
+JOIN @Cancel_AdminReadIDs r ON r.meterReadID=b.meterReadID
+WHERE b.BillActive=1 AND b.BillTypeID_FK=2
+  AND b.residentInfoID_FK IS NULL
+  AND b.buildingDetailsID=@BuildingDetailsID_BIGINT
+  AND b.idaraID_FK=@IdaraID_INT
+  AND NOT EXISTS(SELECT 1 FROM @Cancel_CurrentBillIDs p WHERE p.BillsID=b.BillsID);
+
+-- Guard against another active bill type on an administration reading.
+IF EXISTS
+(
+ SELECT 1 FROM Housing.Bills b WITH (UPDLOCK,HOLDLOCK)
+ JOIN @Cancel_AdminReadIDs r ON r.meterReadID=b.meterReadID
+ WHERE b.BillActive=1
+   AND NOT EXISTS(SELECT 1 FROM @Cancel_CurrentBillIDs c WHERE c.BillsID=b.BillsID)
+)
+    THROW 50001,N'توجد مطالبة أخرى نشطة مرتبطة بقراءة الإدارة؛ تعذر إلغاء الإخلاء بأمان.',1;
+
+-- All selected admin bills are covered by the financial linkage guards below.
 -- Fail closed if a current-cycle read is referenced by a bill outside the precise set.
 IF EXISTS
 (
@@ -1134,6 +1315,22 @@ IF EXISTS
 )
     THROW 50001, N'توجد فاتورة إخلاء لها فواتير فرعية؛ يلزم تدقيق مالي.', 1;
 
+-- Never cancel an invoice already included in a financial-deduction run.
+IF EXISTS
+(
+    SELECT 1 FROM @Cancel_CurrentBillIDs t
+    JOIN Housing.DeductListReportDetails d WITH (UPDLOCK,HOLDLOCK)
+      ON d.BillsID_FK=t.BillsID
+)
+OR EXISTS
+(
+    SELECT 1 FROM @Cancel_CurrentBillIDs t
+    JOIN Housing.BillsDeductListDetails d WITH (UPDLOCK,HOLDLOCK)
+      ON d.billsID_FK=t.BillsID
+    WHERE d.billActive=1
+)
+    THROW 50001, N'فاتورة الإخلاء مرتبطة بمسير مالي؛ لا يمكن إلغاؤها تلقائيًا.', 1;
+
 -- Existing rent engine cancels all active exit-rent bills for this occupancy.
 -- Guard foreign cycle links and ANY historical financial link first.
 IF EXISTS
@@ -1157,6 +1354,21 @@ IF EXISTS
       )
 )
     THROW 50001, N'توجد فاتورة إيجار إخلاء مرتبطة ماليًا أو بدورة أخرى؛ يلزم تدقيق قبل الإلغاء.', 1;
+
+IF EXISTS
+(
+    SELECT 1 FROM Housing.Bills cycleBill WITH (UPDLOCK,HOLDLOCK)
+    WHERE cycleBill.ExitRequestActionID_FK=@Cancel_CurrentExit54ID
+      AND cycleBill.BillActive=1
+      AND
+      (
+         EXISTS (SELECT 1 FROM Housing.DeductListReportDetails d WITH (UPDLOCK,HOLDLOCK)
+                 WHERE d.BillsID_FK=cycleBill.BillsID)
+         OR EXISTS (SELECT 1 FROM Housing.BillsDeductListDetails d WITH (UPDLOCK,HOLDLOCK)
+                    WHERE d.billsID_FK=cycleBill.BillsID AND d.billActive=1)
+      )
+)
+    THROW 50001,N'فاتورة في دورة الإخلاء مرتبطة بمسير مالي؛ لا يمكن إلغاؤها.',1;
 
 -- Invoke the existing source-of-truth service cancel engine for estimated/fixed bills.
 EXEC Housing.GenerateExitServiceBillsForRequest
@@ -1194,6 +1406,30 @@ WHERE mr.meterReadActive = 1;
 
 IF @@ROWCOUNT <> @Cancel_ExpectedReadCount
     THROW 50001, N'تعذر إلغاء قراءات الإخلاء بصورة جذرية.', 1;
+
+INSERT INTO dbo.AuditLog(TableName,ActionType,RecordID,PerformedBy,Notes)
+SELECT N'[Housing].[Bills]',N'CANCELHOUSINGEXIT',b.BillsID,@entryData,
+       N'إلغاء منطقي لفاتورة دورية للإدارة بعد 59 ضمن دورة إخلاء ملغاة.'
+FROM Housing.Bills b
+JOIN @Cancel_CurrentBillIDs target ON target.BillsID=b.BillsID
+JOIN @Cancel_AdminReadIDs r ON r.meterReadID=b.meterReadID
+WHERE b.BillTypeID_FK=2 AND b.BillActive=0
+  AND b.residentInfoID_FK IS NULL
+  AND b.idaraID_FK=@IdaraID_INT AND b.buildingDetailsID=@BuildingDetailsID_BIGINT;
+
+-- Reverse administrative readings after the associated invoices are disabled.
+DECLARE @Cancel_AdminExpected INT=(SELECT COUNT(*) FROM @Cancel_AdminReadIDs);
+UPDATE mr SET mr.meterReadActive=0
+FROM Housing.MeterRead mr
+JOIN @Cancel_AdminReadIDs r ON r.meterReadID=mr.meterReadID
+WHERE mr.meterReadActive=1;
+IF @@ROWCOUNT<>@Cancel_AdminExpected
+    THROW 50001,N'تعذر إلغاء القراءات الدورية للإدارة بعد قراءة الإخلاء؛ لم يُلغ الطلب.',1;
+
+INSERT INTO dbo.AuditLog(TableName,ActionType,RecordID,PerformedBy,Notes)
+SELECT N'[Housing].[MeterRead]',N'CANCELHOUSINGEXIT',r.meterReadID,
+       @entryData,N'إلغاء منطقي لقراءة دورية للإدارة لاحقة لإخلاء تم إلغاؤه؛ بقيت قراءة المستفيد محفوظة.'
+FROM @Cancel_AdminReadIDs r;
 
 -- Strong post-condition: no current-cycle active exit service bill may remain.
 IF EXISTS
@@ -1586,17 +1822,33 @@ EXEC [Housing].[GenerateExitRentBills]
                 IF @G57_RentGaps>0
                     THROW 50001,N'فواتير إيجار الإشغال غير مكتملة أو بها تداخل؛ لا يمكن إرسال الإخلاء.',1;
 
-                -- New-cycle rent invoices must have a trustworthy exit-day bound.
-                IF NOT EXISTS
-                (
-                    SELECT 1 FROM Housing.Bills b WITH (UPDLOCK,HOLDLOCK)
-                    WHERE b.ExitRequestActionID_FK=@G57_Exit54
-                      AND b.residentInfoID_FK=@G57_Resident
-                      AND b.buildingDetailsID=@G57_Home AND b.idaraID_FK=@G57_Idara
-                      AND b.BillActive=1 AND b.BillTypeID_FK=3
-                      AND b.BillChargeTypeID_FK=1
-                      AND CONVERT(DATE,b.BillsToDate)=@G57_Physical
-                ) THROW 50001,N'فاتورة إيجار الإخلاء غير مكتملة حتى يوم الاستلام.',1;
+                -- The preceding daily coverage guard ensures exactly one active
+-- rent bill per occupancy day, without gaps or overlaps.
+-- The last rent bill may be periodic or belong to this exit cycle.
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM Housing.Bills b WITH (UPDLOCK, HOLDLOCK)
+    WHERE b.residentInfoID_FK = @G57_Resident
+      AND b.buildingDetailsID = @G57_Home
+      AND b.idaraID_FK = @G57_Idara
+      AND b.BillActive = 1
+      AND b.BillChargeTypeID_FK = 1
+      AND
+      (
+          b.BillTypeID_FK = 2
+          OR
+          (
+              b.BillTypeID_FK = 3
+              AND b.ExitRequestActionID_FK = @G57_Exit54
+          )
+      )
+      AND CONVERT(DATE, b.BillsFromDate) <= @G57_Physical
+      AND CONVERT(DATE, b.BillsToDate) = @G57_Physical
+)
+    THROW 50001,
+        N'لا توجد فاتورة إيجار مؤهلة تنتهي بتاريخ الاستلام الفعلي.',
+        1;
 
                 -- Ensure all capped exemptions end no later than physical 54.
                 IF EXISTS
@@ -1653,7 +1905,8 @@ EXEC [Housing].[GenerateExitRentBills]
                          AND b.PeriodMonth=MONTH(@G57_Physical)
                         WHERE r.meterID_FK=m.meterID AND r.meterReadActive=1
                           AND r.meterReadTypeID_FK=3 AND r.buildingActionID_FK=@G57_S59
-                          AND CONVERT(DATE,r.dateOfRead)=@G57_Physical
+                          AND CONVERT(DATE,r.dateOfRead)>=@G57_Physical
+                          AND CONVERT(DATE,r.dateOfRead)<=CONVERT(DATE,GETDATE())
                     ) match_
                     WHERE link.buildingDetailsID_FK=@G57_Home
                       AND link.IdaraID_FK=@G57_Idara
@@ -1666,69 +1919,230 @@ EXEC [Housing].[GenerateExitRentBills]
                       AND (match_.Reads<>1 OR match_.Bills<>1 OR @G57_S59 IS NULL)
                 ) THROW 50001,N'القراءة النهائية أو فاتورتها غير مكتملة لأحد العدادات الفعلية.',1;
 
-                -- Services: independently reject any configured, non-reading service
-                -- that did not produce a correctly stamped cycle bill for the exit month.
-                DECLARE @G57_MonthStart DATE=DATEFROMPARTS(YEAR(@G57_Physical),MONTH(@G57_Physical),1);
-                IF @G57_Entry>@G57_MonthStart SET @G57_MonthStart=@G57_Entry;
-                IF EXISTS
-                (
-                    SELECT 1 FROM Housing.MeterServiceType st
-                    WHERE st.meterServiceTypeActive=1
-                      AND (st.meterServiceTypeStartDate IS NULL OR CONVERT(DATE,st.meterServiceTypeStartDate)<=@G57_Physical)
-                      AND (st.meterServiceTypeEndDate IS NULL OR CONVERT(DATE,st.meterServiceTypeEndDate)>=@G57_Physical)
-                      AND EXISTS
-                      (SELECT 1 FROM Housing.MeterServiceTypeLinkedWithIdara il
-                       WHERE il.MeterServiceTypeID_FK=st.meterServiceTypeID
-                         AND (il.Idara_FK=@G57_Idara OR il.Idara_FK IS NULL)
-                         AND (il.MeterServiceTypeLinkedWithIdaraActive=1 OR il.MeterServiceTypeLinkedWithIdaraEndDate IS NOT NULL)
-                         AND (il.MeterServiceTypeLinkedWithIdaraStartDate IS NULL OR CONVERT(DATE,il.MeterServiceTypeLinkedWithIdaraStartDate)<=@G57_MonthStart)
-                         AND (il.MeterServiceTypeLinkedWithIdaraEndDate IS NULL OR CONVERT(DATE,il.MeterServiceTypeLinkedWithIdaraEndDate)>=@G57_Physical))
-                      AND NOT EXISTS
-                      (SELECT 1 FROM Housing.MeterForBuilding lm
-                       JOIN Housing.Meter mm ON mm.meterID=lm.meterID_FK
-                       JOIN Housing.MeterType tm ON tm.meterTypeID=mm.meterTypeID_FK
-                       WHERE lm.buildingDetailsID_FK=@G57_Home AND lm.IdaraID_FK=@G57_Idara
-                         AND lm.meterForBuildingActive=1 AND mm.meterActive=1 AND tm.meterTypeActive=1
-                         AND tm.meterServiceTypeID_FK=st.meterServiceTypeID AND tm.MeterCalculateTypeID_FK=1
-                         AND tm.IdaraId_FK=@G57_Idara
-                         AND (lm.meterForBuildingStartDate IS NULL OR CONVERT(DATE,lm.meterForBuildingStartDate)<=@G57_Physical)
-                         AND (lm.meterForBuildingEndDate IS NULL OR CONVERT(DATE,lm.meterForBuildingEndDate)>=@G57_Physical))
-                      AND
-                      (
-                       EXISTS
-                       (SELECT 1 FROM Housing.MeterForBuilding lm
-                        JOIN Housing.Meter mm ON mm.meterID=lm.meterID_FK
-                        JOIN Housing.MeterType tm ON tm.meterTypeID=mm.meterTypeID_FK
-                        WHERE lm.buildingDetailsID_FK=@G57_Home AND lm.IdaraID_FK=@G57_Idara
-                          AND lm.meterForBuildingActive=1 AND mm.meterActive=1 AND tm.meterTypeActive=1
-                          AND tm.meterServiceTypeID_FK=st.meterServiceTypeID AND tm.MeterCalculateTypeID_FK=2
-                          AND tm.IdaraId_FK=@G57_Idara
-                          AND (lm.meterForBuildingStartDate IS NULL OR CONVERT(DATE,lm.meterForBuildingStartDate)<=@G57_Physical)
-                          AND (lm.meterForBuildingEndDate IS NULL OR CONVERT(DATE,lm.meterForBuildingEndDate)>=@G57_Physical))
-                       OR EXISTS (SELECT 1 FROM Housing.BuildingDetailsMeterServices bms
-                          WHERE bms.BuildingDetailsID_FK=@G57_Home
-                            AND bms.IdaraId_FK=@G57_Idara
-                            AND bms.MeterServicesTypeID_FK=st.meterServiceTypeID
-                            AND (bms.BuildingDetailsMeterServicesActive=1 OR bms.BuildingDetailsMeterServicesEndDate IS NOT NULL)
-                            AND (bms.BuildingDetailsMeterServicesStartDate IS NULL OR CONVERT(DATE,bms.BuildingDetailsMeterServicesStartDate)<=@G57_MonthStart)
-                            AND (bms.BuildingDetailsMeterServicesEndDate IS NULL OR CONVERT(DATE,bms.BuildingDetailsMeterServicesEndDate)>=@G57_Physical))
-                      )
-                      AND NOT EXISTS
-                      (SELECT 1 FROM Housing.Bills b WITH (UPDLOCK,HOLDLOCK)
-                       JOIN Housing.BillCalculation c ON c.BillsID_FK=b.BillsID
-                       WHERE b.ExitRequestActionID_FK=@G57_Exit54
-                         AND b.residentInfoID_FK=@G57_Resident
-                         AND b.generalNo_FK=@G57_General
-                         AND b.buildingDetailsID=@G57_Home AND b.idaraID_FK=@G57_Idara
-                         AND b.BillActive=1 AND b.BillTypeID_FK=3
-                         AND b.meterServiceTypeID=st.meterServiceTypeID
-                         AND CONVERT(DATE,b.BillsFromDate)<=@G57_MonthStart
-                         AND CONVERT(DATE,b.BillsToDate)>=@G57_Physical
-                         AND c.CalculationMethod IN
-    (N'SPACE_ESTIMATED', N'FIXED_METER', N'SERVICE_FIXED_FALLBACK'))
+                -- Validate actual daily coverage of non-reading services.
+-- Periodic bills are accepted; exit bills must belong to this cycle.
+-- Reading-meter invoices remain validated by the preceding stage-59 guard.
+
+DECLARE @G57_MonthStart DATE =
+    DATEFROMPARTS(YEAR(@G57_Physical), MONTH(@G57_Physical), 1);
+
+IF @G57_Entry > @G57_MonthStart
+    SET @G57_MonthStart = @G57_Entry;
+
+;WITH Days AS
+(
+    SELECT @G57_MonthStart AS BillDay
+
+    UNION ALL
+
+    SELECT DATEADD(DAY, 1, BillDay)
+    FROM Days
+    WHERE BillDay < @G57_Physical
+),
+EligibleServices AS
+(
+    SELECT DISTINCT
+        d.BillDay,
+        st.meterServiceTypeID AS ServiceID
+    FROM Days d
+    JOIN Housing.MeterServiceType st
+      ON st.meterServiceTypeActive = 1
+     AND (
+         st.meterServiceTypeStartDate IS NULL
+         OR CONVERT(DATE, st.meterServiceTypeStartDate) <= d.BillDay
+     )
+     AND (
+         st.meterServiceTypeEndDate IS NULL
+         OR CONVERT(DATE, st.meterServiceTypeEndDate) >= d.BillDay
+     )
+    WHERE EXISTS
+    (
+        SELECT 1
+        FROM Housing.MeterServiceTypeLinkedWithIdara il
+        WHERE il.MeterServiceTypeID_FK = st.meterServiceTypeID
+          AND (il.Idara_FK = @G57_Idara OR il.Idara_FK IS NULL)
+          AND (
+              il.MeterServiceTypeLinkedWithIdaraActive = 1
+              OR il.MeterServiceTypeLinkedWithIdaraEndDate IS NOT NULL
+          )
+          AND (
+              il.MeterServiceTypeLinkedWithIdaraStartDate IS NULL
+              OR CONVERT(DATE, il.MeterServiceTypeLinkedWithIdaraStartDate)
+                 <= d.BillDay
+          )
+          AND (
+              il.MeterServiceTypeLinkedWithIdaraEndDate IS NULL
+              OR CONVERT(DATE, il.MeterServiceTypeLinkedWithIdaraEndDate)
+                 >= d.BillDay
+          )
+    )
+),
+EligibleMeters AS
+(
+    SELECT DISTINCT
+        es.BillDay,
+        es.ServiceID,
+        m.meterID,
+        mt.MeterCalculateTypeID_FK
+    FROM EligibleServices es
+    JOIN Housing.MeterForBuilding lm
+      ON lm.buildingDetailsID_FK = @G57_Home
+     AND lm.IdaraID_FK = @G57_Idara
+     AND lm.meterForBuildingActive = 1
+    JOIN Housing.Meter m
+      ON m.meterID = lm.meterID_FK
+     AND m.meterActive = 1
+    JOIN Housing.MeterType mt
+      ON mt.meterTypeID = m.meterTypeID_FK
+     AND mt.meterTypeActive = 1
+     AND mt.IdaraId_FK = @G57_Idara
+     AND mt.meterServiceTypeID_FK = es.ServiceID
+    WHERE
+        (lm.meterForBuildingStartDate IS NULL
+         OR CONVERT(DATE, lm.meterForBuildingStartDate) <= es.BillDay)
+    AND (lm.meterForBuildingEndDate IS NULL
+         OR CONVERT(DATE, lm.meterForBuildingEndDate) >= es.BillDay)
+    AND (m.meterStartDate IS NULL
+         OR CONVERT(DATE, m.meterStartDate) <= es.BillDay)
+    AND (m.meterEndDate IS NULL
+         OR CONVERT(DATE, m.meterEndDate) >= es.BillDay)
+),
+RequiredTargets AS
+(
+    -- Each eligible fixed meter must have its own coverage.
+    SELECT DISTINCT
+        em.BillDay,
+        em.ServiceID,
+        em.meterID,
+        CONVERT(VARCHAR(25), 'METER_FIXED') AS TargetMethod
+    FROM EligibleMeters em
+    WHERE em.MeterCalculateTypeID_FK = 2
+      AND NOT EXISTS
+      (
+          SELECT 1 FROM EligibleMeters reading
+          WHERE reading.BillDay = em.BillDay
+            AND reading.ServiceID = em.ServiceID
+            AND reading.MeterCalculateTypeID_FK = 1
+      )
+
+    UNION ALL
+
+    -- Service-level coverage applies only without reading/fixed meters.
+    SELECT
+        es.BillDay,
+        es.ServiceID,
+        CAST(NULL AS BIGINT),
+        CONVERT(VARCHAR(25), 'SERVICE')
+    FROM EligibleServices es
+    WHERE NOT EXISTS
+    (
+        SELECT 1 FROM EligibleMeters em
+        WHERE em.BillDay = es.BillDay
+          AND em.ServiceID = es.ServiceID
+          AND em.MeterCalculateTypeID_FK IN (1, 2)
+    )
+    AND EXISTS
+    (
+        SELECT 1
+        FROM Housing.BuildingDetailsMeterServices bms
+        WHERE bms.BuildingDetailsID_FK = @G57_Home
+          AND bms.IdaraId_FK = @G57_Idara
+          AND bms.MeterServicesTypeID_FK = es.ServiceID
+          AND (
+              bms.BuildingDetailsMeterServicesActive = 1
+              OR bms.BuildingDetailsMeterServicesEndDate IS NOT NULL
+          )
+          AND (
+              bms.BuildingDetailsMeterServicesStartDate IS NULL
+              OR CONVERT(DATE, bms.BuildingDetailsMeterServicesStartDate)
+                 <= es.BillDay
+          )
+          AND (
+              bms.BuildingDetailsMeterServicesEndDate IS NULL
+              OR CONVERT(DATE, bms.BuildingDetailsMeterServicesEndDate)
+                 >= es.BillDay
+          )
+    )
 )
-THROW 50001,
-    N'فاتورة خدمة مستحقة غير مكتملة لفترة الإخلاء أو لا تطابق نوع الخدمة.', 1;
+SELECT
+    rt.BillDay,
+    rt.ServiceID,
+    rt.meterID,
+    rt.TargetMethod,
+    coverage.TotalBills,
+    coverage.ValidBills
+INTO #G57_ServiceCoverageFailures
+FROM RequiredTargets rt
+CROSS APPLY
+(
+    SELECT
+        COUNT_BIG(DISTINCT b.BillsID) AS TotalBills,
+        COUNT_BIG(DISTINCT
+            CASE
+                WHEN c.BillsID_FK IS NOT NULL
+                THEN b.BillsID
+            END
+        ) AS ValidBills
+    FROM Housing.Bills b WITH (UPDLOCK, HOLDLOCK)
+    LEFT JOIN Housing.BillCalculation c
+      ON c.BillsID_FK = b.BillsID
+     AND (
+         (
+             rt.TargetMethod = 'METER_FIXED'
+             AND c.CalculationMethod = N'METER_FIXED'
+         )
+         OR
+         (
+             rt.TargetMethod = 'SERVICE'
+             AND c.CalculationMethod IN
+                 (N'SPACE_ESTIMATED', N'SERVICE_FIXED_FALLBACK')
+         )
+     )
+    WHERE b.residentInfoID_FK = @G57_Resident
+      AND b.buildingDetailsID = @G57_Home
+      AND b.idaraID_FK = @G57_Idara
+      AND b.BillActive = 1
+      AND b.BillChargeTypeID_FK IN (2, 3, 4)
+      AND (
+          b.meterServiceTypeID = rt.ServiceID
+          OR (
+              b.meterServiceTypeID IS NULL
+              AND EXISTS
+              (
+                  SELECT 1
+                  FROM Housing.BillChargeType ct
+                  WHERE ct.BillChargeTypeID = b.BillChargeTypeID_FK
+                    AND ct.MeterServiceTypeID_FK = rt.ServiceID
+              )
+          )
+      )
+      AND (
+          (rt.TargetMethod = 'METER_FIXED'
+           AND b.meterID = rt.meterID)
+          OR
+          (rt.TargetMethod = 'SERVICE'
+           AND b.meterID IS NULL)
+      )
+      AND (
+          b.BillTypeID_FK = 2
+          OR (
+              b.BillTypeID_FK = 3
+              AND b.ExitRequestActionID_FK = @G57_Exit54
+          )
+      )
+      AND CONVERT(DATE, b.BillsFromDate) <= rt.BillDay
+      AND CONVERT(DATE, b.BillsToDate) >= rt.BillDay
+) coverage
+WHERE coverage.TotalBills <> 1
+   OR coverage.ValidBills <> 1
+OPTION (MAXRECURSION 32767);
+
+IF EXISTS (SELECT 1 FROM #G57_ServiceCoverageFailures)
+    THROW 50001,
+        N'فواتير الخدمات غير مكتملة أو متداخلة أو لا تطابق طريقة الاحتساب.',
+        1;
+
+DROP TABLE #G57_ServiceCoverageFailures;
                 -- This gate proves exit-month service presence, but not historical
                 -- service coverage for EVERY prior tenancy month. That is a separate
                 -- pre-release blocker and must be verified before deploying this draft.
@@ -1790,6 +2204,141 @@ THROW 50001,
             BEGIN
                 ;THROW 50002, N'حصل خطأ في ارسال الطلب للتدقيق المالي - Identity', 1; -- برمجي
             END
+
+            
+------------------------------------------------------------
+-- HOUSE_OPERATIONAL_RELEASE_62_V1
+-- The financial action 57 has been inserted successfully.
+-- Create an independent operational root for the house.
+-- Do not attach the house root to the resident's exit chain.
+------------------------------------------------------------
+
+DECLARE @G57_Operational62ID BIGINT = NULL;
+
+-- Confirm the newly created financial action is trustworthy.
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM Housing.BuildingAction a
+    WHERE a.buildingActionID = @NewID
+      AND a.buildingActionTypeID_FK = 57
+      AND a.buildingActionParentID = @G57_S60
+      AND a.residentInfoID_FK = @G57_Resident
+      AND a.buildingDetailsID_FK = @G57_Home
+      AND a.IdaraId_FK = @G57_Idara
+      AND a.buildingActionActive = 1
+)
+    THROW 50001,
+        N'تعذر التحقق من إجراء الإحالة المالية قبل إتاحة المنزل.',
+        1;
+
+-- A new operational cycle must not already exist
+-- for this exit request.
+IF EXISTS
+(
+    SELECT 1
+    FROM Housing.BuildingAction operationalRoot
+         WITH (UPDLOCK, HOLDLOCK)
+    WHERE operationalRoot.buildingDetailsID_FK = @G57_Home
+      AND operationalRoot.IdaraId_FK = @G57_Idara
+      AND operationalRoot.buildingActionActive = 1
+      AND operationalRoot.buildingActionParentID IS NULL
+      AND operationalRoot.residentInfoID_FK IS NULL
+      AND operationalRoot.buildingActionTypeID_FK IN (4, 5, 62)
+      AND operationalRoot.buildingActionID > @G57_Exit54
+)
+    THROW 50001,
+        N'توجد دورة تشغيل مستقلة بدأت بعد طلب الإخلاء الحالي؛ تعذر إنشاء دورة أخرى.',
+        1;
+
+-- The new action type must exist and remain active.
+IF NOT EXISTS
+(
+    SELECT 1
+    FROM Housing.BuildingActionType
+    WHERE buildingActionTypeID = 62
+      AND buildingActionTypeActive = 1
+      AND buildingStatusID_FK = 2
+      AND IsResident = 0
+)
+    THROW 50001,
+        N'إجراء إتاحة المنزل 62 غير مفعّل أو غير مطابق للتعريف المعتمد.',
+        1;
+
+INSERT INTO Housing.BuildingAction
+(
+    buildingActionTypeID_FK,
+    buildingStatusID_FK,
+    residentInfoID_FK,
+    buildingDetailsID_FK,
+    buildingDetailsNo,
+    buildingActionDate,
+    buildingActionNote,
+    buildingActionActive,
+    buildingActionParentID,
+    IdaraId_FK,
+    entryDate,
+    entryData,
+    hostName
+)
+VALUES
+(
+    62,
+    2,
+    NULL,
+    @G57_Home,
+    @buildingDetailsNo,
+    GETDATE(),
+    N'إتاحة المنزل للتشغيل بعد اكتمال متطلبات الإحالة المالية للإخلاء.',
+    1,
+    NULL,
+    @G57_Idara,
+    GETDATE(),
+    @entryData,
+    @hostName
+);
+
+SET @G57_Operational62ID =
+    TRY_CONVERT(BIGINT, SCOPE_IDENTITY());
+
+IF @G57_Operational62ID IS NULL
+    THROW 50002,
+        N'تعذر إنشاء إجراء إتاحة المنزل 62.',
+        1;
+
+INSERT INTO dbo.AuditLog
+(
+    TableName,
+    ActionType,
+    RecordID,
+    PerformedBy,
+    Notes
+)
+VALUES
+(
+    N'[Housing].[BuildingAction]',
+    N'CREATEHOUSEOPERATIONAL62',
+    @G57_Operational62ID,
+    @entryData,
+    CONCAT(
+        N'{"operationalActionID":',
+        @G57_Operational62ID,
+        N',"actionType":62',
+        N',"financialAction57ID":',
+        @NewID,
+        N',"exitRequest54ID":',
+        @G57_Exit54,
+        N',"buildingDetailsID":',
+        @G57_Home,
+        N',"independentRoot":true}'
+    )
+);
+
+------------------------------------------------------------
+-- END HOUSE_OPERATIONAL_RELEASE_62_V1
+------------------------------------------------------------
+
+
             SET @Note = N'{'
                 + N'"buildingActionID": "' + ISNULL(CONVERT(NVARCHAR(MAX), @NewID), '') + N'"'
                 + N',"buildingActionTypeID_FK": "'      + ISNULL(CONVERT(NVARCHAR(MAX), @buildingActionTypeID_FK), '') + N'"'

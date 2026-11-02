@@ -1,83 +1,197 @@
-﻿-- =============================================
--- Author:		<Author,,Name>
--- Create date: <Create Date,,>
--- Description:	<Description,,>
--- =============================================
-CREATE PROCEDURE [Housing].[HousingHandoverDL] 
-	-- Add the parameters for the stored procedure here
-	  @pageName_      NVARCHAR(400)
-    , @idaraID        INT
-    , @entrydata      INT
-    , @hostname       NVARCHAR(400)
-	, @LastActionTypeID  INT
+﻿
+CREATE PROCEDURE [Housing].[HousingHandoverDL]
+      @pageName_         NVARCHAR(400)
+    , @idaraID           INT
+    , @entrydata         INT
+    , @hostname          NVARCHAR(400)
+    , @LastActionTypeID  INT
 AS
 BEGIN
-	-- SET NOCOUNT ON added to prevent extra result sets from
-	-- interfering with SELECT statements.
-	SET NOCOUNT ON;
-	   
-  -- Buildinghandover Data
+    SET NOCOUNT ON;
 
-          select distinct
-		  b.buildingDetailsID,
-		  b.buildingDetailsNo,
-		  b.militaryLocationName_A,
-		  b.militaryAreaCityName_A,
-		  b.militaryAreaName_A,
-		  b.buildingUtilityTypeName_A,
-		  b.LastActionTypeID,
-		  b.LastActionTypeName,
-		  b.LastActionTypeBuildingAlias,
-		  b.LastActionID,
-		  b.LastActionNote,
-		  convert(nvarchar(10),b.LastActionEntryDate,23) +N'  '+ convert(nvarchar(10),b.LastActionEntryDate,8) as LastActionEntryDatestring,
-		  b.LastActionEntryDate
-		  
-		  
-		  from [Housing].[V_GetGeneralListForBuilding] b
-		  left join housing.Buildinghandover h on h.BuildingActionTypeID_FK = b.LastActionTypeID
-		  where h.BuildinghandoverActive = 1
-		  and b.buildingDetailsActive = 1
-		  and b.LastActionTypeID = @LastActionTypeID
-		  and b.BuildingIdaraID = @idaraID
-		  and h.PermissionTypeID_FK 
-		  in (select distinct d.permissionTypeID from dbo.V_GetListUserPermission d where d.permissionTypeRoleID = 20 and d.userID = @entrydata)
-		  order by b.LastActionEntryDate desc
+    ------------------------------------------------------------
+    -- تحديد مصدر الإجراءات المعتمد للإدارة
+    --
+    -- إذا وجد أي سجل نشط خاص بالإدارة:
+    --   استخدام سجلات الإدارة فقط.
+    --
+    -- إذا لم يوجد أي سجل نشط خاص بالإدارة:
+    --   استخدام السجلات الافتراضية IdaraID_FK IS NULL.
+    --
+    -- القرار على مستوى الإدارة بالكامل، وليس لكل صلاحية.
+    ------------------------------------------------------------
 
-		  --------------------------
+    DECLARE @UseDepartmentActions BIT = 0;
 
-		   select distinct
-		  
-		  h.BuildingActionTypeID_FK,
-		  t.buildingActionTypeBuildingAlias
-		
-		  
-		  from 
-		  housing.Buildinghandover h 
-		  inner join Housing.BuildingActionType t on t.BuildingActionTypeID = h.BuildingActionTypeID_FK
-		  where h.BuildinghandoverActive = 1
-		  and h.IdaraID_FK = @idaraID
-		  and h.PermissionTypeID_FK 
-		  in (select distinct d.permissionTypeID from dbo.V_GetListUserPermission d where d.permissionTypeRoleID = 20 and d.userID = @entrydata)
+    IF EXISTS
+    (
+        SELECT 1
+        FROM Housing.Buildinghandover h
+        WHERE h.IdaraID_FK = @idaraID
+          AND h.BuildinghandoverActive = 1
+    )
+    BEGIN
+        SET @UseDepartmentActions = 1;
+    END;
 
-		  
-		  order by h.BuildingActionTypeID_FK asc
+    ------------------------------------------------------------
+    -- 1. Buildinghandover Data
+    -- المباني المتاحة حسب الحالة والإدارة والصلاحيات
+    ------------------------------------------------------------
 
-		  ----------------------------------
+    SELECT DISTINCT
+          b.buildingDetailsID
+        , b.buildingDetailsNo
+        , b.militaryLocationName_A
+        , b.militaryAreaCityName_A
+        , b.militaryAreaName_A
+        , b.buildingUtilityTypeName_A
+        , b.LastActionTypeID
+        , b.LastActionTypeName
+        , CASE
+              WHEN b.LastActionTypeID = 57
+                  THEN N'المبنى خالٍ بانتظار اتخاذ إجراء'
+              ELSE b.LastActionTypeBuildingAlias
+          END AS LastActionTypeBuildingAlias
+        , b.LastActionID
+        , b.LastActionNote
+        , CONVERT(NVARCHAR(10), b.LastActionEntryDate, 23)
+          + N'  '
+          + CONVERT(NVARCHAR(10), b.LastActionEntryDate, 8)
+            AS LastActionEntryDatestring
+        , b.LastActionEntryDate
 
-		  select distinct 
-		  h.NextBuildingActionTypeID_FK,
-		  t.buildingActionTypeName_A,
-		  h.BuildingActionTypeID_FK
-		  from [Housing].[Buildinghandover] h
-		  inner join Housing.BuildingActionType t on t.BuildingActionTypeID = h.NextBuildingActionTypeID_FK
-		  where h.BuildinghandoverActive = 1
-		  and h.BuildingActionTypeID_FK = @LastActionTypeID
-		  and h.IdaraID_FK = @idaraID
+    FROM Housing.V_GetGeneralListForBuilding b
 
-		  order by h.NextBuildingActionTypeID_FK asc
+    WHERE b.buildingDetailsActive = 1
+      AND b.LastActionTypeID = @LastActionTypeID
+      AND b.BuildingIdaraID = @idaraID
 
-		
+      AND EXISTS
+      (
+          SELECT 1
+          FROM Housing.Buildinghandover h
+          WHERE h.BuildingActionTypeID_FK = b.LastActionTypeID
+            AND h.BuildinghandoverActive = 1
 
-   
-END
+            AND
+            (
+                (
+                    @UseDepartmentActions = 1
+                    AND h.IdaraID_FK = @idaraID
+                )
+                OR
+                (
+                    @UseDepartmentActions = 0
+                    AND h.IdaraID_FK IS NULL
+                )
+            )
+
+            AND EXISTS
+            (
+                SELECT 1
+                FROM dbo.V_GetListUserPermission d
+                WHERE d.permissionTypeRoleID = 20
+                  AND d.userID = @entrydata
+                  AND d.permissionTypeID = h.PermissionTypeID_FK
+            )
+      )
+
+    ORDER BY b.LastActionEntryDate DESC;
+
+
+    ------------------------------------------------------------
+    -- 2. DDLValues
+    -- الحالات المتاحة في القائمة المنسدلة
+    ------------------------------------------------------------
+
+    SELECT DISTINCT
+          h.BuildingActionTypeID_FK
+        , CASE
+              WHEN h.BuildingActionTypeID_FK = 57
+                  THEN N'المبنى خالٍ بانتظار اتخاذ إجراء'
+              ELSE t.buildingActionTypeBuildingAlias
+          END AS buildingActionTypeBuildingAlias
+
+    FROM Housing.Buildinghandover h
+
+    INNER JOIN Housing.BuildingActionType t
+        ON t.BuildingActionTypeID =
+           h.BuildingActionTypeID_FK
+
+    WHERE h.BuildinghandoverActive = 1
+
+      AND
+      (
+          (
+              @UseDepartmentActions = 1
+              AND h.IdaraID_FK = @idaraID
+          )
+          OR
+          (
+              @UseDepartmentActions = 0
+              AND h.IdaraID_FK IS NULL
+          )
+      )
+
+      AND EXISTS
+      (
+          SELECT 1
+          FROM dbo.V_GetListUserPermission d
+          WHERE d.permissionTypeRoleID = 20
+            AND d.userID = @entrydata
+            AND d.permissionTypeID = h.PermissionTypeID_FK
+      )
+
+    ORDER BY h.BuildingActionTypeID_FK ASC;
+
+
+    ------------------------------------------------------------
+    -- 3. DDLValues With Extra Params
+    -- الإجراءات التالية للحالة المختارة
+    ------------------------------------------------------------
+
+    SELECT DISTINCT
+      h.NextBuildingActionTypeID_FK
+    , CASE
+          WHEN h.NextBuildingActionTypeID_FK = 57
+              THEN N'المبنى خالٍ بانتظار اتخاذ إجراء'
+          ELSE t.buildingActionTypeName_A
+      END AS buildingActionTypeName_A
+    , h.BuildingActionTypeID_FK
+
+    FROM Housing.Buildinghandover h
+
+    INNER JOIN Housing.BuildingActionType t
+        ON t.BuildingActionTypeID =
+           h.NextBuildingActionTypeID_FK
+
+    WHERE h.BuildinghandoverActive = 1
+
+      AND h.BuildingActionTypeID_FK = @LastActionTypeID
+
+      AND
+      (
+          (
+              @UseDepartmentActions = 1
+              AND h.IdaraID_FK = @idaraID
+          )
+          OR
+          (
+              @UseDepartmentActions = 0
+              AND h.IdaraID_FK IS NULL
+          )
+      )
+
+      AND EXISTS
+      (
+          SELECT 1
+          FROM dbo.V_GetListUserPermission d
+          WHERE d.permissionTypeRoleID = 20
+            AND d.userID = @entrydata
+            AND d.permissionTypeID = h.PermissionTypeID_FK
+      )
+
+    ORDER BY h.NextBuildingActionTypeID_FK ASC;
+
+END;

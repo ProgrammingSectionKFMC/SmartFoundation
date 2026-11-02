@@ -10822,6 +10822,168 @@ BEGIN
     GROUP BY i.EntityKey;
 
 
+
+    /* PHASE 62: independent building operational completion.
+       Historical source parity stays unchanged. This runs only on active
+       buildings of the selected Idara, never on unrelated departments. */
+    ;WITH RankedKnown AS
+    (
+        SELECT a.buildingDetailsID_FK AS BuildingID,
+               a.IdaraId_FK AS IdaraID,
+               a.buildingActionID AS ExitActionID,
+               a.buildingActionTypeID_FK AS ExitType,
+               a.residentInfoID_FK AS ResidentID,
+               a.entryDate,
+               a.ExitDate,
+               a.buildingActionDate,
+               ROW_NUMBER() OVER
+               (PARTITION BY a.buildingDetailsID_FK,a.IdaraId_FK
+                ORDER BY a.entryDate DESC,a.buildingActionID DESC) AS rn
+        FROM Housing.BuildingAction a
+        WHERE a.IdaraId_FK=@IdaraId
+          AND a.buildingDetailsID_FK IS NOT NULL
+          AND a.buildingActionActive=1
+          AND a.buildingActionTypeID_FK IS NOT NULL
+          AND a.buildingActionTypeID_FK<>62
+    )
+    SELECT r.BuildingID,r.IdaraID,r.ExitActionID,r.ExitType,r.ResidentID
+    INTO #V62Expected
+    FROM RankedKnown r
+    JOIN Housing.BuildingDetails b ON b.buildingDetailsID=r.BuildingID
+                                 AND b.IdaraId_FK=r.IdaraID
+    WHERE r.rn=1
+      AND r.ExitType IN (57,58,3)
+      AND r.ResidentID IS NOT NULL
+      AND b.buildingDetailsActive=1
+      AND NOT EXISTS
+      (
+          SELECT 1 FROM Housing.BuildingAction o
+          WHERE o.buildingDetailsID_FK=r.BuildingID
+            AND o.IdaraId_FK=r.IdaraID
+            AND o.buildingActionActive=1
+            AND o.buildingActionParentID IS NULL
+            AND o.residentInfoID_FK IS NULL
+            AND o.buildingActionTypeID_FK IN (4,5)
+            AND EXISTS
+            (
+                SELECT 1
+                FROM Housing.fn_BuildingAction_ChainToRoot(r.ExitActionID) fh
+                WHERE fh.buildingActionTypeID_FK=57
+                  AND fh.buildingActionActive=1
+                  AND o.entryDate>fh.entryDate
+            )
+      )
+      AND NOT EXISTS
+      (
+          SELECT 1 FROM Housing.BuildingAction occupied
+          WHERE occupied.buildingDetailsID_FK=r.BuildingID
+            AND occupied.IdaraId_FK=r.IdaraID
+            AND occupied.buildingActionActive=1
+            AND occupied.buildingActionTypeID_FK=2
+            AND occupied.residentInfoID_FK IS NOT NULL
+            AND occupied.residentInfoID_FK<>r.ResidentID
+            AND
+            (
+                occupied.entryDate>r.entryDate
+                OR COALESCE(TRY_CONVERT(datetime2(3),occupied.OccupentDate),
+                            TRY_CONVERT(datetime2(3),occupied.buildingActionDate))
+                   >
+                   (SELECT MAX(COALESCE(TRY_CONVERT(datetime2(3),ea.ExitDate),
+                                         TRY_CONVERT(datetime2(3),ea.buildingActionDate)))
+                    FROM Housing.BuildingAction ea
+                    WHERE ea.buildingDetailsID_FK=r.BuildingID
+                      AND ea.IdaraId_FK=r.IdaraID
+                      AND ea.residentInfoID_FK=r.ResidentID
+                      AND ea.buildingActionActive=1
+                      AND ea.buildingActionTypeID_FK IN (54,57,58,3)
+                      AND ea.buildingActionID<=r.ExitActionID)
+            )
+      );
+
+    SELECT a.buildingActionID AS Action62ID,
+           a.buildingDetailsID_FK AS BuildingID,
+           a.IdaraId_FK AS IdaraID,
+           a.buildingStatusID_FK AS StatusID,
+           a.residentInfoID_FK AS ResidentID,
+           a.generalNo_FK AS GeneralNo,
+           a.buildingActionParentID AS ParentID,
+           a.buildingActionActive AS IsActive,
+           a.buildingActionExtraText4 AS Marker,
+           a.buildingActionNote AS NoteText
+    INTO #V62Actual
+    FROM Housing.BuildingAction a
+    WHERE a.IdaraId_FK=@IdaraId
+      AND a.buildingActionTypeID_FK=62
+      AND a.buildingActionExtraText4=N'MoveData:FinalizeVacant62';
+
+
+    IF @GeneralNo IS NULL
+    BEGIN
+        INSERT INTO #ValidationIssues
+        (EntityKey,SectionName,IssueCode,SourceObject,TargetObject,
+         ReferenceID,FieldName,ExpectedValue,ActualValue,Severity,Notes)
+        SELECT CONCAT(N'B:',e.BuildingID),N'BUILDING_OPERATIONAL_62',
+               N'MISSING_GENERATED_62',N'MoveData.usp_FinalizeVacantBuildingActions',
+               N'Housing.BuildingAction',CONVERT(nvarchar(100),e.ExitActionID),
+               N'buildingActionTypeID_FK',N'62',N'<MISSING>','ERROR',
+               N'Eligible active building has no active generated 62 after the migration step.'
+        FROM #V62Expected e
+        WHERE NOT EXISTS
+        (SELECT 1 FROM #V62Actual a
+         WHERE a.BuildingID=e.BuildingID AND a.IdaraID=e.IdaraID AND a.IsActive=1);
+
+        INSERT INTO #ValidationIssues
+        (EntityKey,SectionName,IssueCode,TargetObject,ReferenceID,
+         FieldName,ExpectedValue,ActualValue,Severity,Notes)
+        SELECT CONCAT(N'B:',a.BuildingID),N'BUILDING_OPERATIONAL_62',
+               N'INVALID_GENERATED_62_STRUCTURE',N'Housing.BuildingAction',
+               CONVERT(nvarchar(100),a.Action62ID),N'OperationalRoot',
+               N'Active=1;Status=2;Resident=NULL;GeneralNo=NULL;Parent=NULL',
+               CONCAT(N'Active=',COALESCE(CONVERT(nvarchar(10),a.IsActive),N'NULL'),
+                      N';Status=',COALESCE(CONVERT(nvarchar(10),a.StatusID),N'NULL')),
+               'ERROR',N'Generated 62 does not satisfy the independent vacant building-root contract.'
+        FROM #V62Actual a
+        WHERE a.IsActive<>1 OR a.IsActive IS NULL
+           OR a.StatusID<>2 OR a.StatusID IS NULL
+           OR a.ResidentID IS NOT NULL OR a.GeneralNo IS NOT NULL
+           OR a.ParentID IS NOT NULL OR a.BuildingID IS NULL;
+
+        INSERT INTO #ValidationIssues
+        (EntityKey,SectionName,IssueCode,TargetObject,ReferenceID,
+         FieldName,ExpectedValue,ActualValue,Severity,Notes)
+        SELECT CONCAT(N'B:',x.BuildingID),N'BUILDING_OPERATIONAL_62',
+               N'DUPLICATE_GENERATED_62',N'Housing.BuildingAction',
+               CONVERT(nvarchar(100),MIN(x.Action62ID)),N'Active62Count',
+               N'1',CONVERT(nvarchar(100),COUNT_BIG(*)),'ERROR',
+               N'Multiple active generated 62 actions for one building.'
+        FROM #V62Actual x
+        WHERE x.IsActive=1
+        GROUP BY x.BuildingID,x.IdaraID
+        HAVING COUNT_BIG(*)>1;
+
+        INSERT INTO #ValidationIssues
+        (EntityKey,SectionName,IssueCode,TargetObject,ReferenceID,
+         FieldName,ExpectedValue,ActualValue,Severity,Notes)
+        SELECT CONCAT(N'B:',a.BuildingID),N'BUILDING_OPERATIONAL_62',
+               N'UNEXPECTED_GENERATED_62',N'Housing.BuildingAction',
+               CONVERT(nvarchar(100),a.Action62ID),N'Eligibility',
+               N'Eligible vacant after financial exit',N'Not eligible',
+               'ERROR',N'Unexpected generated 62; review historical occupancy and operational cycles.'
+        FROM #V62Actual a
+        WHERE a.IsActive=1
+          AND NOT EXISTS (SELECT 1 FROM #V62Expected e
+                          WHERE e.BuildingID=a.BuildingID AND e.IdaraID=a.IdaraID)
+          AND NOT EXISTS
+          (SELECT 1 FROM Housing.BuildingAction newer
+           WHERE newer.buildingDetailsID_FK=a.BuildingID
+             AND newer.IdaraId_FK=a.IdaraID
+             AND newer.buildingActionActive=1
+             AND newer.buildingActionTypeID_FK IN (2,4,5,24,39)
+             AND newer.entryDate>
+                 (SELECT entryDate FROM Housing.BuildingAction original
+                  WHERE original.buildingActionID=a.Action62ID));
+    END;
+
     ------------------------------------------------------------
     -- RESULT SET 1
     -- GLOBAL SUMMARY
@@ -11651,6 +11813,9 @@ BEGIN
 
     UNION ALL
     SELECT N'FINANCIAL_RECONCILIATION'
+
+    UNION ALL
+    SELECT N'BUILDING_OPERATIONAL_62'
 
     UNION ALL
     SELECT N'CURRENT_ACTION_PARITY'

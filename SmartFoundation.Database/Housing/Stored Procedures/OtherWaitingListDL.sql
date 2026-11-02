@@ -64,22 +64,84 @@ FROM Housing.V_WaitingList w
 
 
 
-       -- Houses DDL
-            SELECT
-      c.buildingDetailsID
-    , c.buildingDetailsNo
+       
+-- Houses DDL
+-- Same house eligibility rules as Housing.AssignDL
+
+SELECT
+    c.buildingDetailsID,
+    c.buildingDetailsNo
 FROM Housing.V_GetGeneralListForBuilding c
 WHERE c.BuildingIdaraID = @idaraID
   AND c.buildingDetailsActive = 1
-  AND (c.LastActionTypeID IN (5, 39, 41, 42, 43, 44)
-       OR c.LastActionTypeID IS NULL)
+  AND c.LastActionTypeID = 5
+
+  -- At least one active bedroom
+  AND EXISTS
+  (
+      SELECT 1
+      FROM Housing.BuildingSpace bs
+      INNER JOIN Housing.BuildingSpaceType bst
+          ON bst.BuildingSpaceTypeID =
+             bs.BuildingSpaceTypeID_FK
+      WHERE bs.BuildingDetailsID_FK = c.buildingDetailsID
+        AND bs.BuildingSpaceActive = 1
+        AND bs.BuildingSpaceTypeID_FK = 1
+        AND bst.BuildingSpaceTypeCode = N'BEDROOM'
+        AND bst.BuildingSpaceTypeActive = 1
+        AND (
+            bs.BuildingSpaceStartDate IS NULL
+            OR bs.BuildingSpaceStartDate <= CAST(GETDATE() AS DATE)
+        )
+        AND (
+            bs.BuildingSpaceEndDate IS NULL
+            OR bs.BuildingSpaceEndDate >= CAST(GETDATE() AS DATE)
+        )
+        AND (
+            bst.BuildingSpaceTypeStartDate IS NULL
+            OR bst.BuildingSpaceTypeStartDate <= CAST(GETDATE() AS DATE)
+        )
+        AND (
+            bst.BuildingSpaceTypeEndDate IS NULL
+            OR bst.BuildingSpaceTypeEndDate >= CAST(GETDATE() AS DATE)
+        )
+  )
+
+  -- No active physical occupancy
   AND NOT EXISTS
   (
       SELECT 1
       FROM Housing.V_Occupant occupant
       WHERE occupant.buildingDetailsID = c.buildingDetailsID
+        AND (
+            occupant.LastActionTypeID IS NULL
+            OR occupant.LastActionTypeID NOT IN (57, 58)
+        )
+  )
+
+  -- No pending allocation or housing procedure
+  AND NOT EXISTS
+  (
+      SELECT 1
+      FROM Housing.V_WaitingList holding
+      WHERE holding.buildingDetailsID = c.buildingDetailsID
+        AND holding.LastActionTypeID IN (38, 40, 45, 46, 47)
+        AND NOT EXISTS
+        (
+            SELECT 1
+            FROM Housing.BuildingAction oldMigrationAction
+            INNER JOIN Housing.AssignPeriod oldMigrationPeriod
+                ON oldMigrationPeriod.AssignPeriodID =
+                   oldMigrationAction.AssignPeriodID_FK
+            WHERE oldMigrationAction.buildingActionID =
+                  holding.LastActionID
+              AND oldMigrationAction.buildingActionExtraText5 =
+                  N'MIGRATION_GENERATED'
+              AND oldMigrationPeriod.AssignPeriodDescrption LIKE
+                  N'Legacy allocation migration - WaitingClass %'
+        )
   );
-  
+
             
 
 

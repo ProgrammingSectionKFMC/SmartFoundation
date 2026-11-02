@@ -7,7 +7,7 @@ public sealed class GlobalExceptionMiddleware
 {
     private static readonly HashSet<int> ConnectionErrorNumbers =
     [
-        -2, 2, 20, 53, 64, 233, 258, 4060, 18456,
+         2, 20, 53, 64, 233, 258, 4060, 18456,
         10053, 10054, 10060, 11001
     ];
 
@@ -66,9 +66,37 @@ public sealed class GlobalExceptionMiddleware
         }
     }
 
+    // Reuse existing SQL logging for exceptions caught inside CRUD controllers.
+    public static async Task<int?> TryLogHandledExceptionAsync(
+        HttpContext context,
+        Exception exception,
+        IConfiguration configuration,
+        ILogger logger)
+    {
+        if (IsDatabaseConnectionFailure(exception))
+        {
+            logger.LogError("Handled database connection failure at {Path}", context.Request.Path.Value);
+            return null;
+        }
+
+        try
+        {
+            return await SaveErrorCoreAsync(configuration, context, exception);
+        }
+        catch (Exception loggingException)
+        {
+            logger.LogError(loggingException, "Failed to save handled exception in dbo.ErrorLog");
+            return null;
+        }
+    }
     private async Task<int> SaveErrorAsync(HttpContext context, Exception exception)
     {
-        var connectionString = _configuration.GetConnectionString("Default");
+        return await SaveErrorCoreAsync(_configuration, context, exception);
+    }
+
+    private static async Task<int> SaveErrorCoreAsync(IConfiguration configuration, HttpContext context, Exception exception)
+    {
+        var connectionString = configuration.GetConnectionString("Default");
         if (string.IsNullOrWhiteSpace(connectionString))
             throw new InvalidOperationException("Default connection string is not configured.");
 

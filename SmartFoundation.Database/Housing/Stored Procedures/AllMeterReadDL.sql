@@ -92,6 +92,82 @@ AND EXISTS
     CREATE NONCLUSTERED INDEX IX_EligibleMeters_No ON #EligibleMeters(meterNo) INCLUDE (meterServiceTypeID_FK);
 
     ----------------------------------------------------------------
+    -- Reading AFTER exit meter invoice 59 belongs to the administration.
+    -- A resident's active monthly bill must not hide a second eligible
+    -- administration reading of the SAME meter/current open period.
+    -- Keep this in step with Housing.AllMeterReadSP (same 54/59 eligibility).
+    ----------------------------------------------------------------
+    SELECT DISTINCT em.meterID
+    INTO #PostExitAdminMeters
+    FROM #EligibleMeters em
+    JOIN Housing.MeterForBuilding mfb
+      ON mfb.meterID_FK = em.meterID
+     AND mfb.meterForBuildingActive = 1
+    CROSS APPLY
+    (
+        SELECT TOP (1) exit54.buildingActionID,
+                       exit54.residentInfoID_FK
+        FROM Housing.BuildingAction exit54
+        WHERE exit54.buildingDetailsID_FK = mfb.buildingDetailsID_FK
+          AND exit54.IdaraId_FK = @idaraID
+          AND exit54.buildingActionTypeID_FK = 54
+          AND exit54.buildingActionActive = 1
+          AND TRY_CONVERT(date, exit54.ExitDate) <= CONVERT(date, GETDATE())
+          AND NOT EXISTS
+          (
+              SELECT 1
+              FROM Housing.BuildingAction cancelled
+              WHERE cancelled.buildingActionTypeID_FK = 55
+                AND cancelled.buildingActionActive = 1
+                AND cancelled.buildingDetailsID_FK = exit54.buildingDetailsID_FK
+                AND cancelled.IdaraId_FK = exit54.IdaraId_FK
+                AND EXISTS
+                (
+                    SELECT 1
+                    FROM Housing.fn_BuildingAction_ChainToRoot(cancelled.buildingActionID) x
+                    WHERE x.buildingActionID = exit54.buildingActionID
+                )
+          )
+          AND NOT EXISTS
+          (
+              SELECT 1
+              FROM Housing.BuildingAction nextOccupancy
+              WHERE nextOccupancy.buildingDetailsID_FK = exit54.buildingDetailsID_FK
+                AND nextOccupancy.IdaraId_FK = exit54.IdaraId_FK
+                AND nextOccupancy.buildingActionTypeID_FK = 2
+                AND nextOccupancy.buildingActionActive = 1
+                AND nextOccupancy.entryDate > exit54.entryDate
+          )
+        ORDER BY exit54.buildingActionID DESC
+    ) exit54
+    JOIN Housing.BuildingAction stage59
+      ON stage59.buildingActionParentID = exit54.buildingActionID
+     AND stage59.buildingActionTypeID_FK = 59
+     AND stage59.buildingActionActive = 1
+     AND stage59.buildingDetailsID_FK = mfb.buildingDetailsID_FK
+     AND stage59.IdaraId_FK = @idaraID
+     AND stage59.residentInfoID_FK = exit54.residentInfoID_FK
+    JOIN Housing.MeterRead exitRead
+      ON exitRead.buildingActionID_FK = stage59.buildingActionID
+     AND exitRead.meterID_FK = em.meterID
+     AND exitRead.meterReadTypeID_FK = 3
+     AND exitRead.meterReadActive = 1
+     AND exitRead.buildingDetailsID = mfb.buildingDetailsID_FK
+     AND exitRead.IdaraID_FK = @idaraID
+    JOIN Housing.Bills exitBill
+      ON exitBill.meterReadID = exitRead.meterReadID
+     AND exitBill.meterID = em.meterID
+     AND exitBill.BillTypeID_FK = 3
+     AND exitBill.BillActive = 1
+     AND exitBill.idaraID_FK = @idaraID
+     AND exitBill.buildingDetailsID = mfb.buildingDetailsID_FK
+     AND exitBill.meterServiceTypeID = @meterServiceTypeID_FK
+     AND exitBill.residentInfoID_FK = exit54.residentInfoID_FK;
+
+    CREATE UNIQUE CLUSTERED INDEX IX_PostExitAdminMeters
+        ON #PostExitAdminMeters(meterID);
+
+    ----------------------------------------------------------------
     -- 3) Counts
     ----------------------------------------------------------------
     SELECT @AllMetersCount = COUNT(*) FROM #EligibleMeters s where s.MeterCalculateTypeID = 1;
@@ -108,6 +184,12 @@ AND EXISTS
           AND b.BillActive = 1
           AND b.BillTypeID_FK = 2
           AND b.CurrentPeriodID = @CurrentPeriodID
+          -- An earlier resident invoice does not fulfill an Idara reading
+          -- when an active invoice for exit reading 59 already exists.
+          AND (b.residentInfoID_FK IS NULL
+               OR NOT EXISTS
+                  (SELECT 1 FROM #PostExitAdminMeters pam
+                   WHERE pam.meterID = em.meterID))
 
     );
 
@@ -286,6 +368,12 @@ AND EXISTS
               AND b.BillActive = 1
               AND b.BillTypeID_FK = 2
               AND b.CurrentPeriodID = @CurrentPeriodID
+          -- An earlier resident invoice does not fulfill an Idara reading
+          -- when an active invoice for exit reading 59 already exists.
+          AND (b.residentInfoID_FK IS NULL
+               OR NOT EXISTS
+                  (SELECT 1 FROM #PostExitAdminMeters pam
+                   WHERE pam.meterID = em.meterID))
               
             WHERE b.meterID IS not NULL AND em.MeterCalculateTypeID = 1
             ORDER BY em.meterNo;
@@ -302,6 +390,12 @@ AND EXISTS
               AND b.BillActive = 1
               AND b.BillTypeID_FK = 2
               AND b.CurrentPeriodID = @CurrentPeriodID
+          -- An earlier resident invoice does not fulfill an Idara reading
+          -- when an active invoice for exit reading 59 already exists.
+          AND (b.residentInfoID_FK IS NULL
+               OR NOT EXISTS
+                  (SELECT 1 FROM #PostExitAdminMeters pam
+                   WHERE pam.meterID = em.meterID))
               
             WHERE b.meterID IS NULL AND em.MeterCalculateTypeID = 1
             ORDER BY em.meterNo;

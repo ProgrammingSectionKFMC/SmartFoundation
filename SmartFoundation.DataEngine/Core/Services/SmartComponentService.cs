@@ -6,6 +6,7 @@ using SmartFoundation.DataEngine.Core.Interfaces;
 using SmartFoundation.DataEngine.Core.Models;
 using SmartFoundation.DataEngine.Core.Utilities;
 using System.Data;
+using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
 using System.Text.Json;
@@ -114,35 +115,15 @@ namespace SmartFoundation.DataEngine.Core.Services
                 // Multiple Result Sets
                 // Multiple Result Sets
                 // تنفيذ البروسيجر مرة واحدة فقط وقراءة جميع النتائج
-                using var grid = await conn.QueryMultipleAsync(
+                using var reader = (DbDataReader)await conn.ExecuteReaderAsync(
                     new CommandDefinition(
                         request.SpName,
                         dp,
                         commandType: CommandType.StoredProcedure,
                         cancellationToken: ct));
 
-                var datasets = new List<List<Dictionary<string, object?>>>();
-
-                while (!grid.IsConsumed)
-                {
-                    var rows = await grid.ReadAsync();
-                    var list = new List<Dictionary<string, object?>>();
-
-                    foreach (var row in rows)
-                    {
-                        var dict = (IDictionary<string, object?>)row;
-
-                        list.Add(
-                            dict.ToDictionary(
-                                kv => kv.Key,
-                                kv => kv.Value));
-                    }
-
-                    // نضيف الجدول حتى لو كان فارغًا للمحافظة على ترتيب DataSet
-                    datasets.Add(list);
-                }
-
-                resp.Datasets = datasets;
+                await ReadResultSetsAsync(reader, resp, ct);
+                var datasets = resp.Datasets;
 
                 resp.Data = datasets.FirstOrDefault()
                     ?? new List<Dictionary<string, object?>>();
@@ -219,6 +200,32 @@ namespace SmartFoundation.DataEngine.Core.Services
             }
 
             return resp;
+        }
+
+        private static async Task ReadResultSetsAsync(
+            DbDataReader reader, SmartResponse response, CancellationToken ct)
+        {
+            do
+            {
+                // Statements without columns are not tabular result sets.
+                if (reader.FieldCount == 0) continue;
+
+                var columns = Enumerable.Range(0, reader.FieldCount)
+                    .Select(reader.GetName).ToList();
+                var rows = new List<Dictionary<string, object?>>();
+                var parse = reader.GetRowParser<dynamic>();
+
+                while (await reader.ReadAsync(ct))
+                {
+                    // Retain Dapper's dynamic row conversion and null handling.
+                    var row = (IDictionary<string, object?>)parse(reader);
+                    rows.Add(row.ToDictionary(kv => kv.Key, kv => kv.Value));
+                }
+
+                response.Datasets.Add(rows);
+                response.DatasetSchemas.Add(columns);
+            }
+            while (await reader.NextResultAsync(ct));
         }
     }
 }

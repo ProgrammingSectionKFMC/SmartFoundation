@@ -1,4 +1,4 @@
-CREATE PROCEDURE [Housing].[GenerateFixedServiceBillsForResidentPeriod]
+﻿CREATE   PROCEDURE [Housing].[GenerateFixedServiceBillsForResidentPeriod]
 (
       @ResidentInfoID BIGINT
     , @GeneralNo BIGINT
@@ -93,7 +93,8 @@ BEGIN
         DECLARE @InsertedBills TABLE
         (
               BillsID BIGINT NOT NULL
-            , meterID INT NULL
+, BillsUID UNIQUEIDENTIFIER NOT NULL
+, meterID BIGINT NULL
             , BillsFromDate DATE NOT NULL
             , BillsToDate DATE NOT NULL
             , TaxRatePercent DECIMAL(18,6) NOT NULL
@@ -146,24 +147,36 @@ BEGIN
                 , CAST(NULL AS INT) AS meterTypeID
                 , CAST(NULL AS NVARCHAR(100)) AS meterNo
                 , CAST(NULL AS NVARCHAR(200)) AS meterName_A
-                , fixedAmount.FixedAmount
-                , N'SERVICE' AS SourceKind
+                , ISNULL(fixedAmount.FixedAmount, 0) AS FixedAmount
+, CASE
+    WHEN fixedAmount.FixedAmount IS NULL
+        THEN N'MISSING_RATE_ZERO'
+    WHEN fixedAmount.FixedAmount = 0
+        THEN N'ZERO_CONFIGURED_RATE'
+    ELSE N'POSITIVE_RATE'
+  END AS RateStatus
+, N'SERVICE' AS SourceKind
             FROM EligibleServiceDays serviceDay
-            CROSS APPLY
-            (
-                SELECT TOP (1) amountRow.FixedAmount
-                FROM Housing.MeterServiceTypeFixedAmount amountRow
-                WHERE amountRow.MeterServiceTypeID_FK = serviceDay.meterServiceTypeID
-                  AND (amountRow.idaraID_FK = @IdaraID OR amountRow.idaraID_FK IS NULL)
-                  AND (amountRow.MeterServiceTypeFixedAmountActive = 1 OR amountRow.MeterServiceTypeFixedAmountEndDate IS NOT NULL)
-                  AND ISNULL(amountRow.FixedAmount, 0) > 0
-                  AND (amountRow.MeterServiceTypeFixedAmountStartDate IS NULL OR CAST(amountRow.MeterServiceTypeFixedAmountStartDate AS date) <= serviceDay.BillDay)
-                  AND (amountRow.MeterServiceTypeFixedAmountEndDate IS NULL OR CAST(amountRow.MeterServiceTypeFixedAmountEndDate AS date) >= serviceDay.BillDay)
-                ORDER BY
-                      CASE WHEN amountRow.idaraID_FK = @IdaraID THEN 0 ELSE 1 END
-                    , amountRow.MeterServiceTypeFixedAmountStartDate DESC
-                    , amountRow.MeterServiceTypeFixedAmountID DESC
-            ) fixedAmount
+            OUTER APPLY
+(
+    SELECT TOP (1)
+        amountRow.FixedAmount
+    FROM Housing.MeterServiceTypeFixedAmount amountRow
+    WHERE amountRow.MeterServiceTypeID_FK = serviceDay.meterServiceTypeID
+      AND (amountRow.idaraID_FK = @IdaraID OR amountRow.idaraID_FK IS NULL)
+      AND (
+    amountRow.MeterServiceTypeFixedAmountActive = 1
+    OR amountRow.MeterServiceTypeFixedAmountEndDate IS NOT NULL
+)
+      AND (amountRow.MeterServiceTypeFixedAmountStartDate IS NULL
+           OR CAST(amountRow.MeterServiceTypeFixedAmountStartDate AS date) <= serviceDay.BillDay)
+      AND (amountRow.MeterServiceTypeFixedAmountEndDate IS NULL
+           OR CAST(amountRow.MeterServiceTypeFixedAmountEndDate AS date) >= serviceDay.BillDay)
+    ORDER BY
+        CASE WHEN amountRow.idaraID_FK = @IdaraID THEN 0 ELSE 1 END,
+        amountRow.MeterServiceTypeFixedAmountStartDate DESC,
+        amountRow.MeterServiceTypeFixedAmountID DESC
+) fixedAmount
             WHERE NOT EXISTS
             (
                 SELECT 1
@@ -205,8 +218,15 @@ BEGIN
                 , meterType.meterTypeID
                 , meter.meterNo
                 , meter.meterName_A
-                , fixedAmount.FixedAmount
-                , N'METER' AS SourceKind
+                , ISNULL(fixedAmount.FixedAmount, 0) AS FixedAmount
+, CASE
+    WHEN fixedAmount.FixedAmount IS NULL
+        THEN N'MISSING_RATE_ZERO'
+    WHEN fixedAmount.FixedAmount = 0
+        THEN N'ZERO_CONFIGURED_RATE'
+    ELSE N'POSITIVE_RATE'
+  END AS RateStatus
+, N'METER' AS SourceKind
             FROM EligibleServiceDays serviceDay
             JOIN Housing.MeterForBuilding meterLink
               ON meterLink.buildingDetailsID_FK = serviceDay.buildingDetailsID
@@ -224,18 +244,23 @@ BEGIN
              AND meterType.IdaraId_FK = @IdaraID
              AND (meterType.meterTypeStartDate IS NULL OR CAST(meterType.meterTypeStartDate AS date) <= serviceDay.BillDay)
              AND (meterType.meterTypeEndDate IS NULL OR CAST(meterType.meterTypeEndDate AS date) >= serviceDay.BillDay)
-            CROSS APPLY
-            (
-                SELECT TOP (1) amountRow.FixedAmount
-                FROM Housing.MeterTypeFixedAmount amountRow
-                WHERE amountRow.MeterTypeID_FK = meterType.meterTypeID
-                  AND amountRow.idaraID_FK = @IdaraID
-                  AND (amountRow.MeterTypeFixedAmountActive = 1 OR amountRow.MeterTypeFixedAmountEndDate IS NOT NULL)
-                  AND ISNULL(amountRow.FixedAmount, 0) > 0
-                  AND (amountRow.MeterTypeFixedAmountStartDate IS NULL OR CAST(amountRow.MeterTypeFixedAmountStartDate AS date) <= serviceDay.BillDay)
-                  AND (amountRow.MeterTypeFixedAmountEndDate IS NULL OR CAST(amountRow.MeterTypeFixedAmountEndDate AS date) >= serviceDay.BillDay)
-                ORDER BY amountRow.MeterTypeFixedAmountStartDate DESC, amountRow.MeterTypeFixedAmountID DESC
-            ) fixedAmount
+            OUTER APPLY
+(
+    SELECT TOP (1) amountRow.FixedAmount
+    FROM Housing.MeterTypeFixedAmount amountRow
+    WHERE amountRow.MeterTypeID_FK = meterType.meterTypeID
+      AND amountRow.idaraID_FK = @IdaraID
+      AND (
+    amountRow.MeterTypeFixedAmountActive = 1
+    OR amountRow.MeterTypeFixedAmountEndDate IS NOT NULL
+)
+      AND (amountRow.MeterTypeFixedAmountStartDate IS NULL
+           OR CAST(amountRow.MeterTypeFixedAmountStartDate AS date) <= serviceDay.BillDay)
+      AND (amountRow.MeterTypeFixedAmountEndDate IS NULL
+           OR CAST(amountRow.MeterTypeFixedAmountEndDate AS date) >= serviceDay.BillDay)
+    ORDER BY amountRow.MeterTypeFixedAmountStartDate DESC,
+             amountRow.MeterTypeFixedAmountID DESC
+) fixedAmount
             WHERE NOT EXISTS
             (
                 SELECT 1
@@ -277,9 +302,12 @@ BEGIN
                 FROM #ExistingFixedBills existingBill
                 WHERE 1 = 1
                   AND existingBill.meterServiceTypeID = sourceDay.meterServiceTypeID
-                  AND existingBill.BillChargeTypeID_FK = sourceDay.BillChargeTypeID
-                  AND ((sourceDay.SourceKind = N'SERVICE' AND existingBill.meterID IS NULL)
-                       OR (sourceDay.SourceKind = N'METER' AND existingBill.meterID = sourceDay.meterID))
+AND
+(
+    (sourceDay.SourceKind = N'SERVICE' AND existingBill.meterID IS NULL)
+    OR
+    (sourceDay.SourceKind = N'METER' AND existingBill.meterID = sourceDay.meterID)
+)
                   AND existingBill.BillFromDate <= sourceDay.BillDay
                   AND existingBill.BillToDate >= sourceDay.BillDay
             )
@@ -305,7 +333,7 @@ BEGIN
                    DATEADD(DAY, -ROW_NUMBER() OVER
                    (
                        PARTITION BY YEAR(BillDay), MONTH(BillDay), SourceKind, meterServiceTypeID,
-                                    ISNULL(meterID, -1), FixedAmount, TaxRate
+             ISNULL(meterID, -1), FixedAmount, RateStatus, TaxRate
                        ORDER BY BillDay
                    ), BillDay) AS IslandKey
             FROM MissingDays missingDay
@@ -319,12 +347,23 @@ BEGIN
                 , MAX(buildingUtilityTypeID_FK) AS buildingUtilityTypeID_FK
                 , meterServiceTypeID, BillChargeTypeID, meterID, meterTypeID
                 , MAX(meterNo) AS meterNo, MAX(meterName_A) AS meterName_A
-                , FixedAmount, TaxRate, SourceKind
-            FROM NumberedDays
-            GROUP BY YEAR(BillDay), MONTH(BillDay), SourceKind, meterServiceTypeID,
-                     BillChargeTypeID, meterID, meterTypeID, FixedAmount, TaxRate, IslandKey, buildingDetailsID
-        )
-        INSERT INTO Housing.Bills
+                , FixedAmount, RateStatus, TaxRate, SourceKind
+FROM NumberedDays
+GROUP BY YEAR(BillDay), MONTH(BillDay), SourceKind, meterServiceTypeID,
+         BillChargeTypeID, meterID, meterTypeID,
+         FixedAmount, RateStatus, TaxRate, IslandKey, buildingDetailsID
+)
+SELECT
+    NEWID() AS SegmentUID,
+    segment.*
+INTO #BillSegments
+FROM BillSegments segment
+OPTION (MAXRECURSION 32767);
+
+CREATE UNIQUE INDEX UX_BillSegments_SegmentUID
+    ON #BillSegments (SegmentUID);
+
+INSERT INTO Housing.Bills
         (
               BillsUID, BillChargeTypeID_FK, BillTypeID_FK, CurrentPeriodID
             , PeriodMonth, PeriodYear, CurrentPeriodTax
@@ -333,11 +372,13 @@ BEGIN
             , CurrentRead, LastRead, ReadDiff, PRICE, PRICETAX, meterServicePrice, meterServicePriceTAX, TotalPrice
             , BillsFromDate, BillsToDate, BillActive, idaraID_FK, entryDate, entryData, hostName
         )
-        OUTPUT inserted.BillsID, inserted.meterID, inserted.BillsFromDate, inserted.BillsToDate,
-               inserted.CurrentPeriodTax, inserted.PRICE, inserted.PRICETAX, inserted.TotalPrice
+        OUTPUT inserted.BillsID, inserted.BillsUID, inserted.meterID,
+       inserted.BillsFromDate, inserted.BillsToDate,
+       inserted.CurrentPeriodTax, inserted.PRICE,
+       inserted.PRICETAX, inserted.TotalPrice
         INTO @InsertedBills
         SELECT
-              NEWID(), segment.BillChargeTypeID, 2, periodRow.billPeriodID
+              segment.SegmentUID, segment.BillChargeTypeID, 2, periodRow.billPeriodID
             , MONTH(segment.BillFromDate), YEAR(segment.BillFromDate), segment.TaxRate
             , segment.meterNo, segment.meterID, segment.meterName_A, segment.buildingDetailsNo
             , segment.buildingUtilityTypeID_FK, segment.buildingDetailsID, segment.meterTypeID
@@ -346,7 +387,7 @@ BEGIN
             , CAST(amount.ChargeAmount * segment.TaxRate / 100.0 AS decimal(18,2)), 0, 0
             , CAST(amount.ChargeAmount * (1 + segment.TaxRate / 100.0) AS decimal(18,2))
             , segment.BillFromDate, segment.BillToDate, 1, @IdaraID, GETDATE(), @EntryData, @HostName
-        FROM BillSegments segment
+        FROM #BillSegments segment
         CROSS APPLY
         (
             SELECT CAST(segment.FixedAmount *
@@ -367,8 +408,9 @@ BEGIN
               AND period.billPeriodStartDate <= segment.BillToDate
               AND period.billPeriodEndDate >= segment.BillFromDate
             ORDER BY period.billPeriodID DESC
-        ) periodRow
-        OPTION (MAXRECURSION 32767);
+        ) periodRow;
+
+  
 
         INSERT Housing.BillCalculation
         (
@@ -396,13 +438,25 @@ BEGIN
                + 1)
             , 1, 0, taxRow.taxID, insertedBill.TaxRatePercent / 100.0
             , insertedBill.AmountBeforeTax, insertedBill.TaxAmount, insertedBill.TotalAmount
-            , CASE WHEN insertedBill.meterID IS NULL
-                   THEN N'تم الرجوع إلى المبلغ الثابت للخدمة لعدم وجود فراغات مطابقة لسياسة الحسبة'
-                   ELSE N'تم الاحتساب بالمبلغ الثابت للعداد'
-              END
-            , @EntryData, @HostName
-        FROM @InsertedBills insertedBill
-        OUTER APPLY
+            , CASE segment.RateStatus
+    WHEN N'MISSING_RATE_ZERO'
+        THEN N'MISSING_RATE_ZERO | لا توجد تعرفة ثابتة مؤهلة لهذه الخدمة أو العداد خلال فترة الفاتورة؛ تم الرصد بقيمة صفرية دون إنشاء مطالبة مالية.'
+
+    WHEN N'ZERO_CONFIGURED_RATE'
+        THEN N'ZERO_CONFIGURED_RATE | التعرفة الثابتة المعتمدة لهذه الخدمة أو العداد تساوي صفرًا خلال فترة الفاتورة.'
+
+    WHEN N'POSITIVE_RATE'
+        THEN CASE
+            WHEN insertedBill.meterID IS NULL
+                THEN N'POSITIVE_RATE | تم الاحتساب باستخدام التعرفة الثابتة للخدمة.'
+            ELSE N'POSITIVE_RATE | تم الاحتساب باستخدام التعرفة الثابتة للعداد.'
+        END
+  END
+, @EntryData, @HostName
+FROM @InsertedBills insertedBill
+INNER JOIN #BillSegments segment
+    ON segment.SegmentUID = insertedBill.BillsUID
+OUTER APPLY
         (
             SELECT TOP (1) tax.taxID
             FROM dbo.Tax tax

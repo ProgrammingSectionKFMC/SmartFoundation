@@ -651,7 +651,6 @@
     <Build Include="dbo\Stored Procedures\Masters_DataLoad.sql">
       <QuotedIdentifier>On</QuotedIdentifier>
     </Build>
-    <Build Include="Housing\Stored Procedures\BuildingRentForOneMonth_2026-05-12.sql" />
     <Build Include="Housing\Stored Procedures\RentExemptionDL.sql" />
     <Build Include="Housing\Stored Procedures\GenerateMonthlyRentBills.sql" />
     <Build Include="Housing\Stored Procedures\HousingHandoverDL.sql" />
@@ -789,9 +788,6 @@
     <Build Include="Security\Maintenance.sql" />
     <Build Include="Housing\Stored Procedures\OtherWaitingListManagmentSP.sql" />
     <Build Include="Housing\Stored Procedures\OtherWaitingListManagmentDL.sql" />
-    <Build Include="Housing\Stored Procedures\HousingResidentSP_2026_08_26.sql" />
-    <Build Include="Housing\Stored Procedures\BackfillResidentServiceBills_2026_08_26.sql" />
-    <Build Include="Housing\Stored Procedures\AllMeterReadSP_2026_08_26.sql" />
     <Build Include="Housing\Tables\UnallocatedPaymentRefundDetail.sql" />
     <Build Include="Housing\Tables\UnallocatedPaymentRefund.sql" />
     <Build Include="MoveData\Stored Procedures\usp_MigrateWaitingClass.sql" />
@@ -807,6 +803,13 @@
     <Build Include="Housing\Stored Procedures\GenerateExitServiceBillsForRequest.sql" />
     <Build Include="Housing\Stored Procedures\GenerateExitRentBillsForRequest.sql" />
     <Build Include="Housing\Stored Procedures\ExitMeterBillProrationSP.sql" />
+    <Build Include="Housing\Tables\MonthlyBillingQueue.sql" />
+    <Build Include="Housing\Tables\ExitMeterPeriodicSubstitution.sql" />
+    <Build Include="Housing\Tables\AssignPeriodMember.sql" />
+    <Build Include="Housing\Tables\AssignPeriodAllocation.sql" />
+    <Build Include="Housing\Views\V_GetGeneralListActionForBuilding.sql" />
+    <Build Include="MoveData\Stored Procedures\usp_FinalizeVacantBuildingActions.sql" />
+    <Build Include="Housing\Stored Procedures\SyncAssignPeriodHistory.sql" />
   </ItemGroup>
   <ItemGroup>
     <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\150\SqlSchemas\master.dacpac">

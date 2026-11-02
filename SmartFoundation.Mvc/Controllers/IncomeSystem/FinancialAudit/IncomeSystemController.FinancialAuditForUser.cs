@@ -1923,7 +1923,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
             // Drawer الرصيد العام
             // مرحلة أولى: اختبار العرض فقط، دون عمليات مالية.
 
-            dsModel.Toolbar.Drawers = new List<SmartDrawerConfig>
+            dsModelGeneral.Toolbar.Drawers = new List<SmartDrawerConfig>
 {
     new SmartDrawerConfig
     {
@@ -2059,7 +2059,7 @@ Toolbar = new TableToolbarConfig
     ShowEdit = canINSERTGENERALBALANCEREFUND,
     ShowEdit2 = canINSERTGENERALBALANCEREFUND,
     ShowEdit1 = canLINKGENERALBALANCETOBUILDING
-    && generalBalanceLinkBuildingOptions.Count > 1,
+    && generalBalanceLinkBuildingOptions.Count > 0,
 
     Edit = new TableAction
     {
@@ -2095,6 +2095,15 @@ Toolbar = new TableToolbarConfig
 
             DisableWhenAny = new List<TableActionRule>
             {
+                new TableActionRule
+{
+    Field = "AvailableAmount",
+    Op = "eq",
+    Value = "0",
+    Message = "لا يوجد مبلغ متاح للإعادة",
+    Priority = 1
+},
+
                 new TableActionRule
                 {
                     Field = "IsEligible",
@@ -2153,7 +2162,7 @@ Edit1 = new TableAction
     Color = "success",
 
     Show = canLINKGENERALBALANCETOBUILDING
-        && generalBalanceLinkBuildingOptions.Count > 1,
+        && generalBalanceLinkBuildingOptions.Count > 0,
 
     IsEdit = true,
 
@@ -2195,6 +2204,16 @@ OpenForm = generalBalanceLinkForm,
 
         DisableWhenAny = new List<TableActionRule>
         {
+
+            new TableActionRule
+{
+    Field = "AvailableAmount",
+    Op = "eq",
+    Value = "0",
+    Message = "لا يوجد مبلغ متاح للربط",
+    Priority = 1
+},
+
             new TableActionRule
             {
                 Field = "IsEligible",
@@ -2228,7 +2247,7 @@ OpenForm = generalBalanceLinkForm,
 
     Title = "سجل عمليات إعادة المبالغ",
 
-    Description = "عمليات إعادة المبالغ المرتبطة بالسداد المحدد",
+    Description = "عمليات إعادة المبالغ المرتبطة بالسداد المحدد - لايمكن الغاء المبالغ التي تم ربطها بمبنى",
 
     RenderInModal = true,
 
@@ -2613,7 +2632,7 @@ OpenForm = generalBalanceLinkForm,
                             AppliesTo = "any",
                             DisableWhenAny = new List<TableActionRule>
                                 {
-
+                                
                                       new TableActionRule
                                     {
                                         Field = "SumTotalPaidBills",
@@ -3279,6 +3298,8 @@ Print1 = new TableAction
                     };
 
 
+            // تسجيل لوحة الرصيد العام ضمن اللوحات التي يعرضها SmartRenderer
+            dsModel.Toolbar.Drawers.AddRange(dsModelGeneral.Toolbar.Drawers);
 
             bool dsModelHasRows =
                 dt1 != null && dt1.Rows.Count > 0;
@@ -3306,6 +3327,25 @@ Print1 = new TableAction
                 PageTitle = dsModel3.PageTitle,
                 PanelTitle = dsModel3.PanelTitle,
                 PanelIcon = "fa fa-list",
+                Panel = new SmartPagePanelConfig
+                {
+                    Show = true,
+                    ShowIcon = true,
+                    ShowSubtitle = true,
+                    ShowDescription = true,
+                    ShowBadges = true,
+                    Layout = "compact",
+                    Title = "التدقيق المالي العام",
+                    Subtitle = "الاستعلام عن المستفيد وكل اجراءاته الماليه.",
+                    Description = " تُستخدم هذه الصفحة للاستعلام عن مطالبات الساكن وسداداته بشرط ان يكون ملفه لدى ادارتكم ويجب اخذ الحذر لانه لايمكن التراجع عن اي اجراء مالي يتم عن طريق هذه الصفحه",
+                    Icon = "fa-user-group",
+                    Badges = new List<SmartPagePanelBadge>
+                    {
+                        new() { Label = "البحث عن المستفيد", Value = "استخدام رقم الهوية او الاقامه للمستفيد للبحث", Icon = "fa-solid fa-search", Tone = "success" },
+                        new() { Label = "استعراض البيانات الماليه", Value = "استعراض جميع بيانات المستفيد المالية", Icon = "fa-solid fa-pen-to-square", Tone = "info" },
+                        new() { Label = "سداد او اعادة المبالغ او اجراء تسويات ماليه", Value = "انجاز العمليات الماليه المطلوبة للساكن", Icon = "fa-solid fa-shield-halved", Tone = "default" },
+                    }
+                },
 
                 Form = form,
 

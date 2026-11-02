@@ -16,6 +16,12 @@ namespace SmartFoundation.DataEngine.Core.Models
         //يرجع كل الجداول بالترتيب حسب البروسيجر 
         public List<List<Dictionary<string, object?>>> Datasets { get; set; } = [];
 
+        /// <summary>
+        /// Column names in reader order for each corresponding entry in Datasets,
+        /// including result sets that contain no rows.
+        /// </summary>
+        public List<List<string>> DatasetSchemas { get; set; } = [];
+
         public Dictionary<string, object?> Meta { get; set; } = [];
         public string? Error { get; set; }
         public string? Message { get; set; }

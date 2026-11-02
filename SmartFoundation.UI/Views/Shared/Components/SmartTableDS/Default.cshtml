@@ -743,9 +743,24 @@
                                 </td>
 
                                 <template x-for="col in visibleColumns()" x-bind:key="col.field">
+
                                     <td class="td-cell"
-                                        x-bind:class="[col.align, col.truncate ? 'truncate-cell' : '', applyStyleRules(row, col, 'cell'), enableCellCopy ? 'sf-copy-cell' : '', enableCellCopy ? 'hover:bg-gray-50' : '']"
+                                        x-bind:class="[
+                                        col.align,
+                                        col.truncate && !col.wrapText ? 'truncate-cell' : '',
+                                        col.wrapText ? 'sf-wrap-cell' : '',
+                                        applyStyleRules(row, col, 'cell'),
+                                        enableCellCopy ? 'sf-copy-cell' : '',
+                                        enableCellCopy ? 'hover:bg-gray-50' : ''
+                                        ]"
+                                        x-bind:style="col.wrapText
+                                        ? 'width:' + (col.width || '350px')
+                                        + ';min-width:' + (col.minWidth || '350px')
+                                        + ';max-width:' + (col.maxWidth || col.width || '350px')
+                                        + ';'
+                                        : ''"
                                         x-on:dblclick.stop="enableCellCopy && copyCell(row, col, $event)">
+
 
                                         <template x-if="hasCellPill(row, col)">
                                             <span x-bind:class="cellPillClass(row, col)"

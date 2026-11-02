@@ -148,6 +148,125 @@ END;
 
             BEGIN
 
+        DECLARE @Exit54PhysicalDate DATE = NULL,
+                @Exit59ReadAt DATETIME = GETDATE(),
+                @Exit54CreatedAt DATETIME = NULL,
+                @Exit54ActionID BIGINT = NULL,
+                @Exit54OccupentDate DATE = NULL,
+                @ExitBillFromDate DATE = NULL,
+                @ExitLastBaselineDate DATE = NULL,
+                @ExitLastBaselineReadID BIGINT = NULL,
+                @ExitFixedFeePreviouslyBilled BIT = 0;
+
+        IF TRY_CONVERT(INT,@buildingActionRoot) = 2
+        BEGIN
+            DECLARE @ExitReadingLockResult INT;
+            DECLARE @ExitReadingLockResource NVARCHAR(255)=
+                CONCAT(N'Housing.Occupancy:',@IdaraID_INT,N':',TRY_CONVERT(BIGINT,@buildingDetailsID));
+            EXEC @ExitReadingLockResult=sys.sp_getapplock
+                @Resource=@ExitReadingLockResource,
+                @LockMode='Exclusive',@LockOwner='Transaction',@LockTimeout=10000;
+            IF @ExitReadingLockResult<0
+                THROW 50001,N'تجري معالجة أخرى للمنزل؛ يرجى إعادة المحاولة.',1;
+
+            SELECT @Exit54PhysicalDate=TRY_CONVERT(DATE, exit54.ExitDate),
+                   @Exit54OccupentDate=TRY_CONVERT(DATE, exit54.OccupentDate),
+                   @Exit54CreatedAt=exit54.entryDate,
+                   @Exit54ActionID=exit54.buildingActionID
+            FROM Housing.BuildingAction stage59 WITH (UPDLOCK,HOLDLOCK)
+            JOIN Housing.BuildingAction exit54 WITH (UPDLOCK,HOLDLOCK)
+              ON exit54.buildingActionID=stage59.buildingActionParentID
+             AND exit54.buildingActionTypeID_FK=54 AND exit54.buildingActionActive=1
+            WHERE stage59.buildingActionID=TRY_CONVERT(BIGINT,@LastActionID)
+              AND stage59.buildingActionTypeID_FK=59 AND stage59.buildingActionActive=1
+              AND stage59.IdaraId_FK=@IdaraID_INT
+              AND stage59.residentInfoID_FK=TRY_CONVERT(BIGINT,@residentInfoID)
+              AND stage59.buildingDetailsID_FK=TRY_CONVERT(BIGINT,@buildingDetailsID)
+              AND exit54.residentInfoID_FK=TRY_CONVERT(BIGINT,@residentInfoID)
+              AND exit54.buildingDetailsID_FK=TRY_CONVERT(BIGINT,@buildingDetailsID)
+              AND exit54.IdaraId_FK=@IdaraID_INT;
+
+            IF @Exit54ActionID IS NULL OR @Exit54PhysicalDate IS NULL
+               OR @Exit54CreatedAt IS NULL OR @Exit54PhysicalDate>CONVERT(DATE,GETDATE())
+                THROW 50001, N'تعذر إثبات تاريخ الإخلاء الفعلي من الإجراء 54.', 1;
+
+            -- Use the documented occupancy date of this exact exit cycle.
+            -- A missing/invalid date must not silently produce a pre-occupancy invoice.
+            IF @Exit54OccupentDate IS NULL OR @Exit54OccupentDate>@Exit54PhysicalDate
+                THROW 50001, N'تعذر إثبات تاريخ بداية السكن من دورة الإخلاء 54.', 1;
+
+            SET @ExitBillFromDate =
+                CASE
+                    WHEN @Exit54OccupentDate > DATEFROMPARTS(YEAR(@Exit54PhysicalDate),MONTH(@Exit54PhysicalDate),1)
+                    THEN @Exit54OccupentDate
+                    ELSE DATEFROMPARTS(YEAR(@Exit54PhysicalDate),MONTH(@Exit54PhysicalDate),1)
+                END;
+
+            -- A regular reading posted between 54 and this exit reading is
+            -- allowed only when its active invoice belongs to this SAME resident.
+            IF EXISTS
+            (
+                SELECT 1 FROM Housing.MeterRead newer WITH (UPDLOCK,HOLDLOCK)
+                WHERE newer.meterID_FK=TRY_CONVERT(BIGINT,@meterID)
+                  AND newer.buildingDetailsID=TRY_CONVERT(BIGINT,@buildingDetailsID)
+                  AND newer.IdaraID_FK=@IdaraID_INT
+                  AND newer.meterReadActive=1
+                  AND newer.meterReadTypeID_FK=2
+                  AND (newer.entryDate>@Exit54CreatedAt OR newer.dateOfRead>@Exit54CreatedAt)
+                  AND
+                  (
+                      newer.residentInfoID_FK IS NULL
+                      OR newer.residentInfoID_FK<>TRY_CONVERT(BIGINT,@residentInfoID)
+                      OR NOT EXISTS
+                      (
+                         SELECT 1 FROM Housing.Bills regular WITH (UPDLOCK,HOLDLOCK)
+                         WHERE regular.meterReadID=newer.meterReadID
+                           AND regular.BillTypeID_FK=2 AND regular.BillActive=1
+                           AND regular.meterID=newer.meterID_FK
+                           AND regular.residentInfoID_FK=TRY_CONVERT(BIGINT,@residentInfoID)
+                           AND regular.buildingDetailsID=TRY_CONVERT(BIGINT,@buildingDetailsID)
+                           AND regular.idaraID_FK=@IdaraID_INT
+                      )
+                  )
+            )
+                THROW 50001, N'توجد قراءة دورية بعد 54 لا تتبع المستفيد أو لا تحمل فاتورة دورية صالحة؛ يلزم تصحيحها قبل الإخلاء.', 1;
+
+            SELECT TOP (1)
+                   @ExitLastBaselineDate=CONVERT(DATE,COALESCE(lastRead.dateOfRead,lastRead.entryDate)),
+                   @ExitLastBaselineReadID=lastRead.meterReadID
+            FROM Housing.MeterRead lastRead WITH (UPDLOCK,HOLDLOCK)
+            WHERE lastRead.meterID_FK=TRY_CONVERT(BIGINT,@meterID)
+              AND lastRead.buildingDetailsID=TRY_CONVERT(BIGINT,@buildingDetailsID)
+              AND lastRead.IdaraID_FK=@IdaraID_INT
+              AND lastRead.meterReadActive=1
+            ORDER BY COALESCE(lastRead.dateOfRead,lastRead.entryDate) DESC,
+                     lastRead.meterReadID DESC;
+
+            -- Use the chronologically latest valid baseline up to this 59 read,
+            -- even when that baseline was recorded after 54 (but before 59).
+            IF @ExitLastBaselineDate IS NULL OR @ExitLastBaselineDate>CONVERT(DATE,@Exit59ReadAt)
+                THROW 50001, N'آخر قراءة للعداد أحدث من قراءة الإخلاء أو غير صالحة؛ لم تُصدر فاتورة.', 1;
+
+            IF EXISTS
+            (
+                SELECT 1 FROM Housing.Bills b WITH (UPDLOCK,HOLDLOCK)
+                JOIN Housing.MeterRead oldMonthly ON oldMonthly.meterReadID=b.meterReadID
+                WHERE b.meterID=TRY_CONVERT(BIGINT,@meterID)
+                  AND b.BillTypeID_FK=2 AND b.BillActive=1
+                  AND b.residentInfoID_FK=TRY_CONVERT(BIGINT,@residentInfoID)
+                  AND b.buildingDetailsID=TRY_CONVERT(BIGINT,@buildingDetailsID)
+                  AND b.idaraID_FK=@IdaraID_INT
+                  AND b.PeriodYear=YEAR(@Exit54PhysicalDate)
+                  AND b.PeriodMonth=MONTH(@Exit54PhysicalDate)
+                  AND oldMonthly.meterReadActive=1
+                  AND oldMonthly.IdaraID_FK=@IdaraID_INT
+                  AND oldMonthly.buildingDetailsID=TRY_CONVERT(BIGINT,@buildingDetailsID)
+                  AND CONVERT(DATE,COALESCE(oldMonthly.dateOfRead,oldMonthly.entryDate))<=@Exit54PhysicalDate
+            )
+                SET @ExitFixedFeePreviouslyBilled=1; -- historical check retained; no fee suppression
+        END;
+
+
         IF(@buildingActionRoot = 2)
         BEGIN
         IF EXISTS (
@@ -380,7 +499,7 @@ END;
                 , @GeneralNo
                 , @buildingDetailsID
                 , @buildingDetailsNo
-                , GETDATE()
+                , @Exit59ReadAt
                 , @NewMeterReadValue
                 , @LastActionID
                 , 1
@@ -533,6 +652,8 @@ END;
     , [CurrentPeriodID]
     , [PeriodMonth]
     , [PeriodYear]
+    , [BillsFromDate]
+    , [BillsToDate]
     , [CurrentPeriodTax]
     , [meterNo]
     , [meterID]
@@ -684,8 +805,14 @@ SELECT
     , @meterReadTypeID_FK
     , s.PerviosPeriodID
     , 1
-    , s.PeriodMonth
-    , s.PeriodYear
+    , MONTH(@Exit54PhysicalDate)
+    , YEAR(@Exit54PhysicalDate)
+    -- Monthly accounting period starts on the first of the exit month,
+    -- except when this resident's actual occupancy began later in that month.
+    , @ExitBillFromDate
+    -- Official invoice date ends at 54. The entire meter delta remains
+    -- chargeable to the resident through the real 59 handover reading.
+    , @Exit54PhysicalDate
     , s.CurrentPeriodTax
     , s.meterNo
     , s.meterID
@@ -753,16 +880,17 @@ SELECT
     , GETDATE()
     , @entryData
     , @hostName
-FROM Housing.CalculteElectrictyBills_ByNewReadValue_ForInsert(@meterID, @NewMeterReadValue,@Identity_Insert) s;
-
-
-
-             
+FROM Housing.CalculteElectrictyBills_ByNewReadValue_ForInsert(@meterID, @NewMeterReadValue,@Identity_Insert) s
+WHERE s.meterReadID=@ExitLastBaselineReadID
+  AND s.IdaraId_FK=@IdaraID_INT
+  AND s.buildingDetailsID=TRY_CONVERT(BIGINT,@buildingDetailsID)
+  AND s.ReadDiff>=0
+  AND s.TotalPrice IS NOT NULL;
 
 
             IF NOT EXISTS (SELECT 1 FROM @InsertedBills)
             BEGIN
-                ;THROW 50002, N'حصل خطأ في تسجيل الفاتورة - Bills', 1;
+                ;THROW 50002, N'تعذر احتساب فاتورة الإخلاء: راجع ترابط العداد والمنزل والإدارة وقراءة الأساس والتعرفة.', 1;
             END;
 
             SELECT TOP (1) @Identity_Insert1 = BillID

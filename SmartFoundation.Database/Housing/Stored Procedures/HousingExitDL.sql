@@ -18,8 +18,27 @@ BEGIN
 
  -- HousingExit Data
 
- Declare @residentInfoID Bigint
- Set @residentInfoID = (select f.residentInfoID from  Housing.V_GetFullResidentDetails f where f.NationalID = @NationalID)
+
+DECLARE @residentInfoID BIGINT = NULL;
+DECLARE @MatchedResidentCount INT = 0;
+
+SELECT
+    @MatchedResidentCount = COUNT(DISTINCT w.residentInfoID),
+    @residentInfoID = MIN(w.residentInfoID)
+FROM Housing.V_WaitingList w
+WHERE w.NationalID = @NationalID
+  AND w.IdaraId = @idaraID
+  AND w.buildingActionRoot IN (2, 3);
+
+IF @MatchedResidentCount > 1
+BEGIN
+    THROW 50001,
+        N'توجد ملفات إسكان لمستفيدين مختلفين بالهوية نفسها داخل الإدارة؛ يلزم مراجعة البيانات.',
+        1;
+END;
+
+IF @MatchedResidentCount = 0
+    SET @residentInfoID = NULL;
 
             SELECT 
 

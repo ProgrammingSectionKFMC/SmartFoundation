@@ -234,6 +234,35 @@ VALUES
     NULL
 );
 
+
+
+/* Step 16: Finalize vacant buildings after migration */
+SET @CurrentStepNumber = 16;
+SET @CurrentProcedure =
+    N'MoveData.usp_FinalizeVacantBuildingActions';
+SET @StepStartedAt = SYSDATETIME();
+
+EXEC MoveData.usp_FinalizeVacantBuildingActions
+    @IdaraId = @IdaraId,
+    @RollbackAfterTest = 0;
+
+INSERT @ExecutionTiming
+VALUES
+(
+    @CurrentStepNumber,
+    @CurrentProcedure,
+    @StepStartedAt,
+    SYSDATETIME(),
+    DATEDIFF_BIG(
+        MILLISECOND,
+        @StepStartedAt,
+        SYSDATETIME()
+    ),
+    'Succeeded',
+    NULL,
+    NULL
+);
+
         SELECT
             @RollbackAfterTest [RollbackAfterTest],
             @CutoverDate [CutoverDate],

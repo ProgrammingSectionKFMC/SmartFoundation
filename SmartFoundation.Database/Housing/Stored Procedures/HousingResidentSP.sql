@@ -1,5 +1,5 @@
 ﻿
-CREATE PROCEDURE [Housing].[HousingResidentSP] 
+CREATE   PROCEDURE [Housing].[HousingResidentSP] 
 (
       @Action                               NVARCHAR(200)
     , @ActionID                             BIGINT          = NULL
@@ -241,6 +241,9 @@ BEGIN
         BEGIN
             -- Serialize occupancy changes with exit creation/edit/cancellation.
             -- Masters_CRUD owns the outer transaction and releases this lock.
+
+           
+
             DECLARE @OccupancyLockResult INT;
             DECLARE @OccupancyLockResource NVARCHAR(255) = CONCAT(
                 N'Housing.Occupancy:', @IdaraID_INT, N':', TRY_CONVERT(BIGINT, @buildingDetailsID));
@@ -251,6 +254,22 @@ BEGIN
                 , @LockTimeout = 10000;
             IF @OccupancyLockResult < 0
                 THROW 50001, N'تجري معالجة أخرى للمنزل؛ يرجى إعادة المحاولة.', 1;
+
+
+
+                 IF EXISTS
+(
+    SELECT 1
+    FROM Housing.V_WaitingList w
+    WHERE w.residentInfoID =
+          TRY_CONVERT(BIGINT, @residentInfoID)
+      AND w.LastActionTypeID IN (57,58)
+)
+BEGIN
+    ;THROW 50001,
+        N'لا يمكن اعتماد التسكين؛ لا تزال إجراءات الإخلاء المالي للمستفيد غير مكتملة.',
+        1;
+END;
        
             IF (SELECT COUNT(*) FROM Housing.V_Occupant e WHERE e.residentInfoID = @residentInfoID) > 0
             

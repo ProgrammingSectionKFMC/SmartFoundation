@@ -1,7 +1,4 @@
-﻿-- REVIEW ONLY. Before deployment verify the live hash and review the delta.
--- ALTER, not CREATE, because the procedure is already present in DATACORE.
--- Do NOT run without verifying the live definition and transaction tests.
-CREATE  PROCEDURE [Housing].[GenerateHistoricalServiceBillsForExitRequest]
+﻿CREATE PROCEDURE [Housing].[GenerateHistoricalServiceBillsForExitRequest]
       @Action NVARCHAR(12)
     , @ExitRequestActionID BIGINT
     , @EntryData NVARCHAR(20) = NULL
@@ -90,8 +87,8 @@ BEGIN
             IF @PreviewTo IS NOT NULL AND @PreviewTo<@HistoryTo SET @HistoryTo=@PreviewTo;
             IF @PreviewFrom IS NOT NULL AND @PreviewTo IS NOT NULL AND @PreviewFrom>@PreviewTo
                 THROW 50001,N'نطاق المعاينة غير صحيح.',1;
-            IF @HistoryFrom<=@HistoryTo AND DATEDIFF(DAY,@HistoryFrom,@HistoryTo)>400
-                THROW 50001,N'معاينة أكثر من 400 يوم غير مسموحة؛ حدد فترة أقصر.',1;
+            --IF @HistoryFrom<=@HistoryTo AND DATEDIFF(DAY,@HistoryFrom,@HistoryTo)>400
+            --    THROW 50001,N'معاينة أكثر من 400 يوم غير مسموحة؛ حدد فترة أقصر.',1;
         END;
         IF @HistoryFrom>@HistoryTo
         BEGIN
@@ -317,6 +314,56 @@ BEGIN
           END;
         END;
 
+        -- PERFORMANCE DRAFT: pre-stage active service bill coverage once.
+        -- Preserve PREVIEW's virtual retro-split coverage without modifying ledger rows.
+        CREATE TABLE #CoverageBills
+        (
+            BillsID BIGINT NOT NULL PRIMARY KEY,
+            ServiceID INT NULL,
+            EffectiveFrom DATE NULL,
+            EffectiveTo DATE NULL
+        );
+
+        INSERT INTO #CoverageBills(BillsID,ServiceID,EffectiveFrom,EffectiveTo)
+        SELECT b.BillsID,
+               COALESCE(b.meterServiceTypeID,chargeType.MeterServiceTypeID_FK),
+               CASE WHEN b.residentInfoID_FK IS NULL AND @Action=N'PREVIEW'
+                         AND p.SourceBillsID IS NOT NULL
+                         AND dates.BillFrom<p.AssignedFrom
+                    THEN p.AssignedFrom ELSE dates.BillFrom END,
+               CASE WHEN b.residentInfoID_FK IS NULL AND @Action=N'PREVIEW'
+                         AND p.SourceBillsID IS NOT NULL
+                         AND dates.BillTo>p.AssignedTo
+                    THEN p.AssignedTo ELSE dates.BillTo END
+        FROM Housing.Bills b
+        LEFT JOIN Housing.BillChargeType chargeType
+          ON chargeType.BillChargeTypeID=b.BillChargeTypeID_FK
+        LEFT JOIN #RetroSplitPlan p
+          ON p.SourceBillsID=b.BillsID AND @Action=N'PREVIEW'
+        CROSS APPLY (VALUES
+        (
+           COALESCE(CONVERT(DATE,b.BillsFromDate),
+             CASE WHEN b.PeriodYear BETWEEN 1753 AND 9999
+                    AND b.PeriodMonth BETWEEN 1 AND 12
+                  THEN DATEFROMPARTS(b.PeriodYear,b.PeriodMonth,1) END),
+           COALESCE(CONVERT(DATE,b.BillsToDate),
+             CASE WHEN b.PeriodYear BETWEEN 1753 AND 9999
+                    AND b.PeriodMonth BETWEEN 1 AND 12
+                  THEN EOMONTH(DATEFROMPARTS(b.PeriodYear,b.PeriodMonth,1)) END)
+        )) dates(BillFrom,BillTo)
+        WHERE (b.residentInfoID_FK=@ResidentInfoID
+               OR (@Action=N'PREVIEW' AND b.residentInfoID_FK IS NULL
+                   AND p.SourceBillsID IS NOT NULL))
+          AND b.buildingDetailsID=@BuildingDetailsID
+          AND b.idaraID_FK=@IdaraID
+          AND b.BillActive=1
+          AND b.BillChargeTypeID_FK IN (2,3,4)
+          AND dates.BillFrom<=@HistoryTo
+          AND dates.BillTo>=@HistoryFrom;
+
+        CREATE INDEX IX_CoverageBills_Service_Period
+            ON #CoverageBills(ServiceID,EffectiveFrom,EffectiveTo);
+
         -- Day/method classification copied from the tested current exit-month engine;
         -- history-specific change: space validity is checked against EACH BillDay.
     ;WITH Days AS
@@ -443,26 +490,10 @@ BEGIN
     OUTER APPLY
     (
         SELECT COUNT(*) AS CountBills
-        FROM Housing.Bills b
-        LEFT JOIN Housing.BillChargeType chargeType
-          ON chargeType.BillChargeTypeID=b.BillChargeTypeID_FK
-        WHERE (b.residentInfoID_FK=@ResidentInfoID
-          OR (@Action=N'PREVIEW' AND b.residentInfoID_FK IS NULL
-              AND EXISTS (SELECT 1 FROM #RetroSplitPlan p
-                          WHERE p.SourceBillsID=b.BillsID
-                            AND d.BillDay BETWEEN p.AssignedFrom AND p.AssignedTo)))
-          AND b.buildingDetailsID=@BuildingDetailsID
-          AND b.idaraID_FK=@IdaraID
-          AND (b.meterServiceTypeID=st.meterServiceTypeID
-               OR (b.meterServiceTypeID IS NULL AND chargeType.MeterServiceTypeID_FK=st.meterServiceTypeID))
-          AND b.BillActive=1
-          AND b.BillChargeTypeID_FK IN (2,3,4)
-          AND COALESCE(CONVERT(date,b.BillsFromDate),
-                CASE WHEN b.PeriodYear BETWEEN 1753 AND 9999 AND b.PeriodMonth BETWEEN 1 AND 12
-                THEN DATEFROMPARTS(b.PeriodYear,b.PeriodMonth,1) END) <=d.BillDay
-          AND COALESCE(CONVERT(date,b.BillsToDate),
-                CASE WHEN b.PeriodYear BETWEEN 1753 AND 9999 AND b.PeriodMonth BETWEEN 1 AND 12
-                THEN EOMONTH(DATEFROMPARTS(b.PeriodYear,b.PeriodMonth,1)) END) >=d.BillDay
+        FROM #CoverageBills cb
+        WHERE cb.ServiceID=st.meterServiceTypeID
+          AND cb.EffectiveFrom<=d.BillDay
+          AND cb.EffectiveTo>=d.BillDay
     ) existingBill
     WHERE st.meterServiceTypeActive=1
       AND (st.meterServiceTypeStartDate IS NULL OR CONVERT(date,st.meterServiceTypeStartDate)<=d.BillDay)
