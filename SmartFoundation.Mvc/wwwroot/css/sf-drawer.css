@@ -253,3 +253,20 @@ body:has(#sf-user-audit-bills-drawer.is-open) .sf-modal-backdrop,
 body:has(#sf-user-audit-payments-drawer.is-open) .sf-modal-backdrop {
     z-index: 10000030 !important;
 }
+
+/* Remote drawer content: loading / error state (SmartDrawer.openRemote) */
+.sf-drawer-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 220px;
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+    .sf-drawer-state i {
+        font-size: 1.6rem;
+        color: #1f6f5c;
+    }

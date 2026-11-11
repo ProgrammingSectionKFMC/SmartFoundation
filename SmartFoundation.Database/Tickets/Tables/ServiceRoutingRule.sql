@@ -1,16 +1,24 @@
-﻿CREATE TABLE [Tickets].[ServiceRoutingRule] (
-    [serviceRoutingRuleID]            BIGINT   IDENTITY (1, 1) NOT NULL,
-    [IdaraID_FK]                      BIGINT   NULL,
-    [requesterTypeID_FK]              INT      NULL,
-    [TargetDSDID_FK]                  BIGINT   NULL,
-    [ArbitratorDSDID_FK]              BIGINT   NULL,
-    [ArbitratorDistributorID_FK]      BIGINT   NULL,
-    [serviceRoutingRulePriority]      INT      NULL,
-    [serviceRoutingRuleEffectiveFrom] DATETIME NULL,
-    [serviceRoutingRuleEffectiveTo]   DATETIME NULL,
-    [serviceRoutingRuleActive]        BIT      NULL,
-    CONSTRAINT [PK_ServiceRoutingRule] PRIMARY KEY CLUSTERED ([serviceRoutingRuleID] ASC),
-    CONSTRAINT [FK_ServiceRoutingRule_Idara] FOREIGN KEY ([IdaraID_FK]) REFERENCES [dbo].[Idara] ([idaraID]),
-    CONSTRAINT [FK_ServiceRoutingRule_RequesterType] FOREIGN KEY ([requesterTypeID_FK]) REFERENCES [Tickets].[RequesterType] ([requesterTypeID])
-);
+﻿CREATE TABLE [Tickets].[ServiceRoutingRule](
+	[serviceRoutingRuleID] [bigint] IDENTITY(1,1) NOT NULL,
+	[serviceID_FK] [bigint] NOT NULL,
+	[idaraID_FK] [int] NOT NULL,
+	[targetDSDID_FK] [int] NOT NULL,
+	[queueDistributorID_FK] [int] NULL,
+	[effectiveFrom] [datetime] NOT NULL,
+	[effectiveTo] [datetime] NULL,
+	[approvedByUserID] [int] NULL,
+	[changeReason] [nvarchar](1000) NULL,
+	[serviceRoutingRuleActive] [bit] NULL,
+	[entryDate] [datetime] NULL,
+	[entryData] [nvarchar](20) NULL,
+	[hostName] [nvarchar](200) NULL,
+	[changeReason_A] [nvarchar](1000) NULL,
+ CONSTRAINT [PK_Tickets_ServiceRoutingRule] PRIMARY KEY CLUSTERED 
+(
+	[serviceRoutingRuleID] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF)
+)
+GO
 
+ALTER TABLE [Tickets].[ServiceRoutingRule] ADD  CONSTRAINT [DF_Tickets_ServiceRoutingRule_entryDate]  DEFAULT (getdate()) FOR [entryDate]
+GO

@@ -1,0 +1,6 @@
+﻿@model SmartFoundation.UI.ViewModels.SmartPage.SmartPageViewModel
+@{
+    ViewData["Title"] = Model.PageTitle;
+}
+
+@await Component.InvokeAsync("SmartRenderer", new { model = Model })

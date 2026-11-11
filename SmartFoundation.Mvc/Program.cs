@@ -48,7 +48,9 @@ builder.Services.AddSession(o =>
     o.IdleTimeout = TimeSpan.FromMinutes(5);
     o.Cookie.HttpOnly = true;
     o.Cookie.IsEssential = true;
-    o.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    o.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest
+        : CookieSecurePolicy.Always;
 });
 
 builder.Services
@@ -265,7 +267,9 @@ builder.Services.AddAntiforgery(o =>
 {
     o.HeaderName = "RequestVerificationToken";
     o.Cookie.HttpOnly = true;
-    o.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    o.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest
+        : CookieSecurePolicy.Always;
 });
 builder.Services.AddHsts(o =>
 {
@@ -298,7 +302,9 @@ app.UseHsts();
 app.UseHttpsRedirection();
 app.UseCookiePolicy(new CookiePolicyOptions
 {
-    Secure = CookieSecurePolicy.Always
+    Secure = app.Environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest
+        : CookieSecurePolicy.Always
 });
 
 app.Use(async (context, next) =>

@@ -1,18 +1,24 @@
-﻿CREATE TABLE [Tickets].[ServiceSLAPolicy] (
-    [serviceSLAPolicyID]                          BIGINT   IDENTITY (1, 1) NOT NULL,
-    [IdaraID_FK]                                  BIGINT   NULL,
-    [serviceID_FK]                                BIGINT   NULL,
-    [ticketPriorityID_FK]                         INT      NULL,
-    [responseTargetMinutes]                       INT      NULL,
-    [resolutionTargetMinutes]                     INT      NULL,
-    [serviceSLAPolicyAllowPause]                  BIT      NULL,
-    [serviceSLAPolicyRequiresMajorIncidentReview] BIT      NULL,
-    [serviceSLAPolicyEffectiveFrom]               DATETIME NULL,
-    [serviceSLAPolicyEffectiveTo]                 DATETIME NULL,
-    [serviceSLAPolicyActive]                      BIT      NULL,
-    CONSTRAINT [PK_ServiceSLAPolicy] PRIMARY KEY CLUSTERED ([serviceSLAPolicyID] ASC),
-    CONSTRAINT [FK_ServiceSLAPolicy_Idara] FOREIGN KEY ([IdaraID_FK]) REFERENCES [dbo].[Idara] ([idaraID]),
-    CONSTRAINT [FK_ServiceSLAPolicy_Service] FOREIGN KEY ([serviceID_FK]) REFERENCES [Tickets].[Service] ([serviceID]),
-    CONSTRAINT [FK_ServiceSLAPolicy_TicketPriority] FOREIGN KEY ([ticketPriorityID_FK]) REFERENCES [Tickets].[TicketPriority] ([ticketPriorityID])
-);
+﻿CREATE TABLE [Tickets].[ServiceSLAPolicy](
+	[serviceSLAPolicyID] [bigint] IDENTITY(1,1) NOT NULL,
+	[idaraID_FK] [int] NOT NULL,
+	[serviceID_FK] [bigint] NOT NULL,
+	[priorityID_FK] [int] NOT NULL,
+	[firstResponseTargetMinutes] [int] NULL,
+	[assignmentTargetMinutes] [int] NULL,
+	[operationalCompletionTargetMinutes] [int] NULL,
+	[finalClosureTargetMinutes] [int] NULL,
+	[effectiveFrom] [datetime] NULL,
+	[effectiveTo] [datetime] NULL,
+	[slaPolicyActive] [bit] NULL,
+	[entryDate] [datetime] NULL,
+	[entryData] [nvarchar](20) NULL,
+	[hostName] [nvarchar](200) NULL,
+ CONSTRAINT [PK_Tickets_ServiceSLAPolicy] PRIMARY KEY CLUSTERED 
+(
+	[serviceSLAPolicyID] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF)
+)
+GO
 
+ALTER TABLE [Tickets].[ServiceSLAPolicy] ADD  CONSTRAINT [DF_Tickets_ServiceSLAPolicy_entryDate]  DEFAULT (getdate()) FOR [entryDate]
+GO

@@ -58,12 +58,15 @@
   <Import Condition="'$(SQLDBExtensionsRefPath)' == ''" Project="$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets" />
   <ItemGroup>
     <Folder Include="Properties" />
+    <Folder Include="Scripts\" />
+    <Folder Include="Tickets\" />
+    <Folder Include="Tickets\Tables\" />
+    <Folder Include="Tickets\Stored Procedures\" />
+    <Folder Include="Tickets\Views\" />
     <Folder Include="Housing\" />
     <Folder Include="Housing\Tables\" />
     <Folder Include="dbo\" />
     <Folder Include="dbo\Tables\" />
-    <Folder Include="Tickets\" />
-    <Folder Include="Tickets\Tables\" />
     <Folder Include="WH\" />
     <Folder Include="WH\Tables\" />
     <Folder Include="VIC\" />
@@ -99,13 +102,46 @@
     <Folder Include="Housing\Sequences\" />
   </ItemGroup>
   <ItemGroup>
+    <Build Include="Tickets\Stored Procedures\ResidentDDL.sql" />
+    <Build Include="Tickets\Stored Procedures\ServiceDL.sql" />
+    <Build Include="Tickets\Stored Procedures\ServiceSP.sql" />
+    <Build Include="Tickets\Stored Procedures\TicketAdminSP.sql" />
+    <Build Include="Tickets\Stored Procedures\TicketDL.sql" />
+    <Build Include="Tickets\Stored Procedures\TicketSP.sql" />
+    <Build Include="Tickets\Tables\ArbitrationCase.sql" />
+    <Build Include="Tickets\Tables\ArbitrationReason.sql" />
+    <Build Include="Tickets\Tables\CatalogRoutingChangeLog.sql" />
+    <Build Include="Tickets\Tables\ClarificationReason.sql" />
+    <Build Include="Tickets\Tables\ClarificationRequest.sql" />
+    <Build Include="Tickets\Tables\HistoryActionType.sql" />
+    <Build Include="Tickets\Tables\PauseReason.sql" />
+    <Build Include="Tickets\Tables\Priority.sql" />
+    <Build Include="Tickets\Tables\QualityReview.sql" />
+    <Build Include="Tickets\Tables\QualityReviewResult.sql" />
+    <Build Include="Tickets\Tables\RequesterType.sql" />
+    <Build Include="Tickets\Tables\Service.sql" />
+    <Build Include="Tickets\Tables\ServiceCatalogSuggestion.sql" />
+    <Build Include="Tickets\Tables\ServiceRoutingRule.sql" />
+    <Build Include="Tickets\Tables\ServiceSLAPolicy.sql" />
+    <Build Include="Tickets\Tables\Ticket.sql" />
+    <Build Include="Tickets\Tables\TicketAttachment.sql" />
+    <Build Include="Tickets\Tables\TicketClass.sql" />
+    <Build Include="Tickets\Tables\TicketDescriptionTemplate.sql" />
+    <Build Include="Tickets\Tables\TicketHistory.sql" />
+    <Build Include="Tickets\Tables\TicketPauseSession.sql" />
+    <Build Include="Tickets\Tables\TicketReason.sql" />
+    <Build Include="Tickets\Tables\TicketSLA.sql" />
+    <Build Include="Tickets\Tables\TicketSLAHistory.sql" />
+    <Build Include="Tickets\Tables\TicketStatus.sql" />
+    <Build Include="Tickets\Views\V_ServiceFullDefinition.sql" />
+    <Build Include="Tickets\Views\V_TicketFullDetails.sql" />
+    <Build Include="Tickets\Views\V_TicketLastAction.sql" />
     <Build Include="Housing\Tables\RentBillsAdjustment.sql" />
     <Build Include="Housing\Tables\BillType.sql" />
     <Build Include="dbo\Tables\_GregorianHijriDate.sql" />
     <Build Include="dbo\Tables\Country.sql" />
     <Build Include="Housing\Tables\BuildingAssignCount.sql" />
     <Build Include="Housing\Tables\BillsDeductListDetails.sql" />
-    <Build Include="Tickets\Tables\Ticket.sql" />
     <Build Include="Housing\Tables\BuildingRentType.sql" />
     <Build Include="dbo\Tables\Section.sql" />
     <Build Include="Housing\Tables\BillDeductType.sql" />
@@ -119,7 +155,6 @@
     <Build Include="Housing\Tables\BuildingActionSource.sql" />
     <Build Include="dbo\Tables\PriorityType.sql" />
     <Build Include="dbo\Tables\UsersPhoto.sql" />
-    <Build Include="Tickets\Tables\TicketArbitration.sql" />
     <Build Include="dbo\Tables\Department.sql" />
     <Build Include="Housing\Tables\DeductList.sql" />
     <Build Include="Housing\Tables\ResidentDetails.sql" />
@@ -127,7 +162,6 @@
     <Build Include="dbo\Tables\SecurityType.sql" />
     <Build Include="dbo\Tables\DocumentState.sql" />
     <Build Include="dbo\Tables\DocumentPermission.sql" />
-    <Build Include="Tickets\Tables\TicketPauseSession.sql" />
     <Build Include="dbo\Tables\TransactionType.sql" />
     <Build Include="dbo\Tables\DocumentCategory.sql" />
     <Build Include="dbo\Tables\ChartListUsers.sql" />
@@ -139,7 +173,6 @@
     <Build Include="dbo\Tables\AuthenticationAuditLog.sql" />
     <Build Include="Housing\Tables\Bills.sql" />
     <Build Include="dbo\Tables\Transactions.sql" />
-    <Build Include="Tickets\Tables\TicketClarification.sql" />
     <Build Include="Housing\Tables\ExtendInsuranceType.sql" />
     <Build Include="dbo\Tables\UsersDetails.sql" />
     <Build Include="dbo\Tables\Countries.sql" />
@@ -151,7 +184,6 @@
     <Build Include="dbo\Tables\Document.sql" />
     <Build Include="dbo\Tables\Distributor.sql" />
     <Build Include="WH\Tables\WarehousePart.sql" />
-    <Build Include="Tickets\Tables\TicketSLA.sql" />
     <Build Include="Housing\Tables\AssignPeriod.sql" />
     <Build Include="Housing\Tables\ExtendReasonType.sql" />
     <Build Include="dbo\Tables\UsersPassword.sql" />
@@ -161,7 +193,6 @@
     <Build Include="Housing\Tables\MilitaryAreaCity.sql" />
     <Build Include="Housing\Tables\MeterServiceType.sql" />
     <Build Include="dbo\Tables\DocumentType.sql" />
-    <Build Include="Tickets\Tables\TicketQualityReview.sql" />
     <Build Include="VIC\Tables\Vehicles.sql" />
     <Build Include="dbo\Tables\DecisionDigitalSignture.sql" />
     <Build Include="Housing\Tables\BuildingType.sql" />
@@ -174,7 +205,6 @@
     <Build Include="Housing\Tables\BuildingAssign.sql" />
     <Build Include="dbo\Tables\State.sql" />
     <Build Include="dbo\Tables\MaritalStatus.sql" />
-    <Build Include="Tickets\Tables\TicketApproval.sql" />
     <Build Include="VIC\Tables\VehicleTransferRequest.sql" />
     <Build Include="dbo\Tables\NationalIDType.sql" />
     <Build Include="WH\Tables\WarehousePartType1.sql" />
@@ -183,12 +213,10 @@
     <Build Include="dbo\Tables\City.sql" />
     <Build Include="Housing\Tables\BuildingDetailsMeterServices.sql" />
     <Build Include="Housing\Tables\AssignNote.sql" />
-    <Build Include="Tickets\Tables\ServiceCatalogSuggestion.sql" />
     <Build Include="VIC\Tables\HandoverType.sql" />
     <Build Include="dbo\Tables\Nationality.sql" />
     <Build Include="VIC\Tables\MaintenanceDetails.sql" />
     <Build Include="VIC\Tables\MaintenanceTemplate.sql" />
-    <Build Include="Tickets\Tables\TicketHistory.sql" />
     <Build Include="VIC\Tables\TypesRoot.sql" />
     <Build Include="Housing\Tables\MeterServiceTypeFixedAmount.sql" />
     <Build Include="VIC\Tables\VehicleDetailesExchang.sql" />
@@ -198,7 +226,6 @@
     <Build Include="VIC\Tables\VehicleHandover.sql" />
     <Build Include="Housing\Tables\BillDeductAction.sql" />
     <Build Include="Housing\Tables\BuildingClass.sql" />
-    <Build Include="Tickets\Tables\TicketSLAHistory.sql" />
     <Build Include="Housing\Tables\DeductType.sql" />
     <Build Include="VIC\Tables\VehicleMaintenance.sql" />
     <Build Include="dbo\Tables\Religion.sql" />
@@ -213,77 +240,62 @@
     <Build Include="support\Tables\TicketType.sql" />
     <Build Include="dbo\Tables\Territory.sql" />
     <Build Include="VIC\Tables\VehicleScrap.sql" />
-    <Build Include="Tickets\Tables\ApprovalStepHistory.sql" />
     <Build Include="VIC\Tables\VehiclesDocumentType.sql" />
     <Build Include="support\Tables\TicketPriority.sql" />
     <Build Include="dbo\Tables\permissionAuthLvl.sql" />
-    <Build Include="Tickets\Tables\ClarificationReason.sql" />
     <Build Include="dbo\Tables\Tax.sql" />
     <Build Include="Housing\Tables\BuildingAction.sql" />
     <Build Include="VIC\Tables\VehicleTransferRequestType.sql" />
     <Build Include="dbo\Tables\UserPhoto.sql" />
     <Build Include="dbo\Tables\Rank.sql" />
     <Build Include="Housing\Tables\CustodyPaymentType.sql" />
-    <Build Include="Tickets\Tables\ServiceRoutingRuleHistory.sql" />
     <Build Include="support\Tables\TicketStatus.sql" />
     <Build Include="Housing\Tables\ResidentInfo.sql" />
     <Build Include="VIC\Tables\Violations.sql" />
-    <Build Include="Tickets\Tables\OperationalType.sql" />
     <Build Include="Housing\Tables\MeterServicePrice.sql" />
     <Build Include="Housing\Tables\BuildingUtilityType.sql" />
     <Build Include="support\Tables\TeamMember.sql" />
-    <Build Include="Tickets\Tables\QualityReviewResult.sql" />
     <Build Include="dbo\Tables\UserType.sql" />
     <Build Include="Housing\Tables\MeterSlide.sql" />
     <Build Include="dbo\Tables\UsersAuthType.sql" />
     <Build Include="Housing\Tables\BillDeductList.sql" />
     <Build Include="dbo\Tables\Organization.sql" />
-    <Build Include="Tickets\Tables\ArbitrationReason.sql" />
     <Build Include="Housing\Tables\WaitingClass.sql" />
     <Build Include="Housing\Tables\billPaymentType.sql" />
     <Build Include="Housing\Tables\BillDeductListStatus.sql" />
     <Build Include="dbo\Tables\DeptSecDiv.sql" />
     <Build Include="Housing\Tables\WaitingOrderType.sql" />
     <Build Include="dbo\Tables\contactInfo.sql" />
-    <Build Include="Tickets\Tables\PauseReason.sql" />
     <Build Include="Housing\Tables\BuildingUtilityTypeLinkToBillDeductType.sql" />
     <Build Include="support\Tables\TeamMemberRole.sql" />
-    <Build Include="Tickets\Tables\ResolutionType.sql" />
     <Build Include="Housing\Tables\CustodyActionType.sql" />
     <Build Include="WH\Tables\CategoryLevel.sql" />
     <Build Include="Housing\Tables\BillPeriod.sql" />
     <Build Include="Housing\Tables\ResidentContactInfo.sql" />
-    <Build Include="Tickets\Tables\TicketPriority.sql" />
     <Build Include="Housing\Tables\CustodyItems.sql" />
     <Build Include="Housing\Tables\billPayment.sql" />
     <Build Include="WH\Tables\CategoryGroupLife.sql" />
     <Build Include="Housing\Tables\DeductListStatus.sql" />
-    <Build Include="Tickets\Tables\TicketUrgency.sql" />
     <Build Include="support\Tables\Ticket.sql" />
     <Build Include="Housing\Tables\CustodyOrDamageType.sql" />
     <Build Include="WH\Tables\CategoryGroupLifeType.sql" />
     <Build Include="dbo\Tables\Idara.sql" />
     <Build Include="Housing\Tables\MeterType.sql" />
-    <Build Include="Tickets\Tables\TicketImpact.sql" />
     <Build Include="WH\Tables\CategoryLevelResponsible.sql" />
     <Build Include="dbo\Tables\Role.sql" />
     <Build Include="Housing\Tables\CustodyStatus.sql" />
     <Build Include="WH\Tables\Item.sql" />
-    <Build Include="Tickets\Tables\TicketStatus.sql" />
     <Build Include="WH\Tables\ItemLocation.sql" />
     <Build Include="dbo\Tables\Permission.sql" />
     <Build Include="Housing\Tables\BuildingDetails.sql" />
     <Build Include="dbo\Tables\Menu.sql" />
     <Build Include="Housing\Tables\BuildingRentActualPayment.sql" />
     <Build Include="Housing\Tables\billDeductListDestaination.sql" />
-    <Build Include="Tickets\Tables\TicketClass.sql" />
     <Build Include="WH\Tables\ItemProperty.sql" />
     <Build Include="WH\Tables\ItemPropertyType.sql" />
     <Build Include="Housing\Tables\UploadExcelImportLog.sql" />
-    <Build Include="Tickets\Tables\RequesterType.sql" />
     <Build Include="WH\Tables\Unit.sql" />
     <Build Include="Housing\Tables\BuildingAssignType.sql" />
-    <Build Include="Tickets\Tables\PriorityMatrix.sql" />
     <Build Include="WH\Tables\WarehousePartProperty.sql" />
     <Build Include="Housing\Tables\Meter.sql" />
     <Build Include="support\Tables\TicketReply.sql" />
@@ -291,7 +303,6 @@
     <Build Include="dbo\Stored Procedures\ErrorLog_Insert.sql" />
     <Build Include="WH\Tables\WarehousePartPropertyType.sql" />
     <Build Include="Housing\Tables\UploadExcel.sql" />
-    <Build Include="Tickets\Tables\ServiceCategory.sql" />
     <Build Include="Housing\Tables\ResidentRentExemption.sql" />
     <Build Include="Housing\Tables\ResidentRentExemptionPayment.sql" />
     <Build Include="Housing\Tables\MonthlyBillingRun.sql" />
@@ -309,7 +320,6 @@
     <Build Include="dbo\Tables\Notifications.sql" />
     <Build Include="Housing\Tables\BuildingHandover.sql" />
     <Build Include="WH\Tables\WarehousePartType.sql" />
-    <Build Include="Tickets\Tables\Service.sql" />
     <Build Include="Housing\Tables\BuildingRent.sql" />
     <Build Include="Housing\Tables\BillsPaidDeductListType.sql" />
     <Build Include="dbo\Tables\UserNotifications.sql" />
@@ -321,16 +331,13 @@
     <Build Include="Housing\Tables\BillPeriodType.sql" />
     <Build Include="Housing\Tables\elecrtecityCuting.sql" />
     <Build Include="Housing\Tables\BuildingActionType.sql" />
-    <Build Include="Tickets\Tables\ServiceSLAPolicy.sql" />
     <Build Include="dbo\Tables\ProgramDistributor.sql" />
     <Build Include="Housing\Tables\BuildingActionPermission.sql" />
     <Build Include="support\Tables\TicketAssignmentHistory.sql" />
     <Build Include="Housing\Tables\ResidentRentExemptionType.sql" />
-    <Build Include="Tickets\Tables\ApprovalStep.sql" />
     <Build Include="dbo\Tables\MenuDistributor.sql" />
     <Build Include="dbo\Tables\Attachment.sql" />
     <Build Include="dbo\Tables\Blood.sql" />
-    <Build Include="Tickets\Tables\ServiceRoutingRule.sql" />
     <Build Include="support\Tables\TicketTask.sql" />
     <Build Include="Housing\Views\V_GetGeneralListActionForResident.sql" />
     <Build Include="Housing\Views\V_LastActionForResident.sql" />
@@ -817,5 +824,8 @@
       <SuppressMissingDependenciesErrors>False</SuppressMissingDependenciesErrors>
       <DatabaseVariableLiteralValue>master</DatabaseVariableLiteralValue>
     </ArtifactReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Scripts\Tickets_SeedData.sql" />
   </ItemGroup>
 </Project>

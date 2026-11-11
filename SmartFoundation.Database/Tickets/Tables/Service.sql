@@ -1,29 +1,26 @@
-﻿CREATE TABLE [Tickets].[Service] (
-    [serviceID]                    BIGINT          IDENTITY (1, 1) NOT NULL,
-    [IdaraID_FK]                   BIGINT          NULL,
-    [serviceCategoryID_FK]         BIGINT          NULL,
-    [ticketClassID_FK]             INT             NULL,
-    [operationalTypeID_FK]         INT             NULL,
-    [defaultImpactID_FK]           INT             NULL,
-    [defaultUrgencyID_FK]          INT             NULL,
-    [defaultPriorityID_FK]         INT             NULL,
-    [serviceCode]                  NVARCHAR (50)   NULL,
-    [serviceName_A]                NVARCHAR (200)  NULL,
-    [serviceName_E]                NVARCHAR (200)  NULL,
-    [serviceDescription]           NVARCHAR (4000) NULL,
-    [serviceAllowResidentRequest]  BIT             NULL,
-    [serviceAllowInternalRequest]  BIT             NULL,
-    [serviceRequiresQualityReview] BIT             NULL,
-    [serviceAllowChildTickets]     BIT             NULL,
-    [serviceIsOtherPlaceholder]    BIT             NULL,
-    [serviceActive]                BIT             NULL,
-    CONSTRAINT [PK_Service] PRIMARY KEY CLUSTERED ([serviceID] ASC),
-    CONSTRAINT [FK_Service_Idara] FOREIGN KEY ([IdaraID_FK]) REFERENCES [dbo].[Idara] ([idaraID]),
-    CONSTRAINT [FK_Service_OperationalType] FOREIGN KEY ([operationalTypeID_FK]) REFERENCES [Tickets].[OperationalType] ([operationalTypeID]),
-    CONSTRAINT [FK_Service_ServiceCategory] FOREIGN KEY ([serviceCategoryID_FK]) REFERENCES [Tickets].[ServiceCategory] ([serviceCategoryID]),
-    CONSTRAINT [FK_Service_TicketClass] FOREIGN KEY ([ticketClassID_FK]) REFERENCES [Tickets].[TicketClass] ([ticketClassID]),
-    CONSTRAINT [FK_Service_TicketImpact] FOREIGN KEY ([defaultImpactID_FK]) REFERENCES [Tickets].[TicketImpact] ([ticketImpactID]),
-    CONSTRAINT [FK_Service_TicketPriority] FOREIGN KEY ([defaultPriorityID_FK]) REFERENCES [Tickets].[TicketPriority] ([ticketPriorityID]),
-    CONSTRAINT [FK_Service_TicketUrgency] FOREIGN KEY ([defaultUrgencyID_FK]) REFERENCES [Tickets].[TicketUrgency] ([ticketUrgencyID])
-);
+﻿CREATE TABLE [Tickets].[Service](
+	[serviceID] [bigint] IDENTITY(1,1) NOT NULL,
+	[serviceCode] [nvarchar](100) NOT NULL,
+	[serviceName_A] [nvarchar](500) NULL,
+	[serviceName_E] [nvarchar](500) NULL,
+	[serviceDesc] [nvarchar](2000) NULL,
+	[idaraID_FK] [int] NOT NULL,
+	[ticketClassID_FK] [int] NULL,
+	[defaultPriorityID_FK] [int] NULL,
+	[requiresLocation] [bit] NULL,
+	[allowsChildTickets] [bit] NULL,
+	[requiresQualityReview] [bit] NULL,
+	[serviceActive] [bit] NULL,
+	[entryDate] [datetime] NULL,
+	[entryData] [nvarchar](20) NULL,
+	[hostName] [nvarchar](200) NULL,
+	[serviceDesc_A] [nvarchar](2000) NULL,
+ CONSTRAINT [PK_Tickets_Service] PRIMARY KEY CLUSTERED 
+(
+	[serviceID] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF)
+)
+GO
 
+ALTER TABLE [Tickets].[Service] ADD  CONSTRAINT [DF_Tickets_Service_entryDate]  DEFAULT (getdate()) FOR [entryDate]
+GO

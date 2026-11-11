@@ -291,6 +291,11 @@ namespace SmartFoundation.UI.ViewModels.SmartTable
 
         public bool WrapText { get; set; } = false;
 
+        /// <summary>
+        /// Optional hint shown on hover next to the column header (an info icon), e.g. what a code prefix means.
+        /// </summary>
+        public string? Tooltip { get; set; }
+
         public Dictionary<string, object> CustomProperties { get; set; } = new();
     }
 

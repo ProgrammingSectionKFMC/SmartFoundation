@@ -13,6 +13,10 @@
     || Model.TableDS3 is not null
     || Model.TableDS4 is not null
     || Model.TableDS5 is not null
+    || Model.TableDS6 is not null
+    || Model.TableDS7 is not null
+    || Model.TableDS8 is not null
+    || Model.TableDS9 is not null
     || Model.Table is not null
     || Model.Accordions?.Any(a => a is not null) == true;
 
@@ -238,6 +242,22 @@
             @if (Model.TableDS5 is not null)
             {
                 @await Component.InvokeAsync("SmartTableDS", new { model = Model.TableDS5, embedded = true })
+            }
+            @if (Model.TableDS6 is not null)
+            {
+                @await Component.InvokeAsync("SmartTableDS", new { model = Model.TableDS6, embedded = true })
+            }
+            @if (Model.TableDS7 is not null)
+            {
+                @await Component.InvokeAsync("SmartTableDS", new { model = Model.TableDS7, embedded = true })
+            }
+            @if (Model.TableDS8 is not null)
+            {
+                @await Component.InvokeAsync("SmartTableDS", new { model = Model.TableDS8, embedded = true })
+            }
+            @if (Model.TableDS9 is not null)
+            {
+                @await Component.InvokeAsync("SmartTableDS", new { model = Model.TableDS9, embedded = true })
             }
 
             @if (Model.Table is not null)

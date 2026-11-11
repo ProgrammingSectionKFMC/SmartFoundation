@@ -306,9 +306,98 @@ drawer.dispatchEvent(new CustomEvent("sf-drawer:open", {
         }
     }, true);
 
+    // Remote content: open a drawer and load server-rendered HTML into its body.
+    // Lives here (not in page views) because pages loaded through the sidebar
+    // are swapped in via innerHTML, where inline <script> tags never run.
+    let remoteLoadId = 0;
+
+    function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, c => ({
+            "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+        }[c]));
+    }
+
+    function stateHtml(icon, text) {
+        return '<div class="sf-drawer-state"><i class="' + icon +
+            '" aria-hidden="true"></i><span>' + escapeHtml(text) + "</span></div>";
+    }
+
+    async function openRemote(target, url, label = "") {
+        const drawer = resolveDrawer(target);
+
+        // Same-origin relative URLs only.
+        if (!drawer || !/^\/(?!\/)/.test(url)) return false;
+        if (!open(drawer, { url })) return false;
+
+        const body = drawer.querySelector(".sf-drawer-body");
+        const title = drawer.querySelector(".sf-drawer-title");
+
+        if (title) {
+            title.dataset.defaultText ??= title.textContent.trim();
+            title.textContent = label
+                ? title.dataset.defaultText + " " + label
+                : title.dataset.defaultText;
+        }
+
+        if (!body) return true;
+
+        const loadId = ++remoteLoadId;
+        body.innerHTML = stateHtml("fa-solid fa-spinner fa-spin", "جاري التحميل...");
+        body.scrollTop = 0;
+
+        try {
+            const response = await fetch(url, {
+                credentials: "same-origin",
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            });
+            if (loadId !== remoteLoadId) return true;
+
+            if (response.status === 401) {
+                window.location.reload();
+                return true;
+            }
+
+            if (!response.ok) {
+                const messages = {
+                    403: "ليس لديك صلاحية لعرض هذه البيانات",
+                    404: "لم يتم العثور على البيانات المطلوبة"
+                };
+                body.innerHTML = stateHtml(
+                    "fa-solid fa-triangle-exclamation",
+                    messages[response.status] || "تعذر تحميل البيانات");
+                return true;
+            }
+
+            body.innerHTML = await response.text();
+        } catch (error) {
+            if (loadId !== remoteLoadId) return true;
+            console.error("SmartDrawer remote load failed:", error);
+            body.innerHTML = stateHtml("fa-solid fa-triangle-exclamation", "تعذر تحميل البيانات");
+        }
+
+        return true;
+    }
+
+    // Links shaped as  #sf-drawer:<drawerId>:<relative url>  open a remote drawer.
+    // Works for SmartTable LinkTemplate cells and for links inside drawer content.
+    document.addEventListener("click", event => {
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+
+        const link = target.closest('a[href^="#sf-drawer:"]');
+        if (!link) return;
+
+        const match = /^#sf-drawer:([\w-]+):(.+)$/.exec(link.getAttribute("href"));
+        if (!match) return;
+
+        event.preventDefault();
+        openRemote(match[1], match[2], link.textContent.trim());
+    }, true);
+
     // Public API for all SmartFoundation pages.
     window.SmartDrawer = Object.freeze({
         open,
+        openRemote,
         close,
         closeAll,
         isOpen

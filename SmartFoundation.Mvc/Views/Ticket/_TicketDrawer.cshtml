@@ -1,0 +1,421 @@
+@model SmartFoundation.Mvc.Controllers.Tickets.TicketDrawerViewModel
+@{
+    string V(IDictionary<string, object?> row, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            var text = row.TryGetValue(key, out var value) ? value?.ToString()?.Trim() : null;
+            if (!string.IsNullOrEmpty(text))
+                return text;
+        }
+        return "";
+    }
+
+    string D(IDictionary<string, object?> row, string key)
+    {
+        if (!row.TryGetValue(key, out var value) || value is null)
+            return "";
+        return value is DateTime dt ? dt.ToString("yyyy-MM-dd HH:mm") : value.ToString()?.Trim() ?? "";
+    }
+
+    // Empty or unknown values are shown as a single dash.
+    const string Empty = "-";
+    string X(IDictionary<string, object?> row, params string[] keys) => V(row, keys) is { Length: > 0 } v ? v : Empty;
+    string DX(IDictionary<string, object?> row, string key) => D(row, key) is { Length: > 0 } v ? v : Empty;
+
+    bool B(IDictionary<string, object?> row, string key)
+    {
+        var text = V(row, key);
+        return text == "1" || text.Equals("true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    var t = Model.Ticket;
+
+    var location = string.Join(" - ", new[]
+    {
+        V(t, "locationArea"),
+        string.IsNullOrEmpty(V(t, "locationBuildingNo")) ? "" : "مبنى " + V(t, "locationBuildingNo"),
+        string.IsNullOrEmpty(V(t, "locationUnitNo")) ? "" : "وحدة " + V(t, "locationUnitNo")
+    }.Where(s => !string.IsNullOrEmpty(s)));
+
+    int.TryParse(V(t, "slaElapsedMinutes"), out var slaElapsed);
+    int.TryParse(V(t, "slaTargetMinutes"), out var slaTarget);
+    var slaBreached = B(t, "slaIsBreached");
+    var slaPercent = slaTarget > 0 ? Math.Min(100, (int)Math.Round(slaElapsed * 100.0 / slaTarget)) : 0;
+    var slaTone = slaBreached ? "danger" : slaPercent >= 75 ? "warning" : "success";
+
+    string Minutes(int minutes)
+    {
+        if (minutes < 60) return $"{minutes} دقيقة";
+        var hours = minutes / 60;
+        if (hours < 24) return $"{hours} ساعة {minutes % 60} دقيقة";
+        return $"{hours / 24} يوم {hours % 24} ساعة";
+    }
+
+    var history = Enumerable.Reverse(Model.History).ToList();
+
+    // Ticket path: where the ticket is now and who acts next.
+    var statusCode = V(t, "ticketStatusCode").ToUpperInvariant();
+    var needsQuality = B(t, "requiresQualityReview");
+    var unit = V(t, "currentDSDName_A");
+    var assignee = V(t, "assignedUserName");
+    var stages = new List<string> { "إنشاء", "توجيه", "تعيين", "تنفيذ", "حل" };
+    if (needsQuality) stages.Add("مراجعة الجودة");
+    stages.Add("إغلاق");
+    // The highlighted stage is the one the ticket is waiting for (routed → waiting for assignment).
+    var stageIndex = statusCode switch
+    {
+        "NEW" => 1,
+        "ROUTED" => 2,
+        "ASSIGNED" or "REOPENED" or "IN_PROGRESS" or "CLARIFICATION" or "PAUSED" or "ARBITRATION" => 3,
+        "RESOLVED" => 5,
+        "CLOSED" => stages.Count - 1,
+        _ => -1
+    };
+    var stageIcons = new List<string> { "fa-file-circle-plus", "fa-route", "fa-user-check", "fa-screwdriver-wrench", "fa-circle-check" };
+    if (needsQuality) stageIcons.Add("fa-clipboard-check");
+    stageIcons.Add("fa-flag-checkered");
+
+    // When each stage was reached, from the action history (latest occurrence wins).
+    var lastStage = stages.Count - 1;
+    var stageDates = new Dictionary<int, string>();
+    foreach (var h in Model.History)
+    {
+        var stage = V(h, "actionTypeCode").ToUpperInvariant() switch
+        {
+            "CREATED" => 0,
+            "ROUTED" => 1,
+            "ASSIGNED" or "REASSIGNED" => 2,
+            "STARTED" => 3,
+            "RESOLVED" => 4,
+            "QUALITY_REVIEW" when needsQuality => 5,
+            "QUALITY_APPROVED" or "CLOSED" => lastStage,
+            _ => -1
+        };
+        if (stage >= 0 && h.TryGetValue("actionDate", out var when) && DateTime.TryParse(when?.ToString(), out var at))
+            stageDates[stage] = at.ToString("dd/MM HH:mm");
+    }
+
+    var isClosed = statusCode == "CLOSED";
+    var progressPercent = stageIndex <= 0 ? 0 : isClosed ? 100 : (int)Math.Round(stageIndex * 100.0 / lastStage);
+    var currentNote = statusCode switch
+    {
+        "PAUSED" => "موقوفة مؤقتاً",
+        "CLARIFICATION" => "بانتظار التوضيح",
+        "ARBITRATION" => "في التحكيم",
+        "REOPENED" => "معاد فتحها",
+        "RESOLVED" when needsQuality && Model.QualityReviews.Any(q => !B(q, "finalized")) => "بانتظار الاعتماد",
+        _ => ""
+    };
+
+    var unitText = string.IsNullOrEmpty(unit) ? "الجهة المختصة" : unit;
+    var assigneeText = string.IsNullOrEmpty(assignee) ? "الموظف المسند إليه" : assignee;
+    var reviewPending = Model.QualityReviews.Any(q => !B(q, "finalized"));
+    const string InList = "في قائمة التذاكر";
+    (string Step, string Who, string Button) next = statusCode switch
+    {
+        "NEW" => ("توجيه التذكرة إلى الجهة المختصة", "مشرف التذاكر", $"زر «توجيه» {InList}"),
+        "ROUTED" => ($"تعيين موظف من {unitText}", $"مشرف {unitText}", $"زر «تعيين» {InList}"),
+        "ASSIGNED" => ("بدء العمل على التذكرة", assigneeText, $"زر «بدء العمل» {InList}"),
+        "REOPENED" => ("بدء العمل من جديد", assigneeText, $"زر «بدء العمل» {InList}"),
+        "IN_PROGRESS" => ("تنفيذ العمل ثم حل التذكرة", assigneeText, $"زر «حل» {InList}"),
+        "CLARIFICATION" => ("الرد على طلب التوضيح", "الجهة المطلوب منها التوضيح", $"زر «الرد على التوضيح» {InList}"),
+        "PAUSED" => ("استئناف العمل بعد زوال سبب الإيقاف", assigneeText, $"زر «استئناف» {InList}"),
+        "ARBITRATION" => ("قرار التحكيم: تأييد أو تحويل لجهة أخرى", "لجنة التحكيم", "زر «قرار التحكيم» في صندوق التحكيم (إدارة نظام التذاكر)"),
+        "RESOLVED" when needsQuality && reviewPending => ("اعتماد نتيجة مراجعة الجودة", "مشرف الجودة", $"زر «إنهاء المراجعة» {InList}"),
+        "RESOLVED" when needsQuality => ("تسجيل نتيجة مراجعة الجودة", "مراجع الجودة", $"زر «مراجعة جودة» {InList}"),
+        "RESOLVED" => ("الإغلاق النهائي للتذكرة", "مشرف التذاكر", $"زر «إغلاق» {InList}"),
+        "CLOSED" => ("لا يوجد — التذكرة مغلقة", "", ""),
+        "REJECTED" => ("لا يوجد — التذكرة مرفوضة", "", ""),
+        _ => ("-", "", "")
+    };
+
+    // Colors come from Tickets.TicketStatus.ticketStatusColor / Tickets.Priority.priorityColor.
+    // Only plain hex values are emitted into the style attribute.
+    string ColorStyle(IDictionary<string, object?> row, string key)
+    {
+        var color = V(row, key);
+        return System.Text.RegularExpressions.Regex.IsMatch(color, "^#[0-9a-fA-F]{3,8}$")
+            ? "--td-c:" + color
+            : "";
+    }
+}
+
+<div class="td-drawer" data-ticket-id="@V(t, "ticketID")">
+
+    <section class="td-hero">
+        <div class="td-hero-top">
+            <span class="td-ticket-no"><i class="fa-solid fa-hashtag" aria-hidden="true"></i>@X(t, "ticketNo")</span>
+            <div class="td-badges">
+                <span class="td-badge td-status" style="@ColorStyle(t, "ticketStatusColor")">
+                    <span class="td-dot" aria-hidden="true"></span>@X(t, "ticketStatusName_A", "ticketStatusName_E")
+                </span>
+                <span class="td-badge td-priority" style="@ColorStyle(t, "priorityColor")">
+                    <i class="fa-solid fa-flag" aria-hidden="true"></i>@X(t, "priorityName_A", "priorityName_E")
+                </span>
+                @if (B(t, "isParentBlocked"))
+                {
+                    <span class="td-badge td-blocked"><i class="fa-solid fa-lock" aria-hidden="true"></i>معلقة بتذكرة فرعية</span>
+                }
+            </div>
+        </div>
+        <div class="td-holder">
+            <span><i class="fa-solid fa-user-check" aria-hidden="true"></i> المسند إليه: <strong>@X(t, "assignedUserName")</strong></span>
+            <span><i class="fa-solid fa-sitemap" aria-hidden="true"></i> الجهة الحالية: <strong>@X(t, "currentDSDName_A")</strong></span>
+        </div>
+        <h3 class="td-title">@X(t, "title")</h3>
+        <p class="td-description">@X(t, "description_")</p>
+    </section>
+
+    <section class="td-card td-path">
+        <h4 class="td-section-title"><i class="fa-solid fa-route" aria-hidden="true"></i> مسار التذكرة</h4>
+
+        @if (statusCode == "REJECTED")
+        {
+            <div class="td-path-banner td-path-banner-rejected"><i class="fa-solid fa-circle-xmark" aria-hidden="true"></i> رُفضت التذكرة ولن تُكمل المسار</div>
+        }
+        else if (isClosed)
+        {
+            <div class="td-path-banner td-path-banner-done"><i class="fa-solid fa-circle-check" aria-hidden="true"></i> اكتمل مسار التذكرة وأُغلقت@(stageDates.TryGetValue(lastStage, out var closedAt) ? " — " + closedAt : "")</div>
+        }
+        else if (stageIndex >= 0)
+        {
+            <div class="td-path-head">
+                <span>المرحلة الحالية: <strong>@stages[stageIndex]</strong>@(string.IsNullOrEmpty(currentNote) ? "" : " — " + currentNote)</span>
+                <span class="td-path-count">@(stageIndex + 1) من @stages.Count</span>
+            </div>
+            <div class="td-path-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@progressPercent"><span style="width:@(progressPercent)%"></span></div>
+        }
+
+        @if (stageIndex >= 0)
+        {
+            <ol class="td-track" aria-label="مراحل التذكرة">
+                @for (var i = 0; i < stages.Count; i++)
+                {
+                    var state = isClosed || i < stageIndex ? "done" : i == stageIndex ? "current" : "todo";
+                    <li class="td-tr td-tr-@state" aria-current="@(state == "current" ? "step" : null)">
+                        <span class="td-tr-dot" aria-hidden="true">
+                            @if (state == "done")
+                            {
+                                <i class="fa-solid fa-check"></i>
+                            }
+                            else
+                            {
+                                <i class="fa-solid @stageIcons[i]"></i>
+                            }
+                        </span>
+                        <span class="td-tr-label">@stages[i]</span>
+                        @if (state == "done" && stageDates.TryGetValue(i, out var doneAt))
+                        {
+                            <span class="td-tr-date">@doneAt</span>
+                        }
+                        else if (state == "current")
+                        {
+                            <span class="td-tr-now">@(string.IsNullOrEmpty(currentNote) ? "الآن" : currentNote)</span>
+                        }
+                    </li>
+                }
+            </ol>
+        }
+        <div class="td-next">
+            <div><span class="td-next-label">الخطوة التالية</span><strong>@next.Step</strong></div>
+            @if (!string.IsNullOrEmpty(next.Who))
+            {
+                <div><span class="td-next-label">المسؤول</span><strong>@next.Who</strong></div>
+            }
+            @if (!string.IsNullOrEmpty(next.Button))
+            {
+                <div><span class="td-next-label">الإجراء</span><strong>@next.Button</strong></div>
+            }
+        </div>
+    </section>
+
+    @if (slaTarget > 0)
+    {
+        <section class="td-card td-sla td-sla-@slaTone">
+            <div class="td-sla-head">
+                <span><i class="fa-solid fa-stopwatch" aria-hidden="true"></i> اتفاقية مستوى الخدمة @X(t, "slaTypeCode")</span>
+                <strong>@(slaBreached ? "متجاوزة" : $"{slaPercent}%")</strong>
+            </div>
+            <div class="td-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@slaPercent">
+                <span style="width:@(slaPercent)%"></span>
+            </div>
+            <div class="td-sla-foot">
+                <span>المنقضي: @Minutes(slaElapsed)</span>
+                <span>المستهدف: @Minutes(slaTarget)</span>
+            </div>
+        </section>
+    }
+
+    <section class="td-card">
+        <h4 class="td-section-title"><i class="fa-solid fa-circle-info" aria-hidden="true"></i> بيانات التذكرة</h4>
+        <dl class="td-grid">
+            <div><dt>الخدمة</dt><dd>@X(t, "serviceName_A", "serviceName_E")</dd></div>
+            <div><dt>التصنيف</dt><dd>@X(t, "ticketClassName_A", "ticketClassName_E")</dd></div>
+            <div><dt>مقدم الطلب</dt><dd>@X(t, "requesterName")</dd></div>
+            <div><dt>نوع مقدم الطلب</dt><dd>@X(t, "requesterTypeName_A", "requesterTypeName_E")</dd></div>
+            @if (!string.IsNullOrEmpty(V(t, "reporterPhone")))
+            {
+                <div><dt>جوال المبلّغ</dt><dd dir="ltr">@V(t, "reporterPhone")</dd></div>
+            }
+            <div><dt>المسند إليه</dt><dd>@X(t, "assignedUserName")</dd></div>
+            <div><dt>الجهة الحالية</dt><dd>@X(t, "currentDSDName_A")</dd></div>
+            <div><dt>الموقع</dt><dd>@(string.IsNullOrEmpty(location) ? Empty : location)</dd></div>
+            <div><dt>تاريخ الإنشاء</dt><dd>@DX(t, "entryDate")</dd></div>
+            <div><dt>تاريخ الحل التشغيلي</dt><dd>@DX(t, "operationalResolutionDate")</dd></div>
+            <div><dt>تاريخ الإغلاق النهائي</dt><dd>@DX(t, "finalClosureDate")</dd></div>
+            <div><dt>مراجعة الجودة</dt><dd>@(V(t, "requiresQualityReview") == "" ? Empty : B(t, "requiresQualityReview") ? "مطلوبة" : "غير مطلوبة")</dd></div>
+        </dl>
+    </section>
+
+    <section class="td-card">
+        <h4 class="td-section-title">
+            <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i> سجل الإجراءات
+            <span class="td-count">@history.Count</span>
+        </h4>
+        @if (history.Count == 0)
+        {
+            <p class="td-empty">لا توجد إجراءات مسجلة</p>
+        }
+        else
+        {
+            <ol class="td-timeline">
+                @foreach (var h in history)
+                {
+                    var oldStatus = V(h, "oldStatusName_A", "oldStatusName_E");
+                    var newStatus = V(h, "newStatusName_A", "newStatusName_E");
+                    <li>
+                        <div class="td-tl-head">
+                            <strong>@X(h, "actionTypeName_A", "actionTypeName_E", "actionTypeCode")</strong>
+                            <time>@DX(h, "actionDate")</time>
+                        </div>
+                        @if (!string.IsNullOrEmpty(newStatus) && newStatus != oldStatus)
+                        {
+                            <div class="td-tl-status">
+                                @if (!string.IsNullOrEmpty(oldStatus))
+                                {
+                                    <span>@oldStatus</span>
+                                    <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                                }
+                                <span>@newStatus</span>
+                            </div>
+                        }
+                        <div class="td-tl-meta"><i class="fa-solid fa-user" aria-hidden="true"></i> @X(h, "performerName")</div>
+                        @if (!string.IsNullOrEmpty(V(h, "notes")))
+                        {
+                            <p class="td-tl-notes">@V(h, "notes")</p>
+                        }
+                    </li>
+                }
+            </ol>
+        }
+    </section>
+
+    @if (Model.ChildTickets.Count > 0)
+    {
+        <section class="td-card">
+            <h4 class="td-section-title">
+                <i class="fa-solid fa-diagram-project" aria-hidden="true"></i> التذاكر الفرعية
+                <span class="td-count">@Model.ChildTickets.Count</span>
+            </h4>
+            <ul class="td-list">
+                @foreach (var c in Model.ChildTickets)
+                {
+                    <li>
+                        <a href="#sf-drawer:sf-ticket-drawer:/Ticket/TicketDrawer/@V(c, "ticketID")" class="td-link">@X(c, "ticketNo")</a>
+                        <span class="td-list-main">@X(c, "title")</span>
+                        <span class="td-badge td-status" style="@ColorStyle(c, "ticketStatusColor")">@X(c, "ticketStatusName_A", "ticketStatusName_E")</span>
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+
+    @if (Model.ClarificationRequests.Count > 0)
+    {
+        <section class="td-card">
+            <h4 class="td-section-title">
+                <i class="fa-solid fa-circle-question" aria-hidden="true"></i> طلبات التوضيح
+                <span class="td-count">@Model.ClarificationRequests.Count</span>
+            </h4>
+            <ul class="td-list">
+                @foreach (var c in Model.ClarificationRequests)
+                {
+                    <li>
+                        <span class="td-list-main">@X(c, "clarificationReasonName_A", "requestText", "clarificationText")</span>
+                        <span class="td-badge">@X(c, "clarificationStatus")</span>
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+
+    @if (Model.PauseSessions.Count > 0)
+    {
+        <section class="td-card">
+            <h4 class="td-section-title">
+                <i class="fa-solid fa-circle-pause" aria-hidden="true"></i> فترات الإيقاف
+                <span class="td-count">@Model.PauseSessions.Count</span>
+            </h4>
+            <ul class="td-list">
+                @foreach (var p in Model.PauseSessions)
+                {
+                    <li>
+                        <span class="td-list-main">@X(p, "pauseReasonName_A", "pauseReasonName_E")</span>
+                        <span class="td-list-meta">@DX(p, "pauseStart") ← @(D(p, "pauseEnd") is { Length: > 0 } pe ? pe : "مستمر")</span>
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+
+    @if (Model.QualityReviews.Count > 0)
+    {
+        <section class="td-card">
+            <h4 class="td-section-title">
+                <i class="fa-solid fa-clipboard-check" aria-hidden="true"></i> مراجعات الجودة
+                <span class="td-count">@Model.QualityReviews.Count</span>
+            </h4>
+            <ul class="td-list">
+                @foreach (var q in Model.QualityReviews)
+                {
+                    <li>
+                        <span class="td-list-main">@X(q, "qualityReviewResultName_A", "qualityReviewResultName_E")</span>
+                        <span class="td-list-meta">@DX(q, "entryDate")</span>
+                        @if (!string.IsNullOrEmpty(V(q, "reviewNotes")))
+                        {
+                            <p class="td-tl-notes">@V(q, "reviewNotes")</p>
+                        }
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+
+    @if (Model.Attachments.Count > 0)
+    {
+        <section class="td-card">
+            <h4 class="td-section-title">
+                <i class="fa-solid fa-paperclip" aria-hidden="true"></i> المرفقات
+                <span class="td-count">@Model.Attachments.Count</span>
+            </h4>
+            <ul class="td-list">
+                @foreach (var a in Model.Attachments)
+                {
+                    var path = V(a, "filePath").TrimStart('/');
+                    <li>
+                        @if (!string.IsNullOrEmpty(path))
+                        {
+                            <a class="td-link" href="~/@path" target="_blank" rel="noopener">@X(a, "fileName")</a>
+                        }
+                        else
+                        {
+                            <span class="td-list-main">@X(a, "fileName")</span>
+                        }
+                        <span class="td-list-meta">@DX(a, "entryDate")</span>
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+</div>
