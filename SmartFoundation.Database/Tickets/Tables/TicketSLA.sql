@@ -1,22 +1,26 @@
-﻿CREATE TABLE [Tickets].[TicketSLA] (
-    [ticketSLAID]             BIGINT        IDENTITY (1, 1) NOT NULL,
-    [IdaraID_FK]              BIGINT        NULL,
-    [TicketID_FK]             BIGINT        NULL,
-    [serviceSLAPolicyID_FK]   BIGINT        NULL,
-    [ticketPriorityID_FK]     INT           NULL,
-    [responseTargetMinutes]   INT           NULL,
-    [resolutionTargetMinutes] INT           NULL,
-    [responseDueAt]           DATETIME      NULL,
-    [resolutionDueAt]         DATETIME      NULL,
-    [totalPausedMinutes]      INT           NULL,
-    [responseBreached]        BIT           NULL,
-    [resolutionBreached]      BIT           NULL,
-    [slaState]                NVARCHAR (50) NULL,
-    [ticketSLAActive]         BIT           NULL,
-    CONSTRAINT [PK_TicketSLA] PRIMARY KEY CLUSTERED ([ticketSLAID] ASC),
-    CONSTRAINT [FK_TicketSLA_Idara] FOREIGN KEY ([IdaraID_FK]) REFERENCES [dbo].[Idara] ([idaraID]),
-    CONSTRAINT [FK_TicketSLA_ServiceSLAPolicy] FOREIGN KEY ([serviceSLAPolicyID_FK]) REFERENCES [Tickets].[ServiceSLAPolicy] ([serviceSLAPolicyID]),
-    CONSTRAINT [FK_TicketSLA_Ticket] FOREIGN KEY ([TicketID_FK]) REFERENCES [Tickets].[Ticket] ([ticketID]),
-    CONSTRAINT [FK_TicketSLA_TicketPriority] FOREIGN KEY ([ticketPriorityID_FK]) REFERENCES [Tickets].[TicketPriority] ([ticketPriorityID])
-);
+﻿CREATE TABLE [Tickets].[TicketSLA](
+	[ticketSLAID] [bigint] IDENTITY(1,1) NOT NULL,
+	[ticketID_FK] [bigint] NOT NULL,
+	[idaraID_FK] [int] NOT NULL,
+	[slaTypeCode] [nvarchar](50) NOT NULL,
+	[targetMinutes] [int] NULL,
+	[elapsedMinutes] [int] NULL,
+	[remainingMinutes] [int] NULL,
+	[isBreached] [bit] NULL,
+	[slaStartDate] [datetime] NULL,
+	[slaStopDate] [datetime] NULL,
+	[slaCompletionDate] [datetime] NULL,
+	[lastCalculatedDate] [datetime] NULL,
+	[ticketSLAActive] [bit] NULL,
+	[entryDate] [datetime] NULL,
+	[entryData] [nvarchar](20) NULL,
+	[hostName] [nvarchar](200) NULL,
+ CONSTRAINT [PK_Tickets_TicketSLA] PRIMARY KEY CLUSTERED 
+(
+	[ticketSLAID] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF)
+)
+GO
 
+ALTER TABLE [Tickets].[TicketSLA] ADD  CONSTRAINT [DF_Tickets_TicketSLA_entryDate]  DEFAULT (getdate()) FOR [entryDate]
+GO

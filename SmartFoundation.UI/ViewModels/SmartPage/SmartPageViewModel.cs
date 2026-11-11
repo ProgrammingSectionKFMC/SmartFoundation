@@ -64,6 +64,10 @@ namespace SmartFoundation.UI.ViewModels.SmartPage
         public SmartTableDsModel? TableDS3 { get; set; } 
         public SmartTableDsModel? TableDS4 { get; set; } 
         public SmartTableDsModel? TableDS5 { get; set; } 
+         public SmartTableDsModel? TableDS6 { get; set; }
+        public SmartTableDsModel? TableDS7 { get; set; }
+        public SmartTableDsModel? TableDS8 { get; set; }
+        public SmartTableDsModel? TableDS9 { get; set; }
         public DatepickerViewModel? DatePicker { get; set; }
         public SmartChartsConfig? Charts { get; set; }
         public SmartPrintConfig? Print { get; set; }

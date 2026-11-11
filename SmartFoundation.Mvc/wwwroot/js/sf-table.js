@@ -2669,7 +2669,8 @@
                 });
 
                 document.addEventListener('change', async (e) => {
-                    const parentSelect = e.target.closest('select');
+                    // A parent can also be a hidden field prefilled from the selected row (e.g. currentDSDID_FK).
+                    const parentSelect = e.target.closest('select, input[type="hidden"]');
                     if (!parentSelect) return;
 
                     const parentName = parentSelect.name;
@@ -2748,6 +2749,8 @@
                         // هذا الكود القديم يبقى بعد الإضافة كما هو
                         if (!parentValue || parentValue === '-1') {
                             dependentSelect.innerHTML = '<option value="-1">الرجاء الاختيار</option>';
+                            // Clear lists further down the chain too (e.g. section after department).
+                            dependentSelect.dispatchEvent(new Event('change', { bubbles: true }));
                             continue;
                         }
 
@@ -2774,6 +2777,15 @@
                                 dependentSelect.innerHTML = '<option value="-1">لا توجد خيارات متاحة</option>';
                             }
 
+                            // Edit forms: select the value saved on the row, once its option exists.
+                            const pending = dependentSelect.dataset.pendingValue;
+                            if (pending !== undefined) {
+                                delete dependentSelect.dataset.pendingValue;
+                                if (Array.from(dependentSelect.options).some(o => o.value === pending)) {
+                                    dependentSelect.value = pending;
+                                }
+                            }
+
                             if (dependentSelect.classList.contains('js-select2')) {
                                 const modalEl = dependentSelect.closest('.sf-modal') || document.body;
 
@@ -2793,6 +2805,9 @@
                         } finally {
                             dependentSelect.disabled = false;
                         }
+
+                        // Pass the change down the chain so the next list reloads (or clears).
+                        dependentSelect.dispatchEvent(new Event('change', { bubbles: true }));
                     }
                 });
             },
@@ -5608,6 +5623,31 @@ if (subtitleElement) {
                         }
 
                         const form = modalEl.querySelector("form");
+
+                        // Dependent lists load their options from the server, so a value from the edited row
+                        // cannot be selected yet: keep it and pick it once the options arrive.
+                        if (row) {
+                            form?.querySelectorAll('select[data-depends-on]').forEach(dependentSelect => {
+                                const saved = row[dependentSelect.name];
+                                if (saved !== null && saved !== undefined && String(saved).trim() !== '') {
+                                    dependentSelect.dataset.pendingValue = String(saved).trim();
+                                }
+                            });
+                        }
+
+                        // Prefilled parents (a hidden field like currentDSDID_FK, or a select filled from the row)
+                        // never raise "change" by themselves, so load their dependent lists now. Lists that
+                        // depend on another dependent list load in turn once their parent is filled.
+                        const prefilledParents = new Set();
+                        form?.querySelectorAll('select[data-depends-on]').forEach(dependentSelect => {
+                            const parentName = dependentSelect.getAttribute('data-depends-on');
+                            const parent = form.querySelector(`[name="${parentName}"]`);
+                            if (!parent || parent.matches('select[data-depends-on]')) return;
+                            if (parent.value && parent.value !== '-1' && parent.value !== '-99999') {
+                                prefilledParents.add(parent);
+                            }
+                        });
+                        prefilledParents.forEach(parent => parent.dispatchEvent(new Event('change', { bubbles: true })));
 
                         const saveBtn =
                             form?.querySelector(".sf-modal-btn-save") ||
