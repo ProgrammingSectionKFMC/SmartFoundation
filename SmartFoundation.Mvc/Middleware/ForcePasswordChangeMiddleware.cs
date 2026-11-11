@@ -12,6 +12,25 @@ public sealed class ForcePasswordChangeMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        var path = context.Request.Path;
+
+        // Independent dashboard display:
+        // Do not access the ordinary application Session.
+        // Launch remains subject to normal password-change enforcement.
+        if (path.StartsWithSegments(
+                "/HousingCommandCenterDashboard",
+                StringComparison.OrdinalIgnoreCase) &&
+            !path.StartsWithSegments(
+                "/HousingCommandCenterDashboard/Launch",
+                StringComparison.OrdinalIgnoreCase) &&
+            context.User.Identities.Any(identity =>
+                identity.IsAuthenticated &&
+                identity.AuthenticationType == "DashboardDisplay"))
+        {
+            await _next(context);
+            return;
+        }
+
         var userId = context.Session.GetString("usersID");
         var changedPassword = context.Session.GetString("ChangedPassword");
 
@@ -21,12 +40,13 @@ public sealed class ForcePasswordChangeMiddleware
             return;
         }
 
-        var path = context.Request.Path;
         if (IsAllowedPath(path))
         {
             await _next(context);
             return;
         }
+
+        // Keep the remaining existing middleware code unchanged.
 
         if (path.StartsWithSegments("/crud", StringComparison.OrdinalIgnoreCase) ||
             path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase))

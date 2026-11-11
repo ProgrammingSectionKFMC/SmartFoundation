@@ -888,7 +888,7 @@ IF EXISTS
                     DECLARE @CalculationID BIGINT=SCOPE_IDENTITY();
                     INSERT INTO Housing.BillCalculationDetails
                     (BillCalculationID_FK,BuildingSpaceTypeID_FK,SpaceTypeCode,SpaceTypeName_A,
-                     SpaceCount,AverageConsumption,UsageFactor,UnitPrice,UnitCode,BillingDays,
+                     SpaceCount,AverageDailyConsumption,UsageFactor,UnitPrice,UnitCode,BillingDays,
                      AmountBeforeTax,TaxAmount,TotalAmount,entryData,hostName)
                     SELECT @CalculationID,BuildingSpaceTypeID,SpaceCode,SpaceName,
                            SpaceCount,AverageConsumption,UsageFactor,UnitPrice,UnitCode,@SegmentBillingDays,

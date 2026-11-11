@@ -372,6 +372,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                             bool isWaitingClassName = c.ColumnName.Equals("WaitingClassName", StringComparison.OrdinalIgnoreCase);
                             bool ismeterscount = c.ColumnName.Equals("meterscount", StringComparison.OrdinalIgnoreCase);
                             bool isLastActionDate = c.ColumnName.Equals("LastActionDate", StringComparison.OrdinalIgnoreCase);
+                            
+                            
+                            bool isPrintManagerCount = c.ColumnName.Equals("PrintManagerCount ", StringComparison.OrdinalIgnoreCase);
+                            bool isPrintManagerName = c.ColumnName.Equals("PrintManagerName ", StringComparison.OrdinalIgnoreCase);
+                            bool isPrintManagerRank = c.ColumnName.Equals("PrintManagerRank ", StringComparison.OrdinalIgnoreCase);
+                            bool isPrintManagerPosition = c.ColumnName.Equals("PrintManagerPosition ", StringComparison.OrdinalIgnoreCase);
 
 
 
@@ -384,7 +390,10 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                                 //if u want to hide any column 
                                 ,
                                 Visible = !(isActionID || isWaitingClassID || isWaitingOrderTypeID || iswaitingClassSequence
-                                || isresidentInfoID || isIdaraId   || isAssignPeriodID || isbuildingDetailsID || isLastActionID  || isWaitingOrderTypeName || isWaitingListOrder || isLastActionTypeID || isLastActionDecisionNo || isLastActionDecisionDate || isCanExit|| isBillsID || isWaitingClassName || ismeterscount || isLastActionDate)
+                                || isresidentInfoID || isIdaraId   || isAssignPeriodID || isbuildingDetailsID || isLastActionID  
+                                || isWaitingOrderTypeName || isWaitingListOrder || isLastActionTypeID || isLastActionDecisionNo 
+                                || isLastActionDecisionDate || isCanExit|| isBillsID || isWaitingClassName || ismeterscount 
+                                || isLastActionDate || isPrintManagerPosition || isPrintManagerRank || isPrintManagerName || isPrintManagerCount)
                             });
                         }
 
@@ -1540,6 +1549,81 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     return Content($"لم يتم العثور على البيانات المطلوبة. معرف السجل: {rowId}, عدد السجلات: {rowsList.Count}");
                 }
 
+
+
+
+
+                // تاريخ الإخلاء من قاعدة البيانات
+                string exitDateRaw = selectedRow
+                    .GetValueOrDefault("p44")?
+                    .ToString()?.Trim() ?? "";
+
+                if (!DateTime.TryParseExact(
+                    exitDateRaw,
+                    "yyyy-MM-dd",
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None,
+                    out DateTime exitDate))
+                {
+                    return Content(
+                        "لا يمكن إصدار خطاب إيقاف الحسم لعدم وجود تاريخ إخلاء صحيح.");
+                }
+
+                // التاريخ الميلادي
+                string gregorianExitDate = exitDate.ToString(
+                    "yyyy-MM-dd",
+                    System.Globalization.CultureInfo.InvariantCulture);
+
+                // التاريخ الهجري حسب تقويم أم القرى
+                var umAlQura = new System.Globalization.UmAlQuraCalendar();
+
+                if (exitDate < umAlQura.MinSupportedDateTime ||
+                    exitDate > umAlQura.MaxSupportedDateTime)
+                {
+                    return Content(
+                        "تاريخ الإخلاء خارج النطاق المدعوم للتحويل إلى تقويم أم القرى.");
+                }
+
+                string hijriExitDate =
+                    $"{umAlQura.GetYear(exitDate):0000}/" +
+                    $"{umAlQura.GetMonth(exitDate):00}/" +
+                    $"{umAlQura.GetDayOfMonth(exitDate):00}";
+
+
+
+                // بيانات مدير إدارة الموظف الذي يطبع
+                int managerCount = Convert.ToInt32(
+                    selectedRow.GetValueOrDefault("PrintManagerCount") ?? 0);
+
+                if (managerCount != 1)
+                {
+                    return Content(
+                        managerCount == 0
+                            ? "لا يوجد مدير نشط مسجل لإدارتك."
+                            : "يوجد أكثر من مدير نشط لإدارتك؛ يرجى مراجعة بيانات المديرين.");
+                }
+
+                string managerName = selectedRow
+                    .GetValueOrDefault("PrintManagerName")?
+                    .ToString()?.Trim() ?? "";
+
+                string managerRank = selectedRow
+                    .GetValueOrDefault("PrintManagerRank")?
+                    .ToString()?.Trim() ?? "";
+
+                string managerPosition = selectedRow
+                    .GetValueOrDefault("PrintManagerPosition")?
+                    .ToString()?.Trim() ?? "";
+
+                if (string.IsNullOrWhiteSpace(managerName) ||
+                    string.IsNullOrWhiteSpace(managerRank) ||
+                    string.IsNullOrWhiteSpace(managerPosition))
+                {
+                    return Content(
+                        "بيانات مدير الإدارة غير مكتملة؛ لا يمكن إصدار الخطاب.");
+                }
+
+
                 // Extract data from selected row
                 string residentName = selectedRow.GetValueOrDefault("p15")?.ToString() ?? "";
                 string nationalId = selectedRow.GetValueOrDefault("p03")?.ToString() ?? "";
@@ -1732,7 +1816,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             LetterBlockFactory.Spacer(15),
 
             LetterBlockFactory.TextBlock(
-                "مدير فرع الشؤون الإدارية والمالية للقوات البرية بالمنطقة الجنوبية",
+                "مدير فرع الشؤون الإدارية والمالية للقوات البرية",
                 fontSize: 13,
                 bold: true,
                 align: TextAlign.Center,
@@ -1753,7 +1837,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             // Text Justify + LineHeight
              LetterBlockFactory.TextBlock(
-                 $"الموضح  هويته بعاليه قام بإخلاء الوحدة السكنية الموضحة اعلاه اعتبارا من 1447/10/07 هـ موافق 2025-03-26 م\n" +
+                 $"الموضح هويته بعاليه قام بإخلاء الوحدة السكنية الموضحة أعلاه اعتبارًا من {hijriExitDate} هـ الموافق \u200E{gregorianExitDate}\u200E م\n" +
                   $"\n" +
                  $"لذا نأمل ايقاف حسم قيمة الإيجار والخدمات الخاصة بالوحدة السكنية اعتبارا من تاريخ اخلاء الوحدة السكنية وإكمال اللازم من قبلكم , \n"+
                   $"\n" +
@@ -1804,39 +1888,53 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             //    paddingBottom: 20),
 
             // Signature block
-             LetterBlockFactory.TextBlock(
-                "العميد المهندس \n\n ",
-                fontSize: 13,
-                align: TextAlign.Left,
-                paddingTop: 10,
-                bold:true,
-                paddingLeft: 90,
-                lineHeight: 2.7f),
+             // Signature block - بيانات مدير الإدارة
 
-            LetterBlockFactory.TextBlock(
-                " بندر أحمد راشد الأحمري ",
-                fontSize: 13,
-                align: TextAlign.Left,
-                paddingTop: 10,
-                bold:true,
-                paddingLeft: 75,
-                lineHeight: 2.7f),
-            LetterBlockFactory.TextBlock(
-                " مدير إدارة مدينة الملك فيصل العسكرية",
-                fontSize: 13,
-                align: TextAlign.Left,
-                paddingTop: 10,
-                bold:true,
-                paddingLeft: 35,
-                lineHeight: 2.7f),
-            LetterBlockFactory.TextBlock(
-                " للتشغيل والصيانة بالمنطقة الجنوبية",
-                fontSize: 13,
-                align: TextAlign.Left,
-                paddingTop: 10,
-                bold:true,
-                paddingLeft: 45,
-                lineHeight: 2.7f)
+                // توقيع المدير - تنسيق موحد
+ LetterBlockFactory.Spacer(10),
+
+ 
+ // توقيع مدير الإدارة
+
+ // الرتبة
+ LetterBlockFactory.TextBlock(
+     managerRank,
+     fontSize: 12,
+     bold: true,
+     align: TextAlign.Center,
+     paddingTop: 10,
+     paddingBottom: 0,
+     paddingLeft: 15,
+     paddingRight: 260),
+
+ // مساحة فارغة للتوقيع اليدوي
+ LetterBlockFactory.Spacer(35),
+
+ // اسم المدير
+ LetterBlockFactory.TextBlock(
+     managerName,
+     fontSize: 12,
+     bold: true,
+     align: TextAlign.Center,
+     paddingTop: 0,
+     paddingBottom: 4,
+     paddingLeft: 15,
+     paddingRight: 260),
+
+ // المنصب
+ LetterBlockFactory.TextBlock(
+     managerPosition,
+     fontSize: 12,
+     bold: true,
+     align: TextAlign.Center,
+     paddingTop: 0,
+     paddingBottom: 10,
+     paddingLeft: 15,
+     paddingRight: 260,
+     lineHeight: 1.6f)
+
+
+
         }
                 };
 

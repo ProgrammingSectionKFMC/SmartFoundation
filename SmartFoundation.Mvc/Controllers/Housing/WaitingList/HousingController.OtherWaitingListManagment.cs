@@ -186,7 +186,6 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 new FieldConfig { Name = "p01", Label = "الرقم المرجعي",        Type = "hidden", Readonly = true, ColCss = "3" },
                 new FieldConfig { Name = "p02", Label = "اسم سجل الانتظار الجانبي بالعربي",    Type = "text",   Required = true,  ColCss = "6", TextMode = "arabic"  },
                 new FieldConfig { Name = "p03", Label = "اسم سجل الانتظار الجانبي بالانجليزي", Type = "text",   Required = false, ColCss = "6", TextMode="english" },
-                new FieldConfig { Name = "p06", Label = "ملاحظات", Type = "textarea",   Required = false, ColCss = "6" },
                 new FieldConfig { Name = "p10", Label = "سبب التعديل", Type = "textarea",   Required = true, ColCss = "6" }};
 
             // 🗑️ DELETE fields

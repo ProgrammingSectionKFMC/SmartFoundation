@@ -988,6 +988,7 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         ColCss = "3",
                         Required = true,
                         Options = yearOptions,
+                         Select2 = true,
                         Value=year_,
                         Readonly=true,
                         Placeholder = "اختر السنة"
@@ -1006,6 +1007,8 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                         ColCss = "3",
                         Value=month_,
                         Required = true,
+                        Select2 = true,
+
                         Options = monthOptions,
                         Readonly = true
                        // Options = new List<OptionItem>(),

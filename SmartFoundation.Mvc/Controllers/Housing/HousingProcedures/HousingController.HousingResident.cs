@@ -38,11 +38,11 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             SplitDataSet(ds);
 
             //  التحقق من الصلاحيات
-            //if (permissionTable is null || permissionTable.Rows.Count == 0)
-            //{
-            //    TempData["Error"] = "تم رصد دخول غير مصرح به انت لاتملك صلاحية للوصول الى هذه الصفحة";
-            //    return RedirectToAction("Index", "Home");
-            //}
+            if (permissionTable is null || permissionTable.Rows.Count == 0)
+            {
+                TempData["Error"] = "تم رصد دخول غير مصرح به انت لاتملك صلاحية للوصول الى هذه الصفحة";
+                return RedirectToAction("Index", "Home");
+            }
 
             string rowIdField = "";
             bool canHOUSINGESRESIDENTS = false;

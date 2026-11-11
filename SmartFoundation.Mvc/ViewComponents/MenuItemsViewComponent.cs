@@ -6,22 +6,29 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Data;
+using Microsoft.Extensions.Logging;
 
 namespace SmartFoundation.Mvc.ViewComponents
 {
     public class MenuItemsViewComponent : ViewComponent
     {
         private readonly MastersServies _mastersServies;
+        private readonly ILogger<MenuItemsViewComponent> _logger;
 
-
-        public MenuItemsViewComponent(MastersServies mastersServies)
+        public MenuItemsViewComponent(
+            MastersServies mastersServies,
+            ILogger<MenuItemsViewComponent> logger)
         {
             _mastersServies = mastersServies;
+            _logger = logger;
         }
 
         public async Task<IViewComponentResult> InvokeAsync()
         {
             var usersID = HttpContext.Session.GetString("usersID") ?? "";
+
+            await RefreshDashboardPermissionAsync(usersID);
 
             var parameters = new Dictionary<string, object?>
             {
@@ -41,6 +48,78 @@ namespace SmartFoundation.Mvc.ViewComponents
             HttpContext.Session.SetString("MENU_TREE", JsonSerializer.Serialize(menuTree));
             return View("~/Views/Shared/_SidebarNavbar.cshtml", menuTree);
 
+        }
+
+        private async Task RefreshDashboardPermissionAsync(string usersID)
+        {
+            var session = HttpContext.Session;
+
+            long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+            long.TryParse(
+                session.GetString("CanViewDashboardCheckedUnix"),
+                out long lastCheck);
+
+            // Refresh at most once every 30 seconds per session.
+            if (lastCheck > 0 &&
+                now >= lastCheck &&
+                now - lastCheck < 30)
+            {
+                return;
+            }
+
+            bool canViewDashboard = false;
+
+            try
+            {
+                if (int.TryParse(usersID, out int userId) &&
+                    int.TryParse(
+                        session.GetString("IdaraID"),
+                        out int idaraId))
+                {
+                    var parameters = new Dictionary<string, object?>
+                    {
+                        ["pageName_"] = "HousingCommandCenterDashboard",
+                        ["idaraID"] = idaraId,
+                        ["entrydata"] = userId,
+                        ["hostname"] = session.GetString("HostName") ?? "",
+                        ["parameter_20"] = "HEADER_PERMISSION_ONLY"
+                    };
+
+                    DataSet ds =
+                        await _mastersServies.GetDataLoadDataSetAsync(parameters);
+
+                    if (ds.Tables.Count > 0)
+                    {
+                        DataTable permissions = ds.Tables[0];
+
+                        if (permissions.Columns.Contains("permissionTypeName_E"))
+                        {
+                            canViewDashboard =
+                                permissions.Rows.Cast<DataRow>().Any(row =>
+                                    string.Equals(
+                                        row["permissionTypeName_E"]?.ToString()?.Trim(),
+                                        "VIEWDASHBOARD",
+                                        StringComparison.OrdinalIgnoreCase));
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Failed to refresh dashboard header permission.");
+            }
+
+            // Fail closed if the permission could not be verified.
+            session.SetString(
+                "CanViewDashboard",
+                canViewDashboard ? "1" : "0");
+
+            session.SetString(
+                "CanViewDashboardCheckedUnix",
+                now.ToString());
         }
 
         private static List<MenuItem> BuildMenuHierarchy(IEnumerable<MenuItem> items)

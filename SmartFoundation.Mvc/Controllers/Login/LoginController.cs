@@ -1,4 +1,5 @@
 ﻿using SmartFoundation.Mvc.Services.MonthlyBilling;
+using SmartFoundation.Mvc.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
@@ -14,6 +15,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 
+
 namespace SmartFoundation.Mvc.Controllers.Login
 {
     public class LoginController : Controller
@@ -23,22 +25,23 @@ namespace SmartFoundation.Mvc.Controllers.Login
         private readonly ILogger<LoginController> _logger;
         private readonly IConfiguration _configuration;
         private readonly MonthlyBillingQueue _monthlyBillingQueue;
-
+        private readonly DashboardDisplaySessionStore _displaySessionStore;
 
         public LoginController(
             MastersServies mastersServies,
             AuthenticationAuditService authenticationAuditService,
             ILogger<LoginController> logger,
             IConfiguration configuration,
-            MonthlyBillingQueue monthlyBillingQueue)
+            MonthlyBillingQueue monthlyBillingQueue,
+            DashboardDisplaySessionStore displaySessionStore)
         {
             _mastersServies = mastersServies;
             _authenticationAuditService = authenticationAuditService;
             _logger = logger;
             _configuration = configuration;
             _monthlyBillingQueue = monthlyBillingQueue;
+            _displaySessionStore = displaySessionStore;
         }
-
         private static readonly Dictionary<string, string> _dnsCache = new(StringComparer.OrdinalIgnoreCase);
 
         private RedirectToActionResult RedirectToLogin(string messageType, string message, string? nationalId = null)
@@ -190,6 +193,9 @@ namespace SmartFoundation.Mvc.Controllers.Login
             //    return RedirectToLogin("error", "حصل خطأ ما الرجاء التواصل مع فريق عمل المنصة الموحدة", NationalID);
             //}
 
+
+            bool canViewDashboard = false;
+
             if (string.IsNullOrWhiteSpace(NationalID) || string.IsNullOrWhiteSpace(password))
             {
                 await WriteAuthenticationAuditAsync(
@@ -251,6 +257,13 @@ namespace SmartFoundation.Mvc.Controllers.Login
             try
             {
                 auth = _mastersServies.ExtractAuth(ds);
+
+                canViewDashboard =
+                    ds.Tables.Count > 0 &&
+                    ds.Tables[0].Rows.Count > 0 &&
+                    ds.Tables[0].Columns.Contains("CanViewDashboard") &&
+                    ds.Tables[0].Rows[0]["CanViewDashboard"] != DBNull.Value &&
+                    Convert.ToBoolean(ds.Tables[0].Rows[0]["CanViewDashboard"]);
             }
             catch (Exception ex)
             {
@@ -333,6 +346,8 @@ namespace SmartFoundation.Mvc.Controllers.Login
             HttpContext.Session.SetString("ChangedPassword", auth.ChangedPassword?.ToString() ?? "0");
             HttpContext.Session.SetString("OrganaiztionLogo", auth.OrganaiztionLogo ?? "");  // ✅ FIXED: Changed from auth.Photo to auth.photoBase64
             HttpContext.Session.SetString("IdaraLogo", auth.IdaraLogo ?? "");  // ✅ FIXED: Changed from auth.Photo to auth.photoBase64
+            HttpContext.Session.SetString("CanViewDashboard",canViewDashboard ? "1" : "0");
+
 
             var claims = new List<Claim>
             {
@@ -405,15 +420,23 @@ namespace SmartFoundation.Mvc.Controllers.Login
         [HttpPost]
         public async Task<IActionResult> Logout()
         {
-            var userId = HttpContext.Session.GetString("usersID") ??
-                         User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ??
+                         HttpContext.Session.GetString("usersID");
             var nationalId = HttpContext.Session.GetString("nationalID");
 
+            // Revoke all active dashboard display sessions for this user.
+            if (long.TryParse(userId, out var parsedUserId) &&
+                parsedUserId > 0)
+            {
+                _displaySessionStore.RevokeAllForUser(parsedUserId);
+            }
+
+
             await WriteAuthenticationAuditAsync(
-                AuthenticationAuditEventTypes.Logout,
-                true,
-                nationalId,
-                userId);
+     AuthenticationAuditEventTypes.Logout,
+     true,
+     nationalId,
+     userId);
 
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             HttpContext.Session.Clear();

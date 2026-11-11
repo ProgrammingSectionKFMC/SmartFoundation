@@ -1,0 +1,13 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const f=JSON.parse(fs.readFileSync('.backups/monthly-billing-checks/filter.json','utf8'));
+const script=fs.readFileSync('SmartFoundation.Mvc/wwwroot/js/sf-form.js','utf8');
+const code=script.slice(script.indexOf('window.sfNav = function'),script.indexOf('// sfToggle:',script.indexOf('window.sfNav = function')));
+const fields={year:'2026',month:'10',idaraID:'3'};let errors=0;
+const window={location:{href:''},toastr:{error(){errors++},info(){errors++}}};
+const document={querySelector(selector){const key=selector.match(/name="([^"]+)"/)[1];return {value:fields[key]}}};
+vm.runInNewContext(code,{window,document,URLSearchParams});
+const dataset={sfField:f.Name,sfUrl:f.NavUrl,sfKey:f.NavKey,sfKey3:f.NavKey3,sfField3:f.NavField3,sfKey4:f.NavKey4,sfField4:f.NavField4,sfRequired:f.Required?'1':'0',sfPattern:f.InputPattern};
+window.sfNav({dataset});let url=new URL(window.location.href,'https://test');assert.equal(url.searchParams.get('year'),'2026');assert.equal(url.searchParams.get('month'),'10');assert.equal(url.searchParams.get('idaraID'),'3');console.log('PASS shared sfNav sends all current filter fields');
+fields.idaraID='0';window.sfNav({dataset});assert.equal(new URL(window.location.href,'https://test').searchParams.get('idaraID'),'0');console.log('PASS all departments remains navigable');
+fields.month='';window.location.href='';window.sfNav({dataset});assert.equal(window.location.href,'');assert.equal(errors,1);console.log('PASS missing month blocks navigation');
+fields.month='10';fields.year='abc';window.sfNav({dataset});assert.equal(window.location.href,'');assert.equal(errors,2);console.log('PASS invalid year blocks navigation');

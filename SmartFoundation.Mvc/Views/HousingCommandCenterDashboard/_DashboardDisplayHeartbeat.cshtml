@@ -1,0 +1,281 @@
+﻿<div id="hcc-display-heartbeat-token" hidden>
+    @Html.AntiForgeryToken()
+</div>
+
+<script>
+    (function() {
+        "use strict";
+
+        const token = document.querySelector(
+            '#hcc-display-heartbeat-token input[name="__RequestVerificationToken"]'
+        )?.value;
+
+        if (!token) return;
+
+        // The top-level dashboard owns the heartbeat and refresh timers.
+        // A same-origin iframe must not create duplicate timers.
+        if (window.self !== window.top) {
+            return;
+        }
+
+        const status = document.createElement("div");
+        status.setAttribute("role", "status");
+        status.style.cssText = "position:fixed;bottom:8px;left:8px;z-index:2147483647;background:#fff;padding:8px;font:14px sans-serif";
+        document.body.appendChild(status);
+        let heartbeatConnected = false;
+        let refreshConnected = true;
+        function connection(ok, source = "heartbeat") {
+            if (source === "refresh") refreshConnected = ok;
+            else heartbeatConnected = ok;
+            status.textContent = heartbeatConnected && refreshConnected ? "متصل" : "تعذر التحديث مؤقتًا — تُعرض آخر بيانات صحيحة، جارٍ إعادة المحاولة";
+        }
+        let activeFrame = null;
+        let running = false;
+        let stopped = false;
+
+        function stopDisplay() {
+            stopped = true;
+
+            document.body.replaceChildren();
+
+            const message = document.createElement("div");
+            message.textContent =
+                "انتهت صلاحية عرض الشاشة التفاعلية. افتحها مجددًا من النظام.";
+
+            message.style.cssText =
+                "font:20px sans-serif;text-align:center;padding:80px 20px;";
+
+            document.body.appendChild(message);
+        }
+
+        async function heartbeat() {
+            if (running || stopped) return false;
+
+            running = true;
+            const controller = new AbortController();
+            const deadline = setTimeout(() => controller.abort(), 20000);
+
+            try {
+                const displayedUrl = new URL(activeFrame?.contentWindow?.location.href || location.href);
+                const heartbeatUrl = new URL('@Url.Action("Heartbeat", "HousingCommandCenterDashboard")', location.origin);
+                const id = displayedUrl.searchParams.get("id") || displayedUrl.pathname.match(/\/HousingCommandCenterDashboard\/[^/]+\/([^/]+)\/?$/i)?.[1];
+                if (id) heartbeatUrl.searchParams.set("id", id);
+                const response = await fetch(
+                    heartbeatUrl,
+                    {
+                        signal: controller.signal,
+                        method: "POST",
+                        credentials: "same-origin",
+                        cache: "no-store",
+                        headers: {
+                            "RequestVerificationToken": token,
+                            "X-Requested-With": "XMLHttpRequest"
+                        }
+                    }
+                );
+
+                if (response.status === 204) {
+                    connection(true);
+                    return true;
+                }
+                connection(false);
+
+                if ([401, 403, 423].includes(response.status)) {
+                    stopDisplay();
+                    return false;
+                }
+            } catch (error) {
+                connection(false);
+            } finally {
+                clearTimeout(deadline);
+                running = false;
+            }
+        }
+
+        // Resume promptly after suspension or reconnect; never recreate a missing credential.
+        window.addEventListener("online", heartbeat);
+        window.addEventListener("pageshow", heartbeat);
+        document.addEventListener("visibilitychange", () => {
+            if (!document.hidden) heartbeat();
+        });
+        heartbeat();
+
+        // Verify display session every 60 seconds.
+        setInterval(heartbeat, 60000);
+
+        // Refresh dashboard KPIs every 5 minutes.
+        const refreshIntervalMs = 5 * 60 * 1000;
+
+        const dashboardPath = window.location.pathname
+            .replace(/\/+$/, "")
+            .toLowerCase();
+
+        const isDashboardSummary =
+            /\/housingcommandcenterdashboard(?:\/index)?$/.test(
+                dashboardPath
+            );
+
+        const isDepartmentSummary =
+            /\/housingcommandcenterdashboard\/department(?:\/[^/]+)?$/.test(
+                dashboardPath
+            );
+
+        
+        if (isDashboardSummary || isDepartmentSummary) {
+            let refreshing = false;
+
+            function isSummaryUrl(url) {
+                const path = new URL(url).pathname
+                    .replace(/\/+$/, "")
+                    .toLowerCase();
+
+                return /\/housingcommandcenterdashboard(?:\/index|\/department(?:\/[^/]+)?)?$/
+                    .test(path);
+            }
+
+            async function refreshDisplay() {
+                if (stopped || refreshing) return;
+
+                // Use the currently displayed page, including
+                // its department and selected tab.
+                let sourceWindow = window;
+
+                try {
+                    if (activeFrame) {
+                        sourceWindow = activeFrame.contentWindow;
+                    }
+
+                    if (!sourceWindow ||
+                        !isSummaryUrl(sourceWindow.location.href)) {
+                        return;
+                    }
+                } catch {
+                    return;
+                }
+
+                refreshing = true;
+                if (!await heartbeat()) { refreshing = false; return; }
+
+                const sourceUrl = sourceWindow.location.href;
+                const scrollPosition = sourceWindow.scrollY;
+
+                const nextFrame = document.createElement("iframe");
+
+                nextFrame.title = "تحديث الشاشة التفاعلية";
+                nextFrame.setAttribute("aria-label",
+                    "الشاشة التفاعلية المحدثة");
+
+                // Full viewport dimensions allow Chart.js to
+                // calculate chart sizes while loading invisibly.
+                Object.assign(nextFrame.style, {
+                    position: "fixed",
+                    inset: "0",
+                    width: "100vw",
+                    height: "100vh",
+                    border: "0",
+                    opacity: "0",
+                    pointerEvents: "none",
+                    zIndex: "2147483000",
+                    background: "#fff"
+                });
+
+                let finished = false;
+
+                const timeout = setTimeout(function() {
+                    if (finished) return;
+                    finished = true;
+                    nextFrame.remove();
+                    refreshing = false;
+                    connection(false, "refresh");
+                }, 45000);
+
+                nextFrame.onload = async function() {
+                    if (finished) return;
+
+                    try {
+                        const doc = nextFrame.contentDocument;
+                        const win = nextFrame.contentWindow;
+
+                        if (!doc || !win ||
+                            doc.readyState !== "complete") {
+                            throw new Error("Incomplete dashboard");
+                        }
+
+                        const isDepartment =
+                            /\/department(?:\/[^/]+)?$/i.test(
+                                new URL(sourceUrl).pathname
+                            );
+
+                        const validPage = isDepartment
+                            ? !!doc.querySelector(".dep-tab")
+                            : !!doc.querySelector(".hcc-charts-wrap");
+
+                        if (!validPage) {
+                            throw new Error("Unexpected dashboard response");
+                        }
+
+                        // Recheck authorization before revealing a newly loaded document.
+                        if (!await heartbeat() || stopped || finished) {
+                            nextFrame.remove();
+                            finished = true;
+                            clearTimeout(timeout);
+                            refreshing = false;
+                            return;
+                        }
+
+                        // Give layout and canvas initializers a chance
+                        // to finish before revealing the new page.
+                        win.requestAnimationFrame(function() {
+                            win.requestAnimationFrame(function() {
+                                if (finished || stopped) return;
+
+                                const oldFrame = activeFrame;
+
+                                try {
+                                    win.scrollTo(0, scrollPosition);
+                                } catch { }
+
+                                finished = true;
+                                clearTimeout(timeout);
+
+                                nextFrame.style.opacity = "1";
+                                nextFrame.style.pointerEvents = "auto";
+
+                                activeFrame = nextFrame;
+                                connection(true, "refresh");
+
+                                if (oldFrame) {
+                                    oldFrame.remove();
+                                }
+
+                                refreshing = false;
+                            });
+                        });
+                    } catch {
+                        connection(false, "refresh");
+                        finished = true;
+                        clearTimeout(timeout);
+                        nextFrame.remove();
+                        refreshing = false;
+                    }
+                };
+
+                nextFrame.onerror = function() {
+                    connection(false, "refresh");
+                    if (finished) return;
+                    finished = true;
+                    clearTimeout(timeout);
+                    nextFrame.remove();
+                    refreshing = false;
+                };
+
+                nextFrame.src = sourceUrl;
+                document.body.appendChild(nextFrame);
+            }
+
+            setInterval(refreshDisplay, refreshIntervalMs);
+            window.addEventListener("online", refreshDisplay);
+        }
+
+    })();
+</script>

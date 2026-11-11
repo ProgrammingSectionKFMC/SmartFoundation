@@ -120,13 +120,29 @@ BEGIN
          AND childRow.[buildingActionActive] = 1
         WHERE treeRow.[treeLevel] < 100
     ),
-    ExitDates AS
-    (
-        SELECT [rootActionID], MIN(CONVERT(date, [buildingActionDate])) exitDate
-        FROM ActionTree
-        WHERE [buildingActionTypeID_FK] = 3
-        GROUP BY [rootActionID]
-    ),
+   ExitDates AS
+(
+    SELECT
+        [rootActionID],
+
+        COALESCE(
+            -- التاريخ المعتمد: الاستلام الفعلي للمنزل
+            MIN(CASE
+                WHEN [buildingActionTypeID_FK] = 54
+                THEN CONVERT(date, [buildingActionDate])
+            END),
+
+            -- بديل للسجلات التاريخية التي لا يوجد لها إجراء 54
+            MIN(CASE
+                WHEN [buildingActionTypeID_FK] = 3
+                THEN CONVERT(date, [buildingActionDate])
+            END)
+        ) AS exitDate
+
+    FROM ActionTree
+    WHERE [buildingActionTypeID_FK] IN (54, 3)
+    GROUP BY [rootActionID]
+),
     OccupancyPeriods AS
     (
         SELECT rootRow.[residentInfoID_FK], rootRow.[buildingDetailsID_FK],

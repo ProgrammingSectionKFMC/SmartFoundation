@@ -3027,6 +3027,8 @@ END;
                   , @PaymentType                        = @parameter_12
                   , @PaymentNo                          = @parameter_13
                   , @PaymentDate                        = @parameter_14
+                  , @IssueMonth                         = @parameter_31
+                  , @IssueYear                          = @parameter_32
                   , @Amount                             = @parameter_09
                   , @BillChargeTypeID_FK                = @parameter_03
                   --, @FromBillChargeTypeID_FK            = @parameter_
@@ -3115,6 +3117,8 @@ END;
                   , @PaymentType                        = @parameter_12
                   , @PaymentNo                          = @parameter_13
                   , @PaymentDate                        = @parameter_14
+                  , @IssueMonth                         = @parameter_31
+                  , @IssueYear                          = @parameter_32
                   , @Amount                             = @parameter_09
                   , @BillChargeTypeID_FK                = @parameter_03
                   --, @FromBillChargeTypeID_FK            = @parameter_

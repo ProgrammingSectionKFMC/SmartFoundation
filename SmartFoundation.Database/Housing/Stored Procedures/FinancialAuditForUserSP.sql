@@ -13,6 +13,8 @@ CREATE PROCEDURE [Housing].[FinancialAuditForUserSP]
     , @PaymentType                          NVARCHAR(1000)  = NULL
     , @PaymentNo                            NVARCHAR(1000)  = NULL
     , @PaymentDate                          NVARCHAR(1000)  = NULL
+    , @IssueMonth                           NVARCHAR(10)    = NULL
+    , @IssueYear                            NVARCHAR(10)    = NULL
     , @Amount                               NVARCHAR(1000)  = NULL
     , @FullRemining                         NVARCHAR(1000)  = NULL
     , @BillChargeTypeID_FK                  NVARCHAR(1000)  = NULL
@@ -155,6 +157,38 @@ BEGIN
         ----------------------------------------------------------------
          IF @Action = N'PAYMENTANDREFUNDFORUSER'
         BEGIN
+
+        DECLARE @SavedIssueMonth INT = MONTH(GETDATE());
+        DECLARE @SavedIssueYear  INT = YEAR(GETDATE());
+        
+        IF TRY_CONVERT(INT, @PaymentType) = 1
+        BEGIN
+            SET @SavedIssueMonth =
+                TRY_CONVERT(INT, NULLIF(LTRIM(RTRIM(@IssueMonth)), N''));
+        
+            SET @SavedIssueYear =
+                TRY_CONVERT(INT, NULLIF(LTRIM(RTRIM(@IssueYear)), N''));
+        
+            IF @SavedIssueMonth IS NULL
+               OR @SavedIssueMonth NOT BETWEEN 1 AND 12
+            BEGIN
+                ;THROW 50001, N'يجب تحديد شهر الحسم الفعلي بشكل صحيح', 1;
+            END;
+        
+            IF @SavedIssueYear IS NULL
+               OR @SavedIssueYear NOT BETWEEN 1900 AND YEAR(GETDATE())
+            BEGIN
+                ;THROW 50001, N'يجب تحديد سنة الحسم الميلادية بشكل صحيح', 1;
+            END;
+        
+            IF @SavedIssueYear = YEAR(GETDATE())
+               AND @SavedIssueMonth > MONTH(GETDATE())
+            BEGIN
+                ;THROW 50001, N'لا يمكن تسجيل حسم راتب لفترة مستقبلية', 1;
+            END;
+        END;
+
+
             -- No ActionID or WaitingList state is required for general financial auditing.
             -- The gateway dbo.Masters_CRUD is responsible for ActionType permissions.
             DECLARE @AuditResidentID BIGINT = TRY_CONVERT(BIGINT, @residentInfoID);
@@ -273,8 +307,23 @@ BEGIN
             IF @AuditDirection = 2 AND @AuditDate < @AuditFirstOccupancy
                 THROW 50001, N'تاريخ إعادة المبلغ يسبق أول إشغال موثق', 1;
 
-            IF @AuditDirection = 1 AND EOMONTH(@AuditDate) < @AuditFirstOccupancy
-                THROW 50001, N'فترة السداد تسبق أول إشغال موثق بالكامل', 1;
+            IF @AuditDirection = 1
+                   AND EOMONTH(
+                       CASE
+                           WHEN @AuditPaymentTypeID = 1
+                           THEN DATEFROMPARTS(
+                               @SavedIssueYear,
+                               @SavedIssueMonth,
+                               1
+                           )
+                           ELSE @AuditDate
+                       END
+                   ) < @AuditFirstOccupancy
+                BEGIN
+                    THROW 50001,
+                        N'فترة السداد تسبق أول إشغال موثق بالكامل',
+                        1;
+                END;
 
             IF @AuditBuildingID IS NOT NULL
             BEGIN
@@ -438,8 +487,8 @@ END;
                  N'سداد عن طريق صندوق الإدارة',
                  1,
                  @PaymentType,
-                 MONTH(GETDATE()),
-                 YEAR(GETDATE()),
+                 @SavedIssueMonth,
+                 @SavedIssueYear,
                  @PaymentNo,
                  @PaymentDate,
                  @description,
@@ -466,8 +515,8 @@ END;
                 + N',"deductName": "'       + ISNULL(CONVERT(NVARCHAR(MAX), N'سداد عن طريق صندوق الإدارة'), '') + N'"'
                 + N',"amountTypeID_FK": "'  + ISNULL(CONVERT(NVARCHAR(MAX), 1), '') + N'"'
                 + N',"paymentTypeID_FK": "'    + ISNULL(CONVERT(NVARCHAR(MAX), @PaymentType), '') + N'"'
-                + N',"issueMonth": "'      + ISNULL(CONVERT(NVARCHAR(MAX),  MONTH(GETDATE())), '') + N'"'
-                + N',"issueYear": "'           + ISNULL(CONVERT(NVARCHAR(MAX), YEAR(GETDATE())), '') + N'"'
+                + N',"issueMonth": "' + ISNULL(CONVERT(NVARCHAR(MAX), @SavedIssueMonth), '') + N'"'
+                + N',"issueYear": "'  + ISNULL(CONVERT(NVARCHAR(MAX), @SavedIssueYear), '') + N'"'
                 + N',"paymentNo": "'           + ISNULL(CONVERT(NVARCHAR(MAX), @PaymentNo), '') + N'"'
                 + N',"paymentDate": "'           + ISNULL(CONVERT(NVARCHAR(MAX), @PaymentDate), '') + N'"'
                 + N',"description": "'           + ISNULL(CONVERT(NVARCHAR(MAX), @description), '') + N'"'

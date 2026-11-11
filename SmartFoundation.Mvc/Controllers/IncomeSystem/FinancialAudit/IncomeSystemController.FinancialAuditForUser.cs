@@ -1112,11 +1112,74 @@ namespace SmartFoundation.Mvc.Controllers.IncomeSystem
                 new FieldConfig { Name = "p11", Label = "BillsStatusID", Type = "hidden", ColCss = "3", Required = true},
 
 
-                new FieldConfig { Name = "p12", Label = "نوع العملية", Type = "select", ColCss = "3", Required = true, Options= PayPaymentTypeOptions },
-                new FieldConfig { Name = "p13", Label = "رقم العملية", Type = "text", ColCss = "3", Required = true },
-                new FieldConfig { Name = "p14", Label = "تاريخ العملية", Type = "date", ColCss = "3", Required = true },
-                new FieldConfig { Name = "p09", Label = "المبلغ", Type = "text",TextMode="money_sar",Icon = "/img/Saudi_Riyal_Symbol.svg", ColCss = "3", Required = true },
-                new FieldConfig { Name = "p27", Label = "ملاحظات", Type = "textarea", ColCss = "6", Required = true },
+                new FieldConfig
+                    {
+                        Name = "p12",
+                        Label = "نوع العملية",
+                        Type = "select",
+                        ColCss = "3",
+                        Required = true,
+                        Options = PayPaymentTypeOptions,
+                    
+                        ShowFieldsWhen = new Dictionary<string, List<string>>
+                        {
+                            ["1"] = new List<string> { "p31", "p32" }
+                        }
+                    },
+                    
+                    new FieldConfig
+                    {
+                        Name = "p31",
+                        Label = "شهر الحسم الفعلي",
+                        Type = "select",
+                        ColCss = "3",
+                        Required = true,
+                        Placeholder = "اختر شهر الحسم",
+                        HelpText = "شهر الحسم من الراتب في النهاية الطرفيه",
+                        Options = new List<OptionItem>
+                        {
+                            new() { Value = "1", Text = "يناير" },
+                            new() { Value = "2", Text = "فبراير" },
+                            new() { Value = "3", Text = "مارس" },
+                            new() { Value = "4", Text = "أبريل" },
+                            new() { Value = "5", Text = "مايو" },
+                            new() { Value = "6", Text = "يونيو" },
+                            new() { Value = "7", Text = "يوليو" },
+                            new() { Value = "8", Text = "أغسطس" },
+                            new() { Value = "9", Text = "سبتمبر" },
+                            new() { Value = "10", Text = "أكتوبر" },
+                            new() { Value = "11", Text = "نوفمبر" },
+                            new() { Value = "12", Text = "ديسمبر" }
+                        }
+                    },
+                    
+                    new FieldConfig
+                    {
+                        Name = "p32",
+                        Label = "سنة الحسم الفعلية",
+                        Type = "select",
+                        ColCss = "3",
+                        Required = true,
+                        Placeholder = "اختر سنة الحسم",
+                        HelpText = "السنة الميلادية للحسم من النهاية الطرفيه",
+                        Options = Enumerable.Range(
+                                2017,
+                                DateTime.Today.Year - 2017 + 1
+                            )
+                            .Reverse()
+                            .Select(y => new OptionItem
+                            {
+                                Value = y.ToString(),
+                                Text = y.ToString()
+                            })
+                            .ToList()
+                    },
+                    
+                    new FieldConfig { Name = "p13", Label = "رقم العملية", Type = "text", ColCss = "3", Required = true },
+                    new FieldConfig { Name = "p14", Label = "تاريخ العملية", Type = "date", ColCss = "3", Required = true },
+                    new FieldConfig { Name = "p09", Label = "المبلغ", Type = "text", TextMode = "money_sar", Icon = "/img/Saudi_Riyal_Symbol.svg", ColCss = "3", Required = true },
+                    new FieldConfig { Name = "p27", Label = "ملاحظات", Type = "textarea", ColCss = "6", Required = true },
+
 
                 new FieldConfig { Name = "p16", Label = "LastActionTypeID", Type = "hidden", ColCss = "3", Readonly = true,Value = LastActionTypeIDvalue },
                 new FieldConfig { Name = "p21", Label = "LastActionID", Type = "hidden", ColCss = "3", Readonly = true,Value=LastActionIDvalue },

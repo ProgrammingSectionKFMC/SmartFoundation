@@ -9,6 +9,7 @@ using System.Text.Json;
 using SmartFoundation.MVC.Reports;
 using SmartFoundation.UI.ViewModels.SmartPrint;
 using System.Linq;
+using SmartFoundation.Mvc.Services.DataLoad;
 
 
 
@@ -16,7 +17,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 {
     public partial class HousingController : Controller
     {
-        public async Task<IActionResult> BuildingDetails(int pdf = 0)
+        public async Task<IActionResult> BuildingDetails([FromServices] RequestScopedDataLoadService requestDataLoad, int pdf = 0)
         {
 
             if (!InitPageContext(out IActionResult? redirectResult))
@@ -43,18 +44,40 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             ControllerName = nameof(Housing);
             PageName = nameof(BuildingDetails);
 
-            var spParameters = new object?[] { "BuildingDetails", IdaraId, usersId, HostName, UtilityTypeID_ };
+            // مطابقة للمعاملات التي كانت تمررها GetDDLValues.
+            var ddlParameters = new Dictionary<string, object?>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+                ["pageName_"] = PageName ?? "BuildingDetails"
+            };
 
+            if (IdaraId != null)
+                ddlParameters["idaraID"] = Convert.ToInt32(IdaraId);
+
+            if (usersId != null)
+                ddlParameters["entrydata"] = Convert.ToInt32(usersId);
+
+            if (HostName != null)
+                ddlParameters["hostname"] = HostName;
+
+            // معاملات تحميل بيانات الصفحة.
+            // نضيف رقم الهوية فقط عند وجوده.
+            var pageParameters = new Dictionary<string, object?>(
+                ddlParameters,
+                StringComparer.OrdinalIgnoreCase);
+
+            if (UtilityTypeID_ != null)
+                pageParameters["parameter_01"] = UtilityTypeID_;
             //var spParameters = new object?[] { "Permission", IdaraID, userID, HostName, SearchID_, UserID_, distributorID_, RoleID_, Idara_, Dept_, Section_, Divison_ };
 
-            DataSet ds;
+           
 
 
             var rowsList = new List<Dictionary<string, object?>>();
             var dynamicColumns = new List<TableColumn>();
 
 
-            ds = await _mastersServies.GetDataLoadDataSetAsync(spParameters);
+            DataSet ds = await requestDataLoad.GetDataLoadDataSetAsync(pageParameters);
 
 
 
@@ -155,70 +178,84 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             try
             {
 
+
+
+                // Read dropdown options from the already loaded DataSet.
+                // No additional SQL calls.
+
+                static List<OptionItem> ReadOptions(
+                    DataTable? table,
+                    string textColumn,
+                    string valueColumn)
+                {
+                    if (table == null ||
+                        !table.Columns.Contains(textColumn) ||
+                        !table.Columns.Contains(valueColumn))
+                    {
+                        throw new InvalidOperationException(
+                            $"Invalid DDL data: {valueColumn}");
+                    }
+
+                    var options = table.AsEnumerable()
+                        .Where(r => r[valueColumn] != DBNull.Value)
+                        .Select(r => new OptionItem
+                        {
+                            Value = r[valueColumn].ToString()?.Trim() ?? "",
+                            Text = r[textColumn] == DBNull.Value
+                                ? ""
+                                : r[textColumn].ToString()?.Trim() ?? ""
+                        })
+                        .Where(x => !string.IsNullOrWhiteSpace(x.Value))
+                        .ToList();
+
+                    if (options.Count == 0)
+                    {
+                        options.Add(new OptionItem
+                        {
+                            Value = "-1",
+                            Text = "لاتوجد خيارات"
+                        });
+                    }
+
+                    return options;
+                }
+
+                UtilityTypeOptions = ReadOptions(
+                    dt2,
+                    "buildingUtilityTypeName_A",
+                    "buildingUtilityTypeID");
+
+                BuildingRentTypeOptions = ReadOptions(
+                    dt3,
+                    "buildingRentTypeName_A",
+                    "buildingRentTypeID");
+
+                BuildingTypeOptions = ReadOptions(
+                    dt4,
+                    "buildingTypeName_A",
+                    "buildingTypeID");
+
+                MilitaryLocationOptions = ReadOptions(
+                    dt5,
+                    "militaryLocationName_A",
+                    "militaryLocationID");
+
+                BuildingClassOptions = ReadOptions(
+                    dt6,
+                    "buildingClassName_A",
+                    "buildingClassID");
+
+
+
+
+                //// ---------------------- END DDL ----------------------
+
                 // ---------------------- DDLValues ----------------------
 
 
 
 
-                JsonResult? result;
-                string json;
 
-
-
-
-                //// ---------------------- BuildingUtilityType ----------------------
-                result = await _CrudController.GetDDLValues(
-                    "buildingUtilityTypeName_A", "buildingUtilityTypeID", "2", nameof(BuildingDetails), usersId, IdaraId, HostName
-               ) as JsonResult;
-
-
-                json = JsonSerializer.Serialize(result!.Value);
-
-                UtilityTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-
-                // ---------------------- BuildingRentType ----------------------
-                result = await _CrudController.GetDDLValues(
-                    "buildingRentTypeName_A", "buildingRentTypeID", "3", nameof(BuildingDetails), usersId, IdaraId, HostName
-                ) as JsonResult;
-
-
-                json = JsonSerializer.Serialize(result!.Value);
-
-                BuildingRentTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-
-                // ---------------------- BuildingType ----------------------
-                result = await _CrudController.GetDDLValues(
-                    "buildingTypeName_A", "buildingTypeID", "4", nameof(BuildingDetails), usersId, IdaraId, HostName
-                ) as JsonResult;
-
-
-                json = JsonSerializer.Serialize(result!.Value);
-
-                BuildingTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-
-                // ---------------------- MilitaryLocation ----------------------
-                result = await _CrudController.GetDDLValues(
-                    "militaryLocationName_A", "militaryLocationID", "5", nameof(BuildingDetails), usersId, IdaraId, HostName
-                ) as JsonResult;
-
-
-                json = JsonSerializer.Serialize(result!.Value);
-
-                MilitaryLocationOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-
-                // ---------------------- BuildingClass ----------------------
-                result = await _CrudController.GetDDLValues(
-                    "buildingClassName_A", "buildingClassID", "6", nameof(BuildingDetails), usersId, IdaraId, HostName
-                ) as JsonResult;
-
-
-                json = JsonSerializer.Serialize(result!.Value);
-
-                BuildingClassOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-
-
-
-                // ----------------------END DDLValues ----------------------
 
 
                 // Determine which fields should be visible based on SearchID_

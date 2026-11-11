@@ -1423,15 +1423,22 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 printTable.Columns.Add("ExtendToDate", typeof(string));
                 printTable.Columns.Add("buildingDetailsNo", typeof(string));
                 printTable.Columns.Add("buildingActionTypeResidentAlias", typeof(string));
-                
+
 
                 //for (int i = startIndex; i < endIndex; i++)
+
                 foreach (DataRow r in dt1.Rows)
                 {
-                    //var r = dt1.Rows[i];
+                    // طباعة السجلات التي آخر إجراء لها 24 فقط
+                    if (r["LastActionTypeID"] == DBNull.Value ||
+                        r["LastActionTypeID"]?.ToString()?.Trim() != "24")
+                    {
+                        continue;
+                    }
 
                     printTable.Rows.Add(
-                        r["NationalID"],
+
+                                        r["NationalID"],
                         r["FullName_A"],
                         r["GeneralNo"],
                         r["rankNameA"],
@@ -1494,7 +1501,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                    {
                        ["تمت الطباعة بواسطة"] = FullName,
                        ["ملاحظة"] = " هذا التقرير للاستخدام الرسمي",
-                       ["عدد السجلات"] = dt1.Rows.Count.ToString(),
+                       ["عدد السجلات"] = printTable.Rows.Count.ToString(),
                        ["تاريخ ووقت الطباعة"] = DateTime.Now.ToString("yyyy/MM/dd HH:mm:ss")
                    },
 
@@ -1527,6 +1534,15 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 {
                     return Content($"لم يتم العثور على البيانات المطلوبة. معرف السجل: {rowId}, عدد السجلات: {rowsList.Count}");
                 }
+
+
+                if (selectedRow.GetValueOrDefault("p16")?
+                        .ToString()?.Trim() != "24")
+                {
+                    return Content(
+                        "لا يمكن الطباعة إلا للمستفيد الذي آخر إجراء له هو 24.");
+                }
+
 
                 // Extract data from selected row
                 string residentName = selectedRow.GetValueOrDefault("p15")?.ToString() ?? "";

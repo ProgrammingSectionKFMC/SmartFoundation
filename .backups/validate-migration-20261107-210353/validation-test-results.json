@@ -1,0 +1,1082 @@
+[
+  {
+    "Category": "Integrity",
+    "CheckName": "Excluded residents migrated",
+    "ExpectedValue": 0.00,
+    "ActualValue": 1.00,
+    "Difference": 1.00,
+    "Result": "FAIL",
+    "Notes": "Only residents excluded by canonical BuildingAction eligibility may not appear in DATACORE."
+  },
+  {
+    "Category": "Integrity",
+    "CheckName": "Contacts linked to excluded residents",
+    "ExpectedValue": 0.00,
+    "ActualValue": 1.00,
+    "Difference": 1.00,
+    "Result": "FAIL",
+    "Notes": "Target contacts of source residents not eligible by action-based rule."
+  },
+  {
+    "Category": "WaitingList",
+    "CheckName": "Excluded inactive waiting actions migrated",
+    "ExpectedValue": 0.00,
+    "ActualValue": 4.00,
+    "Difference": 4.00,
+    "Result": "FAIL",
+    "Notes": "No inactive waiting root or descendant excluded by the new migration rule may remain in DATACORE after clean migration."
+  },
+  {
+    "Category": "Completeness",
+    "CheckName": "Building actions",
+    "ExpectedValue": 41100.00,
+    "ActualValue": 41099.00,
+    "Difference": -1.00,
+    "Result": "FAIL",
+    "Notes": "Actual counts retained eligible IDs; Missing and Unexpected source-ID sets both must be empty, regardless of equal totals."
+  },
+  {
+    "Category": "Completeness",
+    "CheckName": "Building actions Missing",
+    "ExpectedValue": 0.00,
+    "ActualValue": 1.00,
+    "Difference": 1.00,
+    "Result": "FAIL",
+    "Notes": "Eligible source IDs missing in DATACORE."
+  },
+  {
+    "Category": "Completeness",
+    "CheckName": "Building actions Unexpected",
+    "ExpectedValue": 0.00,
+    "ActualValue": 8.00,
+    "Difference": 8.00,
+    "Result": "FAIL",
+    "Notes": "Excluded source IDs still present in DATACORE; generated target-only IDs are not imported source actions."
+  },
+  {
+    "Category": "Allocation migration",
+    "CheckName": "Two No_house allocations become action 42",
+    "ExpectedValue": 53.00,
+    "ActualValue": 37.00,
+    "Difference": -16.00,
+    "Result": "FAIL",
+    "Notes": "No fake building or intermediate fake allocation action is created."
+  },
+  {
+    "Category": "Allocation migration",
+    "CheckName": "Letter housing linked directly 7 to 2",
+    "ExpectedValue": 360.00,
+    "ActualValue": 0.00,
+    "Difference": -360.00,
+    "Result": "FAIL",
+    "Notes": "REVIEW REQUIRED: verify historical direct-relinking against the CURRENT usp_MigrateBuildingActions contract; root now type 1/class 17."
+  },
+  {
+    "Category": "Value reconciliation",
+    "CheckName": "BuildingAction value differences",
+    "ExpectedValue": 0.00,
+    "ActualValue": 2108.00,
+    "Difference": 2108.00,
+    "Result": "FAIL",
+    "Notes": "Compares mapped type, parent, active flag, and action date. Old evacuation type 3 maps by ExtraInt1."
+  },
+  {
+    "Category": "Evacuation actions",
+    "CheckName": "Evacuation action type mapping differences",
+    "ExpectedValue": 0.00,
+    "ActualValue": 4.00,
+    "Difference": 4.00,
+    "Result": "FAIL",
+    "Notes": "Old ExtraInt1: NULL/5->3, 1->59, 2/3->57, 4->57."
+  },
+  {
+    "Category": "Historical warnings",
+    "CheckName": "Meter reads without building",
+    "ExpectedValue": 0.00,
+    "ActualValue": 1.00,
+    "Difference": 1.00,
+    "Result": "WARN",
+    "Notes": "Preserved historical data."
+  },
+  {
+    "Category": "WaitingList",
+    "CheckName": "Duplicate effective waiting roots in DATACORE",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Target effective pending roots (1/18/26/27), checking same class and Idara; real occupancy 2/24 conflicts also fail."
+  },
+  {
+    "Category": "WaitingList",
+    "CheckName": "Active descendants of inactive waiting roots in KFMC",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "An inactive waiting root with any active descendant blocks the full migration. Actual counts distinct violating roots."
+  },
+  {
+    "Category": "WaitingList",
+    "CheckName": "Inactive waiting-root chains exceed 100 levels",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Chains deeper than 100 levels (or cyclic chains) cannot be safely classified for exclusion."
+  },
+  {
+    "Category": "Building actions",
+    "CheckName": "Unresolved source pending-root duplicate groups",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Same conservative root-resolution policy as the live migration; ambiguous history is retained and fails validation."
+  },
+  {
+    "Category": "WaitingClass",
+    "CheckName": "WaitingClass master parity",
+    "ExpectedValue": 12.00,
+    "ActualValue": 12.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "KFMC IDs 1-11: preserved names, root and historical sequence; main IDs 1-4 use sequence 2-5; side IDs 5-11 use Idara 1; ID 12 is main class القادة."
+  },
+  {
+    "Category": "WaitingClass",
+    "CheckName": "Legacy letter roots 7/25 converted by source ID",
+    "ExpectedValue": 701.00,
+    "ActualValue": 701.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Compare all KFMC legacy roots by preserved action ID: type 7->1/class17 and 25->1/class18; no fixed ActionID lists."
+  },
+  {
+    "Category": "WaitingClass",
+    "CheckName": "Converted legacy letter side classes 17/18",
+    "ExpectedValue": 2.00,
+    "ActualValue": 2.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Idara 1 side classes: 17 خطاب تسكين sequence 3; 18 خطاب تسكين عزاب sequence 4, both active with NULL root."
+  },
+  {
+    "Category": "WaitingClass",
+    "CheckName": "Unconverted legacy 7/25 roots in DATACORE",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Legacy root types 7 and 25 must be converted to type 1; do not alter dependent actions."
+  },
+  {
+    "Category": "WaitingClass",
+    "CheckName": "Test and virtual IDs incorrectly in WaitingClass master",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "IDs 13-15 are confirmed test data; ID 99 is a virtual legacy letter-housing category, not a WaitingClass master row."
+  },
+  {
+    "Category": "WaitingClass",
+    "CheckName": "Orphan waiting-class references in BuildingAction",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Action types 1,21,22,27,28: every non-NULL class must have a master row, except virtual legacy ID 99."
+  },
+  {
+    "Category": "WaitingClass",
+    "CheckName": "Waiting-class values changed in copied historical actions",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Compare expected transformed class: root type 7=>17, 25=>18; root type 1 class 99=>5; other copied waiting/allocation values unchanged."
+  },
+  {
+    "Category": "WaitingClass",
+    "CheckName": "Orphan waiting-class references in AssignPeriod",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Every populated AssignPeriod.WaitingClassID_FK must match an existing master row."
+  },
+  {
+    "Category": "WaitingClass",
+    "CheckName": "Missing or duplicated legacy periods for main waiting classes",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Exactly one historical period per class 1,2,3,4 in the migration Idara; no legacy period is required for side classes."
+  },
+  {
+    "Category": "WaitingClass",
+    "CheckName": "Orphan waiting classes in BuildingAssign allocation chains",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "When a BuildingAssign row links to action 27 under waiting root 1, its effective class must exist, except virtual ID 99."
+  },
+  {
+    "Category": "Completeness",
+    "CheckName": "Military units",
+    "ExpectedValue": 233.00,
+    "ActualValue": 233.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Matched by ID and code."
+  },
+  {
+    "Category": "Completeness",
+    "CheckName": "ResidentInfo",
+    "ExpectedValue": 12911.00,
+    "ActualValue": 12911.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Eligible by BuildingAction; no actions and lone type 6 are excluded."
+  },
+  {
+    "Category": "Completeness",
+    "CheckName": "ResidentDetails",
+    "ExpectedValue": 12911.00,
+    "ActualValue": 12911.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "One selected details record per eligible resident with source details; absence of details is allowed."
+  },
+  {
+    "Category": "Legacy Excel",
+    "CheckName": "Legacy Excel deduction-list import logs",
+    "ExpectedValue": 241.00,
+    "ActualValue": 241.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Active KFMC deduction lists whose trimmed name starts with مسير استقطاع and have both a migrated list and an UploadExcelImportLog row."
+  },
+  {
+    "Category": "Legacy Excel",
+    "CheckName": "Duplicate import logs for one deduction list",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Actual is the number of duplicated non-null DeductListID_FK groups."
+  },
+  {
+    "Category": "Legacy Excel",
+    "CheckName": "Import logs with missing deduction list",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Normally enforced by FK; retained to detect disabled or untrusted constraints."
+  },
+  {
+    "Category": "Legacy Excel",
+    "CheckName": "Legacy Excel logs with incorrect InsertedRows",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "InsertedRows must equal every BuildingPayment row linked to the migrated deduction list."
+  },
+  {
+    "Category": "Legacy Excel",
+    "CheckName": "Legacy Excel logs with incorrect synthetic hash",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Hash must be SHA2-256 of LEGACY-KFMC-EXCEL:<deductListID>."
+  },
+  {
+    "Category": "Completeness",
+    "CheckName": "Resident contacts",
+    "ExpectedValue": 37762.00,
+    "ActualValue": 37762.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Contacts for action-eligible source residents (not details-based eligibility)."
+  },
+  {
+    "Category": "Completeness",
+    "CheckName": "Buildings",
+    "ExpectedValue": 2715.00,
+    "ActualValue": 2715.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Matched by buildingDetailsID."
+  },
+  {
+    "Category": "Completeness",
+    "CheckName": "Meters",
+    "ExpectedValue": 2378.00,
+    "ActualValue": 2378.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Matched by meterID."
+  },
+  {
+    "Category": "Completeness",
+    "CheckName": "Meter reads",
+    "ExpectedValue": 78741.00,
+    "ActualValue": 78741.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "قراءات المستفيدين الذين لا يملكون ResidentDetails مستبعدة من الترحيل."
+  },
+  {
+    "Category": "Integrity",
+    "CheckName": "Excluded source meter reads migrated",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "يجب عدم نقل قراءات المستفيدين المستبعدين، مع الاحتفاظ بفواتيرها الأصلية."
+  },
+  {
+    "Category": "Historical corrections",
+    "CheckName": "Meter reads linked to corrected residents",
+    "ExpectedValue": 13.00,
+    "ActualValue": 13.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Applies documented mappings 202964->60013013, 404529/1265->10038776, and 306499/B06-5-2->10036016."
+  },
+  {
+    "Category": "Historical corrections",
+    "CheckName": "Meter reads linked to corrected building C07-2-1",
+    "ExpectedValue": 10.00,
+    "ActualValue": 10.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Corrects historical building number C7-2-1 to C07-2-1."
+  },
+  {
+    "Category": "WaitingList",
+    "CheckName": "Non-excluded actions referring to excluded roots or descendants",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Retained actions may not reference excluded waiting actions via buildingActionParentID."
+  },
+  {
+    "Category": "WaitingList",
+    "CheckName": "Assignments linked to excluded waiting actions",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "No target BuildingAssign row may reference an excluded waiting action."
+  },
+  {
+    "Category": "WaitingList",
+    "CheckName": "Excluded source assignments migrated",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Assignments whose KFMC owning action belongs to an excluded inactive waiting chain must not be imported."
+  },
+  {
+    "Category": "Building actions",
+    "CheckName": "Waiting roots excluded by consecutive deduplication",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Root identities 1/7/25 must never be merged by consecutive deduplication."
+  },
+  {
+    "Category": "Building actions",
+    "CheckName": "Protected linked history excluded by leaf policies",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Leaf exclusions must not remove assignment history or retained children."
+  },
+  {
+    "Category": "Action provenance",
+    "CheckName": "Source-matched actions missing LEGACY classification",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "An action with the same source ID and UDID must be classified LEGACY."
+  },
+  {
+    "Category": "Action provenance",
+    "CheckName": "LEGACY classification without source identity",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "LEGACY requires matching source buildingActionID and buildingActionUDID."
+  },
+  {
+    "Category": "Action provenance",
+    "CheckName": "MIGRATION_GENERATED without marker or with source identity",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Generated actions need MoveData: marker and may not replace source actions."
+  },
+  {
+    "Category": "Action provenance",
+    "CheckName": "MoveData-generated marker missing classification",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "MoveData: marker without a source action requires MIGRATION_GENERATED."
+  },
+  {
+    "Category": "Action provenance",
+    "CheckName": "Source ID collision with different action UDID",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "A matching legacy ID with different or missing UDID must be investigated."
+  },
+  {
+    "Category": "Completeness",
+    "CheckName": "Building assignments",
+    "ExpectedValue": 3588.00,
+    "ActualValue": 3588.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Matched by BuildingAssignID."
+  },
+  {
+    "Category": "Allocation migration",
+    "CheckName": "Historical assignment periods",
+    "ExpectedValue": 4.00,
+    "ActualValue": 4.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Exactly one legacy period is created for each normal waiting class 1,2,3,4."
+  },
+  {
+    "Category": "Allocation migration",
+    "CheckName": "Old action 18 retains historical action type",
+    "ExpectedValue": 555.00,
+    "ActualValue": 555.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Copied source action 18 must remain 18; no migration mapping to 39."
+  },
+  {
+    "Category": "Allocation migration",
+    "CheckName": "Linked legacy side allocation 27 missing",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Source type-27 with BuildingAssign history must not be dropped without an approved remap."
+  },
+  {
+    "Category": "Allocation migration",
+    "CheckName": "No operational No_house building",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "No generated action or building may use No_house as a real building number."
+  },
+  {
+    "Category": "Allocation migration",
+    "CheckName": "Accepted normal allocations linked to housing through 47",
+    "ExpectedValue": 541.00,
+    "ActualValue": 541.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Every accepted normal allocation that reached housing ends 45->46->47->2."
+  },
+  {
+    "Category": "Completeness",
+    "CheckName": "Extend insurance",
+    "ExpectedValue": 133.00,
+    "ActualValue": 133.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Only residents whose last active action is type 24 with buildingActionExtraType1 = 2 are migrated."
+  },
+  {
+    "Category": "Completeness",
+    "CheckName": "Electricity bills",
+    "ExpectedValue": 74802.00,
+    "ActualValue": 74802.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Matched by BillsID. Duplicate active 2024/10 bills for the same resident, building, month, year, and amount are intentionally excluded, including NULL generalNo_FK groups."
+  },
+  {
+    "Category": "Completeness",
+    "CheckName": "Excluded duplicate electricity bills present",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Active duplicate electricity bills for 2024/10 must not exist in DATACORE after migration, including NULL generalNo_FK groups."
+  },
+  {
+    "Category": "Integrity",
+    "CheckName": "Electricity bills with excluded readings - count",
+    "ExpectedValue": 11.00,
+    "ActualValue": 11.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Bills must retain their original identity, amount and general number, with NULL meterReadID and residentInfoID_FK."
+  },
+  {
+    "Category": "Integrity",
+    "CheckName": "Electricity bills with excluded readings - amount",
+    "ExpectedValue": 1821.24,
+    "ActualValue": 1821.24,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Total amounts of correctly migrated bills linked to excluded source readings."
+  },
+  {
+    "Category": "Completeness",
+    "CheckName": "Active rent payments",
+    "ExpectedValue": 216490.00,
+    "ActualValue": 216490.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Cancelled source lists and payments are excluded."
+  },
+  {
+    "Category": "Financial reconciliation",
+    "CheckName": "Inactive historical rent payments - count",
+    "ExpectedValue": 15384.00,
+    "ActualValue": 15384.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "مطابقة السدادات بالمعرف الأصلي والرقم العام والمبلغ وحالة النشاط والمسير."
+  },
+  {
+    "Category": "Financial reconciliation",
+    "CheckName": "Inactive historical rent payments - amount",
+    "ExpectedValue": 5178747.69,
+    "ActualValue": 5178747.69,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "مطابقة السدادات بالمعرف الأصلي والرقم العام والمبلغ وحالة النشاط والمسير."
+  },
+  {
+    "Category": "Financial reconciliation",
+    "CheckName": "Active historical rent payments - count",
+    "ExpectedValue": 216490.00,
+    "ActualValue": 216490.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "مطابقة السدادات بالمعرف الأصلي والرقم العام والمبلغ وحالة النشاط والمسير."
+  },
+  {
+    "Category": "Financial reconciliation",
+    "CheckName": "Active historical rent payments - amount",
+    "ExpectedValue": 64120529.20,
+    "ActualValue": 64120529.20,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "مطابقة السدادات بالمعرف الأصلي والرقم العام والمبلغ وحالة النشاط والمسير."
+  },
+  {
+    "Category": "Completeness",
+    "CheckName": "Penalty bills",
+    "ExpectedValue": 332.00,
+    "ActualValue": 332.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Every old custody penalty becomes a bill."
+  },
+  {
+    "Category": "Completeness",
+    "CheckName": "Paid penalties",
+    "ExpectedValue": 266.00,
+    "ActualValue": 266.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Every old paid penalty becomes a payment."
+  },
+  {
+    "Category": "Generated bills",
+    "CheckName": "Pre-2017 rent only for continued occupancy at cutover",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Pre-2017 active rent bills must belong to a housing cycle still occupied at migration cutover; vacated/replaced cycles retain the 2017 floor."
+  },
+  {
+    "Category": "Generated bills",
+    "CheckName": "No water bills before enforcement date",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Water charges start on 2024-01-01; older occupancy months must not receive water bills."
+  },
+  {
+    "Category": "Generated bills",
+    "CheckName": "Rent or water bills extending beyond evacuation date",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Every active KFMC type-3 action ends rent and water charging on its buildingActionDate, regardless of ExtraInt1 workflow stage."
+  },
+  {
+    "Category": "Business rules",
+    "CheckName": "Monthly rent procedure ignores ExitDate",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "BuildingRentForOneMonth must pass ExitDate to the rent function and exclude months wholly after evacuation."
+  },
+  {
+    "Category": "Value reconciliation",
+    "CheckName": "ResidentInfo value differences",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Compares NationalID and active status for matching IDs."
+  },
+  {
+    "Category": "Value reconciliation",
+    "CheckName": "Building value differences",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Compares normalized building number."
+  },
+  {
+    "Category": "Value reconciliation",
+    "CheckName": "Meter value differences",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Compares normalized meter number."
+  },
+  {
+    "Category": "Integrity",
+    "CheckName": "Excluded invalid-general-number actions present",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Actions with general number 0/1 or a non-NULL number absent from KFMC ResidentInfo must not be migrated. NULL building-only actions remain valid."
+  },
+  {
+    "Category": "Business rules",
+    "CheckName": "Meaningful action 27 without parent action 1 or 7",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Action 27 requires an existing waiting root of type 1 or 7. Historical inactive roots are valid; operational eligibility is validated separately."
+  },
+  {
+    "Category": "Business rules",
+    "CheckName": "Duplicate waiting-list traversal for same final action",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "V_WaitingList must not traverse the same resident, building, and final action from more than one root."
+  },
+  {
+    "Category": "Allocation migration",
+    "CheckName": "Pending legacy allocations hidden from AssignStatusDL",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Migration-generated pending actions 38/40 belong to closed historical periods and must have InAssignPeriod = 0."
+  },
+  {
+    "Category": "Evacuation actions",
+    "CheckName": "Evacuation actions completeness",
+    "ExpectedValue": 1222.00,
+    "ActualValue": 1222.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "All old type-3 actions must be migrated, except consecutive identical actions excluded by the migration rule."
+  },
+  {
+    "Category": "Evacuation actions",
+    "CheckName": "Unsupported old evacuation stages",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Only NULL and values 1,2,3,4,5 are supported in old buildingActionExtraInt1."
+  },
+  {
+    "Category": "Evacuation actions",
+    "CheckName": "Evacuation effective-date mapping differences",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Every old type-3 action retains its recorded buildingActionDate as effective ExitDate, regardless of workflow stage."
+  },
+  {
+    "Category": "Evacuation actions",
+    "CheckName": "Evacuation workflow actions missing effective dates",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Workflow status and effective evacuation date are independent; migrated stages 57/58/59 must retain OccupentDate and ExitDate."
+  },
+  {
+    "Category": "Value reconciliation",
+    "CheckName": "BuildingAction extend reason differences",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "For action type 24: old extra type 2->1, 3->3, 4->2."
+  },
+  {
+    "Category": "Value reconciliation",
+    "CheckName": "Extend insurance value differences",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Compares amount, remaining, type, approval flag, number, and date."
+  },
+  {
+    "Category": "Value reconciliation",
+    "CheckName": "Missing or changed resident contacts",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Compares type, details, dates, and active status for resident contacts."
+  },
+  {
+    "Category": "Generated bills",
+    "CheckName": "Duplicate occupied rent/water monthly bill groups",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "One bill per charge type, resident, building, year, and month for occupied periods."
+  },
+  {
+    "Category": "Generated bills",
+    "CheckName": "Unpaired occupied monthly rent/water bills",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "From 2024-01 onward, every occupied migrated month must contain one rent and one water bill."
+  },
+  {
+    "Category": "Vacant service bills",
+    "CheckName": "Rent bills generated for vacant periods",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Vacant periods may receive fixed-service bills but must never receive rent bills."
+  },
+  {
+    "Category": "Vacant service bills",
+    "CheckName": "Duplicate exact vacant-water periods",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Only one active water bill may represent the same building and exact vacant date range."
+  },
+  {
+    "Category": "Vacant service bills",
+    "CheckName": "Overlapping distinct vacant-water periods",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Distinct vacant-water periods for one building must not overlap; separate non-overlapping gaps in one month are valid."
+  },
+  {
+    "Category": "Vacant service bills",
+    "CheckName": "Vacant water bills carrying a general number",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "A water bill without a resident must not retain a general number from a previous or later occupant."
+  },
+  {
+    "Category": "Generated bills",
+    "CheckName": "Incorrect water-bill calculations",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Expected amount is WaterMonthlyAmount divided by 30 and multiplied by Days30."
+  },
+  {
+    "Category": "Generated bills",
+    "CheckName": "Incorrect water VAT separation",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Water TotalPrice is VAT-inclusive; PRICE is net of 15% VAT and PRICETAX is the separated VAT amount."
+  },
+  {
+    "Category": "Generated bills",
+    "CheckName": "No migrated rent/water bills in cutover month",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "The historical monthly migration must not generate rent/water bills in the cutover month. Operational invoices are excluded."
+  },
+  {
+    "Category": "Billing periods",
+    "CheckName": "Water bills without current billing period",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Every migrated water bill must link to its generated monthly water period."
+  },
+  {
+    "Category": "Billing periods",
+    "CheckName": "Water bills linked to incorrect billing period",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "The current period must belong to the same administration, water service, and cover the bill dates."
+  },
+  {
+    "Category": "Billing periods",
+    "CheckName": "Water bills missing an available previous period",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "PreviousPeriodID is required when an earlier water period exists."
+  },
+  {
+    "Category": "Bills",
+    "CheckName": "Water bills missing available building utility type",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Water bills must copy buildingUtilityTypeID_FK from BuildingDetails when it is available."
+  },
+  {
+    "Category": "Fixed services",
+    "CheckName": "Missing or mismatched active water fixed amount",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Water fixed amount is stored net of 15 percent VAT and must reconcile to WaterMonthlyAmount."
+  },
+  {
+    "Category": "Billing periods",
+    "CheckName": "Electric bills missing an available previous period",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "An electricity bill requires PreviousPeriodID when the same meter has an earlier migrated bill."
+  },
+  {
+    "Category": "Billing periods",
+    "CheckName": "Electric bills linked to invalid previous period",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Previous electricity period must belong to the same administration and service and precede the current period."
+  },
+  {
+    "Category": "Integrity",
+    "CheckName": "ResidentDetails without ResidentInfo",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": null
+  },
+  {
+    "Category": "Integrity",
+    "CheckName": "ResidentDetails without MilitaryUnit",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": null
+  },
+  {
+    "Category": "Integrity",
+    "CheckName": "Resident contacts without resident",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": null
+  },
+  {
+    "Category": "Integrity",
+    "CheckName": "Extend insurance without action or resident",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": null
+  },
+  {
+    "Category": "Business rules",
+    "CheckName": "Active housing actions missing OccupentDate",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": null
+  },
+  {
+    "Category": "Business rules",
+    "CheckName": "Active exit actions missing dates",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": null
+  },
+  {
+    "Category": "Business rules",
+    "CheckName": "Exit date earlier than occupancy date",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": null
+  },
+  {
+    "Category": "Bills",
+    "CheckName": "Bills without BillNumber",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": null
+  },
+  {
+    "Category": "Bills",
+    "CheckName": "Duplicate BillNumber values",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Actual is the number of duplicated bill-number groups."
+  },
+  {
+    "Category": "Payments",
+    "CheckName": "Active payments without link status",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": null
+  },
+  {
+    "Category": "Payments",
+    "CheckName": "Status-1 payments missing resident or building",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": null
+  },
+  {
+    "Category": "Entry metadata",
+    "CheckName": "Migration-generated text in entryData",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Values originating in KFMC are preserved exactly; migration literals are forbidden."
+  },
+  {
+    "Category": "Historical warnings",
+    "CheckName": "Meter reads without resident",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Preserved historical data."
+  },
+  {
+    "Category": "Historical warnings",
+    "CheckName": "Unexpected building actions with unmatched building",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Known building-workflow types 4,5,8-17,29-31 are accepted and excluded."
+  },
+  {
+    "Category": "BuildingOperational62",
+    "CheckName": "Missing generated 62 for eligible active building",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Expected from the post-migration building exit state (not from raw KFMC action counts)."
+  },
+  {
+    "Category": "BuildingOperational62",
+    "CheckName": "Duplicate generated 62 per building",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "One active generated 62 at most per building and Idara."
+  },
+  {
+    "Category": "BuildingOperational62",
+    "CheckName": "Invalid generated 62 independent-root structure",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "62 must be active, vacant (status 2), without resident, general number or parent."
+  },
+  {
+    "Category": "BuildingOperational62",
+    "CheckName": "Generated 62 on building not eligible for post-migration vacancy",
+    "ExpectedValue": 0.00,
+    "ActualValue": 0.00,
+    "Difference": 0.00,
+    "Result": "PASS",
+    "Notes": "Generated 62 has no corresponding eligible final exit state; review any later occupancy or operational cycle."
+  }
+]

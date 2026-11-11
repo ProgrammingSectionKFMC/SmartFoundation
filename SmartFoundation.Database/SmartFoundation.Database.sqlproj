@@ -394,7 +394,6 @@
     <Build Include="Housing\Views\V_GetListAllMetersLastAndBeforeLastRead_WithWrap.sql" />
     <Build Include="WH\Views\V_Group.sql" />
     <Build Include="Housing\Views\V_WaitingListByLetter.sql" />
-    <Build Include="Housing\Views\V_ResidentFinancialSummary.sql" />
     <Build Include="WH\Views\V_Class.sql" />
     <Build Include="Housing\Views\V_FirstMeterReadForAllMeter.sql" />
     <Build Include="Housing\Views\V_LastMeterRead_Type1.sql" />
@@ -810,6 +809,7 @@
     <Build Include="Housing\Views\V_GetGeneralListActionForBuilding.sql" />
     <Build Include="MoveData\Stored Procedures\usp_FinalizeVacantBuildingActions.sql" />
     <Build Include="Housing\Stored Procedures\SyncAssignPeriodHistory.sql" />
+    <Build Include="Housing\Tables\BuildingPaymentExcelImportDetail.sql" />
   </ItemGroup>
   <ItemGroup>
     <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\150\SqlSchemas\master.dacpac">

@@ -30,8 +30,11 @@
         Model ?? new List<MenuItem>(),
         new JsonSerializerOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
 
+    var showDashboardButton =
+Context.Session.GetString("CanViewDashboard") == "1";
 
-  
+    
+
 }
 
 
@@ -68,14 +71,27 @@
             <div class="flex items-center gap-0">
 
 
-                <!-- روابط سريعة - الشاشة التفاعلية -->
-                <nav class="me-4 flex flex-none items-center gap-0.5" dir="rtl" aria-label="روابط سريعة">
-                    <a href="/HousingCommandCenterDashboard/Index" target="_blank" 
-                       class="sf-header-action-btn sf-dashboard-btn">
-                        <i class="fa-solid fa-chart-pie"></i>
-                        <span>الشاشة التفاعلية</span>
-                    </a>
-                </nav>
+                @if (showDashboardButton)
+                {
+                    <!-- روابط سريعة - الشاشة التفاعلية -->
+                    <nav class="me-4 flex flex-none items-center gap-0.5"
+                         dir="rtl" aria-label="روابط سريعة">
+                        <form method="post"
+                              action="/HousingCommandCenterDashboard/Launch"
+                              target="_blank"
+                              style="margin:0">
+
+                            @Html.AntiForgeryToken()
+
+                            <button type="submit"
+                                    class="sf-header-action-btn sf-dashboard-btn"
+                                    style="cursor:pointer">
+                                <i class="fa-solid fa-chart-pie"></i>
+                                <span>الشاشة التفاعلية</span>
+                            </button>
+                        </form>
+                    </nav>
+                }
 
                 <!-- روابط سريعة -->
                 <nav class="me-4 flex flex-none items-center gap-0.5" dir="rtl" aria-label="روابط سريعة">

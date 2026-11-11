@@ -1389,19 +1389,7 @@ ELSE IF @pageName_ = 'buildingUtilityType'
 
 
 
-    -------------------------------------------------------------------
-    --                     PAGE: HousingUnallocatedPaymentsReview
-    -------------------------------------------------------------------
-        ELSE IF @pageName_ = N'HousingUnallocatedPaymentsReview'
-        BEGIN
-            EXEC [Housing].[HousingUnallocatedPaymentsReviewDL]
-                  @pageName_ = @pageName_
-                , @idaraID   = @idaraID
-                , @entrydata = @entrydata
-                , @hostname  = @hostname;
-        END
-
-
+   
 
          -------------------------------------------------------------------
     --                     PAGE: MonthlyBillingMonitor
@@ -2366,89 +2354,91 @@ BEGIN
             N''
         );
 
-        DECLARE @CommandCenterSearchText NVARCHAR(4000) =
-    NULLIF
-    (
-        LTRIM(RTRIM(@parameter_04)),
-        N''
-    );
-
-
-DECLARE @CommandCenterBillChargeTypeID INT =
-    TRY_CONVERT
-    (
-        INT,
+    DECLARE @CommandCenterSearchText NVARCHAR(4000) =
         NULLIF
         (
-            LTRIM(RTRIM(@parameter_05)),
+            LTRIM(RTRIM(@parameter_04)),
             N''
-        )
-    );
+        );
 
-
-DECLARE @CommandCenterSortKey NVARCHAR(30) =
-    NULLIF
-    (
-        UPPER
+    DECLARE @CommandCenterBillChargeTypeID INT =
+        TRY_CONVERT
         (
-            LTRIM(RTRIM(@parameter_06))
-        ),
-        N''
-    );
+            INT,
+            NULLIF
+            (
+                LTRIM(RTRIM(@parameter_05)),
+                N''
+            )
+        );
 
-
-DECLARE @CommandCenterPageNumber INT =
-    TRY_CONVERT
-    (
-        INT,
+    DECLARE @CommandCenterSortKey NVARCHAR(30) =
         NULLIF
         (
-            LTRIM(RTRIM(@parameter_07)),
+            UPPER(LTRIM(RTRIM(@parameter_06))),
             N''
-        )
-    );
+        );
 
-
-DECLARE @CommandCenterPageSize INT =
-    TRY_CONVERT
-    (
-        INT,
-        NULLIF
+    DECLARE @CommandCenterPageNumber INT =
+        TRY_CONVERT
         (
-            LTRIM(RTRIM(@parameter_08)),
-            N''
-        )
-    );
+            INT,
+            NULLIF
+            (
+                LTRIM(RTRIM(@parameter_07)),
+                N''
+            )
+        );
+
+    DECLARE @CommandCenterPageSize INT =
+        TRY_CONVERT
+        (
+            INT,
+            NULLIF
+            (
+                LTRIM(RTRIM(@parameter_08)),
+                N''
+            )
+        );
 
     DECLARE @CommandCenterResidentInfoID BIGINT =
-    TRY_CONVERT
-    (
-        BIGINT,
-        NULLIF
+        TRY_CONVERT
         (
-            LTRIM(RTRIM(@parameter_09)),
-            N''
-        )
-    );
+            BIGINT,
+            NULLIF
+            (
+                LTRIM(RTRIM(@parameter_09)),
+                N''
+            )
+        );
 
+    ---------------------------------------------------------------
+    -- HEADER PERMISSION CHECK
+    -- Skip dashboard data loading when checking header permission.
+    -- The permission result is already returned by Masters_DataLoad.
+    ---------------------------------------------------------------
 
-    EXEC [Housing].[HousingCommandCenterDashboardDL]
-          @pageName_      = @pageName_
-        , @idaraID        = @idaraID
-        , @entryData      = @entrydata
-        , @hostName       = @hostName
+    IF ISNULL(@parameter_20, N'') <> N'HEADER_PERMISSION_ONLY'
+    BEGIN
 
-        , @targetIdaraID  = @CommandCenterTargetIdaraID
-        , @section        = @CommandCenterSection
-        , @status         = @CommandCenterStatus
+        EXEC [Housing].[HousingCommandCenterDashboardDL]
+              @pageName_        = @pageName_
+            , @idaraID          = @idaraID
+            , @entryData        = @entrydata
+            , @hostName         = @hostName
 
-        , @searchText       = @CommandCenterSearchText
-        , @billChargeTypeID = @CommandCenterBillChargeTypeID
-        , @sortKey          = @CommandCenterSortKey
-        , @pageNumber       = @CommandCenterPageNumber
-        , @pageSize         = @CommandCenterPageSize
-        , @residentInfoID   = @CommandCenterResidentInfoID
-        ;
+            , @targetIdaraID    = @CommandCenterTargetIdaraID
+            , @section          = @CommandCenterSection
+            , @status           = @CommandCenterStatus
+
+            , @searchText       = @CommandCenterSearchText
+            , @billChargeTypeID = @CommandCenterBillChargeTypeID
+            , @sortKey          = @CommandCenterSortKey
+            , @pageNumber       = @CommandCenterPageNumber
+            , @pageSize         = @CommandCenterPageSize
+            , @residentInfoID   = @CommandCenterResidentInfoID;
+
+    END;
 
 END
 

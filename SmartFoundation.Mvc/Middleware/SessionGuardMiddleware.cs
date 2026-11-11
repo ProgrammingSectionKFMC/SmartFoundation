@@ -35,6 +35,22 @@ namespace SmartFoundation.Mvc.Middleware
         {
             var path = context.Request.Path;
 
+            // Allow only independently authenticated dashboard displays
+            // to bypass the ordinary MVC session consistency check.
+            if (path.StartsWithSegments(
+                    "/HousingCommandCenterDashboard",
+                    StringComparison.OrdinalIgnoreCase) &&
+                !path.StartsWithSegments(
+                    "/HousingCommandCenterDashboard/Launch",
+                    StringComparison.OrdinalIgnoreCase) &&
+                context.User.Identities.Any(identity =>
+                    identity.IsAuthenticated &&
+                    identity.AuthenticationType == "DashboardDisplay"))
+            {
+                await _next(context);
+                return;
+            }
+
             // Skip static files quickly
             foreach (var p in StaticPrefixes)
             {

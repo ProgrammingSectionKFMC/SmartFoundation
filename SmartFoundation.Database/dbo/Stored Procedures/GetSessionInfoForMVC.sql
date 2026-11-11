@@ -1,6 +1,4 @@
-﻿
-
-CREATE PROCEDURE [dbo].[GetSessionInfoForMVC]
+﻿CREATE   PROCEDURE [dbo].[GetSessionInfoForMVC]
     @NationalID NVARCHAR(20),
     @Password Nvarchar(200),
     @hostName Nvarchar(200)
@@ -203,7 +201,21 @@ BEGIN
                         + N' الساعة ' + CONVERT(nvarchar(8), GETDATE(), 108) AS Message_,
                         up.ChangedPassword,
                         (select top(1) o.OrganizationLogo from DATACORE.dbo.Organization o) AS OrganaiztionLogo,
-                        (select top(1) i.idaraLogo from DATACORE.dbo.Idara i where i.idaraID = d.IdaraID) AS IdaraLogo
+                        (select top(1) i.idaraLogo from DATACORE.dbo.Idara i where i.idaraID = d.IdaraID) AS IdaraLogo,
+                        CASE
+                            WHEN EXISTS
+                            (
+                                SELECT 1
+                                FROM dbo.ft_UserPagePermissions(
+                                    @usersID,
+                                    N'HousingCommandCenterDashboard'
+                                )
+                                WHERE permissionTypeName_E = N'VIEWDASHBOARD'
+                            )
+                            THEN CAST(1 AS BIT)
+                            ELSE CAST(0 AS BIT)
+                        END AS CanViewDashboard
+
                     FROM dbo.[Users] u
                     Left JOIN  dbo.UsersDetails ud ON u.usersID = ud.usersID_FK
                     left Join  dbo.UsersAuthType ua on ud.usersAuthTypeID_FK = ua.UsersAuthTypeID

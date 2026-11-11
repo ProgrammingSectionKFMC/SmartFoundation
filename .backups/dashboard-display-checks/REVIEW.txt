@@ -1,0 +1,20 @@
+Audit scope: DashboardDisplaySessionStore, DashboardDisplay cookie configuration, Launch (the existing StartDisplay equivalent), Heartbeat, dashboard InitPageContext, Login/Logout, and the current iframe refresh flow. Read existing scope helper and DataLoad error propagation only to verify the contracts used; neither was changed.
+
+Confirmed failure paths before the fix:
+- Three-minute cookie expiry prevents authentication after browser suspension.
+- Three-minute heartbeat expiry deletes the server token (also from the worker enumeration), preventing recovery.
+- SQL permission-check exceptions reject authentication as 401; the client treats that exactly like revocation and clears the screen.
+- A failed Department load redirects to Index, which can replace the intended department during iframe refresh.
+- Ordinary Session expiry is independent by design; InitPageContext reads the display store for authenticated displays. Unknown display credentials never fall back to Session.
+- MVC restart loses all in-memory tokens and must require a new authenticated Launch.
+
+Implemented boundaries:
+- Separate a three-minute background activity lease from a 30-day renewable display credential. The normal system cookie/session settings are unchanged.
+- Expired activity leases retain the existing credential, but every endpoint still needs the signed user identity, matching server-held context, current VIEWDASHBOARD, and live SQL scope. Daily cookie renewal is allowed only after those checks succeed.
+- 503 blocks all new endpoint data while preserving existing displayed data. 401 (unknown/revoked/expired independent credential), 403 (permission/scope denial), and 423 remain terminal; no automatic Launch or token recreation exists.
+- Logout revocation runs before optional audit I/O and prefers the authenticated user identity.
+- The client retries heartbeat with a request timeout, on wake/visibility/online, keeps a connection indicator, and revalidates before revealing a refreshed iframe. Failed refreshes keep the last valid frame.
+
+Checks: 8 standalone C# store assertions and 9 Node client/iframe scenarios passed. Store inactivity was simulated by changing private timestamps in the test harness, not by waiting two days. MVC build command and final output are recorded in build.log.
+
+Not established: a real two-hour/day soak, actual browser sleep behavior, live SQL permission/scope/account changes, end-to-end MVC cookie/antiforgery/Logout integration, deployment restart behavior. No SQL, KPI, Cache, Git, or deployment configuration was changed. During a total network outage, revocation cannot be learned until a server response is received; terminal responses hide the page when received. Lost MVC in-memory state always requires opening the display again from the authenticated system.

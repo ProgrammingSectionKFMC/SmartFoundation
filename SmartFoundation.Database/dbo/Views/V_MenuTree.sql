@@ -1,4 +1,5 @@
-﻿CREATE VIEW dbo.V_MenuTree
+﻿
+CREATE VIEW [dbo].[V_MenuTree]
 AS
 WITH MenuTree AS
 (
@@ -42,6 +43,7 @@ WITH MenuTree AS
         p.programActive = 1
         AND m.menuActive = 1
         AND m.parentMenuID_FK IS NULL     -- مستوى أول فقط
+        AND p.programID <> 22
 
 
     UNION ALL
@@ -88,4 +90,3 @@ WITH MenuTree AS
 )
 SELECT *
 FROM MenuTree;
-

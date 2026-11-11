@@ -214,55 +214,185 @@ DECLARE @DeductListName NVARCHAR(255) =
             THROW 50001, @Msg, 1;
         END
 
-        INSERT INTO [DATACORE].[Housing].[BuildingPayment]
+                -- ربط كل صف Excel بالسداد الذي أُنشئ له، حتى عند تكرار البيانات
+        CREATE TABLE #ImportedRows
         (
-            [buildingPaymentTypeID_FK],
-            [generalNo_FK],
-            [IDNumber],
-            [residentInfoID_FK],
-            [unitID],
-            [buildingDetailsID_FK],
-            [amount],
-            [deductListID_FK],
-            [buildingPayementActive],
-            [BillChargeTypeID_FK],
-            [IdaraId_FK],
-            [entryDate],
-            [entryData],
-            [hostname]
-        )
-        SELECT
-            1,
-            c.generalNo_FK,
-            c.IDNumber,
-            r.residentInfoID,
-            c.unitID,
-            NULL,
-            c.amount,
-            @DedcutID,
-            1,
-            @BillChargeTypeID,
-            @IdaraId_FK,
-            GETDATE(),
-            @entryData,
-            @hostName
-        FROM #Clean AS c
-        OUTER APPLY
-        (
-            SELECT TOP (1)
-                rd.residentInfoID_FK AS residentInfoID
-            FROM Housing.ResidentDetails rd
-            WHERE rd.generalNo_FK = TRY_CONVERT(bigint, c.generalNo_FK)
-              AND rd.residentInfoID_FK IS NOT NULL
-            ORDER BY
-                ISNULL(rd.residentDetailsActive, 0) DESC,
-                rd.residentDetailsID DESC
-        ) r;
+            RowNo INT NOT NULL PRIMARY KEY,
+            ExcelPaymentID BIGINT NOT NULL UNIQUE
+        );
 
-        DECLARE @Inserted int = @@ROWCOUNT;
+        -- تحديد المستفيد بالهوية الوطنية فقط
+-- لا يُختار مستفيد عند غياب الهوية أو تكرارها
+
+CREATE TABLE #ExcelIdentity
+(
+    IDNumber NVARCHAR(255) NOT NULL PRIMARY KEY,
+    ResidentID BIGINT NULL,
+    MatchCount BIGINT NOT NULL
+);
+
+INSERT INTO #ExcelIdentity
+(
+    IDNumber,
+    ResidentID,
+    MatchCount
+)
+SELECT
+    ids.IDNumber,
+
+    CASE
+        WHEN COUNT_BIG(ri.residentInfoID) = 1
+        THEN MIN(ri.residentInfoID)
+        ELSE NULL
+    END,
+
+    COUNT_BIG(ri.residentInfoID)
+
+FROM
+(
+    SELECT DISTINCT IDNumber
+    FROM #Clean
+    WHERE IDNumber IS NOT NULL
+) ids
+
+LEFT JOIN Housing.ResidentInfo ri
+    ON NULLIF(
+        LTRIM(RTRIM(ri.NationalID)), N''
+    ) = ids.IDNumber
+
+GROUP BY ids.IDNumber;
+
+        MERGE INTO [DATACORE].[Housing].[BuildingPayment] AS target
+        USING
+(
+    SELECT
+        c.RowNo,
+        c.generalNo_FK,
+        c.IDNumber,
+        c.unitID,
+        c.amount,
+
+        CASE
+            WHEN im.MatchCount = 1
+            THEN im.ResidentID
+            ELSE NULL
+        END AS residentInfoID,
+
+        ISNULL(im.MatchCount, 0) AS IdentityMatchCount
+
+    FROM #Clean AS c
+
+    LEFT JOIN #ExcelIdentity im
+        ON im.IDNumber = c.IDNumber
+
+) AS source
+        ON 1 = 0
+
+        WHEN NOT MATCHED BY TARGET THEN
+            INSERT
+            (
+                buildingPaymentTypeID_FK,
+                generalNo_FK,
+                IDNumber,
+                residentInfoID_FK,
+                unitID,
+                buildingDetailsID_FK,
+                amount,
+                deductListID_FK,
+                buildingPayementActive,
+                BillChargeTypeID_FK,
+                IdaraId_FK,
+                entryDate,
+                entryData,
+                hostname
+            )
+            VALUES
+            (
+                1,
+                source.generalNo_FK,
+                source.IDNumber,
+                source.residentInfoID,
+                source.unitID,
+                NULL,
+                source.amount,
+                @DedcutID,
+                CASE
+                    WHEN source.IdentityMatchCount = 1 THEN 1
+                    ELSE 0
+                END,
+                @BillChargeTypeID,
+                @IdaraId_FK,
+                GETDATE(),
+                @entryData,
+                @hostName
+            )
+
+        OUTPUT
+            source.RowNo,
+            inserted.paymentID
+        INTO #ImportedRows (RowNo, ExcelPaymentID);
+
+        DECLARE @Inserted INT;
+
+        SELECT @Inserted = COUNT(*)
+        FROM #ImportedRows;
 
         IF @Inserted <> (SELECT COUNT(*) FROM #Clean)
-            THROW 50001, N'تعذر إدخال صف واحد مقابل كل صف في ملف Excel. تم التراجع عن العملية.', 1;
+            THROW 50001,
+                N'تعذر إدخال صف واحد مقابل كل صف في ملف Excel. تم التراجع عن العملية.',
+                1;
+
+        -- إنشاء سجل تتبع مستقل لكل حركة Excel
+        INSERT INTO Housing.BuildingPaymentExcelImportDetail
+        (
+            DeductListID_FK,
+            ExcelRowNo,
+            ExcelPaymentID_FK,
+            ReplacedManualPaymentID_FK,
+            MatchStatus,
+            MatchNote,
+            entryData
+        )
+        SELECT
+            @DedcutID,
+            ir.RowNo,
+            ir.ExcelPaymentID,
+            NULL,
+        
+            CASE
+                WHEN im.MatchCount = 1
+                THEN N'IMPORTED'
+                ELSE N'PROTECTED'
+            END,
+        
+            CASE
+                WHEN c.IDNumber IS NULL
+                THEN N'لم يتم إدخال رقم الهوية الوطنية؛ السداد محفوظ وغير نشط.'
+        
+                WHEN ISNULL(im.MatchCount, 0) = 0
+                THEN N'رقم الهوية الوطنية غير موجود في النظام؛ السداد محفوظ وغير نشط.'
+        
+                WHEN im.MatchCount > 1
+                THEN N'رقم الهوية الوطنية مرتبط بأكثر من مستفيد؛ السداد محفوظ وغير نشط.'
+        
+                ELSE N'تم تحديد المستفيد بالهوية الوطنية؛ السداد مؤهل للتصنيف والمطابقة.'
+            END,
+        
+            LEFT(@entryData, 200)
+        
+        FROM #ImportedRows ir
+        
+        JOIN #Clean c
+            ON c.RowNo = ir.RowNo
+        
+        LEFT JOIN #ExcelIdentity im
+            ON im.IDNumber = c.IDNumber;
+
+        IF @@ROWCOUNT <> @Inserted
+            THROW 50001,
+                N'تعذر تسجيل تتبع جميع صفوف Excel. تم التراجع عن العملية.',
+                1;
+
 
         EXEC Housing.usp_ClassifyAndLinkBuildingPayments
              @DeductListID = @DedcutID,
@@ -270,6 +400,256 @@ DECLARE @DeductListName NVARCHAR(255) =
              @ShowDetails = 0,
              @ReturnResults = 0,
              @ChangedBy = @entryData;
+
+
+                            /* ============================================================
+           Excel vs Manual Salary Deductions
+           كل صف Excel محفوظ مسبقاً.
+           المطابقة 1:1؛ اليدوي يبقى نشطاً وExcel المطابق يُعطل.
+           لا يتم نقل أي تسوية أو إعفاء أو استرداد.
+           ============================================================ */
+
+        -- صفوف Excel المؤهلة للمطابقة
+        SELECT
+            ir.ExcelPaymentID,
+            ir.RowNo AS ExcelRowNo,
+            xp.residentInfoID_FK AS ResidentID,
+            xp.IdaraId_FK AS IdaraID,
+            xp.BillChargeTypeID_FK AS ServiceID,
+            xp.amount AS Amount,
+            xp.buildingPaymentLinkStatusID_FK AS LinkStatusID,
+            CASE
+                WHEN xp.buildingPaymentLinkStatusID_FK = 1
+                THEN TRY_CONVERT(
+                    BIGINT,
+                    NULLIF(LTRIM(RTRIM(xp.buildingDetailsID_FK)), N'')
+                )
+            END AS BuildingID
+        INTO #MatchExcel
+        FROM #ImportedRows ir
+        JOIN Housing.BuildingPayment xp
+            ON xp.paymentID = ir.ExcelPaymentID
+        JOIN Housing.ResidentInfo ri
+            ON ri.residentInfoID = xp.residentInfoID_FK
+           AND NULLIF(LTRIM(RTRIM(ri.NationalID)), N'')
+               = NULLIF(LTRIM(RTRIM(xp.IDNumber)), N'')
+        WHERE xp.buildingPayementActive = 1
+          AND xp.buildingPaymentTypeID_FK = 1
+          AND xp.buildingPaymentLinkStatusID_FK IN (1, 2)
+          AND xp.amount > 0
+          AND
+          (
+              xp.buildingPaymentLinkStatusID_FK = 2
+              OR TRY_CONVERT(
+                  BIGINT,
+                  NULLIF(LTRIM(RTRIM(xp.buildingDetailsID_FK)), N'')
+              ) > 0
+          );
+
+        -- السدادات اليدوية المطابقة المؤهلة
+        SELECT DISTINCT
+            mp.paymentID AS ManualPaymentID,
+            mp.residentInfoID_FK AS ResidentID,
+            mp.IdaraId_FK AS IdaraID,
+            mp.BillChargeTypeID_FK AS ServiceID,
+            mp.amount AS Amount,
+            mp.buildingPaymentLinkStatusID_FK AS LinkStatusID,
+            CASE
+                WHEN mp.buildingPaymentLinkStatusID_FK = 1
+                THEN TRY_CONVERT(
+                    BIGINT,
+                    NULLIF(LTRIM(RTRIM(mp.buildingDetailsID_FK)), N'')
+                )
+            END AS BuildingID
+        INTO #MatchManual
+        FROM Housing.BuildingPayment mp WITH (UPDLOCK, HOLDLOCK)
+        JOIN Housing.DeductList md
+            ON md.deductListID = mp.deductListID_FK
+        JOIN Housing.ResidentInfo ri
+            ON ri.residentInfoID = mp.residentInfoID_FK
+        JOIN #MatchExcel xe
+            ON xe.ResidentID = mp.residentInfoID_FK
+           AND xe.IdaraID = mp.IdaraId_FK
+           AND xe.ServiceID = mp.BillChargeTypeID_FK
+           AND xe.Amount = mp.amount
+           AND xe.LinkStatusID = mp.buildingPaymentLinkStatusID_FK
+           AND ISNULL(xe.BuildingID, -1) =
+               ISNULL(
+                   CASE
+                       WHEN mp.buildingPaymentLinkStatusID_FK = 1
+                       THEN TRY_CONVERT(
+                           BIGINT,
+                           NULLIF(
+                               LTRIM(RTRIM(mp.buildingDetailsID_FK)),
+                               N''
+                           )
+                       )
+                   END, -1
+               )
+        WHERE mp.buildingPaymentTypeID_FK = 1
+          AND mp.buildingPayementActive = 1
+          AND mp.buildingPaymentLinkStatusID_FK IN (1, 2)
+          AND md.paymentTypeID_FK = 1
+          AND md.deductActive = 1
+          AND md.issueMonth = TRY_CONVERT(INT, @IssueMonth)
+          AND md.issueYear = TRY_CONVERT(INT, @IssueYear)
+          AND md.IdaraId_FK = TRY_CONVERT(BIGINT, @IdaraId_FK)
+          AND md.BillChargeTypeID_FK = @BillChargeTypeID
+          AND
+          (
+              NULLIF(LTRIM(RTRIM(mp.IDNumber)), N'') IS NULL
+              OR LTRIM(RTRIM(mp.IDNumber))
+                 = LTRIM(RTRIM(ri.NationalID))
+          )
+          -- يجب إثبات أن السداد أُنشئ يدوياً
+          AND EXISTS
+          (
+              SELECT 1
+              FROM dbo.AuditLog a
+              WHERE a.TableName = N'[Housing].[BuildingPayment]'
+                AND a.RecordID = mp.paymentID
+                AND a.ActionType IN
+                (
+                    N'PAYMENTANDREFUNDFORUSER',
+                    N'PAYMENTANDREFUNDFOREXTENDANDEXIT'
+                )
+          )
+          -- لا نستخدم سداداً يدوياً سبق أن غطى Excel آخر
+          AND NOT EXISTS
+          (
+              SELECT 1
+              FROM Housing.BuildingPaymentExcelImportDetail t
+              WHERE t.MatchedManualPaymentID_FK = mp.paymentID
+                 OR t.ReplacedManualPaymentID_FK = mp.paymentID
+          )
+          -- عدم اعتبار استيراد سابق سداداً يدوياً
+          AND NOT EXISTS
+          (
+              SELECT 1
+              FROM Housing.UploadExcelImportLog il
+              WHERE il.DeductListID_FK = mp.deductListID_FK
+          );
+
+        -- ترتيب مستقل للحسومات المتطابقة من الطرفين
+        CREATE TABLE #MatchedPairs
+        (
+            ExcelPaymentID BIGINT NOT NULL PRIMARY KEY,
+            ManualPaymentID BIGINT NOT NULL UNIQUE,
+            ExcelRowNo INT NOT NULL
+        );
+
+        ;WITH ExcelRanked AS
+        (
+            SELECT *,
+                ROW_NUMBER() OVER
+                (
+                    PARTITION BY
+                        ResidentID, IdaraID, ServiceID,
+                        Amount, LinkStatusID, BuildingID
+                    ORDER BY ExcelRowNo, ExcelPaymentID
+                ) AS MatchNumber
+            FROM #MatchExcel
+        ),
+        ManualRanked AS
+        (
+            SELECT *,
+                ROW_NUMBER() OVER
+                (
+                    PARTITION BY
+                        ResidentID, IdaraID, ServiceID,
+                        Amount, LinkStatusID, BuildingID
+                    ORDER BY ManualPaymentID
+                ) AS MatchNumber
+            FROM #MatchManual
+        )
+        INSERT INTO #MatchedPairs
+        (
+            ExcelPaymentID,
+            ManualPaymentID,
+            ExcelRowNo
+        )
+        SELECT
+            e.ExcelPaymentID,
+            m.ManualPaymentID,
+            e.ExcelRowNo
+        FROM ExcelRanked e
+        JOIN ManualRanked m
+            ON m.ResidentID = e.ResidentID
+           AND m.IdaraID = e.IdaraID
+           AND m.ServiceID = e.ServiceID
+           AND m.Amount = e.Amount
+           AND m.LinkStatusID = e.LinkStatusID
+           AND ISNULL(m.BuildingID, -1) =
+               ISNULL(e.BuildingID, -1)
+           AND m.MatchNumber = e.MatchNumber;
+
+        DECLARE @CoveredCount INT =
+        (
+            SELECT COUNT(*) FROM #MatchedPairs
+        );
+
+        -- تعطيل سداد Excel المطابق فقط
+        UPDATE xp
+        SET buildingPayementActive = 0
+        FROM Housing.BuildingPayment xp
+        JOIN #MatchedPairs m
+            ON m.ExcelPaymentID = xp.paymentID
+        WHERE xp.buildingPayementActive = 1;
+
+        IF @@ROWCOUNT <> @CoveredCount
+            THROW 50001,
+                N'تعذر تعطيل جميع حسومات Excel المطابقة. تم التراجع.',
+                1;
+
+        -- تسجيل العلاقة الدائمة بين Excel واليدوي
+        UPDATE t
+        SET
+            MatchedManualPaymentID_FK = m.ManualPaymentID,
+            MatchStatus = N'COVERED_BY_MANUAL',
+            MatchNote = CONCAT(
+                N'حسم Excel مغطى بسداد يدوي نشط رقم ',
+                m.ManualPaymentID,
+                N'؛ تم تعطيل حسم Excel لمنع الاحتساب المزدوج.'
+            )
+        FROM Housing.BuildingPaymentExcelImportDetail t
+        JOIN #MatchedPairs m
+            ON m.ExcelPaymentID = t.ExcelPaymentID_FK
+        WHERE t.DeductListID_FK = @DedcutID;
+
+        IF @@ROWCOUNT <> @CoveredCount
+            THROW 50001,
+                N'تعذر حفظ ارتباطات مطابقة Excel بالسدادات اليدوية.',
+                1;
+
+        -- تسجيل التدقيق: السداد اليدوي لا يتغير
+        INSERT INTO dbo.AuditLog
+        (
+            TableName,
+            ActionType,
+            RecordID,
+            PerformedBy,
+            Notes,
+            PerformedAt
+        )
+        SELECT
+            N'[Housing].[BuildingPayment]',
+            N'EXCEL_COVERED_BY_MANUAL',
+            m.ExcelPaymentID,
+            @entryData,
+            CONCAT(
+                N'{"ExcelPaymentID":', m.ExcelPaymentID,
+                N',"ManualPaymentID":', m.ManualPaymentID,
+                N',"DeductListID":', @DedcutID,
+                N',"ExcelRowNo":', m.ExcelRowNo,
+                N'}'
+            ),
+            GETDATE()
+        FROM #MatchedPairs m;
+
+        IF @@ROWCOUNT <> @CoveredCount
+            THROW 50001,
+                N'تعذر تسجيل تدقيق مطابقات Excel.',
+                1;
 
         INSERT INTO [Housing].[UploadExcelImportLog]
         (

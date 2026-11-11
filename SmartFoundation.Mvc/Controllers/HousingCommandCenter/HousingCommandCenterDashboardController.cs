@@ -3,11 +3,16 @@ using SmartFoundation.UI.ViewModels.SmartCharts;
 using SmartFoundation.UI.ViewModels.SmartPage;
 using System.Data;
 using System.Globalization;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
 {
     public partial class HousingCommandCenterDashboardController : Controller
     {
+
+
         // ═══════════════════════════════════════════════════════
         //  لوحة الألوان
         // ═══════════════════════════════════════════════════════
@@ -37,6 +42,179 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
             public const string Indigo = "#3730a3";
         }
 
+        
+        [HttpPost]
+        [Authorize(AuthenticationSchemes = "Cookies")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Launch()
+        {
+            // Require the ordinary authenticated session for launching.
+            if (User.Identity?.IsAuthenticated != true ||
+                !InitPageContext(out _))
+            {
+                return Unauthorized();
+            }
+
+            // A user required to change their password cannot launch TV mode.
+            if (HttpContext.Session.GetString("ChangedPassword") == "0")
+            {
+                return StatusCode(StatusCodes.Status423Locked);
+            }
+
+            if (!int.TryParse(usersId, out int userId) || userId <= 0 ||
+                !int.TryParse(IdaraId, out int idaraId) || idaraId <= 0)
+            {
+                return Unauthorized();
+            }
+
+            // Fresh permission check, not the cached header flag.
+            var parameters = new Dictionary<string, object?>
+            {
+                ["pageName_"] = "HousingCommandCenterDashboard",
+                ["idaraID"] = idaraId,
+                ["entrydata"] = userId,
+                ["hostname"] = HostName ?? "",
+                ["parameter_20"] = "HEADER_PERMISSION_ONLY"
+            };
+
+            DataSet ds = await _mastersServies
+                .GetDataLoadDataSetAsync(parameters);
+
+            bool permitted =
+                ds.Tables.Count > 0 &&
+                ds.Tables[0].Columns.Contains("permissionTypeName_E") &&
+                ds.Tables[0].Rows.Cast<DataRow>().Any(row =>
+                    string.Equals(
+                        row["permissionTypeName_E"]?.ToString()?.Trim(),
+                        "VIEWDASHBOARD",
+                        StringComparison.OrdinalIgnoreCase));
+
+            if (!permitted)
+                return Forbid();
+
+            // Capture server-trusted session values for the independent display.
+            string[] keys =
+            {
+        "usersID", "fullName", "OrganizationID", "OrganizationName",
+        "IdaraID", "IdaraName", "DepartmentID", "DepartmentName",
+        "SectionID", "SectionName", "DivisionID", "DivisonID",
+        "DivisionName", "DivisonName", "photoBase64", "ThameName",
+        "DeptCode", "nationalID", "IDNumber", "useractive",
+        "HostName", "LastActivityUtc", "OrganaiztionLogo", "IdaraLogo"
+    };
+
+            var context = keys.ToDictionary(
+                key => key,
+                key => HttpContext.Session.GetString(key),
+                StringComparer.Ordinal);
+
+
+            string token = _displaySessionStore.Create(context);
+
+            var identity = new ClaimsIdentity(
+                new[]
+                {
+        new Claim(
+            ClaimTypes.NameIdentifier,
+            userId.ToString()),
+
+        new Claim(
+            "DashboardDisplayToken",
+            token)
+                },
+                "DashboardDisplay");
+
+            try
+            {
+                await HttpContext.SignInAsync(
+                    "DashboardDisplay",
+                    new ClaimsPrincipal(identity),
+                    new AuthenticationProperties
+                    {
+                        IsPersistent = false,
+                        AllowRefresh = true
+                    });
+            }
+            catch
+            {
+                _displaySessionStore.Revoke(token);
+                throw;
+            }
+
+            Response.Headers["Cache-Control"] = "no-store";
+
+            return RedirectToAction(nameof(Index));
+
+        }
+
+        [HttpPost]
+        [Authorize(AuthenticationSchemes = "DashboardDisplay")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Heartbeat()
+        {
+            if (!InitPageContext(out _))
+                return Unauthorized();
+
+            string? token = User.FindFirst("DashboardDisplayToken")?.Value;
+
+            if (!_displaySessionStore.TryGet(token, out _))
+                return Unauthorized();
+
+            if (!int.TryParse(usersId, out int userId) || userId <= 0 ||
+                !int.TryParse(IdaraId, out int idaraId) || idaraId <= 0)
+            {
+                return Unauthorized();
+            }
+
+            var parameters = new Dictionary<string, object?>
+            {
+                ["pageName_"] = "HousingCommandCenterDashboard",
+                ["idaraID"] = idaraId,
+                ["entrydata"] = userId,
+                ["hostname"] = HostName ?? "",
+                ["parameter_20"] = "HEADER_PERMISSION_ONLY"
+            };
+
+            DataSet ds;
+
+            try
+            {
+                ds = await _mastersServies
+                    .GetDataLoadDataSetAsync(parameters);
+            }
+            catch (Exception)
+            {
+                // No renewal when permission validation is unavailable.
+                return StatusCode(503);
+            }
+
+            bool permitted =
+                ds.Tables.Count > 0 &&
+                ds.Tables[0].Columns.Contains("permissionTypeName_E") &&
+                ds.Tables[0].Rows.Cast<DataRow>().Any(row =>
+                    string.Equals(
+                        row["permissionTypeName_E"]?.ToString()?.Trim(),
+                        "VIEWDASHBOARD",
+                        StringComparison.OrdinalIgnoreCase));
+
+            if (!permitted)
+            {
+                _displaySessionStore.Revoke(token);
+
+                await HttpContext.SignOutAsync("DashboardDisplay");
+
+                return StatusCode(403);
+            }
+
+            if (!_displaySessionStore.Renew(token))
+                return Unauthorized();
+
+            Response.Headers["Cache-Control"] = "no-store";
+
+            return NoContent();
+        }
+
+        [Authorize(AuthenticationSchemes = "DashboardDisplay")]
         public async Task<IActionResult> Index()
         {
             // تهيئة بيانات المستخدم والسيشن
@@ -58,17 +236,36 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
 
             try
             {
-                ds = await _mastersServies
-                    .GetDataLoadDataSetAsync(spParameters);
+                ds = await LoadAuthorizedDashboardAsync();
 
                 SplitDataSet(ds);
+
+                // التحقق من صلاحية VIEWDASHBOARD
+                bool canViewDashboard =
+                    permissionTable != null &&
+                    permissionTable.Columns.Contains("permissionTypeName_E") &&
+                    permissionTable.Rows.Cast<DataRow>().Any(row =>
+                        string.Equals(
+                            row["permissionTypeName_E"]?.ToString()?.Trim(),
+                            "VIEWDASHBOARD",
+                            StringComparison.OrdinalIgnoreCase));
+
+                if (!canViewDashboard)
+                {
+                    TempData["Error"] = "ليس لديك صلاحية الوصول إلى الشاشة التفاعلية.";
+                    return RedirectToAction("Index", "Home");
+                }
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized();
             }
             catch (Exception)
             {
                 TempData["Error"] =
                     "حدث خطأ أثناء تحميل بيانات لوحة القيادة. يرجى المحاولة مرة أخرى.";
 
-                return RedirectToAction("Index", "Home");
+                return StatusCode(503);
             }
 
             // dt1 = الإدارات القادمة من HousingCommandCenterDashboardDL
@@ -99,11 +296,12 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
 
             ApplyOccupancySummary(metrics, departments);
 
-            // حساب كفاءة جاهزية المباني غير المشغولة
             ApplyReadinessSummary(metrics, departments);
 
-            // حساب كفاءة إجراءات الإسكان من الدورات المكتملة
             ApplyHousingProceduresSummary(metrics, dt10);
+
+            // تطبيق متوسط كفاءة الإدارات المسموح بعرضها
+            ApplyDepartmentAverages(metrics, departments);
 
             var card =
                 BuildCommandCenterCard(metrics, departments);
@@ -126,6 +324,8 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
             return View(vm);
         }
 
+
+        [Authorize(AuthenticationSchemes = "DashboardDisplay")]
         public async Task<IActionResult> Department(string id)
         {
             //----------------------------------------------------------
@@ -152,17 +352,20 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
 
             try
             {
-                ds = await _mastersServies
-                    .GetDataLoadDataSetAsync(spParameters);
+                ds = await LoadAuthorizedDashboardAsync();
 
                 SplitDataSet(ds);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Unauthorized();
             }
             catch (Exception)
             {
                 TempData["Error"] =
                     "حدث خطأ أثناء تحميل بيانات الإدارة. يرجى المحاولة مرة أخرى.";
 
-                return RedirectToAction("Index");
+                return StatusCode(503);
             }
 
             //----------------------------------------------------------
@@ -241,6 +444,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
 
 
         [HttpGet]
+        [Authorize(AuthenticationSchemes = "DashboardDisplay")]
         public async Task<IActionResult> WaitingListData(string id)
         {
             if (!InitPageContext(out _))
@@ -262,12 +466,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
             // قيد مؤقت مطابق لقيد SQL الحالي.
             // لا نسمح بالوصول إلى إدارة أخرى حتى اكتمال
             // تطبيق CanViewAllHousingDashboard.
-            if (!long.TryParse(
-                    IdaraId,
-                    NumberStyles.Integer,
-                    CultureInfo.InvariantCulture,
-                    out var currentIdaraID)
-                || currentIdaraID != targetIdaraID)
+            if (!await CanAccessDashboardDepartmentAsync(targetIdaraID))
             {
                 return StatusCode(403,
                     new { message = "غير مصرح بعرض قوائم انتظار هذه الإدارة." });
@@ -391,6 +590,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
 
 
         [HttpGet]
+        [Authorize(AuthenticationSchemes = "DashboardDisplay")]
         public async Task<IActionResult> WaitingListDetails(
     string id,
     string mode = "DETAIL_ALL",
@@ -422,12 +622,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
             }
 
             // نفس قيد الصلاحية المستخدم في WaitingListData
-            if (!long.TryParse(
-                    IdaraId,
-                    NumberStyles.Integer,
-                    CultureInfo.InvariantCulture,
-                    out var currentIdaraID)
-                || currentIdaraID != targetIdaraID)
+            if (!await CanAccessDashboardDepartmentAsync(targetIdaraID))
             {
                 return StatusCode(
                     403,
@@ -681,6 +876,8 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
             return View("WaitingListDetails", vm);
         }
 
+
+        [Authorize(AuthenticationSchemes = "DashboardDisplay")]
         public async Task<IActionResult> BuildingDetails(
             string id,
             string section,
@@ -837,7 +1034,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
         }
 
 
-
+        [Authorize(AuthenticationSchemes = "DashboardDisplay")]
         public async Task<IActionResult> ProcedureDetails(
     string id,
     string workflow = "ALL")
@@ -983,7 +1180,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
 
 
 
-
+        [Authorize(AuthenticationSchemes = "DashboardDisplay")]
         public async Task<IActionResult> FinancialDetails(
     string id,
     string mode = "CLAIMS",
@@ -1425,7 +1622,7 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
 
 
 
-
+        [Authorize(AuthenticationSchemes = "DashboardDisplay")]
         public async Task<IActionResult> ResidentFinancialDetails(
     string id,
     long residentInfoID,
@@ -1756,6 +1953,52 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
 
 
         // ───────────────────────────────────────────────────────
+
+        private static void ApplyDepartmentAverages(
+    List<HousingCommandCenterMetric> metrics,
+    List<HousingCommandCenterDepartment> departments)
+        {
+            var metricKeys = new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase)
+    {
+        "m_housing_readiness",
+        "m_housing_occupancy",
+        "m_housing_procedures",
+        "m_finance_utilities"
+    };
+
+            foreach (var metric in metrics.Where(x => metricKeys.Contains(x.Key)))
+            {
+                var percentages = departments
+                    .SelectMany(d => d.Metrics)
+                    .Where(m =>
+                        m.MetricKey == metric.Key &&
+                        m.CompletionPercent.HasValue)
+                    .Select(m => m.CompletionPercent!.Value)
+                    .ToList();
+
+                decimal? average = percentages.Count > 0
+                    ? Math.Round(percentages.Average(), 1)
+                    : null;
+
+                metric.CompletionPercent = average;
+
+                // هذه البطاقات تعرض الكفاءة، وليس إجمالي الوحدات.
+                // نستخدم 100 كمستهدف حتى لا تعيد الواجهة
+                // احتساب نسبة مختلفة من Actual / Target.
+                metric.Target = average.HasValue ? 100m : null;
+                metric.Actual = average;
+
+                metric.Hint = average.HasValue
+                    ? $"متوسط كفاءة الإدارات القابلة للتقييم: {average.Value:0.0}% | " +
+                      $"عدد الإدارات المحتسبة: {percentages.Count:N0}"
+                    : "لا توجد إدارات قابلة لتقييم هذا المؤشر.";
+            }
+        }
+
+
+        //------------------------------------------------------
+
         private static ChartCardConfig BuildCommandCenterCard(
      List<HousingCommandCenterMetric> metrics,
      List<HousingCommandCenterDepartment> departments)

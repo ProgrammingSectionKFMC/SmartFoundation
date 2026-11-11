@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using SmartFoundation.Mvc.Services.DataLoad;
 using SmartFoundation.UI.ViewModels.SmartForm;
 using SmartFoundation.UI.ViewModels.SmartPage;
 using SmartFoundation.UI.ViewModels.SmartTable;
@@ -8,17 +9,48 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 {
     public partial class HousingController : Controller
     {
-        public async Task<IActionResult> MonthlyBillingMonitor(int? year, int? month, long? idaraID)
+        /// <summary>Displays monthly billing results after a valid filter is submitted.</summary>
+        public async Task<IActionResult> MonthlyBillingMonitor(
+            [FromServices] RequestScopedDataLoadService requestDataLoad,
+            int? year, int? month, long? idaraID)
         {
-            if (!InitPageContext(out var redirectResult)) return redirectResult!;
+            if (!InitPageContext(out var redirect))
+                return redirect!;
+
             ControllerName = nameof(Housing);
             PageName = nameof(MonthlyBillingMonitor);
-            var target = DateTime.Today.AddMonths(-1);
-            year ??= target.Year;
-            month ??= target.Month;
 
-            DataSet ds = await _mastersServies.GetDataLoadDataSetAsync(new object?[]
-                { PageName, IdaraId, usersId, HostName, year, month, idaraID });
+            bool hasFilter = year.HasValue && month.HasValue;
+            bool validFilter = ModelState.IsValid &&
+                (!year.HasValue || year.Value >= 1 && year.Value <= 9999) &&
+                (!month.HasValue || month.Value >= 1 && month.Value <= 12) &&
+                (!idaraID.HasValue || idaraID.Value > 0) &&
+                (!hasFilter || idaraID is > 0);
+            bool showResults = hasFilter && validFilter;
+
+            var target = DateTime.Today.AddMonths(-1);
+            int selectedYear = year is >= 1 and <= 9999 ? year.Value : target.Year;
+            int selectedMonth = month is >= 1 and <= 12 ? month.Value : target.Month;
+            long? selectedIdaraID = idaraID is > 0 ? idaraID : null;
+
+            var pageParameters = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["pageName_"] = PageName
+            };
+            if (IdaraId != null)
+                pageParameters["idaraID"] = Convert.ToInt32(IdaraId);
+            if (usersId != null)
+                pageParameters["entrydata"] = Convert.ToInt32(usersId);
+            if (HostName != null)
+                pageParameters["hostname"] = HostName;
+
+            // Preserve the gateway's positional parameter contract.
+            pageParameters["parameter_01"] = selectedYear;
+            pageParameters["parameter_02"] = selectedMonth;
+            if (showResults && selectedIdaraID.HasValue)
+                pageParameters["parameter_03"] = selectedIdaraID.Value;
+
+            DataSet ds = await requestDataLoad.GetDataLoadDataSetAsync(pageParameters);
             SplitDataSet(ds);
             if (permissionTable is null || permissionTable.Rows.Count == 0)
             {
@@ -26,8 +58,18 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 return RedirectToAction("Index", "Home");
             }
 
-            bool canRetry = permissionTable.AsEnumerable().Any(r =>
-                string.Equals(r["permissionTypeName_E"]?.ToString()?.Trim(), "RETRYMONTHLYBILLING", StringComparison.OrdinalIgnoreCase));
+            bool canRetry = false;
+            foreach (DataRow row in permissionTable.Rows)
+            {
+                var permissionName = row["permissionTypeName_E"]?.ToString()?.Trim().ToUpperInvariant();
+                if (permissionName == "RETRYMONTHLYBILLING")
+                    canRetry = true;
+            }
+
+            if (!validFilter)
+                TempData["Error"] = "الرجاء اختيار سنة وشهر وإدارة بقيم صحيحة.";
+
+            var currentUrl = Request.Path + Request.QueryString;
 
             static List<Dictionary<string, object?>> MapRows(DataTable? table, bool aliases = false)
             {
@@ -82,6 +124,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
             var retryFields = new List<FieldConfig>
             {
                 new() { Name="redirectAction", Type="hidden", Value=PageName }, new() { Name="redirectController", Type="hidden", Value=ControllerName },
+                new() { Name="redirectUrl", Type="hidden", Value=currentUrl },
                 new() { Name="pageName_", Type="hidden", Value=PageName }, new() { Name="ActionType", Type="hidden", Value="RETRYMONTHLYBILLING" },
                 new() { Name="__RequestVerificationToken", Type="hidden" }, new() { Name="MonthlyBillingRunID", Type="hidden" },
                 new() { Name="p01", Type="hidden", MirrorName="MonthlyBillingRunID" },
@@ -101,12 +144,12 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                     ShowColumns=true, ShowRefresh=false, ShowAdd=false, ShowDelete=false, ShowEdit=canRetry,
                     Edit=new TableAction
                     {
-                        Label="إعادة تشغيل النطاق", Icon="fa fa-rotate", Color="warning", IsEdit=true, OpenModal=true,
+                        Label="إعادة تشغيل النطاق", Icon="fa fa-rotate", Color="warning", Show=true, IsEdit=true, OpenModal=true,
                         RequireSelection=true, MinSelection=1, MaxSelection=1, ModalTitle="إعادة تشغيل نطاق الرصد",
                         OpenForm=new FormConfig
                         {
                             FormId="monthlyBillingRetryForm", Title="تأكيد إعادة التشغيل", Method="post", ActionUrl="/crud/update", Fields=retryFields,
-                            Buttons=new(){new(){Text="إعادة التشغيل",Type="submit",Color="warning"},new(){Text="إلغاء",Type="button",Color="secondary",OnClickJs="this.closest('.sf-modal').__x.$data.closeModal();"}}
+                            SubmitText="إعادة التشغيل", CancelText="إلغاء"
                         }
                     }
                 }
@@ -122,21 +165,67 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
             var monthOptions = Enumerable.Range(1,12).Select(v => new OptionItem{Value=v.ToString(),Text=v.ToString()}).ToList();
             var idaraOptions = dt3?.AsEnumerable().Select(r => new OptionItem{Value=r["idaraID"].ToString()!,Text=r["idaraLongName_A"].ToString()!}).ToList() ?? new();
-            idaraOptions.Insert(0,new OptionItem{Value="",Text="جميع الإدارات المتاحة"});
-            var filter = new FormConfig
+            var form = new FormConfig
             {
-                FormId="monthlyBillingMonitorFilter", Method="get", ActionUrl="/Housing/MonthlyBillingMonitor",
-                Fields=new(){new(){Name="year",Label="السنة",Type="number",Value=year.ToString(),Required=true,ColCss="3"},
-                    new(){Name="month",Label="الشهر",Type="select",Value=month.ToString(),Options=monthOptions,Required=true,ColCss="3"},
-                    new(){Name="idaraID",Label="الإدارة",Type="select",Value=idaraID?.ToString(),Options=idaraOptions,ColCss="4",Select2=true}},
-                Buttons=new(){new(){Text="عرض",Type="submit",Color="primary"}}
+                FormId = "monthlyBillingMonitorFilter",
+                Method = "get",
+                ActionUrl = "/Housing/MonthlyBillingMonitor",
+                Fields = new List<FieldConfig>
+                {
+                    new FieldConfig
+                    {
+                        Name = "idaraID", Label = "الإدارة", Type = "select",
+                        Value = selectedIdaraID?.ToString(), Options = idaraOptions,
+                        ColCss = "5", Select2 = true, Required = true,
+                        Select2Placeholder = "الرجاء اختيار الإدارة",
+                        RequiredMsg = "الرجاء اختيار الإدارة"
+                    },
+                    new FieldConfig
+                    {
+                        Name = "month", Label = "الشهر", Type = "select",
+                        Value = selectedMonth.ToString(), Options = monthOptions,
+                        Required = true, ColCss = "3"
+                    },
+                    
+                    new FieldConfig
+                    {
+                        Name = "year", Label = "السنة", Type = "number",
+                        Value = selectedYear.ToString(), Required = true, ColCss = "4",
+                        Min = 1, Max = 9999, IsNumericOnly = true, MaxLength = 4,
+                        InputPattern = @"^[0-9]{1,4}$",
+                        PatternMsg = "السنة يجب أن تكون رقمًا بين 1 و9999",
+                        RequiredMsg = "الرجاء كتابة السنة",
+                        SubmitOnEnter = true,
+                        InlineButton = true,
+                        InlineButtonText = "عرض",
+                        InlineButtonIcon = "fa-solid fa-magnifying-glass",
+                        InlineButtonCss = "btn btn-success",
+                        InlineButtonPosition = "end",
+                        InlineButtonOnClickJs = "sfNav(this)",
+                        NavUrl = "/Housing/MonthlyBillingMonitor",
+                        NavKey = "year",
+                        NavKey3 = "month", NavField3 = "month",
+                        NavKey4 = "idaraID", NavField4 = "idaraID"
+                    },
+                }
             };
 
-            return View("HousingProcedures/MonthlyBillingMonitor", new SmartPageViewModel
+            bool runsHaveRows = showResults && dt1 != null && dt1.Rows.Count > 0;
+            bool detailsHaveRows = showResults && dt2 != null && dt2.Rows.Count > 0;
+            if (showResults && !runsHaveRows && !detailsHaveRows)
+                TempData["Info"] = "لا توجد بيانات رصد للفترة والإدارة المحددة.";
+
+            var page = new SmartPageViewModel
             {
-                PageTitle="متابعة الرصد الشهري", PanelTitle="متابعة الرصد الشهري", PanelIcon="fa-file-invoice-dollar",
-                Form=filter, TableDS=runsTable, TableDS2=detailsTable
-            });
+                PageTitle = "متابعة الرصد الشهري",
+                PanelTitle = "متابعة الرصد الشهري",
+                PanelIcon = "fa-file-invoice-dollar",
+                Form = form,
+                TableDS = runsHaveRows ? runsTable : null,
+                TableDS2 = detailsHaveRows ? detailsTable : null
+            };
+
+            return View("HousingProcedures/MonthlyBillingMonitor", page);
         }
     }
 }

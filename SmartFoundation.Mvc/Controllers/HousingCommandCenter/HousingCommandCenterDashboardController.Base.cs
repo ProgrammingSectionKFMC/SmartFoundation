@@ -2,6 +2,7 @@
 using SmartFoundation.Application.Services;
 using SmartFoundation.Mvc.Models;
 using System.Data;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
 {
@@ -10,6 +11,11 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
         private readonly MastersServies _mastersServies;
         private readonly CrudController _CrudController;
         private readonly IWebHostEnvironment _env;
+
+        private readonly SmartFoundation.Mvc.Services.DashboardDisplaySessionStore _displaySessionStore;
+
+        private readonly IMemoryCache _memoryCache;
+        private readonly SmartFoundation.Mvc.Services.DashboardMetricsCacheService _dashboardMetricsCacheService;
 
         protected string? ControllerName;
         protected string? PageName;
@@ -65,18 +71,49 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
         protected DataTable? dtExtra9;
 
         public HousingCommandCenterDashboardController(
-            MastersServies mastersServies,
-            CrudController crudController,
-            IWebHostEnvironment env)
+    MastersServies mastersServies,
+    CrudController crudController,
+    IWebHostEnvironment env,
+    SmartFoundation.Mvc.Services.DashboardDisplaySessionStore displaySessionStore,
+    IMemoryCache memoryCache,
+    SmartFoundation.Mvc.Services.DashboardMetricsCacheService dashboardMetricsCacheService)
         {
             _mastersServies = mastersServies;
             _CrudController = crudController;
             _env = env;
+            _displaySessionStore = displaySessionStore;
+            _memoryCache = memoryCache;
+            _dashboardMetricsCacheService = dashboardMetricsCacheService;
         }
 
         protected bool InitPageContext(out IActionResult? redirectResult)
         {
             redirectResult = null;
+
+
+            if (HttpContext.User.Identities.Any(identity =>
+                identity.IsAuthenticated &&
+                identity.AuthenticationType == "DashboardDisplay"))
+            {
+                var token = HttpContext.User
+                    .FindFirst("DashboardDisplayToken")?.Value;
+
+                if (!_displaySessionStore.TryGet(
+                    token, out var displayContext) ||
+                    displayContext == null)
+                {
+                    redirectResult = Unauthorized();
+                    return false;
+                }
+
+                ApplyPageContext(key =>
+                    displayContext.TryGetValue(key, out var value)
+                        ? value
+                        : null);
+
+                return true;
+            }
+
 
             if (string.IsNullOrWhiteSpace(
                 HttpContext.Session.GetString("usersID")))
@@ -89,30 +126,36 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
                 return false;
             }
 
-            usersId = HttpContext.Session.GetString("usersID");
-            FullName = HttpContext.Session.GetString("fullName");
-            OrganizationId = HttpContext.Session.GetString("OrganizationID");
-            OrganizationName = HttpContext.Session.GetString("OrganizationName");
-            IdaraId = HttpContext.Session.GetString("IdaraID");
-            IdaraName = HttpContext.Session.GetString("IdaraName");
-            DepartmentId = HttpContext.Session.GetString("DepartmentID");
-            DepartmentName = HttpContext.Session.GetString("DepartmentName");
-            SectionId = HttpContext.Session.GetString("SectionID");
-            SectionName = HttpContext.Session.GetString("SectionName");
-            DivisionId = HttpContext.Session.GetString("DivisonID");
-            DivisionName = HttpContext.Session.GetString("DivisonName");
-            PhotoBase64 = HttpContext.Session.GetString("photoBase64");
-            ThameName = HttpContext.Session.GetString("ThameName");
-            DeptCode = HttpContext.Session.GetString("DeptCode");
-            NationalId = HttpContext.Session.GetString("nationalID");
-            IdNumber = HttpContext.Session.GetString("IDNumber") ?? NationalId;
-            UserActive = HttpContext.Session.GetString("useractive");
-            HostName = HttpContext.Session.GetString("HostName");
-            LastActivityUtc = HttpContext.Session.GetString("LastActivityUtc");
-            OrganaiztionLogo = HttpContext.Session.GetString("OrganaiztionLogo");
-            IdaraLogo = HttpContext.Session.GetString("IdaraLogo");
+            ApplyPageContext(
+    key => HttpContext.Session.GetString(key));
 
             return true;
+        }
+
+        private void ApplyPageContext(Func<string, string?> read)
+        {
+            usersId = read("usersID");
+            FullName = read("fullName");
+            OrganizationId = read("OrganizationID");
+            OrganizationName = read("OrganizationName");
+            IdaraId = read("IdaraID");
+            IdaraName = read("IdaraName");
+            DepartmentId = read("DepartmentID");
+            DepartmentName = read("DepartmentName");
+            SectionId = read("SectionID");
+            SectionName = read("SectionName");
+            DivisionId = read("DivisonID");
+            DivisionName = read("DivisonName");
+            PhotoBase64 = read("photoBase64");
+            ThameName = read("ThameName");
+            DeptCode = read("DeptCode");
+            NationalId = read("nationalID");
+            IdNumber = read("IDNumber") ?? NationalId;
+            UserActive = read("useractive");
+            HostName = read("HostName");
+            LastActivityUtc = read("LastActivityUtc");
+            OrganaiztionLogo = read("OrganaiztionLogo");
+            IdaraLogo = read("IdaraLogo");
         }
 
         protected void SplitDataSet(DataSet ds)

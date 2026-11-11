@@ -767,28 +767,28 @@ namespace SmartFoundation.Mvc.Controllers.Housing
 
 
             // ADD fields
-            var addFieldsOccubentLetter = new List<FieldConfig>
-            {
-                new FieldConfig { Name = rowIdField_dt2, Type = "hidden" },
-                new FieldConfig { Name = "p01", Label = "الرقم المرجعي", Type = "hidden", ColCss = "6", Required =          true,Value=residentInfoID_ },
-                new FieldConfig { Name = "p02", Label = "رقم الهوية", Type = "hidden", ColCss = "6",Placeholder="1xxxxxxxxx",   Value=     NationalID_ },
-                new FieldConfig { Name = "p03", Label = "الرقم العام", Type = "hidden", ColCss = "6", Required =        true,Value=generalNo_FK_ },
+            //var addFieldsOccubentLetter = new List<FieldConfig>
+            //{
+            //    new FieldConfig { Name = rowIdField_dt2, Type = "hidden" },
+            //    new FieldConfig { Name = "p01", Label = "الرقم المرجعي", Type = "hidden", ColCss = "6", Required =          true,Value=residentInfoID_ },
+            //    new FieldConfig { Name = "p02", Label = "رقم الهوية", Type = "hidden", ColCss = "6",Placeholder="1xxxxxxxxx",   Value=     NationalID_ },
+            //    new FieldConfig { Name = "p03", Label = "الرقم العام", Type = "hidden", ColCss = "6", Required =        true,Value=generalNo_FK_ },
 
-                new FieldConfig { Name = "p04", Label = "رقم القرار", Type = "text", ColCss = "3", MaxLength = 50, TextMode =       "number",Required=true},
-                new FieldConfig { Name = "p05", Label = "تاريخ القرار", Type = "date", ColCss = "3", MaxLength = 50, TextMode =         "number",Required=true,Placeholder="YYYY-MM-DD"},
+            //    new FieldConfig { Name = "p04", Label = "رقم القرار", Type = "text", ColCss = "3", MaxLength = 50, TextMode =       "number",Required=true},
+            //    new FieldConfig { Name = "p05", Label = "تاريخ القرار", Type = "date", ColCss = "3", MaxLength = 50, TextMode =         "number",Required=true,Placeholder="YYYY-MM-DD"},
 
  
-                new FieldConfig { Name = "p08", Label = "ملاحظات", Type = "textarea", ColCss = "6", Required = false },
+            //    new FieldConfig { Name = "p08", Label = "ملاحظات", Type = "textarea", ColCss = "6", Required = false },
 
-            };
+            //};
 
-            // hidden fields
-            addFieldsOccubentLetter.Insert(0, new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") });
-            addFieldsOccubentLetter.Insert(0, new FieldConfig { Name = "ActionType", Type = "hidden", Value = "INSERTOCCUBENTLETTER" });
-            addFieldsOccubentLetter.Insert(0, new FieldConfig { Name = "pageName_", Type = "hidden", Value = PageName });
-            addFieldsOccubentLetter.Insert(0, new FieldConfig { Name = "redirectAction", Type = "hidden", Value = PageName });
-            addFieldsOccubentLetter.Insert(0, new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName });
-            addFieldsOccubentLetter.Insert(0, new FieldConfig { Name = "redirectUrl", Type = "hidden", Value = currentUrl });
+            //// hidden fields
+            //addFieldsOccubentLetter.Insert(0, new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = (Request.Headers["RequestVerificationToken"].FirstOrDefault() ?? "") });
+            //addFieldsOccubentLetter.Insert(0, new FieldConfig { Name = "ActionType", Type = "hidden", Value = "INSERTOCCUBENTLETTER" });
+            //addFieldsOccubentLetter.Insert(0, new FieldConfig { Name = "pageName_", Type = "hidden", Value = PageName });
+            //addFieldsOccubentLetter.Insert(0, new FieldConfig { Name = "redirectAction", Type = "hidden", Value = PageName });
+            //addFieldsOccubentLetter.Insert(0, new FieldConfig { Name = "redirectController", Type = "hidden", Value = ControllerName });
+            //addFieldsOccubentLetter.Insert(0, new FieldConfig { Name = "redirectUrl", Type = "hidden", Value = currentUrl });
 
             // UPDATE fields
             var updateFieldsWaitingList = new List<FieldConfig>
@@ -1335,147 +1335,147 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 }
             };
 
-            var dsModel2 = new SmartTableDsModel
-            {
-                PageTitle = "خطابات التسكين",
-                Columns = dynamicColumns_dt3,
-                Rows = rowsList_dt3,
-                RowIdField = rowIdField_dt3,
-                PageSize = 10,
-                PageSizes = new List<int> { 10, 25, 50, 200, },
-                QuickSearchFields = dynamicColumns_dt3.Select(c => c.Field).Take(4).ToList(),
-                Searchable = false,
-                AllowExport = false,
-                ShowRowBorders = false,
-                EnablePagination = false, // جديد
-                ShowPageSizeSelector = false, // جديد
-                PanelTitle = "خطابات التسكين",
-                //TabelLabel = "خطابات التسكين",
-                //TabelLabelIcon = "fa-solid fa-list",
-                ShowToolbar = residentInfoIdaraID == IdaraId,
-                EnableCellCopy = false,
-                //RenderAsToggle = true,
-                //ToggleLabel = "عرض خطابات التسكين بإدارتك",
-                //ToggleIcon = "fa-solid fa-file-signature",
-                //ToggleDefaultOpen = residentInfoIdaraID == IdaraId,
-                //ShowToggleCount = true,
-                RenderMode = SmartTableRenderMode.Tab,
-                RenderAsToggle = false,
-                RenderAsSection = false,
-                RenderAsTab = true,
-                TabGroupKey = "waiting-list-by-resident",
-                TabKey = "occupant-letters",
-                TabLabel = "خطابات التسكين",
-                TabIcon = "fa-solid fa-file-signature",
-                TabDefaultActive = false,
-                ShowTabCount = false,
-                TabOrder = 4,
+            //var dsModel2 = new SmartTableDsModel
+            //{
+            //    PageTitle = "خطابات التسكين",
+            //    Columns = dynamicColumns_dt3,
+            //    Rows = rowsList_dt3,
+            //    RowIdField = rowIdField_dt3,
+            //    PageSize = 10,
+            //    PageSizes = new List<int> { 10, 25, 50, 200, },
+            //    QuickSearchFields = dynamicColumns_dt3.Select(c => c.Field).Take(4).ToList(),
+            //    Searchable = false,
+            //    AllowExport = false,
+            //    ShowRowBorders = false,
+            //    EnablePagination = false, // جديد
+            //    ShowPageSizeSelector = false, // جديد
+            //    PanelTitle = "خطابات التسكين",
+            //    //TabelLabel = "خطابات التسكين",
+            //    //TabelLabelIcon = "fa-solid fa-list",
+            //    ShowToolbar = residentInfoIdaraID == IdaraId,
+            //    EnableCellCopy = false,
+            //    //RenderAsToggle = true,
+            //    //ToggleLabel = "عرض خطابات التسكين بإدارتك",
+            //    //ToggleIcon = "fa-solid fa-file-signature",
+            //    //ToggleDefaultOpen = residentInfoIdaraID == IdaraId,
+            //    //ShowToggleCount = true,
+            //    RenderMode = SmartTableRenderMode.Tab,
+            //    RenderAsToggle = false,
+            //    RenderAsSection = false,
+            //    RenderAsTab = true,
+            //    TabGroupKey = "waiting-list-by-resident",
+            //    TabKey = "occupant-letters",
+            //    TabLabel = "خطابات التسكين",
+            //    TabIcon = "fa-solid fa-file-signature",
+            //    TabDefaultActive = false,
+            //    ShowTabCount = false,
+            //    TabOrder = 4,
 
 
-                Toolbar = new TableToolbarConfig
-                {
-                    ShowRefresh = false,
-                    ShowColumns = true,
-                    ShowExportCsv = false,
-                    ShowExportExcel = false,
-                    ShowAdd2 = canInsertOCCUBENTLETTER && residentInfoIdaraID == IdaraId,
-                    ShowEdit2 = canUpdateOCCUBENTLETTER && residentInfoIdaraID == IdaraId,
-                    ShowDelete2 = canDeleteOCCUBENTLETTER && residentInfoIdaraID == IdaraId,
-                    ShowBulkDelete = false,
+            //    Toolbar = new TableToolbarConfig
+            //    {
+            //        ShowRefresh = false,
+            //        ShowColumns = true,
+            //        ShowExportCsv = false,
+            //        ShowExportExcel = false,
+            //        ShowAdd2 = canInsertOCCUBENTLETTER && residentInfoIdaraID == IdaraId,
+            //        ShowEdit2 = canUpdateOCCUBENTLETTER && residentInfoIdaraID == IdaraId,
+            //        ShowDelete2 = canDeleteOCCUBENTLETTER && residentInfoIdaraID == IdaraId,
+            //        ShowBulkDelete = false,
 
 
 
 
 
-                    Add2 = new TableAction
-                    {
-                        Label = "إضافة خطاب تسكين",
-                        Icon = "fa fa-plus",
-                        Color = "success",
-                        //Placement = TableActionPlacement.ActionsMenu,
-                        OpenModal = true,
-                        ModalTitle = "إدخال بيانات خطاب تسكين جديد",
-                        ModalMessage = "ملاحظة: جميع التعديلات مرصودة",
-                        ModalMessageIcon = "fa-solid fa-circle-info",
-                        ModalMessageClass = "bg-sky-100 text-sky-700",
+            //        Add2 = new TableAction
+            //        {
+            //            Label = "إضافة خطاب تسكين",
+            //            Icon = "fa fa-plus",
+            //            Color = "success",
+            //            //Placement = TableActionPlacement.ActionsMenu,
+            //            OpenModal = true,
+            //            ModalTitle = "إدخال بيانات خطاب تسكين جديد",
+            //            ModalMessage = "ملاحظة: جميع التعديلات مرصودة",
+            //            ModalMessageIcon = "fa-solid fa-circle-info",
+            //            ModalMessageClass = "bg-sky-100 text-sky-700",
 
-                        OpenForm = new FormConfig
-                        {
-                            FormId = "BuildingTypeInsertForm",
-                            Title = "بيانات خطاب تسكين جديد",
-                            Method = "post",
-                            ActionUrl = "/crud/insert",
-                            Fields = addFieldsOccubentLetter,
-                            Buttons =
-                            {
-                                new() { Text = "حفظ", Type = "submit", Color = "success" },
-                                new() { Text = "إلغاء", Type = "button", Color = "secondary",
-                                        OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
-                            }
-                        }
-                    },
-
-
-                    Edit2 = new TableAction
-                    {
-                        Label = "تعديل خطاب تسكين",
-                        Icon = "fa fa-pen-to-square",
-                        Color = "info",
-                        //Placement = TableActionPlacement.ActionsMenu, 
-                        IsEdit = true,
-                        OpenModal = true,
-                        ModalTitle = "تعديل خطاب تسكين",
-                        ModalMessage = "ملاحظة: جميع التعديلات مرصودة",
-                        ModalMessageIcon = "fa-solid fa-circle-info",
-                        ModalMessageClass = "bg-sky-100 text-sky-700",
-                        OpenForm = new FormConfig
-                        {
-                            FormId = "BuildingTypeEditForm",
-                            Title = "تعديل خطاب تسكين",
-                            Method = "post",
-                            ActionUrl = "/crud/update",
-                            SubmitText = "حفظ التعديلات",
-                            CancelText = "إلغاء",
-                            Fields = updateFieldsOccubentLetter
-                        },
-                        RequireSelection = true,
-                        MinSelection = 1,
-                        MaxSelection = 1
-                    },
+            //            OpenForm = new FormConfig
+            //            {
+            //                FormId = "BuildingTypeInsertForm",
+            //                Title = "بيانات خطاب تسكين جديد",
+            //                Method = "post",
+            //                ActionUrl = "/crud/insert",
+            //                Fields = addFieldsOccubentLetter,
+            //                Buttons =
+            //                {
+            //                    new() { Text = "حفظ", Type = "submit", Color = "success" },
+            //                    new() { Text = "إلغاء", Type = "button", Color = "secondary",
+            //                            OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
+            //                }
+            //            }
+            //        },
 
 
-                    Delete2 = new TableAction
-                    {
-                        Label = "الغاء خطاب تسكين",
-                        Icon = "fa fa-trash",
-                        Color = "danger",
-                        //Placement = TableActionPlacement.ActionsMenu,
-                        IsEdit = true,
-                        OpenModal = true,
-                        ModalTitle = "تحذير",
-                        ModalMessage = "هل أنت متأكد من الغاء بيانات خطاب تسكين؟",
-                        ModalMessageIcon = "fa fa-exclamation-triangle text-red-600",
-                        ModalMessageClass = "bg-red-50 text-red-700",
-                        OpenForm = new FormConfig
-                        {
-                            FormId = "BuildingTypeDeleteForm",
-                            Title = "تأكيد الغاء خطاب تسكين",
-                            Method = "post",
-                            ActionUrl = "/crud/delete",
-                            Buttons = new List<FormButtonConfig>
-                            {
-                                new FormButtonConfig { Text = "حذف", Type = "submit", Color = "danger", },
-                                new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
-                            },
-                            Fields = deleteFieldsOccubentLetter
-                        },
-                        RequireSelection = true,
-                        MinSelection = 1,
-                        MaxSelection = 1
-                    },
-                }
+            //        Edit2 = new TableAction
+            //        {
+            //            Label = "تعديل خطاب تسكين",
+            //            Icon = "fa fa-pen-to-square",
+            //            Color = "info",
+            //            //Placement = TableActionPlacement.ActionsMenu, 
+            //            IsEdit = true,
+            //            OpenModal = true,
+            //            ModalTitle = "تعديل خطاب تسكين",
+            //            ModalMessage = "ملاحظة: جميع التعديلات مرصودة",
+            //            ModalMessageIcon = "fa-solid fa-circle-info",
+            //            ModalMessageClass = "bg-sky-100 text-sky-700",
+            //            OpenForm = new FormConfig
+            //            {
+            //                FormId = "BuildingTypeEditForm",
+            //                Title = "تعديل خطاب تسكين",
+            //                Method = "post",
+            //                ActionUrl = "/crud/update",
+            //                SubmitText = "حفظ التعديلات",
+            //                CancelText = "إلغاء",
+            //                Fields = updateFieldsOccubentLetter
+            //            },
+            //            RequireSelection = true,
+            //            MinSelection = 1,
+            //            MaxSelection = 1
+            //        },
 
-            };
+
+            //        Delete2 = new TableAction
+            //        {
+            //            Label = "الغاء خطاب تسكين",
+            //            Icon = "fa fa-trash",
+            //            Color = "danger",
+            //            //Placement = TableActionPlacement.ActionsMenu,
+            //            IsEdit = true,
+            //            OpenModal = true,
+            //            ModalTitle = "تحذير",
+            //            ModalMessage = "هل أنت متأكد من الغاء بيانات خطاب تسكين؟",
+            //            ModalMessageIcon = "fa fa-exclamation-triangle text-red-600",
+            //            ModalMessageClass = "bg-red-50 text-red-700",
+            //            OpenForm = new FormConfig
+            //            {
+            //                FormId = "BuildingTypeDeleteForm",
+            //                Title = "تأكيد الغاء خطاب تسكين",
+            //                Method = "post",
+            //                ActionUrl = "/crud/delete",
+            //                Buttons = new List<FormButtonConfig>
+            //                {
+            //                    new FormButtonConfig { Text = "حذف", Type = "submit", Color = "danger", },
+            //                    new FormButtonConfig { Text = "إلغاء", Type = "button", Color = "secondary", OnClickJs = "this.closest('.sf-modal').__x.$data.closeModal();" }
+            //                },
+            //                Fields = deleteFieldsOccubentLetter
+            //            },
+            //            RequireSelection = true,
+            //            MinSelection = 1,
+            //            MaxSelection = 1
+            //        },
+            //    }
+
+            //};
 
             var dsModel3 = new SmartTableDsModel
             {
@@ -1624,7 +1624,7 @@ namespace SmartFoundation.Mvc.Controllers.Housing
                 Form =form,
                 TableDS = dsModelHasRows ? dsModel : null,
                 TableDS2 = dsModelHasRows ? dsModel1 : null,
-                TableDS3 = dsModelHasRows ? dsModel2 : null,
+              //  TableDS3 = dsModelHasRows ? dsModel2 : null,
                 TableDS1 = dsModel3HasRows ? dsModel3 : null
 
             };
