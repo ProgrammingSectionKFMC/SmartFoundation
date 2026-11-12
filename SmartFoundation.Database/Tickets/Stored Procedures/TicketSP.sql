@@ -120,7 +120,7 @@
                  THROW 50001, N'هذا الإجراء متاح فقط للموظف المسند إليه التذكرة', 1;
          END
 
-         -- تعديل 04: إجراءات الإشراف مقصورة على أعضاء الجهة الحالية للتذكرة (صف التوزيع أو الهيكل التنظيمي)،
+         -- تعديل 04: إجراءات الإشراف مقصورة على أعضاء خط الجهة الحالية للتذكرة (الجهة وما تحتها وما فوقها مباشرة، Tickets.ft_UnitLine) أو صف التوزيع،
          -- بنفس شرط أهلية المستلم في ASSIGN_TICKET. امتلاك صلاحية الصفحة لا يكفي للتصرف في تذكرة جهة أخرى.
          -- التذكرة التي لم توجَّه بعد (بدون جهة أو صف) يكفي فيها فحص الإدارة أعلاه.
          IF @ticketID IS NOT NULL
@@ -145,7 +145,7 @@
                       AND ISNULL(d.[distributorActive], 1) = 1
                       AND (
                             (@scopeQueueDistributorID IS NOT NULL AND ud.[distributorID_FK] = @scopeQueueDistributorID)
-                         OR (@scopeDSDID IS NOT NULL AND d.[DSDID_FK] = @scopeDSDID)
+                         OR (@scopeDSDID IS NOT NULL AND d.[DSDID_FK] IN (SELECT ul.[DSDID] FROM [Tickets].[ft_UnitLine](@scopeDSDID) ul))
                       )
                 )
                  THROW 50001, N'لا يمكنك تنفيذ هذا الإجراء على تذكرة لا تتبع جهتك', 1;
@@ -615,7 +615,7 @@
                AND ISNULL(d.[distributorActive], 1) = 1
                AND (
                  (@asCurrentQueueDistributorID IS NOT NULL AND ud.[distributorID_FK] = @asCurrentQueueDistributorID)
-                OR (@asCurrentDSDID IS NOT NULL AND d.[DSDID_FK] = @asCurrentDSDID)
+                OR (@asCurrentDSDID IS NOT NULL AND d.[DSDID_FK] IN (SELECT ul.[DSDID] FROM [Tickets].[ft_UnitLine](@asCurrentDSDID) ul))
                )
            )
            BEGIN ;THROW 50001, N'المستخدم المحدد غير مؤهل لاستلام التذكرة في المسار الحالي', 1; END
@@ -688,12 +688,12 @@
                AND (ud.[UDEndDate] IS NULL OR CAST(ud.[UDEndDate] AS date) >= CAST(GETDATE() AS date))
                AND ISNULL(d.[distributorActive], 1) = 1
                AND (
-                 (@currentDSDID_FK IS NOT NULL AND d.[DSDID_FK] = @raTargetDSDID)
+                 (@currentDSDID_FK IS NOT NULL AND d.[DSDID_FK] IN (SELECT ul.[DSDID] FROM [Tickets].[ft_UnitLine](@raTargetDSDID) ul))
                 OR (
                    @currentDSDID_FK IS NULL
                  AND (
                      (@raCurrentQueueDistributorID IS NOT NULL AND ud.[distributorID_FK] = @raCurrentQueueDistributorID)
-                    OR (@raTargetDSDID IS NOT NULL AND d.[DSDID_FK] = @raTargetDSDID)
+                    OR (@raTargetDSDID IS NOT NULL AND d.[DSDID_FK] IN (SELECT ul.[DSDID] FROM [Tickets].[ft_UnitLine](@raTargetDSDID) ul))
                  )
                 )
                )

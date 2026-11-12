@@ -110,6 +110,7 @@
     <Build Include="Tickets\Stored Procedures\TicketAdminDL.sql" />
     <Build Include="Tickets\Stored Procedures\TicketListDL.sql" />
     <Build Include="Tickets\Stored Procedures\TicketDrawerDL.sql" />
+    <Build Include="Tickets\Functions\ft_UnitLine.sql" />
     <Build Include="Tickets\Stored Procedures\TicketSP.sql" />
     <Build Include="Tickets\Tables\ArbitrationCase.sql" />
     <Build Include="Tickets\Tables\ArbitrationReason.sql" />

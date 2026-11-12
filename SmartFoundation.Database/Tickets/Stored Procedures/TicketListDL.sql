@@ -211,15 +211,35 @@ BEGIN
     WHERE f.[IdaraID] = @idaraID
     ORDER BY f.[DepartmentName], f.[SectionName], f.[DivisonName];
 
-    -- [11] موظفو الجهات (قائمة الموظف تتبع الجهة المختارة)
-    SELECT
-          v.[usersID]
-        , v.[FullName] AS [fullName_A]
-        , v.[DSDID]
-    FROM dbo.V_GetListUsersInDSD v
-    WHERE EXISTS (SELECT 1 FROM dbo.V_GetFullStructureForDSD f
-                  WHERE f.[DSDID] = v.[DSDID] AND f.[IdaraID] = @idaraID)
-    ORDER BY v.[FullName];
+    -- [11] موظفو الجهات: لكل جهة [DSDID] الموظفون المؤهلون لاستلام تذاكرها،
+    --      أي أعضاء خط الجهة (Tickets.ft_UnitLine: الجهة وما تحتها وما فوقها مباشرة).
+    --      نفس القاعدة التي يفحص بها Tickets.TicketSP الإسناد وإعادة الإسناد.
+    SELECT DISTINCT
+          ud.[userID_FK] AS [usersID]
+        , COALESCE(NULLIF(LTRIM(RTRIM(CONCAT_WS(N' ', nm.[firstName_A], nm.[secondName_A], nm.[thirdName_A], nm.[lastName_A]))), N''),
+                   CAST(ud.[userID_FK] AS NVARCHAR(20))) AS [fullName_A]
+        , u.[DSDID]
+    FROM dbo.[DeptSecDiv] u
+    CROSS APPLY [Tickets].[ft_UnitLine](u.[DSDID]) ul
+    INNER JOIN dbo.[Distributor] d
+        ON d.[DSDID_FK] = ul.[DSDID]
+       AND ISNULL(d.[distributorActive], 1) = 1
+    INNER JOIN dbo.[UserDistributor] ud
+        ON ud.[distributorID_FK] = d.[distributorID]
+       AND ISNULL(ud.[UDActive], 1) = 1
+       AND (ud.[UDStartDate] IS NULL OR CAST(ud.[UDStartDate] AS date) <= CAST(GETDATE() AS date))
+       AND (ud.[UDEndDate] IS NULL OR CAST(ud.[UDEndDate] AS date) >= CAST(GETDATE() AS date))
+    INNER JOIN dbo.[Users] us
+        ON us.[usersID] = ud.[userID_FK]
+       AND us.[usersActive] = 1
+    OUTER APPLY (
+        SELECT TOP 1 x.[firstName_A], x.[secondName_A], x.[thirdName_A], x.[lastName_A]
+        FROM dbo.[UsersDetails] x
+        WHERE x.[usersID_FK] = ud.[userID_FK] AND x.[userActive] = 1
+        ORDER BY x.[entryDate] DESC, x.[usersDetailsID] DESC
+    ) nm
+    WHERE u.[idaraID_FK] = @idaraID
+    ORDER BY [fullName_A];
 
     -- [12] صندوق مراجعة الجودة
     SELECT
