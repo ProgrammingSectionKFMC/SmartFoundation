@@ -83,7 +83,8 @@ public enum LetterBlockType
     Text,
     Table,
     Spacer,
-    Divider
+    Divider,
+    Footer
 }
 
 public class LetterTableCell
@@ -100,6 +101,8 @@ public class LetterTableCell
 public class LetterTableRow
 {
     public List<LetterTableCell> Cells { get; set; } = new();
+    public bool ExtendVertical { get; set; } = false;
+    public float MinRowHeight { get; set; } = 0f;
 }
 
 public class LetterTable
@@ -111,6 +114,8 @@ public class LetterTable
     public float BorderWidth { get; set; } = 1f;
     public string BorderColor { get; set; } = "#444444";
     public float CellPadding { get; set; } = 6f;
+    public bool ExtendVertical { get; set; } = false;
+    public float MinRowHeight { get; set; } = 0f;
 }
 
 public class LetterBlock
@@ -138,6 +143,13 @@ public class LetterBlock
 
     // ===== Table =====
     public LetterTable? Table { get; set; }
+    public bool StretchToFill { get; set; } = false;
+
+    // ===== Footer =====
+    public string FooterRight { get; set; } = "";
+    public string FooterCenter { get; set; } = "";
+    public string FooterLeft { get; set; } = "";
+    public float FooterFontSize { get; set; } = 6.3f;
 }
 
 public static class LetterBlockFactory
@@ -175,7 +187,8 @@ public static class LetterBlockFactory
         float paddingTop = 0,
         float paddingBottom = 0,
         float paddingRight = 0,
-        float paddingLeft = 0)
+        float paddingLeft = 0,
+        bool stretchToFill = false)
     {
         return new LetterBlock
         {
@@ -184,7 +197,8 @@ public static class LetterBlockFactory
             PaddingTop = paddingTop,
             PaddingBottom = paddingBottom,
             PaddingRight = paddingRight,
-            PaddingLeft = paddingLeft
+            PaddingLeft = paddingLeft,
+            StretchToFill = stretchToFill
         };
     }
 
@@ -206,6 +220,24 @@ public static class LetterBlockFactory
             Type = LetterBlockType.Divider,
             PaddingTop = paddingTop,
             PaddingBottom = paddingBottom
+        };
+    }
+
+    public static LetterBlock FooterBlock(
+        string right,
+        string center,
+        string left,
+        float fontSize = 6.3f,
+        float paddingTop = 4)
+    {
+        return new LetterBlock
+        {
+            Type = LetterBlockType.Footer,
+            FooterRight = right,
+            FooterCenter = center,
+            FooterLeft = left,
+            FooterFontSize = fontSize,
+            PaddingTop = paddingTop
         };
     }
 }

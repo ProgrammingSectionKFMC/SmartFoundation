@@ -1,0 +1,184 @@
+/* =========================================================
+   page-periodic-maintenance.css  (محدودة بـ .page-pm)
+   Compact Dashboard: KPI صف واحد (Size.Sm) + Donut + جدول.
+   لا منطق/JS/عمليات — config كنترولر + SmartRenderer فقط.
+   ========================================================= */
+
+/* ===== المسافات العامة ===== */
+.page-pm { display:flex; flex-direction:column; gap:.7rem; }
+.page-pm > .w-full { margin:0; }
+.page-pm > .w-full > .rounded-sm { padding:.7rem .9rem; }
+.page-pm .grid.grid-cols-12 { gap:16px !important; }      /* بين KPI والـ Pie3D */
+.page-pm .sf-panel { margin-top:0 !important; }            /* بين Pie3D والجدول */
+.page-pm .sf-panel-header { padding:.35rem .25rem; }
+.page-pm .sf-panel-body { padding:.35rem .25rem; }
+.page-pm [data-card-id] { border-radius:14px !important; }
+
+/* ===== KPI: مدمجة (Size.Sm من الكنترولر) + توسيط وتلوين ===== */
+.page-pm .smart-kpi { align-items:center; text-align:center; justify-content:center; gap:.15rem; }
+.page-pm .smart-kpi__row { justify-content:center; }
+.page-pm .smart-kpi__value { font-size:1.6rem; font-weight:800; line-height:1; }
+.page-pm .smart-kpi__note { font-size:.72rem; color:#64748b; font-weight:600; }
+.page-pm [data-tone="success"] .smart-kpi__value { color:#16a34a; }
+.page-pm [data-tone="info"]    .smart-kpi__value { color:#2563eb; }
+.page-pm [data-tone="warning"] .smart-kpi__value { color:#d97706; }
+.page-pm [data-tone="danger"]  .smart-kpi__value { color:#dc2626; }
+.page-pm [data-tone="neutral"] .smart-kpi__value { color:#0f172a; }
+
+/* ===== KPI الحالات الخمس: 5 أعمدة متساوية (Scoped داخل .page-pm فقط) =====
+   SmartCharts يرسم البطاقات في Grid بـ 12 عمود (grid-cols-12) لا يقبل القسمة على 5،
+   و classes مثل xl:col-span-2 غير مولّدة في CSS المجمّع → البطاقات كانت بعرض الصفحة.
+   الحل: الكنترولر يضع marker (pm-kpi-col) وهنا يُعاد تعريف قالب الأعمدة لهذه الصفحة فقط:
+   Mobile: 1 | ≥640px: 2 | ≥768px: 3 | ≥1024px (Desktop): 5 في صف واحد */
+.page-pm #smartCharts > .grid.grid-cols-12 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+.page-pm #smartCharts > .grid.grid-cols-12 > .pm-kpi-col { grid-column: auto; }
+.page-pm #smartCharts > .grid.grid-cols-12 > .col-span-12:not(.pm-kpi-col) { grid-column: 1 / -1; }
+@media (min-width: 640px) {
+    .page-pm #smartCharts > .grid.grid-cols-12 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 768px) {
+    .page-pm #smartCharts > .grid.grid-cols-12 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 1024px) {
+    .page-pm #smartCharts > .grid.grid-cols-12 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+/* ارتفاع متساوٍ لجميع البطاقات */
+.page-pm #smartCharts > .grid.grid-cols-12 > .pm-kpi-col > div { height: 100%; }
+
+/* خلفية خفيفة جدًا بلون الحالة + Border مستقل (نفس ألوان Pills) */
+.page-pm .pm-kpi-card--warning { background:#fffbeb !important; border-color:#fde68a !important; }
+.page-pm .pm-kpi-card--success { background:#f0fdf4 !important; border-color:#bbf7d0 !important; }
+.page-pm .pm-kpi-card--info    { background:#eff6ff !important; border-color:#bfdbfe !important; }
+.page-pm .pm-kpi-card--danger  { background:#fef2f2 !important; border-color:#fecaca !important; }
+.page-pm .pm-kpi-card--neutral { background:#f8fafc !important; border-color:#e2e8f0 !important; }
+.page-pm .pm-kpi-card--warning .smart-kpi__value { color:#d97706; }
+.page-pm .pm-kpi-card--success .smart-kpi__value { color:#16a34a; }
+.page-pm .pm-kpi-card--info    .smart-kpi__value { color:#2563eb; }
+.page-pm .pm-kpi-card--danger  .smart-kpi__value { color:#dc2626; }
+.page-pm .pm-kpi-card--neutral .smart-kpi__value { color:#0f172a; }
+.page-pm .pm-kpi-card--attention {
+    position:relative;
+    border-width:2px !important;
+    box-shadow:0 8px 20px rgba(220,38,38,.12) !important;
+}
+.page-pm .pm-kpi-card--attention .smart-kpi__note {
+    color:#b91c1c;
+    font-weight:800;
+}
+/* كتلة واحدة: توسيط رأس البطاقة وإخفاء نقطة الـ tone */
+.page-pm [data-card-id]:has(.smart-kpi) .relative.flex.items-start.justify-between {
+    justify-content:center !important; margin-bottom:.2rem !important;
+}
+.page-pm [data-card-id]:has(.smart-kpi) .shrink-0 { display:none; }
+
+/* ===== Donut مسطح: الرسم يسار والدليل المضغوط يمين (RTL) ===== */
+.page-pm [data-card-id="periodic_status_donut"] {
+    padding:.75rem 1rem !important;
+}
+.page-pm [data-card-id="periodic_status_donut"] .smart-donut__wrap {
+    grid-template-columns:1fr !important;
+    justify-items:center;
+    align-items:center;
+    gap:14px !important;
+}
+.page-pm [data-card-id="periodic_status_donut"] .smart-donut__chart {
+    width:220px;
+}
+.page-pm [data-card-id="periodic_status_donut"] .smart-donut__center-total {
+    color:#0f172a;
+    font-size:26px;
+}
+.page-pm [data-card-id="periodic_status_donut"] .smart-donut__center-label {
+    margin-top:4px;
+    font-size:12px;
+}
+.page-pm [data-card-id="periodic_status_donut"] .smart-donut__legend {
+    width:100%;
+    gap:5px;
+}
+.page-pm [data-card-id="periodic_status_donut"] .smart-donut__legend-row {
+    min-height:34px;
+    padding:.3rem .6rem;
+    border:1px solid #e2e8f0;
+    border-radius:9px;
+    background:#fff;
+    font-size:13px;
+}
+.page-pm [data-card-id="periodic_status_donut"] .smart-donut__legend-meta {
+    font-size:12px;
+    font-weight:700;
+}
+@media (min-width:768px) {
+    .page-pm [data-card-id="periodic_status_donut"] .smart-donut__wrap {
+        grid-template-columns:minmax(0,2fr) 260px !important;
+        justify-items:stretch;
+        gap:24px !important;
+    }
+    .page-pm [data-card-id="periodic_status_donut"] .smart-donut__legend {
+        grid-column:1;
+        grid-row:1;
+        align-self:center;
+    }
+    .page-pm [data-card-id="periodic_status_donut"] .smart-donut__chart {
+        grid-column:2;
+        grid-row:1;
+        justify-self:center;
+    }
+}
+
+/* ===== تبويبات المجموعات: compact في صف واحد ===== */
+.page-pm .sf-tab-panel__header { display:flex; flex-wrap:wrap; gap:.4rem; padding:.2rem 0 .5rem; }
+.page-pm [data-role="tab-button"] {
+    display:inline-flex; align-items:center; gap:.45rem; justify-content:space-between;
+    min-width:108px; padding:.45rem .7rem;
+    border:1px solid #e2e8f0; border-radius:11px; background:#fff; color:#334155;
+    font-weight:600; font-size:.85rem; box-shadow:0 1px 2px rgba(15,23,42,.05);
+    cursor:pointer; transition:all .16s ease;
+}
+.page-pm [data-role="tab-button"]:hover { border-color:#cbd5e1; transform:translateY(-1px); }
+.page-pm [data-role="tab-button"].is-active {
+    background:#16a34a; border-color:#16a34a; color:#fff; box-shadow:0 5px 14px rgba(22,163,74,.25);
+}
+.page-pm [data-role="tab-button"] [class*="count"],
+.page-pm [data-role="tab-button"] .sf-tab-count {
+    background:rgba(15,23,42,.08); color:#0f172a; border-radius:999px; padding:.05rem .5rem; font-size:.74rem;
+}
+.page-pm [data-role="tab-button"].is-active [class*="count"],
+.page-pm [data-role="tab-button"].is-active .sf-tab-count { background:rgba(255,255,255,.25); color:#fff; }
+
+/* ===== Toolbar: منطقة واحدة فوق الجدول ===== */
+.page-pm .toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:.45rem; }
+.page-pm .toolbar-search { min-width:200px; flex:1 1 200px; }
+.page-pm .toolbar-actions { display:flex; align-items:center; flex-wrap:wrap; gap:.4rem; }
+.page-pm .toolbar-utility { display:flex; align-items:center; gap:.35rem; flex-wrap:wrap; }
+.page-pm .actions-list { display:flex; align-items:center; gap:.35rem; flex-wrap:wrap; }
+.page-pm .toolbar .sf-input,
+.page-pm .toolbar select,
+.page-pm .toolbar .btn { height:36px; }
+.page-pm .actions-list .btn { border-radius:9px; font-weight:600; }
+.page-pm .actions-list .btn[disabled],
+.page-pm .actions-list .btn.cursor-not-allowed { opacity:.5; }
+
+/* ===== الجدول ===== */
+.page-pm .sf-table { border-collapse:separate; border-spacing:0; }
+.page-pm .sf-table .tr-row { transition:background .12s ease; }
+.page-pm .sf-table .tr-row:hover { background:#f1f5f9; }
+.page-pm .sf-table .tr-row-selected,
+.page-pm .sf-table .tr-row-selected:hover { background:#ecfdf5; }
+.page-pm .sf-table .td-cell { padding:.38rem .55rem; }
+.page-pm .sf-table .th-cell { padding:.5rem .55rem; }
+.page-pm .sf-table .pill {
+    display:inline-flex; align-items:center; gap:.3rem;
+    padding:.22rem .55rem; border-radius:999px;
+    font-size:.72rem; font-weight:700; line-height:1; border:1px solid transparent;
+}
+.page-pm .sf-table .pill-red    { background:#fef2f2; color:#b91c1c; border-color:#fecaca; }
+.page-pm .sf-table .pill-green  { background:#f0fdf4; color:#15803d; border-color:#bbf7d0; }
+.page-pm .sf-table .pill-blue   { background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe; }
+.page-pm .sf-table .pill-yellow { background:#fffbeb; color:#b45309; border-color:#fde68a; }
+.page-pm .sf-table .pill-gray   { background:#f8fafc; color:#475569; border-color:#e2e8f0; }
+
+/* ===== الهوية الخضراء ===== */
+.page-pm .sf-panel-title__text { color:#0a7257; font-weight:700; }

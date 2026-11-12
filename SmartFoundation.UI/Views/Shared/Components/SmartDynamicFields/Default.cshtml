@@ -1,0 +1,27 @@
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using SmartFoundation.UI.ViewModels.SmartDynamicFields
+@model SmartDynamicFieldsConfig
+
+@{
+    var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+    jsonOptions.Converters.Add(new JsonStringEnumConverter());
+    var configJson = JsonSerializer.Serialize(Model, jsonOptions);
+}
+
+<section id="@Model.Id"
+         class="sf-dynamic-fields"
+         data-sf-dynamic-fields
+         data-sf-dynamic-fields-config="@configJson"
+         dir="@Model.Direction">
+    @if (Model.RenderOutputInput && !string.IsNullOrWhiteSpace(Model.OutputName))
+    {
+        <input type="hidden"
+               name="@Model.OutputName"
+               data-sf-dynamic-fields-output />
+    }
+
+    <noscript>
+        <p class="sf-dynamic-fields__error">يتطلب هذا المكوّن تفعيل JavaScript.</p>
+    </noscript>
+</section>

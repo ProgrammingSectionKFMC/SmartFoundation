@@ -270,3 +270,25 @@ body:has(#sf-user-audit-payments-drawer.is-open) .sf-modal-backdrop {
         font-size: 1.6rem;
         color: #1f6f5c;
     }
+
+/* Vehicle-list chassis link: make the drawer entry point visually discoverable. */
+a[href*="/Vehicle/VehicleDetails?chassisNumber="] {
+    color: #047857 !important;
+    font-weight: 800;
+    text-decoration: none;
+    text-underline-offset: 4px;
+    transition: color 150ms ease, text-decoration-color 150ms ease;
+}
+
+a[href*="/Vehicle/VehicleDetails?chassisNumber="]:hover {
+    color: #065f46 !important;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+}
+
+a[href*="/Vehicle/VehicleDetails?chassisNumber="]:focus-visible {
+    border-radius: 4px;
+    outline: 3px solid rgba(16, 185, 129, 0.28);
+    outline-offset: 3px;
+    text-decoration: underline;
+}
