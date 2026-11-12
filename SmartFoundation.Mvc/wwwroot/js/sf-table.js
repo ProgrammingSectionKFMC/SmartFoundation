@@ -6732,7 +6732,7 @@ if (subtitleElement) {
                         fieldHtml = `
 <div class="form-group ${colCss}">
     <label class="block text-sm font-medium text-gray-700 mb-1">
-        ${this.escapeHtml(field.label)}
+        ${this.escapeHtml(field.label)}${this.fieldHint(field)}
         ${field.required ? '<span class="text-red-500">*</span>' : ''}
     </label>
     <div class="sf-field-wrap">
@@ -6853,7 +6853,7 @@ if (subtitleElement) {
                         fieldHtml = `
                         <div class="form-group ${colCss}">
                           <label class="block text-sm font-medium text-gray-700 mb-1">
-                            ${this.escapeHtml(field.label)}
+                            ${this.escapeHtml(field.label)}${this.fieldHint(field)}
                             ${val(field.required, field.Required, false) ? '<span class="text-red-500">*</span>' : ''}
                           </label>
 
@@ -6946,7 +6946,7 @@ if (subtitleElement) {
                         fieldHtml = `
                         <div class="form-group ${colCss}">
                             <label class="block text-sm font-medium text-gray-700 mb-1">
-                                ${this.escapeHtml(field.label)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
+                                ${this.escapeHtml(field.label)}${this.fieldHint(field)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
                             </label>
                             <textarea
                                 name="${this.escapeHtml(field.name)}"
@@ -7049,7 +7049,7 @@ if (subtitleElement) {
                         fieldHtml = `
                         <div class="form-group ${colCss}">
                             <label class="block text-sm font-medium text-gray-700 mb-1">
-                                ${this.escapeHtml(field.label)} ${(field.required ?? field.Required) ? '<span class="text-red-500">*</span>' : ''}
+                                ${this.escapeHtml(field.label)}${this.fieldHint(field)} ${(field.required ?? field.Required) ? '<span class="text-red-500">*</span>' : ''}
                             </label>
 
                             <div class="sf-select-wrap">
@@ -7085,7 +7085,7 @@ if (subtitleElement) {
                                        ${checked} ${required} ${disabled}
                                        class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
                                 <span class="ml-2 text-sm text-gray-700">
-                                    ${this.escapeHtml(field.label)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
+                                    ${this.escapeHtml(field.label)}${this.fieldHint(field)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
                                 </span>
                             </label>
                             ${field.helpText ? `<p class="mt-1 text-xs text-gray-500">${this.escapeHtml(field.helpText)}</p>` : ''}
@@ -7110,7 +7110,7 @@ if (subtitleElement) {
                         fieldHtml = `
                             <div class="form-group ${colCss}">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">
-                                    ${this.escapeHtml(field.label)}
+                                    ${this.escapeHtml(field.label)}${this.fieldHint(field)}
                                     ${field.required ? '<span class="text-red-500">*</span>' : ''}
                                 </label>
 
@@ -7173,7 +7173,7 @@ if (subtitleElement) {
                         fieldHtml = `
                         <div class="form-group ${colCss}">
                             <label class="block text-sm font-medium text-gray-700 mb-1">
-                                ${this.escapeHtml(field.label)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
+                                ${this.escapeHtml(field.label)}${this.fieldHint(field)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
                             </label>
 
                             <div class="sf-field-wrap">
@@ -7231,7 +7231,7 @@ if (subtitleElement) {
                         fieldHtml = `
                         <div class="form-group ${colCss}">
                             <label class="block text-sm font-medium text-gray-700 mb-1">
-                                ${this.escapeHtml(field.label)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
+                                ${this.escapeHtml(field.label)}${this.fieldHint(field)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
                             </label>
                             <div class="sf-field-wrap">
                                 ${iconHtml}
@@ -7345,7 +7345,7 @@ if (subtitleElement) {
                         fieldHtml = `
                         <div class="form-group ${colCss}">
                             <label class="block text-sm font-medium text-gray-700 mb-1">
-                                ${this.escapeHtml(field.label)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
+                                ${this.escapeHtml(field.label)}${this.fieldHint(field)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
                             </label>
 
                             <div class="sf-field-wrap">
@@ -7385,7 +7385,7 @@ if (subtitleElement) {
                         fieldHtml = `
                         <div class="form-group ${colCss}">
                             <label class="block text-sm font-medium text-gray-700 mb-1">
-                                ${this.escapeHtml(field.label)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
+                                ${this.escapeHtml(field.label)}${this.fieldHint(field)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
 
                             </label>
                             <input type="text" name="${this.escapeHtml(field.name)}"
@@ -7401,7 +7401,7 @@ if (subtitleElement) {
                         fieldHtml = `
                         <div class="form-group ${colCss}">
                             <label class="block text-sm font-medium text-gray-700 mb-1">
-                                ${this.escapeHtml(field.label)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
+                                ${this.escapeHtml(field.label)}${this.fieldHint(field)} ${field.required ? '<span class="text-red-500">*</span>' : ''}
 
                             </label>
                             <input type="text" name="${this.escapeHtml(field.name)}"
@@ -8121,6 +8121,16 @@ if (subtitleElement) {
                     .replace(/>/g, "&gt;")
                     .replace(/"/g, "&quot;")
                     .replace(/'/g, "&#039;");
+            },
+
+            // Info icon with a hover hint next to a modal field label (same look as the table header hint).
+            fieldHint(field) {
+                const tip = field?.tooltip ?? field?.Tooltip;
+                if (!tip) return "";
+                const t = this.escapeHtml(tip);
+                return ` <span class="sf-field-hint" tabindex="0" role="note" title="${t}" aria-label="${t}"
+                    style="display:inline-flex;align-items:center;opacity:.8;font-size:.8rem;cursor:help;margin-inline-start:.25rem;"
+                    onclick="event.preventDefault();event.stopPropagation();"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></span>`;
             },
 
             // Toast notifications

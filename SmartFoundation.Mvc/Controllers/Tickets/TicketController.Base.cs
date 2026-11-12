@@ -124,6 +124,14 @@ namespace SmartFoundation.Mvc.Controllers.Tickets
             dt9 = (ds?.Tables?.Count ?? 0) > 9 ? ds.Tables[9] : null;
         }
 
+        /// <summary>
+        /// Organisation units (DSD) used as clarification/routing targets in ticket forms.
+        /// </summary>
+        private async Task<List<OptionItem>> GetServiceCatalogueDsdOptionsAsync()
+        {
+            return await GetTicketDdlOptionsAsync("dsdName_A", "DSDID", "1", "DSDDL", "اختر الجهة المستهدفة");
+        }
+
         protected async Task<List<OptionItem>> GetTicketDdlOptionsAsync(
             string textCol,
             string valueCol,

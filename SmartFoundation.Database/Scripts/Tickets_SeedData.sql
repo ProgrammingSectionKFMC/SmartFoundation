@@ -565,22 +565,30 @@ DECLARE @programID INT = (SELECT TOP 1 programID FROM dbo.Program WHERE programN
 INSERT INTO dbo.Menu (menuName_A, menuName_E, menuDescription, parentMenuID_FK, menuLink, programID_FK, menuSerial, menuActive, isDashboard, PageLvl)
 SELECT s.menuName_A, s.menuName_E, s.menuDescription, NULL, s.menuLink, @programID, s.menuSerial, s.menuActive, s.isDashboard, s.PageLvl
 FROM (VALUES
-    (N'التذاكر', N'TicketList', N'Ticket List', N'TicketList', 1, 1, 0, 0),
-    (N'قائمة التذاكر', N'TicketDetails', N'Ticket Details', N'TicketDetails', 2, 1, 0, 0),
-    (N'إدارة نظام التذاكر', N'TicketAdmin', N'Ticket Admin', N'TicketAdmin', 3, 1, 0, 0),
-    (N'دليل الخدمات', N'ServiceCatalogueList', N'Service Catalogue', N'ServiceCatalogueList', 4, 1, 0, 0)
+    (N'قائمة التذاكر', N'TicketList', N'Ticket List', N'TicketList', 1, 1, 0, 3),
+    (N'إجراءات التذاكر', N'TicketDetails', N'Ticket Details', N'TicketDetails', 2, 1, 0, 3),
+    (N'إعدادات التذاكر', N'TicketAdmin', N'Ticket Admin', N'TicketAdmin', 3, 1, 0, 2),
+    (N'دليل الخدمات', N'ServiceCatalogueList', N'Service Catalogue', N'ServiceCatalogueList', 4, 1, 0, 2)
 ) AS s (menuName_A, menuName_E, menuDescription, menuLink, menuSerial, menuActive, isDashboard, PageLvl)
 WHERE NOT EXISTS (SELECT 1 FROM dbo.Menu m WHERE m.menuName_E = s.menuName_E AND m.programID_FK = @programID);
+
+-- PageLvl 0 hides the ticket pages from the permissions screen (it lists levels 1-3 only).
+-- Fix menus created by earlier runs of this script.
+UPDATE m SET PageLvl = CASE m.menuName_E WHEN N'TicketAdmin' THEN 2 WHEN N'ServiceCatalogueList' THEN 2 ELSE 3 END
+FROM dbo.Menu m
+WHERE m.programID_FK = @programID
+  AND m.PageLvl = 0
+  AND m.menuName_E IN (N'TicketList', N'TicketDetails', N'TicketAdmin', N'ServiceCatalogueList');
 
 -- Distributors (permission groups per page)
 INSERT INTO dbo.Distributor (distributorName_A, distributorName_E, distributorDescription, distributorCode, distributorActive, distributorType_FK, roleID_FK, entryDate)
 SELECT s.distributorName_A, s.distributorName_E, s.distributorDescription, s.distributorCode, s.distributorActive, s.distributorType_FK, s.roleID_FK, GETDATE()
 FROM (VALUES
-    (N'الصلاحيات - التذاكر', N'Perm - TicketList', N'TicketList', N'TKT-TLIST', 1, 4, 1),
-    (N'الصلاحيات - قائمة التذاكر', N'Perm - TicketDetails', N'TicketDetails', N'TKT-TDET', 1, 4, 1),
-    (N'الصلاحيات - تفاصيل التذكرة', N'Perm - TicketAdmin', N'TicketAdmin', N'TKT-TADM', 1, 4, 1),
+    (N'قائمة التذاكر: عرض وإنشاء التذاكر', N'Perm - TicketList', N'TicketList', N'TKT-TLIST', 1, 4, 1),
+    (N'إجراءات التذاكر: توجيه وإسناد وحل وإغلاق', N'Perm - TicketDetails', N'TicketDetails', N'TKT-TDET', 1, 4, 1),
+    (N'إعدادات التذاكر: الفئات والأولويات والحالات', N'Perm - TicketAdmin', N'TicketAdmin', N'TKT-TADM', 1, 4, 1),
     (N'الصلاحيات - إدارة التذاكر', N'Perm - Tickets CRUD', N'Tickets', N'TKT-CRUD', 1, 4, 1),
-    (N'صلاحية - دليل الخدمات', N'Perm - Service Catalogue', N'Service Catalogue', N'TKT-SCAT', 1, 4, 1)
+    (N'دليل الخدمات: إضافة وتعديل الخدمات', N'Perm - Service Catalogue', N'Service Catalogue', N'TKT-SCAT', 1, 4, 1)
 ) AS s (distributorName_A, distributorName_E, distributorDescription, distributorCode, distributorActive, distributorType_FK, roleID_FK)
 WHERE NOT EXISTS (SELECT 1 FROM dbo.Distributor d WHERE d.distributorCode = s.distributorCode);
 
