@@ -124,159 +124,29 @@ namespace SmartFoundation.Mvc.Controllers.Tickets
             dt9 = (ds?.Tables?.Count ?? 0) > 9 ? ds.Tables[9] : null;
         }
 
-        protected async Task<List<OptionItem>> GetTicketDdlOptionsAsync(
-            string textCol,
-            string valueCol,
-            string tableIndex,
-            string pageName,
-            string? firstOption = null)
+        private static List<Dictionary<string, object?>> ConvertTableToDictionaryList(DataTable? table)
         {
-            if (string.Equals(pageName, "ResidentDDL", StringComparison.OrdinalIgnoreCase))
+            var items = new List<Dictionary<string, object?>>();
+            if (table == null)
+                return items;
+
+            foreach (DataRow row in table.Rows)
             {
-                var residentTable = await GetResidentsWithHousing();
-                var residentOptions = BuildResidentOptionItems(residentTable, firstOption);
-                if (HasUsableOptions(residentOptions))
-                    return residentOptions;
-            }
-
-            var ddlResult = await _CrudController.GetDDLValues(
-                textCol,
-                valueCol,
-                tableIndex,
-                pageName,
-                usersId,
-                IdaraId,
-                HostName,
-                FirstOption: firstOption
-            ) as JsonResult;
-
-            var options = ddlResult?.Value != null
-                ? JsonSerializer.Deserialize<List<OptionItem>>(JsonSerializer.Serialize(ddlResult.Value)) ?? new List<OptionItem>()
-                : new List<OptionItem>();
-
-            if (HasUsableOptions(options))
-                return options;
-
-            return BuildOptionItems(null, valueCol, textCol, firstOption);
-        }
-
-        private List<OptionItem> BuildOptionItems(
-            DataTable? table,
-            string valueCol,
-            string textCol,
-            string? firstOption)
-        {
-            var options = new List<OptionItem>();
-
-            if (!string.IsNullOrWhiteSpace(firstOption))
-            {
-                options.Add(new OptionItem { Value = "-1", Text = firstOption });
-            }
-
-            if (table != null && table.Columns.Contains(valueCol) && table.Columns.Contains(textCol))
-            {
-                foreach (DataRow row in table.Rows)
+                var item = new Dictionary<string, object?>();
+                foreach (DataColumn column in table.Columns)
                 {
-                    var value = row[valueCol]?.ToString()?.Trim();
-                    var text = row[textCol]?.ToString()?.Trim();
-
-                    if (!string.IsNullOrWhiteSpace(value))
-                    {
-                        options.Add(new OptionItem
-                        {
-                            Value = value,
-                            Text = string.IsNullOrWhiteSpace(text) ? value : text
-                        });
-                    }
+                    var rawValue = row[column] == DBNull.Value ? null : row[column];
+                    item[column.ColumnName] = rawValue is string textValue
+                        ? NormalizeResidentText(textValue)
+                        : rawValue;
                 }
+                items.Add(item);
             }
 
-            if (!HasUsableOptions(options))
-            {
-                options.Add(new OptionItem { Value = "-1", Text = "لاتوجد خيارات" });
-            }
-
-            return options;
+            return items;
         }
 
-        private List<OptionItem> BuildResidentOptionItems(DataTable? table, string? firstOption)
-        {
-            var options = new List<OptionItem>();
-
-            if (!string.IsNullOrWhiteSpace(firstOption))
-            {
-                options.Add(new OptionItem { Value = "-1", Text = firstOption });
-            }
-
-            if (table != null)
-            {
-                var seenResidents = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                foreach (DataRow row in table.Rows)
-                {
-                    var residentId = GetTrimmedCell(row, "residentInfoID");
-                    if (string.IsNullOrWhiteSpace(residentId) || !seenResidents.Add(residentId))
-                        continue;
-
-                    var residentName = GetTrimmedCell(row, "ResidentName_A", "FullName_A");
-                    var nationalId = GetTrimmedCell(row, "NationalID");
-                    var generalNo = GetTrimmedCell(row, "generalNo_FK");
-                    var housing = NormalizeResidentHousing(GetTrimmedCell(row, "BuildingNo"));
-
-                    var identity = !string.IsNullOrWhiteSpace(nationalId)
-                        ? nationalId
-                        : !string.IsNullOrWhiteSpace(generalNo)
-                            ? generalNo
-                            : "-";
-
-                    if (string.IsNullOrWhiteSpace(residentName))
-                        residentName = identity;
-
-                    options.Add(new OptionItem
-                    {
-                        Value = residentId,
-                        Text = FormatResidentOptionText(residentName, identity, housing)
-                    });
-                }
-            }
-
-            if (!HasUsableOptions(options))
-            {
-                options.Add(new OptionItem { Value = "-1", Text = "لاتوجد خيارات" });
-            }
-
-            return options;
-        }
-
-        private static string GetTrimmedCell(DataRow row, params string[] columnNames)
-        {
-            foreach (var columnName in columnNames)
-            {
-                if (!row.Table.Columns.Contains(columnName))
-                    continue;
-
-                var value = row[columnName]?.ToString()?.Trim();
-                if (!string.IsNullOrWhiteSpace(value))
-                    return NormalizeResidentText(value);
-            }
-
-            return string.Empty;
-        }
-
-        private static string NormalizeResidentHousing(string? buildingNo)
-        {
-            var rawBuildingNo = buildingNo?.Trim() ?? string.Empty;
-            var normalizedBuildingNo = NormalizeResidentText(buildingNo);
-            if (string.IsNullOrWhiteSpace(normalizedBuildingNo)
-                || string.Equals(normalizedBuildingNo, "No_house", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(normalizedBuildingNo, "بدون سكن", StringComparison.Ordinal)
-                || (rawBuildingNo.Contains("Ø¨Ø¯", StringComparison.Ordinal)
-                    && rawBuildingNo.Contains("Ø³ÙƒÙ†", StringComparison.Ordinal)))
-                return "بدون سكن";
-
-            return normalizedBuildingNo;
-        }
-
+        // نص عربي محفوظ بترميز خاطئ (UTF-8 مقروء كـ Windows-1252) يُصحَّح عند العرض.
         private static string NormalizeResidentText(string? value)
         {
             if (string.IsNullOrWhiteSpace(value))
@@ -359,146 +229,6 @@ namespace SmartFoundation.Mvc.Controllers.Tickets
         private static bool ContainsArabicCharacters(string value)
         {
             return value.Any(character => character >= '\u0600' && character <= '\u06FF');
-        }
-
-        private static string FormatResidentOptionText(string residentName, string identity, string housing)
-        {
-            return $"{residentName} | هوية: {FormatResidentInlineValue(identity)} | السكن: {FormatResidentInlineValue(housing)}";
-        }
-
-        private static string FormatResidentInlineValue(string value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                return "-";
-
-            var trimmedValue = value.Trim();
-            if (trimmedValue.All(character => char.IsDigit(character) || character is '-' or '/' or ' '))
-                return $"\u200E{trimmedValue}\u200E";
-
-            return trimmedValue;
-        }
-
-        private static bool HasUsableOptions(IEnumerable<OptionItem>? options)
-        {
-            return options?.Any(option =>
-                !string.IsNullOrWhiteSpace(option.Value) &&
-                !string.Equals(option.Value, "-1", StringComparison.Ordinal)) == true;
-        }
-
-        /// <summary>
-        /// Get residents with active housing assignments for ticket creation
-        /// </summary>
-        protected async Task<DataTable> GetResidentsWithHousing()
-        {
-            try
-            {
-                var dataSet = await _mastersServies.GetDataLoadDataSetAsync(
-                    "ResidentDDL",
-                    IdaraId,
-                    usersId,
-                    HostName);
-
-                if ((dataSet.Tables?.Count ?? 0) > 1
-                    && dataSet.Tables[1].Columns.Contains("residentInfoID"))
-                {
-                    return dataSet.Tables[1];
-                }
-
-                if ((dataSet.Tables?.Count ?? 0) > 0
-                    && dataSet.Tables[0].Columns.Contains("residentInfoID"))
-                {
-                    return dataSet.Tables[0];
-                }
-            }
-            catch
-            {
-                // Return empty table when gateway route is unavailable.
-            }
-
-            return new DataTable();
-        }
-
-        private async Task<DataTable?> LoadTicketDataTableAsync(
-            string pageName,
-            int ticketId,
-            params string[] expectedColumns)
-        {
-            try
-            {
-                DataSet dataSet = await _mastersServies.GetDataLoadDataSetAsync(
-                    pageName, IdaraId, usersId, HostName, ticketId.ToString());
-
-                return ResolveUsableTable(dataSet, expectedColumns);
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        private static DataTable? ResolveUsableTable(DataSet? dataSet, params string[] expectedColumns)
-        {
-            if (dataSet == null)
-                return null;
-
-            if (dataSet.Tables.Count > 1 && IsUsableTable(dataSet.Tables[1], expectedColumns))
-                return dataSet.Tables[1];
-
-            if (dataSet.Tables.Count > 0 && IsUsableTable(dataSet.Tables[0], expectedColumns))
-                return dataSet.Tables[0];
-
-            return null;
-        }
-
-        private static bool IsUsableTable(DataTable? table, params string[] expectedColumns)
-        {
-            return table != null
-                && !IsGatewayErrorTable(table)
-                && expectedColumns.Any(table.Columns.Contains);
-        }
-
-        private static bool IsGatewayErrorTable(DataTable? table)
-        {
-            return table != null
-                && table.Columns.Contains("IsSuccessful")
-                && table.Columns.Contains("Message_");
-        }
-
-        private static List<Dictionary<string, object?>> ConvertTableToDictionaryList(DataTable? table)
-        {
-            var items = new List<Dictionary<string, object?>>();
-            if (table == null)
-                return items;
-
-            foreach (DataRow row in table.Rows)
-            {
-                var item = new Dictionary<string, object?>();
-                foreach (DataColumn column in table.Columns)
-                {
-                    var rawValue = row[column] == DBNull.Value ? null : row[column];
-                    item[column.ColumnName] = rawValue is string textValue
-                        ? NormalizeResidentText(textValue)
-                        : rawValue;
-                }
-                items.Add(item);
-            }
-
-            return items;
-        }
-
-        private async Task<List<OptionItem>> GetDDLAsync(string labelCol, string valueCol, string ddlType, string? pageNameOverride = null)
-        {
-            var result = new List<OptionItem>();
-            var ddlResult = await _CrudController.GetDDLValues(
-                labelCol, valueCol, ddlType, pageNameOverride ?? PageName, usersId, IdaraId, HostName
-            ) as JsonResult;
-
-            if (ddlResult?.Value != null)
-            {
-                var json = JsonSerializer.Serialize(ddlResult.Value);
-                result = JsonSerializer.Deserialize<List<OptionItem>>(json) ?? new();
-            }
-            return result;
         }
     }
 }

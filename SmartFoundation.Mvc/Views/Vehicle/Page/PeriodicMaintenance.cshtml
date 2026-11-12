@@ -1,0 +1,15 @@
+@model SmartFoundation.UI.ViewModels.SmartPage.SmartPageViewModel
+@{
+    ViewData["Title"] = Model.PageTitle;
+    var armyLookup = ViewData["ArmyNumberLookup"] as string ?? "{}";
+    var groupLookup = ViewData["VehicleGroupLookup"] as string ?? "{}";
+}
+
+<script>window.__armyNumberLookup = @Html.Raw(armyLookup);</script>
+<script>window.__vehicleGroupLookup = @Html.Raw(groupLookup);</script>
+
+<link rel="stylesheet" href="~/css/page-periodic-maintenance.css" asp-append-version="true" />
+
+<div class="page-pm">
+    @await Component.InvokeAsync("SmartRenderer", new { model = Model })
+</div>

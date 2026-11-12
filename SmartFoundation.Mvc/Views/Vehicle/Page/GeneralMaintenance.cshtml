@@ -1,0 +1,16 @@
+@model SmartFoundation.UI.ViewModels.SmartPage.SmartPageViewModel
+@{
+    ViewData["Title"] = Model.PageTitle;
+    var armyLookup = ViewData["ArmyNumberLookup"] as string ?? "{}";
+}
+
+<script>window.__armyNumberLookup = @Html.Raw(armyLookup);</script>
+
+<link rel="stylesheet" href="~/_content/SmartFoundation.UI/css/sf-dynamic-fields.css" asp-append-version="true" />
+
+@await Component.InvokeAsync("SmartRenderer", new { model = Model })
+
+@section Scripts {
+    <script src="~/_content/SmartFoundation.UI/js/sf-dynamic-fields.js" asp-append-version="true"></script>
+    <script src="~/js/general-maintenance.js" asp-append-version="true"></script>
+}

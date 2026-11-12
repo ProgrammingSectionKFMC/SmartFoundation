@@ -645,3 +645,471 @@ window.sfEnter = (function () {
     };
 
 })();
+
+// PeriodicMaintenance START — Move Group modal handlers
+function sfOpenMoveGroupModal(row, action, table) {
+    if (!row) {
+        if (table && table.getSelectedRows) {
+            var rows = table.getSelectedRows();
+            if (rows && rows.length > 0) row = rows[0];
+        }
+        if (!row) { if (typeof toastr !== 'undefined') toastr.error('اختر مركبة'); return; }
+    }
+    var chassis = row.chassisNumber || row.chassisNumber_FK || '';
+    var currentGroup = row.GroupCode || row.groupCode || '';
+    if (!chassis) { if (typeof toastr !== 'undefined') toastr.error('رقم الهيكل غير متوفر'); return; }
+
+    if (action.openForm && action.openForm.fields) {
+        action.openForm.fields.forEach(function(f) {
+            if (f.name === 'p01') f.value = String(chassis);
+            if (f.name === 'currentGroup_display') f.value = currentGroup || 'غير معينة';
+        });
+    }
+    if (table && typeof table.openModal === 'function') table.openModal(action, row);
+}
+
+function sfSubmitMoveGroup(btn) {
+    try {
+        var form = btn.closest('form');
+        if (!form) return;
+        form.querySelectorAll('select:disabled').forEach(function(sel) { sel.disabled = false; });
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> جاري النقل...';
+        form.submit();
+    } catch(e) {
+        btn.disabled = false;
+        btn.innerHTML = 'تأكيد النقل';
+        if (typeof toastr !== 'undefined') toastr.error('sfSubmitMoveGroup: ' + e.message);
+        else alert('sfSubmitMoveGroup: ' + e.message);
+    }
+}
+// PeriodicMaintenance END
+
+function sfAutoEndDate(el, days) {
+    if (!el || !days) return;
+    var form = el.closest('form');
+    if (!form) return;
+
+    var startVal = el.value;
+    if (!startVal) return;
+
+    var startDate = new Date(startVal);
+    if (isNaN(startDate.getTime())) return;
+
+    var endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + days);
+
+    var yyyy = endDate.getFullYear();
+    var mm = String(endDate.getMonth() + 1).padStart(2, '0');
+    var dd = String(endDate.getDate()).padStart(2, '0');
+    var endStr = yyyy + '-' + mm + '-' + dd;
+
+    var allInputs = form.querySelectorAll('input.js-date, input[type="date"]');
+    var foundSelf = false;
+    for (var i = 0; i < allInputs.length; i++) {
+        if (allInputs[i] === el) { foundSelf = true; continue; }
+        if (foundSelf) {
+            var target = allInputs[i];
+            if (target._flatpickr) {
+                target._flatpickr.setDate(endStr);
+            } else {
+                target.value = endStr;
+            }
+            break;
+        }
+    }
+}
+
+function sfSetArmyNumber(el) {
+    if (!el) return;
+    var chassis = el.value;
+    if (!chassis) return;
+    var form = el.closest('form');
+    if (!form) return;
+
+    if (window.__armyNumberLookup) {
+        var display = form.querySelector('input[name="armyNumber_display"]');
+        if (display) {
+            display.value = window.__armyNumberLookup[chassis] || '';
+        }
+    }
+
+    sfSetGroupFromVehicle(chassis, form);
+}
+
+function sfSetGroupFromVehicle(chassis, form) {
+    if (!form) return;
+    var groupSelect = form.querySelector('select[name="p02"]');
+    if (!groupSelect) return;
+
+    if (!window.__vehicleGroupLookup || !window.__vehicleGroupLookup[chassis]) {
+        groupSelect.value = '';
+        groupSelect.disabled = false;
+        if (window.jQuery && jQuery.fn.select2) {
+            jQuery(groupSelect).val('').trigger('change');
+            jQuery(groupSelect).prop('disabled', false);
+        }
+        return;
+    }
+
+    var info = window.__vehicleGroupLookup[chassis];
+    var gid = String(info.groupID || info.GroupID || '');
+    if (gid) {
+        groupSelect.value = gid;
+        groupSelect.disabled = true;
+        if (window.jQuery && jQuery.fn.select2) {
+            jQuery(groupSelect).val(gid).trigger('change');
+            jQuery(groupSelect).prop('disabled', true);
+        }
+    }
+}
+
+async function sfOpenClosePeriodicModal(row, action, table) {
+    if (!row) {
+        if (table && table.getSelectedRows) {
+            var rows = table.getSelectedRows();
+            if (rows && rows.length > 0) row = rows[0];
+        }
+        if (!row) { table && table.showToast ? table.showToast('اختر أمر صيانة واحد', 'error') : alert('اختر أمر صيانة واحد'); return; }
+    }
+    var ordID = row.openOrderID || row.MaintOrdID;
+    if (!ordID) { table && table.showToast ? table.showToast('رقم أمر الصيانة غير متوفر', 'error') : alert('رقم أمر الصيانة غير متوفر'); return; }
+
+    try {
+        var resp = await fetch('/Vehicle/GetPeriodicDetails?maintOrdID=' + ordID);
+        var data = await resp.json();
+    } catch (err) {
+        if (table && table.showToast) table.showToast('خطأ في تحميل بنود الفحص', 'error');
+        else alert('خطأ في تحميل بنود الفحص');
+        return;
+    }
+
+    if (!data.success || !data.items || data.items.length === 0) {
+        if (table && table.showToast) table.showToast('لا توجد بنود فحص لهذا الأمر', 'error');
+        else alert('لا توجد بنود فحص لهذا الأمر');
+        return;
+    }
+
+    var baseFields = [];
+    if (action.openForm && action.openForm.fields) {
+        action.openForm.fields.forEach(function(f) {
+            var clone = Object.assign({}, f);
+            if (clone.name === 'p01') clone.value = String(ordID);
+            baseFields.push(clone);
+        });
+    }
+
+    data.items.forEach(function(item) {
+        var key = item.typesID_FK || item.MaintDetailesID;
+        var detailId = item.MaintDetailesID || 0;
+        var name = item.itemName || 'بند';
+        var curNotes = item.Notes || '';
+
+        baseFields.push({
+            name: '__cl_detailid_' + key,
+            type: 'hidden',
+            value: String(detailId),
+            isHidden: true,
+            extraCss: 'hidden'
+        });
+
+        baseFields.push({
+            name: '__cl_type_' + key,
+            type: 'hidden',
+            value: String(key),
+            isHidden: true,
+            extraCss: 'hidden'
+        });
+
+        baseFields.push({
+            name: '__cl_name_' + key,
+            label: name,
+            type: 'text',
+            colCss: '12',
+            readonly: true,
+            isHidden: true,
+            value: name,
+            extraCss: 'hidden'
+        });
+
+        baseFields.push({
+            name: '__cl_check_' + key,
+            label: name,
+            type: 'checkbox',
+            colCss: '12'
+        });
+
+        baseFields.push({
+            name: '__cl_notes_' + key,
+            label: 'الإجراء التصحيحي',
+            type: 'textarea',
+            colCss: '12',
+            value: curNotes
+        });
+    });
+
+    var formConfig = Object.assign({}, action.openForm || {});
+    formConfig.fields = baseFields;
+    action.openForm = formConfig;
+
+    if (table && typeof table.openModal === 'function') {
+        table.openModal(action, row);
+    }
+
+    setTimeout(function() {
+        var p02 = document.querySelector('.sf-modal form [name="p02"]');
+        if (p02) {
+            var today = new Date();
+            var yyyy = today.getFullYear();
+            var mm = String(today.getMonth() + 1).padStart(2, '0');
+            var dd = String(today.getDate()).padStart(2, '0');
+            var todayStr = yyyy + '-' + mm + '-' + dd;
+            if (p02._flatpickr) {
+                p02._flatpickr.setDate(todayStr);
+            } else {
+                p02.value = todayStr;
+            }
+        }
+    }, 300);
+}
+
+function sfSubmitCloseChecklist(btn) {
+    var form = btn.closest('form');
+    if (!form) return;
+
+    var closeDate = form.querySelector('[name="p02"]');
+    if (closeDate && !closeDate.value) {
+        if (typeof toastr !== 'undefined') toastr.error('تاريخ الإغلاق مطلوب');
+        else alert('تاريخ الإغلاق مطلوب');
+        return;
+    }
+
+    var checkboxes = form.querySelectorAll('[name^="__cl_check_"]');
+    var unchecked = [];
+    checkboxes.forEach(function(cb) {
+        if (!cb.checked) unchecked.push(cb);
+    });
+
+    if (unchecked.length > 0) {
+        if (typeof toastr !== 'undefined') toastr.error('يجب تحديد جميع البنود كمكتملة قبل الإغلاق (' + unchecked.length + ' بند غير مكتمل)');
+        else alert('يجب تحديد جميع البنود كمكتملة قبل الإغلاق');
+        return;
+    }
+
+    var details = [];
+    checkboxes.forEach(function(cb) {
+        var key = cb.name.replace('__cl_check_', '');
+        var detailIdField = form.querySelector('[name="__cl_detailid_' + key + '"]');
+        var typeField = form.querySelector('[name="__cl_type_' + key + '"]');
+        var notesField = form.querySelector('[name="__cl_notes_' + key + '"]');
+        details.push({
+            MaintDetailesID: detailIdField ? parseInt(detailIdField.value) : 0,
+            typesID_FK: typeField ? parseInt(typeField.value) : null,
+            CheckStatus_FK: cb.checked ? '268' : '',
+            Notes: notesField ? notesField.value : ''
+        });
+    });
+
+    var p04 = form.querySelector('[name="p04"]');
+    if (p04) p04.value = JSON.stringify(details);
+
+    form.querySelectorAll('select:disabled').forEach(function(sel) {
+        sel.disabled = false;
+    });
+
+    var body = new FormData(form);
+    var redirectUrl = body.get('redirectUrl') || '/Vehicle/PeriodicMaintenance';
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> جاري الإغلاق...';
+
+    fetch('/crud/update', { method: 'POST', body: body, redirect: 'manual' })
+        .then(function() {
+            window.location.href = redirectUrl;
+        })
+        .catch(function(err) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa fa-lock"></i> إغلاق الأمر';
+            if (typeof toastr !== 'undefined') toastr.error('خطأ: ' + err.message);
+            else alert('خطأ: ' + err.message);
+        });
+}
+
+function sfSubmitPeriodicInsert(btn) {
+    try {
+        var form = btn.closest('form');
+        if (!form) return;
+
+        // include disabled selects so their values are submitted with the form
+        form.querySelectorAll('select:disabled').forEach(function(sel) {
+            sel.disabled = false;
+        });
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> جاري الحفظ...';
+
+        // Native submit: the server (/crud/insert) sets the real result in TempData
+        // (success message OR error message, e.g. duplicate-order rejection) and returns
+        // a redirect. Letting the browser follow that redirect is what surfaces the true
+        // outcome on the page — no false "success" when the operation actually failed.
+        form.submit();
+    } catch(e) {
+        btn.disabled = false;
+        btn.innerHTML = 'حفظ';
+        if (typeof toastr !== 'undefined') toastr.error('sfSubmitPeriodicInsert: ' + e.message);
+        else alert('sfSubmitPeriodicInsert: ' + e.message);
+    }
+}
+
+async function sfOpenGeneralCloseModal(row, action, table) {
+    if (!row) {
+        if (table && table.getSelectedRows) {
+            var rows = table.getSelectedRows();
+            if (rows && rows.length > 0) row = rows[0];
+        }
+        if (!row) { table && table.showToast ? table.showToast('اختر أمر صيانة واحد', 'error') : alert('اختر أمر صيانة واحد'); return; }
+    }
+    var ordID = row.MaintOrdID || row.p01;
+    if (!ordID) { table && table.showToast ? table.showToast('رقم أمر الصيانة غير متوفر', 'error') : alert('رقم أمر الصيانة غير متوفر'); return; }
+
+    try {
+        var resp = await fetch('/Vehicle/GetGeneralFaults?maintOrdID=' + ordID);
+        var data = await resp.json();
+    } catch (err) {
+        if (table && table.showToast) table.showToast('خطأ في تحميل الأعطال', 'error');
+        else alert('خطأ في تحميل الأعطال');
+        return;
+    }
+
+    if (!data.success || !data.items || data.items.length === 0) {
+        if (table && table.showToast) table.showToast('لا توجد أعطال مسجلة لهذا الأمر', 'error');
+        else alert('لا توجد أعطال مسجلة لهذا الأمر');
+        return;
+    }
+
+    var baseFields = [];
+    if (action.openForm && action.openForm.fields) {
+        action.openForm.fields.forEach(function(f) {
+            if (f.name && f.name.indexOf('__gf_') === 0) return;
+            var clone = Object.assign({}, f);
+            if (clone.name === 'p01') clone.value = String(ordID);
+            baseFields.push(clone);
+        });
+    }
+
+    // Implemented by 60014017 — pre-fill workshop checkboxes from row data
+    var existingWs = (row.workshopIDs || "").split(",").map(function(s) { return s.trim(); });
+    baseFields.forEach(function(f) {
+        if (f.name && f.name.indexOf("__ws_") === 0
+            && existingWs.indexOf(f.name.replace("__ws_", "")) >= 0) {
+            f.value = "1";
+        }
+    });
+
+    data.items.forEach(function(item) {
+        var id = item.FaultID;
+        var desc = item.FaultDescription || '';
+
+        baseFields.push({
+            name: '__gf_desc_' + id,
+            label: 'الأعطال والقصور',
+            type: 'text',
+            colCss: '6',
+            readonly: true,
+            value: desc
+        });
+
+        baseFields.push({
+            name: '__gf_action_' + id,
+            label: 'الإجراء التصحيحي',
+            type: 'textarea',
+            colCss: '6',
+            required: true,
+            value: item.CorrectiveAction || ''
+        });
+    });
+
+    var formConfig = Object.assign({}, action.openForm || {});
+    formConfig.fields = baseFields;
+    action.openForm = formConfig;
+
+    if (table && typeof table.openModal === 'function') {
+        table.openModal(action, row);
+    }
+
+    setTimeout(function() {
+        var p07 = document.querySelector('.sf-modal form [name="p07"]');
+        if (p07) {
+            var today = new Date();
+            var yyyy = today.getFullYear();
+            var mm = String(today.getMonth() + 1).padStart(2, '0');
+            var dd = String(today.getDate()).padStart(2, '0');
+            var todayStr = yyyy + '-' + mm + '-' + dd;
+            if (p07._flatpickr) {
+                p07._flatpickr.setDate(todayStr);
+            } else {
+                p07.value = todayStr;
+            }
+        }
+    }, 300);
+}
+
+function sfSubmitGeneralClose(btn) {
+    var form = btn.closest('form');
+    if (!form) return;
+
+    var closeDate = form.querySelector('[name="p07"]');
+    if (closeDate && !closeDate.value) {
+        if (typeof toastr !== 'undefined') toastr.error('تاريخ الإغلاق مطلوب');
+        else alert('تاريخ الإغلاق مطلوب');
+        return;
+    }
+
+    var actions = [];
+    var textareas = form.querySelectorAll('[name^="__gf_action_"]');
+    var missing = false;
+    textareas.forEach(function(ta) {
+        var id = ta.name.replace('__gf_action_', '');
+        var val = (ta.value || '').trim();
+        if (!val) missing = true;
+        actions.push({ faultID: parseInt(id), correctiveAction: val });
+    });
+
+    if (missing) {
+        if (typeof toastr !== 'undefined') toastr.error('يجب إدخال الإجراء التصحيحي لكل عطل');
+        else alert('يجب إدخال الإجراء التصحيحي لكل عطل');
+        return;
+    }
+
+    var p09 = form.querySelector('[name="p09"]');
+    if (p09) p09.value = JSON.stringify(actions);
+
+    // Implemented by 60014017 — collect workshop checkboxes into p08
+    var wsIds = [];
+    form.querySelectorAll('input[type="checkbox"][name^="__ws_"]').forEach(function(cb) {
+        if (cb.checked) wsIds.push(cb.name.replace("__ws_", ""));
+    });
+    var p08 = form.querySelector('[name="p08"]');
+    if (p08) p08.value = wsIds.join(",");
+
+    form.querySelectorAll('select:disabled').forEach(function(sel) {
+        sel.disabled = false;
+    });
+
+    var body = new FormData(form);
+    var redirectUrl = body.get('redirectUrl') || '/Vehicle/GeneralMaintenance';
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> جاري الإغلاق...';
+
+    fetch('/crud/update', { method: 'POST', body: body, redirect: 'manual' })
+        .then(function() {
+            window.location.href = redirectUrl;
+        })
+        .catch(function(err) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa fa-lock"></i> إغلاق الأمر';
+            if (typeof toastr !== 'undefined') toastr.error('خطأ: ' + err.message);
+            else alert('خطأ: ' + err.message);
+        });
+}

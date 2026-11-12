@@ -102,6 +102,55 @@
                  THROW 50001, N'التذكرة غير موجودة أو لا تتبع الإدارة المحددة', 1;
          END
 
+         -- تعديل 03: إجراءات تنفيذ العمل مقصورة على الموظف المسند إليه التذكرة.
+         -- الصلاحية تحدد من يملك الإجراء عمومًا، وهذا الفحص يحدد على أي تذكرة.
+         -- إجراءات الإشراف (توجيه، إسناد، إعادة إسناد، رفض، إغلاق، إعادة فتح، أولوية) لها فحص النطاق أدناه.
+         IF @ticketID IS NOT NULL
+            AND @Action IN (N'START_WORK', N'RESOLVE_TICKET', N'PAUSE_TICKET', N'RESUME_TICKET')
+         BEGIN
+             DECLARE @ownerAssignedUserID INT;
+             SELECT @ownerAssignedUserID = [assignedUserID_FK]
+             FROM [Tickets].[Ticket]
+             WHERE [ticketID] = @ticketID AND [ticketActive] = 1;
+
+             IF @ownerAssignedUserID IS NULL
+                 THROW 50001, N'التذكرة غير مسندة لأي موظف، يجب إسنادها أولًا', 1;
+
+             IF @performerUserID IS NULL OR @performerUserID <> @ownerAssignedUserID
+                 THROW 50001, N'هذا الإجراء متاح فقط للموظف المسند إليه التذكرة', 1;
+         END
+
+         -- تعديل 04: إجراءات الإشراف مقصورة على أعضاء خط الجهة الحالية للتذكرة (الجهة وما تحتها وما فوقها مباشرة، Tickets.ft_UnitLine) أو صف التوزيع،
+         -- بنفس شرط أهلية المستلم في ASSIGN_TICKET. امتلاك صلاحية الصفحة لا يكفي للتصرف في تذكرة جهة أخرى.
+         -- التذكرة التي لم توجَّه بعد (بدون جهة أو صف) يكفي فيها فحص الإدارة أعلاه.
+         IF @ticketID IS NOT NULL
+            AND @Action IN (N'ROUTE_TICKET', N'ASSIGN_TICKET', N'REASSIGN_TICKET', N'REJECT_TICKET',
+                            N'CLOSE_TICKET', N'REOPEN_TICKET', N'UPDATE_PRIORITY')
+         BEGIN
+             DECLARE @scopeQueueDistributorID INT, @scopeDSDID INT;
+             SELECT @scopeQueueDistributorID = [currentQueueDistributorID_FK]
+                  , @scopeDSDID = [currentDSDID_FK]
+             FROM [Tickets].[Ticket]
+             WHERE [ticketID] = @ticketID AND [ticketActive] = 1;
+
+             IF (@scopeQueueDistributorID IS NOT NULL OR @scopeDSDID IS NOT NULL)
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM dbo.[UserDistributor] ud
+                    INNER JOIN dbo.[Distributor] d ON d.[distributorID] = ud.[distributorID_FK]
+                    WHERE ud.[userID_FK] = @performerUserID
+                      AND ISNULL(ud.[UDActive], 1) = 1
+                      AND (ud.[UDStartDate] IS NULL OR CAST(ud.[UDStartDate] AS date) <= CAST(GETDATE() AS date))
+                      AND (ud.[UDEndDate] IS NULL OR CAST(ud.[UDEndDate] AS date) >= CAST(GETDATE() AS date))
+                      AND ISNULL(d.[distributorActive], 1) = 1
+                      AND (
+                            (@scopeQueueDistributorID IS NOT NULL AND ud.[distributorID_FK] = @scopeQueueDistributorID)
+                         OR (@scopeDSDID IS NOT NULL AND d.[DSDID_FK] IN (SELECT ul.[DSDID] FROM [Tickets].[ft_UnitLine](@scopeDSDID) ul))
+                      )
+                )
+                 THROW 50001, N'لا يمكنك تنفيذ هذا الإجراء على تذكرة لا تتبع جهتك', 1;
+         END
+
          ----------------------------------------------------------------
          -- INSERT_TICKET
          ----------------------------------------------------------------
@@ -121,8 +170,10 @@
              ELSE
              BEGIN
                  -- Employee and public reports are recorded by the signed-in user.
+                 -- تعديل 04: الهوية من الجلسة فقط (@performerUserID / @entryData)، وتُتجاهل القيمة المرسلة في p03،
+                 -- فلا يمكن تسجيل بلاغ باسم موظف آخر. لا توجد صلاحية "التسجيل نيابة عن الغير" حاليًا.
                  SET @requesterResidentID_FK = NULL;
-                 SET @requesterUserID_FK = ISNULL(@requesterUserID_FK, TRY_CAST(@entryData AS INT));
+                 SET @requesterUserID_FK = COALESCE(@performerUserID, TRY_CAST(@entryData AS INT));
              END
 
              SET @reporterName  = NULLIF(LTRIM(RTRIM(@reporterName)), N'');
@@ -216,6 +267,32 @@
                  BEGIN ;THROW 50001, N'تذاكر السكان تتطلب معرف ساكن لمقدم الطلب', 1; END
                  IF @requesterUserID_FK IS NOT NULL
                  BEGIN ;THROW 50001, N'تذاكر السكان يجب ألا تحتوي على معرف مستخدم لمقدم الطلب', 1; END
+
+                 -- تعديل 05: أهلية الساكن بنفس شرط قائمة ResidentDDL: يتبع إدارة البلاغ وله سكن فعّال.
+                 IF NOT EXISTS
+                 (
+                     SELECT 1
+                     FROM [Housing].[V_GetFullResidentDetails] r
+                     INNER JOIN [DATACORE].[Housing].[BuildingAssign] ba ON r.[generalNo_FK] = ba.[GeneralNo]
+                     INNER JOIN [DATACORE].[Housing].[BuildingAssignStatus] bas ON ba.[BuildingAssignStatusID_FK] = bas.[BuildingAssignStatusID]
+                     WHERE r.[residentInfoID] = @requesterResidentID_FK
+                       AND r.[IdaraID] = @idaraID_FK
+                       AND bas.[Active] = 1
+                 )
+                     THROW 50001, N'الساكن المختار غير موجود أو لا يتبع هذه الإدارة أو ليس له سكن فعّال', 1;
+
+                 -- رقم المبنى في البلاغ يجب أن يكون أحد مساكن الساكن الفعّالة.
+                 IF @locationBuildingNo IS NOT NULL AND NOT EXISTS
+                 (
+                     SELECT 1
+                     FROM [Housing].[V_GetFullResidentDetails] r
+                     INNER JOIN [DATACORE].[Housing].[BuildingAssign] ba ON r.[generalNo_FK] = ba.[GeneralNo]
+                     INNER JOIN [DATACORE].[Housing].[BuildingAssignStatus] bas ON ba.[BuildingAssignStatusID_FK] = bas.[BuildingAssignStatusID]
+                     WHERE r.[residentInfoID] = @requesterResidentID_FK
+                       AND bas.[Active] = 1
+                       AND CONVERT(NVARCHAR(100), ba.[BuildingNo]) = @locationBuildingNo
+                 )
+                     THROW 50001, N'المبنى المحدد لا يتبع سكن الساكن المختار', 1;
              END
              ELSE IF @reqCode IN (N'INTERNAL', N'SUPERVISOR', N'MANAGER', N'PUBLIC')
              BEGIN
@@ -538,7 +615,7 @@
                AND ISNULL(d.[distributorActive], 1) = 1
                AND (
                  (@asCurrentQueueDistributorID IS NOT NULL AND ud.[distributorID_FK] = @asCurrentQueueDistributorID)
-                OR (@asCurrentDSDID IS NOT NULL AND d.[DSDID_FK] = @asCurrentDSDID)
+                OR (@asCurrentDSDID IS NOT NULL AND d.[DSDID_FK] IN (SELECT ul.[DSDID] FROM [Tickets].[ft_UnitLine](@asCurrentDSDID) ul))
                )
            )
            BEGIN ;THROW 50001, N'المستخدم المحدد غير مؤهل لاستلام التذكرة في المسار الحالي', 1; END
@@ -611,12 +688,12 @@
                AND (ud.[UDEndDate] IS NULL OR CAST(ud.[UDEndDate] AS date) >= CAST(GETDATE() AS date))
                AND ISNULL(d.[distributorActive], 1) = 1
                AND (
-                 (@currentDSDID_FK IS NOT NULL AND d.[DSDID_FK] = @raTargetDSDID)
+                 (@currentDSDID_FK IS NOT NULL AND d.[DSDID_FK] IN (SELECT ul.[DSDID] FROM [Tickets].[ft_UnitLine](@raTargetDSDID) ul))
                 OR (
                    @currentDSDID_FK IS NULL
                  AND (
                      (@raCurrentQueueDistributorID IS NOT NULL AND ud.[distributorID_FK] = @raCurrentQueueDistributorID)
-                    OR (@raTargetDSDID IS NOT NULL AND d.[DSDID_FK] = @raTargetDSDID)
+                    OR (@raTargetDSDID IS NOT NULL AND d.[DSDID_FK] IN (SELECT ul.[DSDID] FROM [Tickets].[ft_UnitLine](@raTargetDSDID) ul))
                  )
                 )
                )

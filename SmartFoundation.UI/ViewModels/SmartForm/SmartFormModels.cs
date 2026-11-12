@@ -20,6 +20,8 @@ namespace SmartFoundation.UI.ViewModels.SmartForm
         public string Type { get; set; } = "text";
         public string? Placeholder { get; set; }
         public string? HelpText { get; set; }
+        /// <summary>Hover hint shown as an info icon next to the field label (modal forms).</summary>
+        public string? Tooltip { get; set; }
         public string? Value { get; set; }
         public bool Required { get; set; } = false;
         public bool Readonly { get; set; } = false;

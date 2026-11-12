@@ -1,0 +1,148 @@
+.page-maintenance-report #reportFilterForm {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr) minmax(220px, 1fr) auto;
+    align-items: end;
+    gap: 14px 16px;
+    margin: 0 0 18px;
+    padding: 18px 20px 20px;
+    border: 1px solid #d5e6de;
+    border-radius: 12px;
+    background:
+        linear-gradient(135deg, rgba(4, 120, 87, 0.055), rgba(255, 255, 255, 0) 45%),
+        #fbfdfc;
+    box-shadow: 0 8px 24px rgba(15, 81, 63, 0.055);
+}
+
+.page-maintenance-report #reportFilterForm::before {
+    content: "خيارات تصفية سجل الصيانة";
+    grid-column: 1 / -1;
+    display: block;
+    padding-inline-start: 12px;
+    border-inline-start: 4px solid #0b7a5a;
+    color: #164e3d;
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1.5;
+}
+
+.page-maintenance-report #reportFilterForm > .form-row {
+    display: contents;
+}
+
+.page-maintenance-report #reportFilterForm > .form-row > .form-group {
+    grid-column: auto !important;
+    min-width: 0;
+}
+
+.page-maintenance-report #reportFilterForm .form-group > label {
+    margin-bottom: 7px;
+    color: #334155;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.page-maintenance-report #reportFilterForm .sf-select-wrap {
+    border-radius: 8px;
+}
+
+.page-maintenance-report #reportFilterForm .sf-modal-select {
+    height: 44px;
+    border-color: #c7d8d0;
+    border-radius: 8px;
+    background-color: #fff;
+    color: #1e293b;
+    font-size: 14px;
+    font-weight: 600;
+    transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.page-maintenance-report #reportFilterForm .sf-modal-select:hover {
+    border-color: #8fb6a5;
+}
+
+.page-maintenance-report #reportFilterForm .sf-modal-select:focus {
+    border-color: #0b7a5a;
+    box-shadow: 0 0 0 3px rgba(11, 122, 90, 0.11);
+}
+
+.page-maintenance-report #reportFilterForm > .actions-bar {
+    grid-column: auto;
+    align-self: end;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+}
+
+.page-maintenance-report #reportFilterForm .actions-inner {
+    flex-flow: row nowrap;
+    justify-content: flex-start;
+    gap: 8px;
+}
+
+.page-maintenance-report #reportFilterForm .actions-inner .btn {
+    min-height: 44px;
+    margin: 0;
+    padding-inline: 16px;
+    border-radius: 8px;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: none;
+}
+
+.page-maintenance-report #reportFilterForm .actions-inner .btn-info {
+    background: #087fbd;
+    border-color: #087fbd;
+}
+
+.page-maintenance-report #reportFilterForm .actions-inner .btn-info:hover {
+    background: #0369a1;
+    border-color: #0369a1;
+}
+
+.page-maintenance-report #reportFilterForm .actions-inner .btn-secondary {
+    background: #fff;
+    border-color: #cbd5e1;
+    color: #475569;
+}
+
+.page-maintenance-report #reportFilterForm .actions-inner .btn-secondary:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #334155;
+}
+
+@media (max-width: 980px) {
+    .page-maintenance-report #reportFilterForm {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .page-maintenance-report #reportFilterForm > .actions-bar {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 640px) {
+    .page-maintenance-report #reportFilterForm {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px;
+        padding: 16px;
+        border-radius: 10px;
+    }
+
+    .page-maintenance-report #reportFilterForm::before,
+    .page-maintenance-report #reportFilterForm > .actions-bar {
+        grid-column: 1;
+    }
+
+    .page-maintenance-report #reportFilterForm .actions-inner {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        width: 100%;
+    }
+
+    .page-maintenance-report #reportFilterForm .actions-inner .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}

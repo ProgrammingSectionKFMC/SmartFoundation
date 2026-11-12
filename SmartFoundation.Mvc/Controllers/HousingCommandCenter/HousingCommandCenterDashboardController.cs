@@ -1954,9 +1954,10 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
 
         // ───────────────────────────────────────────────────────
 
+
         private static void ApplyDepartmentAverages(
-    List<HousingCommandCenterMetric> metrics,
-    List<HousingCommandCenterDepartment> departments)
+            List<HousingCommandCenterMetric> metrics,
+            List<HousingCommandCenterDepartment> departments)
         {
             var metricKeys = new HashSet<string>(
                 StringComparer.OrdinalIgnoreCase)
@@ -1967,7 +1968,8 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
         "m_finance_utilities"
     };
 
-            foreach (var metric in metrics.Where(x => metricKeys.Contains(x.Key)))
+            foreach (var metric in metrics.Where(
+                x => metricKeys.Contains(x.Key)))
             {
                 var percentages = departments
                     .SelectMany(d => d.Metrics)
@@ -1981,18 +1983,30 @@ namespace SmartFoundation.Mvc.Controllers.HousingCommandCenter
                     ? Math.Round(percentages.Average(), 1)
                     : null;
 
+                // المتوسط العام لنسب كفاءة الإدارات القابلة للتقييم.
                 metric.CompletionPercent = average;
 
-                // هذه البطاقات تعرض الكفاءة، وليس إجمالي الوحدات.
-                // نستخدم 100 كمستهدف حتى لا تعيد الواجهة
-                // احتساب نسبة مختلفة من Actual / Target.
-                metric.Target = average.HasValue ? 100m : null;
-                metric.Actual = average;
+                // IMPORTANT:
+                // Do not overwrite metric.Actual or metric.Target.
+                //
+                // Readiness:  actual units / unoccupied units
+                // Occupancy:  occupied units / total units
+                // Procedures: efficiency / 100
+                // Finance:    payments / claims
+                //
+                // These values were already assigned by
+                // the corresponding Apply...Summary methods.
 
-                metric.Hint = average.HasValue
-                    ? $"متوسط كفاءة الإدارات القابلة للتقييم: {average.Value:0.0}% | " +
+                string averageHint = average.HasValue
+                    ? $"متوسط كفاءة الإدارات القابلة للتقييم: " +
+                      $"{average.Value:0.0}% | " +
                       $"عدد الإدارات المحتسبة: {percentages.Count:N0}"
                     : "لا توجد إدارات قابلة لتقييم هذا المؤشر.";
+
+                // Preserve the original operational statistics.
+                metric.Hint = string.IsNullOrWhiteSpace(metric.Hint)
+                    ? averageHint
+                    : $"{metric.Hint} | {averageHint}";
             }
         }
 
