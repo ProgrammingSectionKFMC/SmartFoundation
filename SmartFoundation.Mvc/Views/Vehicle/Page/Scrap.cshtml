@@ -1,0 +1,12 @@
+﻿@model SmartFoundation.UI.ViewModels.SmartPage.SmartPageViewModel
+@{
+    ViewData["Title"] = Model.PageTitle;
+}
+<link rel="stylesheet" href="~/_content/SmartFoundation.UI/css/sf-dynamic-fields.css" asp-append-version="true" />
+
+@await Component.InvokeAsync("SmartRenderer", new { model = Model })
+
+@section Scripts {
+    <script src="~/_content/SmartFoundation.UI/js/sf-dynamic-fields.js" asp-append-version="true"></script>
+    <script src="~/js/scrap.js" asp-append-version="true"></script>
+}

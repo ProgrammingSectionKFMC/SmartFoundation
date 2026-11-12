@@ -1,0 +1,10 @@
+@model SmartFoundation.UI.ViewModels.SmartPage.SmartPageViewModel
+@{
+    ViewData["Title"] = Model.PageTitle;
+}
+
+<link rel="stylesheet" href="~/css/page-maintenance-report.css" asp-append-version="true" />
+
+<div class="page-maintenance-report">
+    @await Component.InvokeAsync("SmartRenderer", new { model = Model })
+</div>

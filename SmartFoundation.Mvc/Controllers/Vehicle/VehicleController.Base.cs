@@ -147,5 +147,18 @@ namespace SmartFoundation.Mvc.Controllers.Vehicle
             dtExtra8 = (dsExtra?.Tables?.Count ?? 0) > 8 ? dsExtra.Tables[8] : null;
             dtExtra9 = (dsExtra?.Tables?.Count ?? 0) > 9 ? dsExtra.Tables[9] : null;
         }
+
+        protected static string? NormalizeDateForInput(object? value)
+        {
+            if (value == null) return null;
+
+            if (value is DateTime dt)
+                return dt.ToString("yyyy-MM-dd");
+
+            if (DateTime.TryParse(value.ToString(), out var parsed))
+                return parsed.ToString("yyyy-MM-dd");
+
+            return value.ToString();
+        }
     }
 }
