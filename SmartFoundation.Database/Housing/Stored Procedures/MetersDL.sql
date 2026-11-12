@@ -1,4 +1,4 @@
--- =============================================
+﻿-- =============================================
 -- Author:		<Author,,Name>
 -- Create date: <Create Date,,>
 -- Description:	<Description,,>
@@ -173,54 +173,97 @@ BEGIN
             where m.meterActive = 1  and mt.meterTypeActive = 1 and mbt.meterForBuildingID is null and m.IdaraId_FK = @idaraID
           
 
+
 ;WITH B AS
 (
     SELECT
-        b.buildingDetailsID,
-        b.buildingDetailsNo
-    FROM  Housing.V_GetGeneralListForBuilding b
-    WHERE b.buildingDetailsActive = 1
-      AND b.BuildingIdaraID = @idaraID
+        bd.buildingDetailsID,
+        bd.buildingDetailsNo
+    FROM Housing.BuildingDetails bd
+    INNER JOIN Housing.BuildingType bt
+        ON bt.buildingTypeID = bd.buildingTypeID_FK
+    INNER JOIN Housing.BuildingUtilityType bu
+        ON bu.buildingUtilityTypeID = bd.buildingUtilityTypeID_FK
+    INNER JOIN Housing.MilitaryLocation ml
+        ON ml.militaryLocationID = bd.militaryLocationID_FK
+    INNER JOIN Housing.MilitaryAreaCity mac
+        ON mac.militaryAreaCityID = ml.militaryAreaCityID_FK
+    INNER JOIN Housing.MilitaryArea ma
+        ON ma.militaryAreaID = mac.militaryAreaID_FK
+    INNER JOIN Housing.BuildingClass bc
+        ON bc.buildingClassID = bd.buildingClassID_FK
+    INNER JOIN dbo.Idara i
+        ON i.IdaraId = bd.IdaraId_FK
+    WHERE bd.IdaraId_FK = @idaraID
+      AND bd.buildingDetailsActive = 1
+      AND bt.buildingTypeActive = 1
+      AND bu.buildingUtilityTypeActive = 1
+      AND ml.militaryLocationActive = 1
+      AND bc.buildingClassActive = 1
+      AND mac.militaryAreaCityActive = 1
+      AND ma.militaryAreaIsActive = 1
+      AND bd.buildingDetailsStartDate IS NOT NULL
+      AND bu.buildingUtilityTypeStartDate IS NOT NULL
+      AND (
+          bd.buildingDetailsEndDate IS NULL
+          OR bd.buildingDetailsEndDate > GETDATE()
+      )
+      AND (
+          bu.buildingUtilityTypeEndDate IS NULL
+          OR bu.buildingUtilityTypeEndDate > GETDATE()
+      )
 ),
 AggService AS
 (
     SELECT
         mb.buildingDetailsID_FK AS buildingDetailsID,
-        ServiceNameClean =
-            NULLIF(
-                LTRIM(RTRIM(
-                    REPLACE(ISNULL(mst.meterServiceTypeName_A, N''), N'خدمة عدادات ', N'')
-                )),
-                N''
-            ),
-        Cnt = COUNT_BIG(*)
-    FROM  Housing.MeterForBuilding mb
-    INNER JOIN  Housing.Meter m
+        NULLIF(
+            LTRIM(RTRIM(
+                REPLACE(
+                    ISNULL(mst.meterServiceTypeName_A, N''),
+                    N'خدمة عدادات ', N''
+                )
+            )), N''
+        ) AS ServiceNameClean,
+        COUNT_BIG(*) AS Cnt
+    FROM Housing.MeterForBuilding mb
+    INNER JOIN B b
+        ON b.buildingDetailsID = mb.buildingDetailsID_FK
+    INNER JOIN Housing.Meter m
         ON m.meterID = mb.meterID_FK
        AND m.meterActive = 1
-    INNER JOIN  Housing.MeterType mt
+    INNER JOIN Housing.MeterType mt
         ON mt.meterTypeID = m.meterTypeID_FK
        AND mt.meterTypeActive = 1
-    INNER JOIN  Housing.MeterServiceType mst
+    INNER JOIN Housing.MeterServiceType mst
         ON mst.meterServiceTypeID = mt.meterServiceTypeID_FK
        AND mst.meterServiceTypeActive = 1
     WHERE mb.meterForBuildingActive = 1
-      AND NULLIF(LTRIM(RTRIM(ISNULL(mst.meterServiceTypeName_A, N''))), N'') IS NOT NULL
+      AND NULLIF(
+          LTRIM(RTRIM(
+              ISNULL(mst.meterServiceTypeName_A, N'')
+          )), N''
+      ) IS NOT NULL
     GROUP BY
         mb.buildingDetailsID_FK,
         NULLIF(
             LTRIM(RTRIM(
-                REPLACE(ISNULL(mst.meterServiceTypeName_A, N''), N'خدمة عدادات ', N'')
-            )),
-            N''
+                REPLACE(
+                    ISNULL(mst.meterServiceTypeName_A, N''),
+                    N'خدمة عدادات ', N''
+                )
+            )), N''
         )
 ),
 Agg AS
 (
     SELECT
         s.buildingDetailsID,
-        TotalCnt = SUM(s.Cnt),
-        Summary  = STRING_AGG(CONCAT(s.ServiceNameClean, N' x', s.Cnt), N', ')
+        SUM(s.Cnt) AS TotalCnt,
+        STRING_AGG(
+            CONCAT(s.ServiceNameClean, N' x', s.Cnt),
+            N', '
+        ) AS Summary
     FROM AggService s
     WHERE s.ServiceNameClean IS NOT NULL
     GROUP BY s.buildingDetailsID
@@ -229,13 +272,15 @@ SELECT
     b.buildingDetailsID,
     b.buildingDetailsNo
     + CASE
-        WHEN ISNULL(a.TotalCnt, 0) = 0 THEN N' (المبنى غير مرتبط باي عداد)'
+        WHEN ISNULL(a.TotalCnt, 0) = 0
+            THEN N' (المبنى غير مرتبط باي عداد)'
         ELSE N' (' + ISNULL(a.Summary, N'') + N')'
       END AS buildingDetailsNoWithMeters
 FROM B b
 LEFT JOIN Agg a
     ON a.buildingDetailsID = b.buildingDetailsID
 ORDER BY b.buildingDetailsNo;
+
 
 
 

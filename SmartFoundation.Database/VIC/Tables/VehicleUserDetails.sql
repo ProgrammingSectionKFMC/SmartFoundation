@@ -1,4 +1,4 @@
-CREATE TABLE [VIC].[VehicleUserDetails] (
+﻿CREATE TABLE [VIC].[VehicleUserDetails] (
     [vehicleUserDetailsID] INT             IDENTITY (1, 1) NOT NULL,
     [vehicleUserID_FK]     INT             NOT NULL,
     [generalNo_Snapshot]   BIGINT          NULL,
@@ -29,16 +29,16 @@ CREATE TABLE [VIC].[VehicleUserDetails] (
 );
 
 
-GO
-
-CREATE NONCLUSTERED INDEX [IX_VUD_User]
-    ON [VIC].[VehicleUserDetails]([vehicleUserID_FK] ASC);
 
 
 GO
 
-CREATE UNIQUE NONCLUSTERED INDEX [UX_VUD_OneActive]
-    ON [VIC].[VehicleUserDetails]([vehicleUserID_FK] ASC) WHERE ([detailsActive]=(1));
+
+
+
+GO
+
+
 
 
 GO

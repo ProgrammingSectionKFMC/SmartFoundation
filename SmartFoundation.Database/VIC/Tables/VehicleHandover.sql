@@ -1,4 +1,4 @@
-CREATE TABLE [VIC].[VehicleHandover] (
+﻿CREATE TABLE [VIC].[VehicleHandover] (
     [VehicleHandoverID] INT            IDENTITY (1, 1) NOT NULL,
     [handOverTypeID_FK] INT            NULL,
     [handoverDate]      DATETIME       NULL,
@@ -17,16 +17,16 @@ CREATE TABLE [VIC].[VehicleHandover] (
 );
 
 
-GO
-
-CREATE NONCLUSTERED INDEX [IX_VehicleHandover_chassis]
-    ON [VIC].[VehicleHandover]([chassisNumber_FK] ASC);
 
 
 GO
 
-CREATE NONCLUSTERED INDEX [IX_VehicleHandover_vehicleID]
-    ON [VIC].[VehicleHandover]([vehicleID_FK] ASC);
+
+
+
+GO
+
+
 
 
 GO

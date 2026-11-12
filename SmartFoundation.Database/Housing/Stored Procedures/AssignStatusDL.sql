@@ -1,4 +1,4 @@
--- =============================================
+﻿-- =============================================
 -- Author:		<Author,,Name>
 -- Create date: <Create Date,,>
 -- Description:	<Description,,>
@@ -15,6 +15,21 @@ BEGIN
 	-- SET NOCOUNT ON added to prevent extra result sets from
 	-- interfering with SELECT statements.
 	SET NOCOUNT ON;
+
+
+    -- تحميل سجلات المحضر المطلوب مرة واحدة
+-- قبل عمليات الربط وتتبع السلاسل
+
+SELECT w.*
+INTO #AssignStatusWaiting
+FROM Housing.V_WaitingList w
+WHERE w.AssignPeriodID = @AssignPeriodID
+  AND w.IdaraId = @idaraID
+  AND w.LastActionTypeID IN (27,38,39,40,41,42,45);
+
+CREATE NONCLUSTERED INDEX
+    IX_AssignStatusWaiting_ActionID
+ON #AssignStatusWaiting (ActionID);
 	   
   -- Assign Data
 
@@ -70,7 +85,7 @@ BEGIN
 
             w.buildingDetailsID,
             w.buildingDetailsNo,
-            b.militaryLocationName_A,
+            ml.militaryLocationName_A,
             isnull(w.LastActionNote,w.ActionNote) ActionNote,
             w.IdaraId,
             w.AssignPeriodID,
@@ -88,11 +103,15 @@ SUM(
             
             
             
-    FROM Housing.V_WaitingList w 
+    FROM #AssignStatusWaiting w
     INNER JOIN Housing.V_GetFullResidentDetails rd 
         ON w.residentInfoID = rd.residentInfoID
         Inner Join Housing.BuildingActionType ba on w.LastActionTypeID = ba.buildingActionTypeID
-        left join Housing.V_GetGeneralListForBuilding b on w.buildingDetailsID = b.buildingDetailsID
+        LEFT JOIN Housing.BuildingDetails bd
+    ON bd.buildingDetailsID = w.buildingDetailsID
+
+LEFT JOIN Housing.MilitaryLocation ml
+    ON ml.militaryLocationID = bd.militaryLocationID_FK
         
 -- التحقق من تخصيص المنزل داخل المحضر المحدد
 OUTER APPLY

@@ -1,4 +1,4 @@
-CREATE TABLE [Tickets].[TicketReason] (
+﻿CREATE TABLE [Tickets].[TicketReason] (
     [ticketReasonID]     BIGINT          IDENTITY (1, 1) NOT NULL,
     [ticketReasonCode]   NVARCHAR (50)   NOT NULL,
     [ticketReasonName_A] NVARCHAR (500)  NOT NULL,
@@ -20,28 +20,26 @@ CREATE TABLE [Tickets].[TicketReason] (
 );
 
 
-GO
-
-CREATE NONCLUSTERED INDEX [IX_TicketReason_Active_Order]
-    ON [Tickets].[TicketReason]([ticketReasonActive] ASC, [displayOrder] ASC, [ticketReasonID] ASC);
 
 
 GO
 
-CREATE NONCLUSTERED INDEX [IX_TicketReason_Class]
-    ON [Tickets].[TicketReason]([ticketClassID_FK] ASC);
 
-
-GO
-
-CREATE NONCLUSTERED INDEX [IX_TicketReason_Priority]
-    ON [Tickets].[TicketReason]([priorityID_FK] ASC);
 
 
 GO
 
-CREATE NONCLUSTERED INDEX [IX_TicketReason_Service]
-    ON [Tickets].[TicketReason]([serviceID_FK] ASC);
+
+
+
+GO
+
+
+
+
+GO
+
+
 
 
 GO

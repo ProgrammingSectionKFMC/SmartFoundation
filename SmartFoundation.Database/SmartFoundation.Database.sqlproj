@@ -805,6 +805,16 @@
     <Build Include="WH\Views\V_warehouseZone.sql">
       <QuotedIdentifier>Off</QuotedIdentifier>
     </Build>
+    <Build Include="VIC\Views\V_Dashboard_VehicleStatus.sql" />
+    <Build Include="Housing\Views\V_GetGeneralListForBuilding_Candidate_Operational_V7.sql" />
+    <Build Include="Housing\Views\V_GetGeneralListForBuilding_Candidate_Operational_V6.sql" />
+    <Build Include="Housing\Views\V_GetGeneralListForBuilding_Candidate_Operational_V5.sql" />
+    <Build Include="Housing\Views\V_GetGeneralListForBuilding_Candidate_Operational_V4.sql" />
+    <Build Include="Housing\Views\V_GetGeneralListForBuilding_Candidate_Operational_V3.sql" />
+    <Build Include="Housing\Views\V_GetGeneralListForBuilding_Candidate_Operational_V2.sql" />
+    <Build Include="Housing\Views\V_GetGeneralListForBuilding_Candidate_Operational.sql" />
+    <Build Include="VIC\Stored Procedures\TransferRequestSP.sql" />
+    <Build Include="VIC\Stored Procedures\TransferRequestDL.sql" />
   </ItemGroup>
   <ItemGroup>
     <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\150\SqlSchemas\master.dacpac">

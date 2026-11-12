@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[Masters_CRUD]
+﻿CREATE   PROCEDURE [dbo].[Masters_CRUD]
       @pageName_      NVARCHAR(400)
     , @ActionType     NVARCHAR(100)
     , @idaraID        INT
@@ -928,7 +928,7 @@ BEGIN
 
             SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
             GOTO Finish;
-        END
+       END
 
         ----------------------------------------------------------------
         -- BuildingUtilityType
@@ -4252,11 +4252,11 @@ END
 
 
         
-----------------------------------------------------------------
--- HousingUnallocatedPaymentsReview
-----------------------------------------------------------------
-ELSE IF @pageName_ = N'HousingUnallocatedPaymentsReview'
-BEGIN
+        ----------------------------------------------------------------
+        -- HousingUnallocatedPaymentsReview
+        ----------------------------------------------------------------
+        ELSE IF @pageName_ = N'HousingUnallocatedPaymentsReview'
+        BEGIN
 
     IF (
         SELECT COUNT(*)
@@ -4325,7 +4325,7 @@ END
 
         ----------------------------------------------------------------
           --نظام الدعم الفني للموقع 
-----------------------------------------------------------------
+        ----------------------------------------------------------------
 
        ----------------------------------------------------------------
         -- SupportMyTickets
@@ -4525,1650 +4525,11 @@ END
 
 
 
-----------------------------------------------------------------
-          --العربات 
-----------------------------------------------------------------
-        ----------------------------------------------------------------
--- Custody_Close
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'Custody_Close'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    IF @ActionType = 'UPDATE'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[Custody_Close_SP]
-              @vehicleWithUsersID = @parameter_01
-            , @endDate            = @parameter_02
-            , @note               = @parameter_03
-            , @entryData          = @entrydata
-            , @hostName           = @hostName
-            , @idaraID_FK         = @idaraID;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
-    GOTO Finish;
-END
-
-----------------------------------------------------------------
--- Custody_Create
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'Custody_Create'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    DECLARE @Result_CustodyCreate TABLE
-    (
-          IsSuccessful       INT
-        , Message_           NVARCHAR(4000)
-        , vehicleWithUsersID INT
-    );
-
-    IF @ActionType = 'INSERT'
-    BEGIN
-        INSERT INTO @Result_CustodyCreate(IsSuccessful, Message_, vehicleWithUsersID)
-        EXEC [VIC].[Custody_Create_SP]
-              @chassisNumber = @parameter_01
-            , @userID_FK      = @parameter_02
-            , @startDate      = @parameter_03
-            , @note           = @parameter_04
-            , @entryData      = @entrydata
-            , @hostName       = @hostName
-            , @idaraID_FK     = @idaraID;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result_CustodyCreate;
-    GOTO Finish;
-END
-
-----------------------------------------------------------------
--- Custody_Transfer
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'Custody_Transfer'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    DECLARE @Result_CustodyTransfer TABLE
-    (
-          IsSuccessful             INT
-        , Message_                 NVARCHAR(4000)
-        , ClosedVehicleWithUsersID INT
-        , NewVehicleWithUsersID    INT
-    );
-
-    IF @ActionType = 'INSERT'
-    BEGIN
-        INSERT INTO @Result_CustodyTransfer(IsSuccessful, Message_, ClosedVehicleWithUsersID, NewVehicleWithUsersID)
-        EXEC [VIC].[Custody_Transfer_SP]
-              @chassisNumber = @parameter_01
-            , @toUserID_FK    = @parameter_02
-            , @transferDate   = @parameter_03
-            , @note           = @parameter_04
-            , @entryData      = @entrydata
-            , @hostName       = @hostName
-            , @idaraID_FK     = @idaraID;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result_CustodyTransfer;
-    GOTO Finish;
-END
-
-----------------------------------------------------------------
--- Handover_Create
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'Handover_Create'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    IF @ActionType = 'INSERT'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[Handover_Create_SP]
-              @requestID      = @parameter_01
-            , @handoverTypeID = @parameter_02
-            , @handoverDate   = @parameter_03
-            , @note           = @parameter_04
-            , @idaraID_FK     = @idaraID
-            , @entryData      = @entrydata
-            , @hostName       = @hostName;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
-    GOTO Finish;
-END
-
-----------------------------------------------------------------
--- HandoverType
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'HandoverType'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    IF @ActionType = 'INSERT'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[HandoverType_Upsert_SP]
-              @handoverTypeID     = NULL
-            , @handoverTypeName_A = @parameter_01
-            , @handoverTypeName_E = @parameter_02
-            , @active             = @parameter_03
-            , @entryData          = @entrydata
-            , @hostName           = @hostName;
-    END
-    ELSE IF @ActionType = 'UPDATE'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[HandoverType_Upsert_SP]
-              @handoverTypeID     = @parameter_01
-            , @handoverTypeName_A = @parameter_02
-            , @handoverTypeName_E = @parameter_03
-            , @active             = @parameter_04
-            , @entryData          = @entrydata
-            , @hostName           = @hostName;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
-    GOTO Finish;
-END
-
-----------------------------------------------------------------
--- MaintenanceDetails_Delete
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'MaintenanceDetails_Delete'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    IF @ActionType = 'DELETE'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[MaintenanceDetails_Delete_SP]
-              @maintDetailesID = @parameter_01
-            , @idaraID_FK      = @idaraID
-            , @entryData       = @entrydata
-            , @hostName        = @hostName;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
-    GOTO Finish;
-END
-
-----------------------------------------------------------------
--- MaintenanceTemplate_Delete
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'MaintenanceTemplate_Delete'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    IF @ActionType = 'DELETE'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[MaintenanceTemplate_Delete_SP]
-              @TemplateID = @parameter_01
-            , @entryData  = @entrydata
-            , @hostName   = @hostName;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
-    GOTO Finish;
-END
-----------------------------------------------------------------
--- MaintenanceTemplate_Upsert
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'MaintenanceTemplate_Upsert'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    IF @ActionType = 'INSERT'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[MaintenanceTemplate_Upsert_SP]
-              @TemplateID        = NULL
-            , @MaintOrdTypeID_FK = @parameter_01
-            , @typesID_FK        = @parameter_02
-            , @TemplateOrder     = @parameter_03
-            , @active            = @parameter_04
-            , @entryData         = @entrydata
-            , @hostName          = @hostName;
-    END
-    ELSE IF @ActionType = 'UPDATE'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[MaintenanceTemplate_Upsert_SP]
-              @TemplateID        = @parameter_01
-            , @MaintOrdTypeID_FK = @parameter_02
-            , @typesID_FK        = @parameter_03
-            , @TemplateOrder     = @parameter_04
-            , @active            = @parameter_05
-            , @entryData         = @entrydata
-            , @hostName          = @hostName;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
-    GOTO Finish;
-END
-
-----------------------------------------------------------------
--- MaintenanceDetails_Upsert
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'MaintenanceDetails_Upsert'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    IF @ActionType = 'INSERT'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[MaintenanceDetails_Upsert_SP]
-              @maintDetailesID  = NULL
-            , @maintOrdID       = @parameter_01
-            , @typesID          = @parameter_02
-            , @supportID        = @parameter_03
-            , @checkStatus      = @parameter_04
-            , @actionState      = @parameter_05
-            , @correctiveAction = @parameter_06
-            , @fsn              = @parameter_07
-            , @maintLevel       = @parameter_08
-            , @currentDate      = @parameter_09
-            , @notes            = @parameter_10
-            , @idaraID_FK       = @idaraID
-            , @entryData        = @entrydata
-            , @hostName         = @hostName;
-    END
-    ELSE IF @ActionType = 'UPDATE'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[MaintenanceDetails_Upsert_SP]
-              @maintDetailesID  = @parameter_01
-            , @maintOrdID       = @parameter_02
-            , @typesID          = @parameter_03
-            , @supportID        = @parameter_04
-            , @checkStatus      = @parameter_05
-            , @actionState      = @parameter_06
-            , @correctiveAction = @parameter_07
-            , @fsn              = @parameter_08
-            , @maintLevel       = @parameter_09
-            , @currentDate      = @parameter_10
-            , @notes            = @parameter_11
-            , @idaraID_FK       = @idaraID
-            , @entryData        = @entrydata
-            , @hostName         = @hostName;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
-    GOTO Finish;
-END
-
-----------------------------------------------------------------
--- MaintenanceOrder_Close
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'MaintenanceOrder_Close'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    IF @ActionType = 'UPDATE'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[MaintenanceOrder_Close_SP]
-              @maintOrdID = @parameter_01
-            , @endDate    = @parameter_02
-            , @idaraID_FK = @idaraID
-            , @entryData  = @entrydata
-            , @hostName   = @hostName;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
-    GOTO Finish;
-END
-
-----------------------------------------------------------------
--- MaintenanceOrder_Upsert
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'MaintenanceOrder_Upsert'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    IF @ActionType = 'INSERT'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[MaintenanceOrder_Upsert_SP]
-              @maintOrdID     = NULL
-            , @maintOrdTypeID = @parameter_01
-            , @chassisNumber  = @parameter_02
-            , @startDate      = @parameter_03
-            , @endDate        = @parameter_04
-            , @desc           = @parameter_05
-            , @active         = @parameter_06
-            , @idaraID_FK     = @idaraID
-            , @entryData      = @entrydata
-            , @hostName       = @hostName;
-    END
-    ELSE IF @ActionType = 'UPDATE'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[MaintenanceOrder_Upsert_SP]
-              @maintOrdID     = @parameter_01
-            , @maintOrdTypeID = @parameter_02
-            , @chassisNumber  = @parameter_03
-            , @startDate      = @parameter_04
-            , @endDate        = @parameter_05
-            , @desc           = @parameter_06
-            , @active         = @parameter_07
-            , @idaraID_FK     = @idaraID
-            , @entryData      = @entrydata
-            , @hostName       = @hostName;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
-    GOTO Finish;
-END
-----------------------------------------------------------------
--- MaintenancePlan_AutoGenerate
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'MaintenancePlan_AutoGenerate'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    IF @ActionType = 'INSERT'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[MaintenancePlan_AutoGenerate_SP]
-              @idaraID_FK = @idaraID
-            , @entryData  = @entrydata
-            , @hostName   = @hostName;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
-    GOTO Finish;
-END
-----------------------------------------------------------------
--- MaintenancePlan_SetActive
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'MaintenancePlan_SetActive'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    IF @ActionType = 'UPDATE'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[MaintenancePlan_SetActive_SP]
-              @planID      = @parameter_01
-            , @active      = @parameter_02
-            , @idaraID_FK  = @idaraID
-            , @entryData   = @entrydata
-            , @hostName    = @hostName;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
-    GOTO Finish;
-END
-----------------------------------------------------------------
--- MaintenancePlan_Upsert
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'MaintenancePlan_Upsert'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    IF @ActionType = 'INSERT'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[MaintenancePlan_Upsert_SP]
-              @planID        = NULL
-            , @chassisNumber = @parameter_01
-            , @periodMonths  = @parameter_02
-            , @nextDueDate   = @parameter_03
-            , @active        = @parameter_04
-            , @idaraID_FK    = @idaraID
-            , @entryData     = @entrydata
-            , @hostName      = @hostName;
-    END
-    ELSE IF @ActionType = 'UPDATE'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[MaintenancePlan_Upsert_SP]
-              @planID        = @parameter_01
-            , @chassisNumber = @parameter_02
-            , @periodMonths  = @parameter_03
-            , @nextDueDate   = @parameter_04
-            , @active        = @parameter_05
-            , @idaraID_FK    = @idaraID
-            , @entryData     = @entrydata
-            , @hostName      = @hostName;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
-    GOTO Finish;
-END
-
-----------------------------------------------------------------
--- Scrap_Action
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'Scrap_Action'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    IF @ActionType IN ('APPROVE', 'CANCEL')
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[Scrap_Action_SP]
-              @Action         = @ActionType
-            , @ScrapID        = @parameter_01
-            , @idaraID_FK     = @idaraID
-            , @actionByUserID = @parameter_02
-            , @actionNote     = @parameter_03
-            , @entryData      = @entrydata
-            , @hostName       = @hostName;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
-    GOTO Finish;
-END
-
-----------------------------------------------------------------
--- Scrap_Upsert
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'Scrap_Upsert'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DECLARE @Result_ScrapUpsert TABLE
-    (
-          IsSuccessful INT
-        , Message_     NVARCHAR(4000)
-        , ScrapID      BIGINT
-    );
-
-    IF @ActionType = 'INSERT'
-    BEGIN
-        INSERT INTO @Result_ScrapUpsert(IsSuccessful, Message_, ScrapID)
-        EXEC [VIC].[Scrap_Upsert_SP]
-              @ScrapID        = NULL
-            , @chassisNumber  = @parameter_01
-            , @idaraID_FK     = @idaraID
-            , @ScrapDate      = @parameter_02
-            , @ScrapTypeID_FK = @parameter_03
-            , @RefNo          = @parameter_04
-            , @Reason         = @parameter_05
-            , @Note           = @parameter_06
-            , @Notes          = @parameter_07
-            , @entryData      = @entrydata
-            , @hostName       = @hostName;
-    END
-    ELSE IF @ActionType = 'UPDATE'
-    BEGIN
-        INSERT INTO @Result_ScrapUpsert(IsSuccessful, Message_, ScrapID)
-        EXEC [VIC].[Scrap_Upsert_SP]
-              @ScrapID        = @parameter_01
-            , @chassisNumber  = @parameter_02
-            , @idaraID_FK     = @idaraID
-            , @ScrapDate      = @parameter_03
-            , @ScrapTypeID_FK = @parameter_04
-            , @RefNo          = @parameter_05
-            , @Reason         = @parameter_06
-            , @Note           = @parameter_07
-            , @Notes          = @parameter_08
-            , @entryData      = @entrydata
-            , @hostName       = @hostName;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_
-    FROM @Result_ScrapUpsert;
-
-    GOTO Finish;
-END
-
-
-----------------------------------------------------------------
--- TransferRequest_Approve
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'TransferRequest_Approve'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    IF @ActionType = 'UPDATE'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[TransferRequest_Approve_SP]
-              @requestID  = @parameter_01
-            , @actionBy   = @parameter_02
-            , @note       = @parameter_03
-            , @hostName   = @hostName
-            , @idaraID_FK = @idaraID;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
-    GOTO Finish;
-END
-
-----------------------------------------------------------------
--- TransferRequest_Cancel
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'TransferRequest_Cancel'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    IF @ActionType = 'DELETE'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[TransferRequest_Cancel_SP]
-              @requestID  = @parameter_01
-            , @actionBy   = @parameter_02
-            , @note       = @parameter_03
-            , @hostName   = @hostName
-            , @idaraID_FK = @idaraID;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
-    GOTO Finish;
-END
-
-----------------------------------------------------------------
--- TransferRequest_Close
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'TransferRequest_Close'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    IF @ActionType = 'CLOSE'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[TransferRequest_Close_SP]
-              @requestID  = @parameter_01
-            , @actionBy   = @parameter_02
-            , @note       = @parameter_03
-            , @hostName   = @hostName
-            , @idaraID_FK = @idaraID;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
-    GOTO Finish;
-END
-
-----------------------------------------------------------------
--- TransferRequest_Create
-----------------------------------------------------------------
-----------------------------------------------------------------
--- TransferRequest_Create
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'TransferRequest_Create'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    DECLARE @Result_TransferRequest_Create TABLE
-    (
-          IsSuccessful INT
-        , Message_     NVARCHAR(4000)
-        , RequestID    INT
-    );
-
-    IF @ActionType = 'INSERT'
-    BEGIN
-        INSERT INTO @Result_TransferRequest_Create(IsSuccessful, Message_, RequestID)
-        EXEC [VIC].[TransferRequest_Create_SP]
-              @requestTypeID = @parameter_01
-            , @chassisNumber = @parameter_02
-            , @fromUserID    = @parameter_03
-            , @toUserID      = @parameter_04
-            , @deptID        = @parameter_05
-            , @createByUser  = @parameter_06
-            , @note          = @parameter_07
-            , @idaraID_FK    = @idaraID
-            , @entryData     = @entrydata
-            , @hostName      = @hostName;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result_TransferRequest_Create;
-    GOTO Finish;
-END
-
-----------------------------------------------------------------
--- TransferRequest_Execute
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'TransferRequest_Execute'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    DECLARE @Result_TransferRequest_Execute TABLE
-    (
-          IsSuccessful       INT
-        , Message_           NVARCHAR(4000)
-        , vehicleWithUsersID INT
-    );
-
-    IF @ActionType = 'UPDATE'
-    BEGIN
-        INSERT INTO @Result_TransferRequest_Execute(IsSuccessful, Message_, vehicleWithUsersID)
-        EXEC [VIC].[TransferRequest_Execute_SP]
-              @requestID  = @parameter_01
-            , @entryData  = @entrydata
-            , @hostName   = @hostName
-            , @idaraID_FK = @idaraID
-            , @note       = @parameter_02;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result_TransferRequest_Execute;
-    GOTO Finish;
-END
-
-----------------------------------------------------------------
--- TransferRequest_Reject
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'TransferRequest_Reject'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    IF @ActionType = 'UPDATE'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[TransferRequest_Reject_SP]
-              @requestID  = @parameter_01
-            , @actionBy   = @parameter_02
-            , @note       = @parameter_03
-            , @hostName   = @hostName
-            , @idaraID_FK = @idaraID;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
-    GOTO Finish;
-END
-
-----------------------------------------------------------------
--- TransferRequestType
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'TransferRequestType'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    IF @ActionType = 'INSERT'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[TransferRequestType_Upsert_SP]
-              @vehicleTransferRequestTypeID = NULL
-            , @nameA                        = @parameter_01
-            , @nameE                        = @parameter_02
-            , @active                       = @parameter_03;
-    END
-    ELSE IF @ActionType = 'UPDATE'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[TransferRequestType_Upsert_SP]
-              @vehicleTransferRequestTypeID = @parameter_01
-            , @nameA                        = @parameter_02
-            , @nameE                        = @parameter_03
-            , @active                       = @parameter_04;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
-    GOTO Finish;
-END
-
-----------------------------------------------------------------
--- TypesRoot_Upsert
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'TypesRoot_Upsert'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    IF @ActionType = 'INSERT'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[TypesRoot_Upsert_SP]
-              @typesID            = NULL
-            , @typesName_A        = @parameter_01
-            , @typesName_E        = @parameter_02
-            , @typesDesc          = @parameter_03
-            , @typesActive        = @parameter_04
-            , @typesStartDate     = @parameter_05
-            , @typesEndDate       = @parameter_06
-            , @typesRoot_ParentID = @parameter_07
-            , @entryData          = @entrydata
-            , @hostName           = @hostName;
-    END
-    ELSE IF @ActionType = 'UPDATE'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[TypesRoot_Upsert_SP]
-              @typesID            = @parameter_01
-            , @typesName_A        = @parameter_02
-            , @typesName_E        = @parameter_03
-            , @typesDesc          = @parameter_04
-            , @typesActive        = @parameter_05
-            , @typesStartDate     = @parameter_06
-            , @typesEndDate       = @parameter_07
-            , @typesRoot_ParentID = @parameter_08
-            , @entryData          = @entrydata
-            , @hostName           = @hostName;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
-    GOTO Finish;
-END
-
-----------------------------------------------------------------
--- Vehicle_Upsert
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'Vehicle_Upsert'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    -- ملاحظة: VIC.Vehicle_Upsert_SP يرجّع 3 أعمدة (IsSuccessful, Message_, chassisNumber)
-    DECLARE @Result_VehicleUpsert TABLE
-    (
-          IsSuccessful  INT
-        , Message_      NVARCHAR(4000)
-        , chassisNumber NVARCHAR(100)
-    );
-
-    IF @ActionType = 'INSERT'
-    BEGIN
-        INSERT INTO @Result_VehicleUpsert(IsSuccessful, Message_, chassisNumber)
-        EXEC [VIC].[Vehicle_Upsert_SP]
-              @UsersID               = @entrydata
-            , @MenuLink              = NULL
-            , @SkipPermission        = 1
-            , @chassisNumber         = @parameter_01
-            , @ownerID_FK            = @parameter_02
-            , @ManufacturerNameID_FK = @parameter_03
-            , @vehicleModelID_FK     = @parameter_04
-            , @vehicleClassID_FK     = @parameter_05
-            , @TypeOfUseID_FK        = @parameter_06
-            , @vehicleColorID_FK     = @parameter_07
-            , @countryMadeID_FK      = @parameter_08
-            , @regstritionTypeID_FK  = @parameter_09
-            , @regionID_FK           = @parameter_10
-            , @fuelTypeID_FK         = @parameter_11
-            , @vehicleTypeID_FK      = @parameter_12
-            , @yearModel             = @parameter_13
-            , @capacity              = @parameter_14
-            , @serialNumber          = @parameter_15
-            , @plateLetters          = @parameter_16
-            , @plateNumbers          = @parameter_17
-            , @armyNumber            = @parameter_18
-            , @vehicleNote           = @parameter_19
-            , @idaraID_FK            = @idaraID
-            , @entryData             = @entrydata
-            , @hostName              = @hostName;
-    END
-    ELSE IF @ActionType = 'UPDATE'
-    BEGIN
-        INSERT INTO @Result_VehicleUpsert(IsSuccessful, Message_, chassisNumber)
-        EXEC [VIC].[Vehicle_Upsert_SP]
-              @UsersID               = @entrydata
-            , @MenuLink              = NULL
-            , @SkipPermission        = 1
-            , @chassisNumber         = @parameter_01
-            , @ownerID_FK            = @parameter_02
-            , @ManufacturerNameID_FK = @parameter_03
-            , @vehicleModelID_FK     = @parameter_04
-            , @vehicleClassID_FK     = @parameter_05
-            , @TypeOfUseID_FK        = @parameter_06
-            , @vehicleColorID_FK     = @parameter_07
-            , @countryMadeID_FK      = @parameter_08
-            , @regstritionTypeID_FK  = @parameter_09
-            , @regionID_FK           = @parameter_10
-            , @fuelTypeID_FK         = @parameter_11
-            , @vehicleTypeID_FK      = @parameter_12
-            , @yearModel             = @parameter_13
-            , @capacity              = @parameter_14
-            , @serialNumber          = @parameter_15
-            , @plateLetters          = @parameter_16
-            , @plateNumbers          = @parameter_17
-            , @armyNumber            = @parameter_18
-            , @vehicleNote           = @parameter_19
-            , @idaraID_FK            = @idaraID
-            , @entryData             = @entrydata
-            , @hostName              = @hostName;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
 
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result_VehicleUpsert;
-    GOTO Finish;
-END
 
 ----------------------------------------------------------------
--- VehicleDocument_Upsert
+           --الطلبات
 ----------------------------------------------------------------
-ELSE IF @pageName_ = 'VehicleDocument_Upsert'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    -- ملاحظة: VIC.VehicleDocument_Upsert_SP يرجّع 3 أعمدة (IsSuccessful, Message_, vehicleDocumentID)
-    DECLARE @Result_VehicleDocument TABLE
-    (
-          IsSuccessful      INT
-        , Message_          NVARCHAR(4000)
-        , vehicleDocumentID INT
-    );
-
-    IF @ActionType = 'INSERT'
-    BEGIN
-        INSERT INTO @Result_VehicleDocument(IsSuccessful, Message_, vehicleDocumentID)
-        EXEC [VIC].[VehicleDocument_Upsert_SP]
-              @vehicleDocumentID     = NULL
-            , @chassisNumber         = @parameter_01
-            , @vehicleDocumentTypeID = @parameter_02
-            , @vehicleDocumentNo     = @parameter_03
-            , @StartDate             = @parameter_04
-            , @EndDate               = @parameter_05
-            , @idaraID_FK            = @idaraID
-            , @entryData             = @entrydata
-            , @hostName              = @hostName;
-    END
-    ELSE IF @ActionType = 'UPDATE'
-    BEGIN
-        INSERT INTO @Result_VehicleDocument(IsSuccessful, Message_, vehicleDocumentID)
-        EXEC [VIC].[VehicleDocument_Upsert_SP]
-              @vehicleDocumentID     = @parameter_01
-            , @chassisNumber         = @parameter_02
-            , @vehicleDocumentTypeID = @parameter_03
-            , @vehicleDocumentNo     = @parameter_04
-            , @StartDate             = @parameter_05
-            , @EndDate               = @parameter_06
-            , @idaraID_FK            = @idaraID
-            , @entryData             = @entrydata
-            , @hostName              = @hostName;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result_VehicleDocument;
-    GOTO Finish;
-END
-
-----------------------------------------------------------------
--- VehicleDocumentType_Upsert
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'VehicleDocumentType_Upsert'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    -- ملاحظة: VIC.VehicleDocumentType_Upsert_SP يرجّع 3 أعمدة (IsSuccessful, Message_, vehicleDocumentTypeID)
-    DECLARE @Result_VehicleDocumentType TABLE
-    (
-          IsSuccessful           INT
-        , Message_               NVARCHAR(4000)
-        , vehicleDocumentTypeID  INT
-    );
-
-    IF @ActionType = 'INSERT'
-    BEGIN
-        INSERT INTO @Result_VehicleDocumentType(IsSuccessful, Message_, vehicleDocumentTypeID)
-        EXEC [VIC].[VehicleDocumentType_Upsert_SP]
-              @vehicleDocumentTypeID = NULL
-            , @NameA                 = @parameter_01
-            , @NameE                 = @parameter_02
-            , @Active                = @parameter_03
-            , @entryData             = @entrydata
-            , @hostName              = @hostName;
-    END
-    ELSE IF @ActionType = 'UPDATE'
-    BEGIN
-        INSERT INTO @Result_VehicleDocumentType(IsSuccessful, Message_, vehicleDocumentTypeID)
-        EXEC [VIC].[VehicleDocumentType_Upsert_SP]
-              @vehicleDocumentTypeID = @parameter_01
-            , @NameA                 = @parameter_02
-            , @NameE                 = @parameter_03
-            , @Active                = @parameter_04
-            , @entryData             = @entrydata
-            , @hostName              = @hostName;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result_VehicleDocumentType;
-    GOTO Finish;
-END
-
-----------------------------------------------------------------
--- VehicleInsurance_SetActive
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'VehicleInsurance_SetActive'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    IF @ActionType = 'SETACTIVE'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[VehicleInsurance_SetActive_SP]
-              @VehicleInsuranceID = @parameter_01
-            , @active             = @parameter_02
-            , @idaraID_FK          = @idaraID
-            , @entryData           = @entrydata
-            , @hostName            = @hostName;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
-    GOTO Finish;
-END
-
-----------------------------------------------------------------
--- VehicleInsurance_Upsert
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'VehicleInsurance_Upsert'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    IF @ActionType = 'UPSERT'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[VehicleInsurance_Upsert_SP]
-              @VehicleInsuranceID = @parameter_01
-            , @chassisNumber      = @parameter_02
-            , @OperationTypeID    = @parameter_03
-            , @InsuranceTypeID    = @parameter_04
-            , @Source             = @parameter_05
-            , @StartInsurance     = @parameter_06
-            , @EndInsurance       = @parameter_07
-            , @Amount             = @parameter_08
-            , @Note               = @parameter_09
-            , @active             = @parameter_10
-            , @idaraID_FK          = @idaraID
-            , @entryData           = @entrydata
-            , @hostName            = @hostName;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
-    GOTO Finish;
-END
-
-----------------------------------------------------------------
--- VehicleScrap_Approve
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'VehicleScrap_Approve'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    IF @ActionType = 'APPROVE'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[VehicleScrap_Approve_SP]
-              @ScrapID          = @parameter_01
-            , @ApprovedByUserID = @parameter_02
-            , @ApprovedDate     = @parameter_03
-            , @entryData        = @entrydata
-            , @hostName         = @hostName
-            , @idaraID_FK        = @idaraID;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
-    GOTO Finish;
-END
-
-----------------------------------------------------------------
--- Violation_SetPayment
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'Violation_SetPayment'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    IF @ActionType = 'PAYMENT'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[Violation_SetPayment_SP]
-              @violationID  = @parameter_01
-            , @PaymentDate  = @parameter_02
-            , @entryPayment = @entrydata
-            , @hostName     = @hostName
-            , @idaraID_FK   = @idaraID;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1
-          @ok  = IsSuccessful
-        , @msg = Message_
-    FROM @Result;
-
-    GOTO Finish;
-END
-----------------------------------------------------------------
--- Violation_Upsert
-----------------------------------------------------------------
-ELSE IF @pageName_ = 'Violation_Upsert'
-BEGIN
-    IF (
-        SELECT COUNT(*)
-        FROM DATACORE.dbo.V_GetListUserPermission v
-        WHERE v.userID = @entrydata
-          AND v.menuName_E = @pageName_
-          AND v.permissionTypeName_E = @ActionType
-    ) <= 0
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-        GOTO Finish;
-    END
-
-    DELETE FROM @Result;
-
-    IF @ActionType = 'INSERT'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[Violation_Upsert_SP]
-              @violationID       = NULL
-            , @violationTypeID   = @parameter_01
-            , @chassisNumber     = @parameter_02
-            , @violationDate     = @parameter_03
-            , @violationPrice    = @parameter_04
-            , @violationLocation = @parameter_05
-            , @idaraID_FK        = @idaraID
-            , @entryData         = @entrydata
-            , @hostName          = @hostName;
-    END
-    ELSE IF @ActionType = 'UPDATE'
-    BEGIN
-        INSERT INTO @Result(IsSuccessful, Message_)
-        EXEC [VIC].[Violation_Upsert_SP]
-              @violationID       = @parameter_01
-            , @violationTypeID   = @parameter_02
-            , @chassisNumber     = @parameter_03
-            , @violationDate     = @parameter_04
-            , @violationPrice    = @parameter_05
-            , @violationLocation = @parameter_06
-            , @idaraID_FK        = @idaraID
-            , @entryData         = @entrydata
-            , @hostName          = @hostName;
-    END
-    ELSE
-    BEGIN
-        SET @ok = 0;
-        SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
-        GOTO Finish;
-    END
-
-    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
-    GOTO Finish;
-END
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -6551,6 +4912,867 @@ END
                         SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
                         GOTO Finish;
                 END
+
+
+
+----------------------------------------------------------------
+          --العربات 
+----------------------------------------------------------------
+
+----------------------------------------------------------------
+
+
+            ----------------------------------------------------------------
+            -- TypesRoot_Upsert
+            ----------------------------------------------------------------
+            ELSE IF @pageName_ = 'TypesRoot_Upsert'
+            BEGIN
+            
+                IF (
+                    SELECT COUNT(*)
+                    FROM DATACORE.dbo.V_GetListUserPermission v
+                    WHERE v.userID = @entrydata
+                      AND v.menuName_E = @pageName_
+                      AND v.permissionTypeName_E = @ActionType
+                ) <= 0
+                BEGIN
+                    SET @ok = 0;
+                    SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+                    GOTO Finish;
+                END
+            
+                DELETE FROM @Result;
+            
+                IF @ActionType = 'INSERT'
+                BEGIN
+                    INSERT INTO @Result (IsSuccessful, Message_)
+                    EXEC [VIC].[TypesRoot_Upsert_SP]
+                          @typesID            = NULL
+                        , @typesName_A        = @parameter_01
+                        , @typesName_E        = @parameter_02
+                        , @typesDesc          = @parameter_03
+                        , @typesActive        = @parameter_04
+                        , @typesStartDate     = @parameter_05
+                        , @typesEndDate       = @parameter_06
+                        , @typesRoot_ParentID = @parameter_07
+                        , @entryData          = @entrydata
+                        , @hostName           = @hostName;
+                END
+                ELSE IF @ActionType = 'UPDATE'
+                BEGIN
+                    INSERT INTO @Result (IsSuccessful, Message_)
+                    EXEC [VIC].[TypesRoot_Upsert_SP]
+                          @typesID            = @parameter_01
+                        , @typesName_A        = @parameter_02
+                        , @typesName_E        = @parameter_03
+                        , @typesDesc          = @parameter_04
+                        , @typesActive        = @parameter_05
+                        , @typesStartDate     = @parameter_06
+                        , @typesEndDate       = @parameter_07
+                        , @typesRoot_ParentID = @parameter_08
+                        , @entryData          = @entrydata
+                        , @hostName           = @hostName;
+                END
+                ELSE
+                BEGIN
+                    SET @ok = 0;
+                    SET @msg = N'ActionType غير معروف';
+                    GOTO Finish;
+                END
+            
+                SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+            
+                GOTO Finish;
+            END
+            
+            ----------------------------------------------------------------
+            -- Vehiclelist (consolidated)
+            -- Single pageName_ for all Vehicle/Insurance/Document CRUD
+            -- Routes by @ActionType to [VIC].[VehicleSP]
+            ----------------------------------------------------------------
+            ELSE IF @pageName_ = 'Vehiclelist'
+            BEGIN
+                IF (
+                    SELECT COUNT(*)
+                FROM dbo.V_GetListUserPermission v
+                WHERE v.userID = @entrydata
+                  AND v.menuName_E = @pageName_
+                  AND v.permissionTypeName_E = @ActionType
+                ) <= 0
+                BEGIN
+                    SET @ok = 0;
+                    SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+                    GOTO Finish;
+                END
+            
+                DELETE FROM @Result;
+            
+                -- Vehicle INSERT
+                IF @ActionType = 'VEHICLE_UPSERT_INSERT'
+                BEGIN
+                    DECLARE @VehResultIns TABLE (IsSuccessful INT, Message_ NVARCHAR(4000), chassisNumber NVARCHAR(200), vehicleID BIGINT);
+            
+                    INSERT INTO @VehResultIns
+                    EXEC [VIC].[VehicleSP]
+                          @ActionType             = N'UPSERT'
+                        , @vehicleID              = NULL
+                        , @chassisNumber          = @parameter_01
+                        , @ownerID_FK             = @parameter_02
+                        , @ManufacturerNameID_FK  = @parameter_03
+                        , @vehicleModelID_FK      = @parameter_04
+                        , @vehicleClassID_FK      = @parameter_05
+                        , @TypeOfUseID_FK         = @parameter_06
+                        , @vehicleColorID_FK      = @parameter_07
+                        , @countryMadeID_FK       = @parameter_08
+                        , @regstritionTypeID_FK   = @parameter_09
+                        , @regionID_FK            = @parameter_10
+                        , @fuelTypeID_FK          = @parameter_11
+                        , @vehicleTypeID_FK       = @parameter_12
+                        , @yearModel              = @parameter_13
+                        , @capacity               = @parameter_14
+                        , @serialNumber           = @parameter_15
+                        , @plateLetters           = @parameter_16
+                        , @plateNumbers           = @parameter_17
+                        , @armyNumber             = @parameter_18
+                        , @vehicleNote            = @parameter_19
+                        , @idaraID_FK             = @idaraID
+                        , @entryData              = @entrydata
+                        , @hostName               = @hostName;
+            
+                    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @VehResultIns;
+                    GOTO Finish;
+                END
+                -- Vehicle UPDATE
+                ELSE IF @ActionType = 'VEHICLE_UPSERT_UPDATE'
+                BEGIN
+                    DECLARE @VehResultUpd TABLE (IsSuccessful INT, Message_ NVARCHAR(4000), chassisNumber NVARCHAR(200), vehicleID BIGINT);
+            
+                    INSERT INTO @VehResultUpd
+                    EXEC [VIC].[VehicleSP]
+                          @ActionType             = N'UPSERT'
+                        , @vehicleID              = NULL
+                        , @chassisNumber          = @parameter_01
+                        , @ownerID_FK             = @parameter_02
+                        , @ManufacturerNameID_FK  = @parameter_03
+                        , @vehicleModelID_FK      = @parameter_04
+                        , @vehicleClassID_FK      = @parameter_05
+                        , @TypeOfUseID_FK         = @parameter_06
+                        , @vehicleColorID_FK      = @parameter_07
+                        , @countryMadeID_FK       = @parameter_08
+                        , @regstritionTypeID_FK   = @parameter_09
+                        , @regionID_FK            = @parameter_10
+                        , @fuelTypeID_FK          = @parameter_11
+                        , @vehicleTypeID_FK       = @parameter_12
+                        , @yearModel              = @parameter_13
+                        , @capacity               = @parameter_14
+                        , @serialNumber           = @parameter_15
+                        , @plateLetters           = @parameter_16
+                        , @plateNumbers           = @parameter_17
+                        , @armyNumber             = @parameter_18
+                        , @vehicleNote            = @parameter_19
+                        , @idaraID_FK             = @idaraID
+                        , @entryData              = @entrydata
+                        , @hostName               = @hostName;
+            
+                    SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @VehResultUpd;
+                    GOTO Finish;
+                END
+                -- Insurance INSERT / UPDATE
+                ELSE IF @ActionType IN (N'VEHICLEINSURANCE_UPSERT_INSERT', N'VEHICLEINSURANCE_UPSERT_UPDATE')
+                BEGIN
+                    INSERT INTO @Result(IsSuccessful, Message_)
+                    EXEC [VIC].[VehicleSP]
+                          @ActionType            = N'UPSERT_INSURANCE'
+                        , @VehicleInsuranceID    = @parameter_01
+                        , @chassisNumber         = @parameter_02
+                        , @InsuranceOpertionType = @parameter_03
+                        , @InsuranceTypeID       = @parameter_04
+                        , @Source                = @parameter_05
+                        , @StartInsurance        = @parameter_06
+                        , @EndInsurance          = @parameter_07
+                        , @Amount                = @parameter_08
+                        , @InsuranceNote         = @parameter_09
+                        , @InsuranceActive       = @parameter_10
+                        , @idaraID_FK            = @idaraID
+                        , @entryData             = @entrydata
+                        , @hostName              = @hostName;
+                END
+                -- Insurance SetActive
+                ELSE IF @ActionType = N'VEHICLEINSURANCE_SETACTIVE_UPDATE'
+                BEGIN
+                    INSERT INTO @Result(IsSuccessful, Message_)
+                    EXEC [VIC].[VehicleSP]
+                          @ActionType          = N'SET_INSURANCE_ACTIVE'
+                        , @VehicleInsuranceID  = @parameter_01
+                        , @InsuranceActiveFlag = NULL
+                        , @idaraID_FK          = @idaraID
+                        , @entryData           = @entrydata
+                        , @hostName            = @hostName;
+                END
+                -- Document INSERT
+                ELSE IF @ActionType = 'VEHICLEDOCUMENT_UPSERT_INSERT'
+                BEGIN
+                    INSERT INTO @Result(IsSuccessful, Message_)
+                    EXEC [VIC].[VehicleSP]
+                          @ActionType            = N'UPSERT_DOCUMENT'
+                        , @vehicleID             = NULL
+                        , @chassisNumber         = @parameter_01
+                        , @vehicleDocumentID     = NULL
+                        , @vehicleDocumentTypeID = @parameter_02
+                        , @vehicleDocumentNo     = @parameter_03
+                        , @vehicleDocStartDate   = @parameter_04
+                        , @vehicleDocEndDate     = @parameter_05
+                        , @idaraID_FK            = @idaraID
+                        , @entryData             = @entrydata
+                        , @hostName              = @hostName;
+                END
+                -- Document UPDATE
+                ELSE IF @ActionType = 'VEHICLEDOCUMENT_UPSERT_UPDATE'
+                BEGIN
+                    INSERT INTO @Result(IsSuccessful, Message_)
+                    EXEC [VIC].[VehicleSP]
+                          @ActionType            = N'UPSERT_DOCUMENT'
+                        , @vehicleID             = NULL
+                        , @chassisNumber         = @parameter_02
+                        , @vehicleDocumentID     = @parameter_01
+                        , @vehicleDocumentTypeID = @parameter_03
+                        , @vehicleDocumentNo     = @parameter_04
+                        , @vehicleDocStartDate   = @parameter_05
+                        , @vehicleDocEndDate     = @parameter_06
+                        , @idaraID_FK            = @idaraID
+                        , @entryData             = @entrydata
+                        , @hostName              = @hostName;
+                END
+                ELSE
+                BEGIN
+                    SET @ok = 0;
+                    SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType=[' + ISNULL(@ActionType, N'NULL') + N']';
+                    GOTO Finish;
+                END
+            
+                SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+                GOTO Finish;
+            END
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            -------------------------------------------------------------------
+            -- Custody (CRUD ï؟½ routes by @ActionType)
+            -- ActionType: INSERTCUSTODY, CLOSECUSTODY, UPSERT_HANDOVER_TYPE
+            --
+            -- INSERTCUSTODY params:
+            --   parameter_01 = vehicleID
+            --   parameter_02 = chassisNumber
+            --   parameter_03 = vehicleUserID_FK
+            --   parameter_04 = startDate
+            --   parameter_05 = note
+            --   parameter_06 = createGeneralNo
+            --   parameter_07 = createNationalID
+            --   parameter_08 = createMobileNo
+            --   parameter_09 = createRankID_FK
+            --   parameter_10 = createNationalityID_FK
+            --   parameter_11 = createGenderID_FK
+            --   parameter_12 = createFirstName_A
+            --   parameter_13 = createSecondName_A
+            --   parameter_14 = createThirdName_A
+            --   parameter_15 = createLastName_A
+            -------------------------------------------------------------------
+            ELSE IF @pageName_ = 'Custody'
+            BEGIN
+                IF (
+                    SELECT COUNT(*)
+                    FROM DATACORE.dbo.V_GetListUserPermission v
+                    WHERE v.userID = @entrydata
+                      AND v.menuName_E = @pageName_
+                      AND v.permissionTypeName_E = @ActionType
+                ) <= 0
+                BEGIN
+                    SET @ok = 0;
+                    SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+                    GOTO Finish;
+                END
+                DELETE FROM @Result;
+                IF @ActionType = 'INSERTCUSTODY'
+                BEGIN
+                    DECLARE @CustodyInsertResult TABLE (IsSuccessful INT, Message_ NVARCHAR(4000), vehicleWithUsersID INT);
+                    INSERT INTO @CustodyInsertResult(IsSuccessful, Message_, vehicleWithUsersID)
+                    EXEC [VIC].[CustodySP]
+                          @ActionType             = 'INSERTCUSTODY'
+                        , @vehicleID              = @parameter_01
+                        , @chassisNumber          = @parameter_02
+                        , @vehicleUserID_FK       = @parameter_03
+                        , @startDate              = @parameter_04
+                        , @note                   = @parameter_05
+                        , @entryData              = @entrydata
+                        , @hostName               = @hostName
+                        , @idaraID_FK             = @idaraID
+                        , @createGeneralNo        = @parameter_06
+                        , @createNationalID       = @parameter_07
+                        , @createMobileNo         = @parameter_08
+                        , @createRankID_FK        = @parameter_09
+                        , @createNationalityID_FK = @parameter_10
+                        , @createGenderID_FK      = @parameter_11
+                        , @createFirstName_A      = @parameter_12
+                        , @createSecondName_A     = @parameter_13
+                        , @createThirdName_A      = @parameter_14
+                        , @createLastName_A       = @parameter_15;
+                    INSERT INTO @Result(IsSuccessful, Message_)
+                    SELECT IsSuccessful, Message_ FROM @CustodyInsertResult;
+                END
+                ELSE IF @ActionType = 'CLOSECUSTODY'
+                BEGIN
+                    INSERT INTO @Result(IsSuccessful, Message_)
+                    EXEC [VIC].[CustodySP]
+                          @ActionType         = 'CLOSECUSTODY'
+                        , @vehicleWithUsersID = @parameter_01
+                        , @endDate            = @parameter_02
+                        , @note               = @parameter_03
+                        , @entryData          = @entrydata
+                        , @hostName           = @hostName
+                        , @idaraID_FK         = @idaraID;
+                END
+                ELSE IF @ActionType = 'UPSERT_HANDOVER_TYPE'
+                BEGIN
+                    INSERT INTO @Result(IsSuccessful, Message_)
+                    EXEC [VIC].[CustodySP]
+                          @ActionType           = 'UPSERT_HANDOVER_TYPE'
+                        , @handOverTypeID_Param = @parameter_01
+                        , @handoverTypeNameA    = @parameter_02
+                        , @handoverTypeNameE    = @parameter_03
+                        , @active               = @parameter_04
+                        , @entryData            = @entrydata
+                        , @hostName             = @hostName
+                        , @idaraID_FK           = @idaraID;
+                END
+                ELSE
+                BEGIN
+                    SET @ok = 0;
+                    SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType=' + ISNULL(@ActionType, N'NULL');
+                    GOTO Finish;
+                END
+                SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+                GOTO Finish;
+            END
+            -------------------------------------------------------------------
+            -- VehicleUser_Upsert
+            -- parameter_01 = vehicleUserID
+            -- parameter_02 = generalNo
+            -- parameter_03 = nationalID
+            -- parameter_04 = mobileNo
+            -- parameter_05 = userActive
+            -- parameter_06 = rankID_FK
+            -- parameter_07 = nationalityID_FK
+            -- parameter_08 = genderID_FK
+            -- parameter_09 = firstName_A
+            -- parameter_10 = secondName_A
+            -- parameter_11 = thirdName_A
+            -- parameter_12 = lastName_A
+            -- parameter_13 = firstName_E
+            -- parameter_14 = secondName_E
+            -- parameter_15 = thirdName_E
+            -- parameter_16 = lastName_E
+            -- parameter_17 = note
+            -------------------------------------------------------------------
+            else IF @pageName_ = 'VehicleUser_Upsert'
+            BEGIN
+                IF (
+                    SELECT COUNT(*)
+                    FROM DATACORE.dbo.V_GetListUserPermission v
+                    WHERE v.userID = @entrydata
+                      AND v.menuName_E = @pageName_
+                      AND v.permissionTypeName_E = @ActionType
+                ) <= 0
+                BEGIN
+                    SET @ok = 0;
+                    SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+                    GOTO Finish;
+                END
+            
+                DELETE FROM @Result;
+            
+                IF @ActionType IN ('INSERT', 'UPDATE')
+                BEGIN
+                    INSERT INTO @Result(IsSuccessful, Message_)
+                    EXEC [VIC].[VehicleUserSP]
+                          @ActionType        = 'UPSERT'
+                        , @vehicleUserID     = @parameter_01
+                        , @generalNo         = @parameter_02
+                        , @nationalID        = @parameter_03
+                        , @mobileNo          = @parameter_04
+                        , @IdaraID_FK        = @idaraID
+                        , @userActive        = @parameter_05
+                        , @entryData         = @entrydata
+                        , @hostName          = @hostName
+                        , @rankID_FK         = @parameter_06
+                        , @nationalityID_FK  = @parameter_07
+                        , @genderID_FK       = @parameter_08
+                        , @firstName_A       = @parameter_09
+                        , @secondName_A      = @parameter_10
+                        , @thirdName_A       = @parameter_11
+                        , @lastName_A        = @parameter_12
+                        , @firstName_E       = @parameter_13
+                        , @secondName_E      = @parameter_14
+                        , @thirdName_E       = @parameter_15
+                        , @lastName_E        = @parameter_16
+                        , @note              = @parameter_17;
+                END
+                ELSE
+                BEGIN
+                    SET @ok = 0;
+                    SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+                    GOTO Finish;
+                END
+            
+                SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+                GOTO Finish;
+            END
+            
+            -------------------------------------------------------------------
+            -- VehicleUser_SetActive
+            -------------------------------------------------------------------
+            else IF @pageName_ = 'VehicleUser_SetActive'
+            BEGIN
+                IF (
+                    SELECT COUNT(*)
+                    FROM DATACORE.dbo.V_GetListUserPermission v
+                    WHERE v.userID = @entrydata
+                      AND v.menuName_E = @pageName_
+                      AND v.permissionTypeName_E = @ActionType
+                ) <= 0
+                BEGIN
+                    SET @ok = 0;
+                    SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+                    GOTO Finish;
+                END
+            
+                DELETE FROM @Result;
+            
+                IF @ActionType = 'UPDATE'
+                BEGIN
+                    INSERT INTO @Result(IsSuccessful, Message_)
+                    EXEC [VIC].[VehicleUserSP]
+                          @ActionType    = 'SET_ACTIVE'
+                        , @vehicleUserID = @parameter_01
+                        , @userActive    = @parameter_02
+                        , @entryData     = @entrydata
+                        , @hostName      = @hostName;
+                END
+                ELSE
+                BEGIN
+                    SET @ok = 0;
+                    SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+                    GOTO Finish;
+                END
+            
+                SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+                GOTO Finish;
+            END
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            ----------------------------------------------------------------
+            -- Masters_CRUD ï؟½ Block 1: PeriodicMaintenance
+            -- Paste into Masters_CRUD
+            -- UPDATED: INSERT_PERIODIC_ORDER now passes @groupID
+            ----------------------------------------------------------------
+            ELSE IF @pageName_ = 'PeriodicMaintenance'
+            BEGIN
+                IF (
+                    SELECT COUNT(*)
+                    FROM dbo.V_GetListUserPermission v
+                    WHERE v.userID = @entrydata
+                      AND v.menuName_E = @pageName_
+                      AND v.permissionTypeName_E = @ActionType
+                ) <= 0
+                BEGIN
+                    SET @ok = 0;
+                    SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+                    GOTO Finish;
+                END
+            
+                DELETE FROM @Result;
+            
+                IF @ActionType = 'INSERT_PERIODIC_ORDER'
+                BEGIN
+                    INSERT INTO @Result(IsSuccessful, Message_)
+                    EXEC [VIC].[MaintenanceSP]
+                          @ActionType        = N'UPSERT_ORDER'
+                        , @maintOrdID        = NULL
+                        , @maintOrdTypeID_FK = 265
+                        , @vehicleID         = NULL
+                        , @chassisNumber     = @parameter_01
+                        , @maintOrdDesc      = @parameter_03
+                        , @maintOrdActive    = 1
+                        , @idaraID_FK        = @idaraID
+                        , @entryData         = @entrydata
+                        , @hostName          = @hostName
+                        , @groupID           = @parameter_02;
+                END
+                ELSE IF @ActionType = 'UPDATE_PERIODIC_ORDER'
+                BEGIN
+                    INSERT INTO @Result(IsSuccessful, Message_)
+                    EXEC [VIC].[MaintenanceSP]
+                          @ActionType        = N'UPSERT_ORDER'
+                        , @maintOrdID        = @parameter_01
+                        , @maintOrdTypeID_FK = 265
+                        , @vehicleID         = NULL
+                        , @chassisNumber     = @parameter_02
+                        , @maintOrdStartDate = @parameter_03
+                        , @maintOrdEndDate   = @parameter_04
+                        , @maintOrdDesc      = @parameter_05
+                        , @maintOrdActive    = 1
+                        , @idaraID_FK        = @idaraID
+                        , @entryData         = @entrydata
+                        , @hostName          = @hostName;
+                END
+                ELSE IF @ActionType = 'MOVE_GROUP'
+                BEGIN
+                    INSERT INTO @Result(IsSuccessful, Message_)
+                    EXEC [VIC].[MaintenancePlanSP]
+                          @ActionType    = N'MOVE_GROUP'
+                        , @chassisNumber = @parameter_01
+                        , @groupID       = @parameter_02
+                        , @idaraID_FK    = @idaraID
+                        , @entryData     = @entrydata
+                        , @hostName      = @hostName;
+                END
+                ELSE IF @ActionType = 'CLOSE_PERIODIC_ORDER'
+                BEGIN
+                    INSERT INTO @Result(IsSuccessful, Message_)
+                    EXEC [VIC].[MaintenanceSP]
+                          @ActionType      = N'CLOSE_ORDER'
+                        , @maintOrdID      = @parameter_01
+                         , @workshopIDs    = @parameter_08
+                       , @maintOrdEndDate = @parameter_02
+                        , @odometer        = @parameter_03
+                        , @detailJson      = @parameter_04
+                        , @idaraID_FK      = @idaraID
+                        , @entryData       = @entrydata
+                        , @hostName        = @hostName;
+                END
+                ELSE IF @ActionType = 'UPSERT_PERIODIC_DETAIL'
+                BEGIN
+                    INSERT INTO @Result(IsSuccessful, Message_)
+                    EXEC [VIC].[MaintenanceSP]
+                          @ActionType       = N'UPSERT_DETAIL'
+                        , @maintOrdID       = @parameter_01
+                        , @maintDetailesID  = @parameter_02
+                        , @typesID_FK       = @parameter_03
+                        , @CheckStatus_FK   = @parameter_04
+                        , @CorrectiveAction = @parameter_05
+                        , @Notes            = @parameter_06
+                        , @idaraID_FK       = @idaraID
+                        , @entryData        = @entrydata
+                        , @hostName         = @hostName;
+                END
+                ELSE IF @ActionType = 'DELETE_PERIODIC_DETAIL'
+                BEGIN
+                    INSERT INTO @Result(IsSuccessful, Message_)
+                    EXEC [VIC].[MaintenanceSP]
+                          @ActionType      = N'DELETE_DETAIL'
+                        , @maintDetailesID = @parameter_01
+                        , @idaraID_FK      = @idaraID
+                        , @entryData       = @entrydata
+                        , @hostName        = @hostName;
+                END
+                ELSE
+                BEGIN
+                    SET @ok = 0;
+                    SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+                    GOTO Finish;
+                END
+            
+                SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+                GOTO Finish;
+            END
+            
+            ----------------------------------------------------------------
+            -- Masters_CRUD ï؟½ Block 2: GeneralMaintenance
+            -- Paste into Masters_CRUD
+            ----------------------------------------------------------------
+            ELSE IF @pageName_ = 'GeneralMaintenance'
+            BEGIN
+                IF (
+                    SELECT COUNT(*)
+                    FROM dbo.V_GetListUserPermission v
+                    WHERE v.userID = @entrydata
+                      AND v.menuName_E = @pageName_
+                      AND v.permissionTypeName_E = @ActionType
+                ) <= 0
+                BEGIN
+                    SET @ok = 0;
+                    SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+                    GOTO Finish;
+                END
+            
+                DELETE FROM @Result;
+            
+                IF @ActionType = 'INSERT_GENERAL_ORDER'
+                BEGIN
+                    INSERT INTO @Result(IsSuccessful, Message_)
+                    EXEC [VIC].[MaintenanceSP]
+                          @ActionType        = N'UPSERT_ORDER'
+                        , @maintOrdID        = NULL
+                        , @maintOrdTypeID_FK = 266
+                        , @vehicleID         = NULL
+                        , @chassisNumber     = @parameter_01
+                        , @maintOrdStartDate = @parameter_02
+                        , @maintOrdEndDate   = @parameter_03
+                        , @maintOrdDesc      = @parameter_04
+                        , @maintOrdActive    = 1
+                        , @idaraID_FK        = @idaraID
+                        , @entryData         = @entrydata
+                        , @hostName          = @hostName
+                        , @faultJson         = @parameter_09;
+                END
+                ELSE IF @ActionType = 'UPDATE_GENERAL_ORDER'
+                BEGIN
+                    INSERT INTO @Result(IsSuccessful, Message_)
+                    EXEC [VIC].[MaintenanceSP]
+                          @ActionType        = N'UPSERT_ORDER'
+                        , @maintOrdID        = @parameter_01
+                        , @maintOrdTypeID_FK = 266
+                        , @vehicleID         = NULL
+                        , @chassisNumber     = @parameter_02
+                        , @maintOrdStartDate = @parameter_03
+                        , @maintOrdEndDate   = @parameter_04
+                        , @maintOrdDesc      = @parameter_05
+                        , @maintOrdActive    = 1
+                        , @idaraID_FK        = @idaraID
+                        , @entryData         = @entrydata
+                        , @hostName          = @hostName
+                        , @faultJson         = @parameter_09;
+                END
+                ELSE IF @ActionType = 'CLOSE_GENERAL_ORDER'
+            BEGIN
+                INSERT INTO @Result(IsSuccessful, Message_)
+                EXEC [VIC].[MaintenanceSP]
+                      @ActionType      = N'CLOSE_ORDER'
+                    , @maintOrdID      = @parameter_01
+                    , @maintOrdEndDate = @parameter_07
+                    , @actionJson      = @parameter_09
+                    , @workshopIDs     = @parameter_08   -- ?? ï؟½ï؟½ï؟½ ï؟½ï؟½ï؟½ï؟½ï؟½ ï؟½ï؟½ï؟½ï؟½ï؟½ï؟½
+                    , @idaraID_FK      = @idaraID
+                    , @entryData       = @entrydata
+                    , @hostName        = @hostName;
+            END
+                ELSE
+                BEGIN
+                    SET @ok = 0;
+                    SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+                    GOTO Finish;
+                END
+            
+                SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+                GOTO Finish;
+            END
+            
+            ----------------------------------------------------------------
+            -- Scrap
+            ----------------------------------------------------------------
+            ELSE IF @pageName_ = 'Scrap'
+            BEGIN
+            
+                IF (
+                    SELECT COUNT(*)
+                    FROM dbo.V_GetListUserPermission v
+                    WHERE v.userID = @entrydata
+                      AND v.menuName_E = @pageName_
+                      AND v.permissionTypeName_E = @ActionType
+                ) <= 0
+                BEGIN
+                    SET @ok = 0;
+                    SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+                    GOTO Finish;
+                END
+            
+                DELETE FROM @Result;
+            
+                IF @ActionType = 'INSERT_SCRAP'
+                BEGIN
+            
+                    INSERT INTO @Result(IsSuccessful, Message_)
+                    EXEC [VIC].[ScrapSP]
+                         @ActionType     = N'UPSERT'
+                        ,@ScrapID        = NULL
+                        ,@vehicleID      = @parameter_01
+                        ,@chassisNumber  = @parameter_02
+                        ,@idaraID_FK     = @idaraID
+                        ,@ScrapDate      = @parameter_03
+                        ,@ScrapTypeID_FK = @parameter_04
+                        ,@RefNo          = @parameter_05
+                        ,@Reason         = @parameter_06
+                        ,@Note           = @parameter_07
+                        ,@entryData      = @entrydata
+                        ,@hostName       = @hostName
+                        ,@actionByUserID = NULL
+                        ,@actionNote     = @parameter_08;
+            
+                END
+            
+                ELSE IF @ActionType = 'UPDATE_SCRAP'
+                BEGIN
+            
+                    INSERT INTO @Result(IsSuccessful, Message_)
+                    EXEC [VIC].[ScrapSP]
+                         @ActionType     = N'UPSERT'
+                        ,@ScrapID        = @parameter_01
+                        ,@vehicleID      = NULL
+                        ,@chassisNumber  = @parameter_02
+                        ,@idaraID_FK     = @idaraID
+                        ,@ScrapDate      = @parameter_03
+                        ,@ScrapTypeID_FK = @parameter_04
+                        ,@RefNo          = @parameter_05
+                        ,@Reason         = @parameter_06
+                        ,@Note           = @parameter_07
+                        ,@entryData      = @entrydata
+                        ,@hostName       = @hostName
+                        ,@actionByUserID = NULL
+                        ,@actionNote     = @parameter_08;
+            
+                END
+            
+                ELSE IF @ActionType = 'APPROVE_SCRAP'
+                BEGIN
+            
+                    INSERT INTO @Result(IsSuccessful, Message_)
+                    EXEC [VIC].[ScrapSP]
+                         @ActionType     = N'APPROVE'
+                        ,@ScrapID        = @parameter_01
+                        ,@actionByUserID = @entrydata
+                        ,@actionNote     = @parameter_20
+                        ,@idaraID_FK     = @idaraID
+                        ,@entryData      = @entrydata
+                        ,@hostName       = @hostName;
+            
+                END
+            
+                ELSE IF @ActionType = 'CANCEL_SCRAP'
+                BEGIN
+            
+                    INSERT INTO @Result(IsSuccessful, Message_)
+                    EXEC [VIC].[ScrapSP]
+                         @ActionType     = N'CANCEL'
+                        ,@ScrapID        = @parameter_01
+                        ,@actionByUserID = @entrydata
+                        ,@actionNote     = @parameter_20
+                        ,@idaraID_FK     = @idaraID
+                        ,@entryData      = @entrydata
+                        ,@hostName       = @hostName;
+            
+                END
+            
+                ELSE
+                BEGIN
+                    SET @ok = 0;
+                    SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+                    GOTO Finish;
+                END
+            
+                SELECT TOP 1 @ok = IsSuccessful, @msg = Message_
+                FROM @Result;
+            
+                GOTO Finish;
+            END
+            
+            ----------------------------------------------------------------
+            -- Violation
+            ----------------------------------------------------------------
+            ELSE IF @pageName_ = 'Violation'
+            BEGIN
+                IF (
+                    SELECT COUNT(*)
+                    FROM dbo.V_GetListUserPermission v
+                    WHERE v.userID = @entrydata
+                      AND v.menuName_E = @pageName_
+                      AND v.permissionTypeName_E = @ActionType
+                ) <= 0
+                BEGIN
+                    SET @ok = 0;
+                    SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+                    GOTO Finish;
+                END
+            
+                DELETE FROM @Result;
+            
+                IF @ActionType = 'ADD_VIOLATION'
+                BEGIN
+                    INSERT INTO @Result(IsSuccessful, Message_)
+                    EXEC [VIC].[ViolationSP]
+                         @ActionType        = N'UPSERT'
+                        ,@violationID       = NULL
+                        ,@vehicleID         = @parameter_02
+                        ,@violationTypeID   = @parameter_03
+                        ,@violationDate     = @parameter_04
+                        ,@violationPrice    = @parameter_05
+                        ,@violationLocation = @parameter_06
+                        ,@idaraID_FK        = @idaraID
+                        ,@entryData         = @entrydata
+                        ,@hostName          = @hostName;
+                END
+                ELSE IF @ActionType = 'EDIT_VIOLATION'
+                BEGIN
+                    INSERT INTO @Result(IsSuccessful, Message_)
+                    EXEC [VIC].[ViolationSP]
+                         @ActionType        = N'UPSERT'
+                        ,@violationID       = @parameter_01
+                        ,@vehicleID         = @parameter_02
+                        ,@violationTypeID   = @parameter_03
+                        ,@violationDate     = @parameter_04
+                        ,@violationPrice    = @parameter_05
+                        ,@violationLocation = @parameter_06
+                        ,@idaraID_FK        = @idaraID
+                        ,@entryData         = @entrydata
+                        ,@hostName          = @hostName;
+                END
+                ELSE IF @ActionType = 'SET_PAYMENT'
+                BEGIN
+                    INSERT INTO @Result(IsSuccessful, Message_)
+                    EXEC [VIC].[ViolationSP]
+                         @ActionType     = N'SET_PAYMENT'
+                        ,@violationID    = @parameter_01
+                        ,@PaymentDate    = @parameter_10
+                        ,@entryPayment   = @parameter_11
+                        ,@idaraID_FK     = @idaraID
+                        ,@entryData      = @entrydata
+                        ,@hostName       = @hostName;
+                END
+                ELSE
+                BEGIN
+                    SET @ok = 0;
+                    SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+                    GOTO Finish;
+                END
+            
+                SELECT TOP 1
+                    @ok = IsSuccessful,
+                    @msg = Message_
+                FROM @Result;
+            
+                GOTO Finish;
+            END
+
+
+
+
+
+
+
+
 
         ----------------------------------------------------------------
         -- DO NOT TOUCH BELOW THIS LINE

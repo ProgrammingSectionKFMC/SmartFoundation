@@ -2,5 +2,14 @@ CREATE SCHEMA [Housing]
     AUTHORIZATION [dbo];
 
 
+
+
 GO
+GRANT EXECUTE
+    ON SCHEMA::[Housing] TO [SAMIDEV];
+
+
+GO
+GRANT ALTER
+    ON SCHEMA::[Housing] TO [SAMIDEV];
 

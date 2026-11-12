@@ -1,4 +1,4 @@
-CREATE TABLE [VIC].[vehicleWithUsers] (
+﻿CREATE TABLE [VIC].[vehicleWithUsers] (
     [vehicleWithUsersID]        INT             IDENTITY (1, 1) NOT NULL,
     [startDate]                 DATETIME        NULL,
     [endDate]                   DATETIME        NULL,
@@ -25,27 +25,28 @@ CREATE TABLE [VIC].[vehicleWithUsers] (
     [vehicleID_FK]              INT             NULL,
     [RankName_Snapshot]         NVARCHAR (200)  NULL,
     [MilitaryUnitName_Snapshot] NVARCHAR (200)  NULL,
+    [userID_FK]                 BIGINT          NULL,
+    [RequestID_FK]              INT             NULL,
     CONSTRAINT [PK_vehicleWithUsers] PRIMARY KEY CLUSTERED ([vehicleWithUsersID] ASC),
     CONSTRAINT [FK_vehicleWithUsers_Vehicles] FOREIGN KEY ([chassisNumber_FK]) REFERENCES [VIC].[Vehicles] ([chassisNumber])
 );
 
 
-GO
-
-CREATE NONCLUSTERED INDEX [IX_vehicleWithUsers_active_chassis]
-    ON [VIC].[vehicleWithUsers]([chassisNumber_FK] ASC, [endDate] ASC);
 
 
 GO
 
-CREATE NONCLUSTERED INDEX [IX_vehicleWithUsers_vehicleID]
-    ON [VIC].[vehicleWithUsers]([vehicleID_FK] ASC);
+
 
 
 GO
 
-CREATE NONCLUSTERED INDEX [IX_vehicleWithUsers_vehicleUserID]
-    ON [VIC].[vehicleWithUsers]([vehicleUserID_FK] ASC);
+
+
+
+GO
+
+
 
 
 GO

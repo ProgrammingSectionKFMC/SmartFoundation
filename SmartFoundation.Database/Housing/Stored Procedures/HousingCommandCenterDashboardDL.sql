@@ -1,4 +1,4 @@
-
+﻿
 CREATE PROCEDURE [Housing].[HousingCommandCenterDashboardDL]
 
       @pageName_       NVARCHAR(400)
@@ -643,6 +643,32 @@ END;
 
 
 
+/* ============================================================
+   HCC DETAIL MODE - V7 OPERATIONAL SNAPSHOT
+
+   Used by:
+   readiness  (t1)
+   occupancy  (t2)
+   procedure  (t3)
+
+   Full V7 materialization before filtering or enrichment.
+   ============================================================ */
+
+IF @targetIdaraID IS NOT NULL
+   AND LOWER(ISNULL(@section, N'')) IN
+       (N'readiness', N'occupancy', N'procedure')
+BEGIN
+    SELECT v.*
+    INTO #HCC_DetailOperational
+    FROM Housing.V_GetGeneralListForBuilding v
+    OPTION (RECOMPILE);
+
+    CREATE UNIQUE CLUSTERED INDEX
+        IX_HCC_DetailOperational_Building
+    ON #HCC_DetailOperational
+       (buildingDetailsID, BuildingIdaraID);
+END;
+
 
     /* ============================================================
    DETAIL MODE
@@ -1005,7 +1031,7 @@ BEGIN
                b.buildingClassID_FK
 
 
-        LEFT JOIN Housing.V_GetGeneralListForBuilding operational
+        LEFT JOIN #HCC_DetailOperational operational
     ON operational.buildingDetailsID = b.buildingDetailsID
    AND operational.BuildingIdaraID = b.IdaraId_FK
 
@@ -1480,9 +1506,13 @@ BEGIN
                b.buildingClassID_FK
 
 
-        LEFT JOIN Housing.V_GetGeneralListForBuilding operational
+        
+
+LEFT JOIN #HCC_DetailOperational operational
     ON operational.buildingDetailsID = b.buildingDetailsID
    AND operational.BuildingIdaraID = b.IdaraId_FK
+
+
 
 LEFT JOIN Housing.BuildingAction a
     ON a.buildingActionID = operational.LastActionID
@@ -5483,6 +5513,14 @@ BEGIN
             , e.buildingActionID AS EndActionID
             , s.StartEntryDate
             , e.EndEntryDate
+            , s.StartSourceMarker
+            , CASE
+                  WHEN e.EndActionTypeID IN (45, 42)
+                   AND COALESCE(s.StartSourceMarker, N'')
+                       IN (N'LEGACY', N'MIGRATION_GENERATED')
+                      THEN CONVERT(BIT, 0)
+                  ELSE CONVERT(BIT, 1)
+              END AS IsPerformanceEligible
             , e.residentInfoID_FK
             , e.generalNo_FK
             , e.buildingDetailsID_FK
@@ -5498,6 +5536,7 @@ BEGIN
             SELECT TOP (1)
                   c.buildingActionID AS StartActionID
                 , c.entryDate AS StartEntryDate
+                , startOrigin.buildingActionExtraText5 AS StartSourceMarker
             FROM Housing.fn_BuildingAction_ChainToRoot(e.buildingActionID) c
             INNER JOIN Housing.BuildingAction startOrigin
                 ON startOrigin.buildingActionID = c.buildingActionID
@@ -5507,8 +5546,14 @@ BEGIN
                     WHEN e.EndActionTypeID = 24 THEN 48
                     WHEN e.EndActionTypeID = 3 THEN 54
                 END
-              AND COALESCE(startOrigin.buildingActionExtraText5, N'')
-                   <> N'MIGRATION_GENERATED'
+              -- For ALLOCATION, select the actual earliest 27 even if migrated;
+              -- exclude it from KPI later rather than skipping to another 27.
+              -- Other workflow start-selection remains unchanged.
+              AND (
+                    e.EndActionTypeID IN (45, 42)
+                    OR COALESCE(startOrigin.buildingActionExtraText5, N'')
+                       <> N'MIGRATION_GENERATED'
+                  )
               AND c.entryDate IS NOT NULL
               AND c.entryDate <= e.EndEntryDate
             ORDER BY c.entryDate ASC, c.Lvl ASC, c.buildingActionID ASC
@@ -5529,6 +5574,8 @@ BEGIN
         , c.buildingDetailsNo
         , c.DurationSeconds
         , c.DurationDays
+        , c.StartSourceMarker
+        , c.IsPerformanceEligible
     INTO #HCC_CompletedWorkflowCycles
     FROM CompletedCycles c
     WHERE c.WorkflowKey = @CWWorkflow;
@@ -5564,6 +5611,9 @@ BEGIN
         , buildingDetailsNo
         , DurationSeconds
         , DurationDays
+        -- Detail rows remain historical. This flag controls KPI inclusion only.
+        , IsPerformanceEligible
+        , StartSourceMarker
     FROM OrderedCycles
     WHERE RowNo > @CWOffset AND RowNo <= @CWOffset + @CWPageSize
     ORDER BY RowNo;
@@ -5573,7 +5623,12 @@ BEGIN
         , @CWPageNumber AS PageNumber
         , @CWPageSize AS PageSize
         , CAST(CEILING(COUNT(*) * 1.0 / @CWPageSize) AS INT) AS TotalPages
-        , CAST(AVG(DurationDays) AS DECIMAL(18, 6)) AS AverageDays
+        , CAST(AVG(CASE WHEN IsPerformanceEligible = 1
+                        THEN DurationDays END) AS DECIMAL(18, 6)) AS AverageDays
+        , SUM(CASE WHEN IsPerformanceEligible = 1 THEN 1 ELSE 0 END)
+              AS PerformanceEligibleCount
+        , SUM(CASE WHEN IsPerformanceEligible = 0 THEN 1 ELSE 0 END)
+              AS PerformanceExcludedCount
     FROM #HCC_CompletedWorkflowCycles;
 
     DROP TABLE IF EXISTS #HCC_CompletedWorkflowCycles;
@@ -5809,9 +5864,11 @@ WHEN a.buildingActionTypeID_FK IN (45, 46, 47)
         FROM Housing.BuildingDetails b
 
 
-        INNER JOIN Housing.V_GetGeneralListForBuilding operational
-            ON operational.buildingDetailsID = b.buildingDetailsID
-           AND operational.BuildingIdaraID = b.IdaraId_FK
+        
+INNER JOIN #HCC_DetailOperational operational
+    ON operational.buildingDetailsID = b.buildingDetailsID
+   AND operational.BuildingIdaraID = b.IdaraId_FK
+
 
         INNER JOIN Housing.BuildingAction a
             ON a.buildingActionID = operational.LastActionID
@@ -6311,111 +6368,96 @@ END
 END
 
 
-    /* ============================================================
-       HCC MAIN DASHBOARD: one scoped operational action per building
-       - Matching eligibility from Housing.V_GetGeneralListForBuilding
-       - Raw TOP (1) uses existing BuildingAction last-by-details index
-       - Special 3/58 exceptions keep the ORIGINAL lineage rule
-       - Main dashboard only: detail branches already RETURNed
-       - No changes to shared View / TVF / data
-       ============================================================ */
-    DROP TABLE IF EXISTS #HCC_MainOperational;
+/* ============================================================
+   HCC MAIN DASHBOARD
+   Unified operational source:
+   Housing.V_GetGeneralListForBuilding
+   ============================================================ */
 
-    SELECT
-          bd.buildingDetailsID
-        , bd.IdaraId_FK AS BuildingIdaraID
-        , rawLast.buildingActionID AS LastActionID
-        , rawLast.buildingActionTypeID_FK AS LastActionTypeID
-    INTO #HCC_MainOperational
-    FROM Housing.BuildingDetails bd
-    INNER JOIN Housing.BuildingType bt
-        ON bt.buildingTypeID = bd.buildingTypeID_FK
-    INNER JOIN Housing.BuildingUtilityType bu
-        ON bu.buildingUtilityTypeID = bd.buildingUtilityTypeID_FK
-    INNER JOIN Housing.MilitaryLocation m
-        ON m.militaryLocationID = bd.militaryLocationID_FK
-    INNER JOIN Housing.MilitaryAreaCity mac
-        ON mac.militaryAreaCityID = m.militaryAreaCityID_FK
-    INNER JOIN Housing.MilitaryArea ma
-        ON ma.militaryAreaID = mac.militaryAreaID_FK
-    INNER JOIN Housing.BuildingClass bc
-        ON bc.buildingClassID = bd.buildingClassID_FK
-    INNER JOIN dbo.Idara i
-        ON i.idaraID = bd.IdaraId_FK
-    OUTER APPLY
-    (
-        SELECT TOP (1)
-              ba.buildingActionID
-            , ba.buildingActionTypeID_FK
-        FROM Housing.BuildingAction ba
-        WHERE ba.buildingDetailsID_FK = bd.buildingDetailsID
-          AND ba.buildingActionActive = 1
-        ORDER BY ba.buildingActionID DESC
-    ) AS rawLast
-    WHERE bd.buildingDetailsActive = 1
-      AND bd.buildingUtilityTypeID_FK IN (1, 11, 13, 15)
-      AND bt.buildingTypeActive = 1
-      AND bu.buildingUtilityTypeActive = 1
-      AND m.militaryLocationActive = 1
-      AND bc.buildingClassActive = 1
-      AND mac.militaryAreaCityActive = 1
-      AND ma.militaryAreaIsActive = 1
-      AND bd.buildingDetailsStartDate IS NOT NULL
-      AND bu.buildingUtilityTypeStartDate IS NOT NULL
-      AND (bd.buildingDetailsEndDate IS NULL OR bd.buildingDetailsEndDate > GETDATE())
-      AND (bu.buildingUtilityTypeEndDate IS NULL OR bu.buildingUtilityTypeEndDate > GETDATE())
-      AND i.idaraShowInCommandCenter = 1
-      AND (@CanViewAllDepartments = 1 OR i.idaraID = @TrustedIdaraID)
-    OPTION (RECOMPILE);
+DROP TABLE IF EXISTS #HCC_MainOperational;
 
-    CREATE UNIQUE CLUSTERED INDEX IX_HCC_MainOperational_Building
-        ON #HCC_MainOperational (buildingDetailsID);
+SELECT
+      bd.buildingDetailsID
+    , bd.IdaraId_FK AS BuildingIdaraID
+    , operational.LastActionID
+    , operational.LastActionTypeID
 
-    /* Explicit second statement prevents repeated lineage evaluation
-       for buildings whose newest action is not 3 or 58. The fallback
-       is EXACTLY the original NOT (...) predicate; it can skip any
-       number of excluded 3/58 rows, not just the newest one. */
-    UPDATE operational
-    SET
-          LastActionID = corrected.buildingActionID
-        , LastActionTypeID = corrected.buildingActionTypeID_FK
-    FROM #HCC_MainOperational AS operational
-    OUTER APPLY
-    (
-        SELECT TOP (1)
-              ba.buildingActionID
-            , ba.buildingActionTypeID_FK
-        FROM Housing.BuildingAction ba
-        WHERE ba.buildingDetailsID_FK = operational.buildingDetailsID
-          AND ba.buildingActionActive = 1
-          AND NOT
-          (
-              ba.buildingActionTypeID_FK IN (3, 58)
-              AND EXISTS
-              (
-                  SELECT 1
-                  FROM Housing.fn_BuildingAction_ChainToRoot(ba.buildingActionID) ancestor
-                  JOIN Housing.BuildingAction stage57
-                    ON stage57.buildingActionID = ancestor.buildingActionID
-                   AND stage57.buildingActionTypeID_FK = 57
-                   AND stage57.buildingActionActive = 1
-                   AND stage57.buildingDetailsID_FK = operational.buildingDetailsID
-                   AND stage57.IdaraId_FK = operational.BuildingIdaraID
-                  JOIN Housing.BuildingAction operatingRoot
-                    ON operatingRoot.buildingDetailsID_FK = operational.buildingDetailsID
-                   AND operatingRoot.IdaraId_FK = operational.BuildingIdaraID
-                   AND operatingRoot.buildingActionActive = 1
-                   AND operatingRoot.buildingActionParentID IS NULL
-                   AND operatingRoot.residentInfoID_FK IS NULL
-                   AND operatingRoot.buildingActionTypeID_FK IN (4, 5, 62)
-                   AND operatingRoot.buildingActionID > stage57.buildingActionID
-                   AND operatingRoot.buildingActionID < ba.buildingActionID
-              )
-          )
-        ORDER BY ba.buildingActionID DESC
-    ) AS corrected
-    WHERE operational.LastActionTypeID IN (3, 58)
-    OPTION (RECOMPILE);
+INTO #HCC_MainOperational
+
+FROM Housing.BuildingDetails bd
+
+INNER JOIN Housing.BuildingType bt
+    ON bt.buildingTypeID = bd.buildingTypeID_FK
+
+INNER JOIN Housing.BuildingUtilityType bu
+    ON bu.buildingUtilityTypeID =
+       bd.buildingUtilityTypeID_FK
+
+INNER JOIN Housing.MilitaryLocation m
+    ON m.militaryLocationID =
+       bd.militaryLocationID_FK
+
+INNER JOIN Housing.MilitaryAreaCity mac
+    ON mac.militaryAreaCityID =
+       m.militaryAreaCityID_FK
+
+INNER JOIN Housing.MilitaryArea ma
+    ON ma.militaryAreaID =
+       mac.militaryAreaID_FK
+
+INNER JOIN Housing.BuildingClass bc
+    ON bc.buildingClassID =
+       bd.buildingClassID_FK
+
+INNER JOIN dbo.Idara i
+    ON i.idaraID = bd.IdaraId_FK
+
+LEFT JOIN Housing.V_GetGeneralListForBuilding operational
+    ON operational.buildingDetailsID =
+       bd.buildingDetailsID
+   AND operational.BuildingIdaraID =
+       bd.IdaraId_FK
+
+WHERE bd.buildingDetailsActive = 1
+
+  AND bd.buildingUtilityTypeID_FK
+      IN (1, 11, 13, 15)
+
+  AND bt.buildingTypeActive = 1
+  AND bu.buildingUtilityTypeActive = 1
+  AND m.militaryLocationActive = 1
+  AND bc.buildingClassActive = 1
+  AND mac.militaryAreaCityActive = 1
+  AND ma.militaryAreaIsActive = 1
+
+  AND bd.buildingDetailsStartDate IS NOT NULL
+  AND bu.buildingUtilityTypeStartDate IS NOT NULL
+
+  AND (
+      bd.buildingDetailsEndDate IS NULL
+      OR bd.buildingDetailsEndDate > GETDATE()
+  )
+
+  AND (
+      bu.buildingUtilityTypeEndDate IS NULL
+      OR bu.buildingUtilityTypeEndDate > GETDATE()
+  )
+
+  AND i.idaraShowInCommandCenter = 1
+
+  AND (
+      @CanViewAllDepartments = 1
+      OR i.idaraID = @TrustedIdaraID
+  )
+
+OPTION (RECOMPILE);
+
+CREATE UNIQUE CLUSTERED INDEX
+    IX_HCC_MainOperational_Building
+ON #HCC_MainOperational (buildingDetailsID);
+
+
+
 
     -------------------------------------------------------------------
     -- الإدارات المفعلة للظهور في لوحة القيادة
@@ -7957,7 +7999,8 @@ DROP TABLE IF EXISTS #HCC_CurrentProcedures;
 
 /* ============================================================
    dt10 - Housing Workflow Performance
-   Four separate completed workflows (operational ends; legacy starts allowed):
+   Four separate completed workflows; ALLOCATION KPI uses native 27 starts only.
+   Completed cycles remain visible in historical counts/details; KPI uses only eligible durations.
    ALLOCATION  27 -> 45 / 42   target 30 days
    HOUSING     45 -> 2        target  5 days
    EXTEND      48 -> 24       target  5 days
@@ -8015,6 +8058,14 @@ CompletedCycles AS
         , e.buildingActionID AS EndActionID
         , s.StartEntryDate
         , e.EndEntryDate
+        , s.StartSourceMarker
+        , CASE
+              WHEN e.EndActionTypeID IN (45, 42)
+               AND COALESCE(s.StartSourceMarker, N'')
+                   IN (N'LEGACY', N'MIGRATION_GENERATED')
+                  THEN CONVERT(BIT, 0)
+              ELSE CONVERT(BIT, 1)
+          END AS IsPerformanceEligible
         , CAST(
               DATEDIFF_BIG(SECOND, s.StartEntryDate, e.EndEntryDate)
               / 86400.0 AS DECIMAL(18, 6)
@@ -8025,6 +8076,7 @@ CompletedCycles AS
         SELECT TOP (1)
               c.buildingActionID AS StartActionID
             , c.entryDate AS StartEntryDate
+            , startOrigin.buildingActionExtraText5 AS StartSourceMarker
         FROM Housing.fn_BuildingAction_ChainToRoot(e.buildingActionID) c
         INNER JOIN Housing.BuildingAction startOrigin
             ON startOrigin.buildingActionID = c.buildingActionID
@@ -8035,13 +8087,17 @@ CompletedCycles AS
                   WHEN e.EndActionTypeID = 24 THEN 48
                   WHEN e.EndActionTypeID = 3 THEN 54
               END
-          -- Historical starts are allowed when the finish is operational.
-          -- Only starts synthesized by the migration are excluded.
-          AND COALESCE(startOrigin.buildingActionExtraText5, N'')
-               <> N'MIGRATION_GENERATED'
+          -- ALLOCATION must pick the actual earliest 27, even if migrated.
+          -- Its KPI eligibility is evaluated AFTER selecting this start.
+          -- Other workflows preserve their original start-selection rule.
+          AND (
+                e.EndActionTypeID IN (45, 42)
+                OR COALESCE(startOrigin.buildingActionExtraText5, N'')
+                   <> N'MIGRATION_GENERATED'
+              )
           AND c.entryDate IS NOT NULL
           AND c.entryDate <= e.EndEntryDate
-        -- Earliest genuine start in this chain, including a retained legacy start.
+        -- Earliest applicable start in this chain (historical visibility preserved).
         ORDER BY c.entryDate ASC, c.Lvl ASC, c.buildingActionID ASC
     ) s
     WHERE s.StartActionID IS NOT NULL
@@ -8051,7 +8107,8 @@ CyclesWithMedian AS
     SELECT
           c.*
         , PERCENTILE_CONT(0.5) WITHIN GROUP
-          (ORDER BY c.DurationDays) OVER
+          (ORDER BY CASE WHEN c.IsPerformanceEligible = 1
+                         THEN c.DurationDays END) OVER
           (PARTITION BY c.idaraID, c.WorkflowKey) AS MedianDays
     FROM CompletedCycles c
 ),
@@ -8061,11 +8118,18 @@ Performance AS
           idaraID
         , WorkflowKey
         , MAX(WorkflowName) AS WorkflowName
-        , COUNT(*) AS CompletedCount
-        , CAST(AVG(DurationDays) AS DECIMAL(18, 6)) AS AverageDays
+        , COUNT(*) AS CompletedCount -- All historical completed cycles
+        , CAST(AVG(CASE WHEN IsPerformanceEligible = 1
+                        THEN DurationDays END) AS DECIMAL(18, 6)) AS AverageDays
         , CAST(MAX(MedianDays) AS DECIMAL(18, 6)) AS MedianDays
-        , MIN(DurationDays) AS MinimumDays
-        , MAX(DurationDays) AS MaximumDays
+        , MIN(CASE WHEN IsPerformanceEligible = 1
+                   THEN DurationDays END) AS MinimumDays
+        , MAX(CASE WHEN IsPerformanceEligible = 1
+                   THEN DurationDays END) AS MaximumDays
+        , SUM(CASE WHEN IsPerformanceEligible = 1 THEN 1 ELSE 0 END)
+              AS PerformanceEligibleCount
+        , SUM(CASE WHEN IsPerformanceEligible = 0 THEN 1 ELSE 0 END)
+              AS PerformanceExcludedCount
         , MAX(EndEntryDate) AS LastCompletedDate
         , SUM(CASE WHEN EndActionTypeID = 45 THEN 1 ELSE 0 END)
           AS ApprovedAllocationCount
@@ -8093,6 +8157,9 @@ SELECT
     , p.LastCompletedDate
     , ISNULL(p.ApprovedAllocationCount, 0) AS ApprovedAllocationCount
     , ISNULL(p.CancelledAllocationCount, 0) AS CancelledAllocationCount
+    -- Appended columns: existing result-set column order is unchanged.
+    , ISNULL(p.PerformanceEligibleCount, 0) AS PerformanceEligibleCount
+    , ISNULL(p.PerformanceExcludedCount, 0) AS PerformanceExcludedCount
 FROM EnabledIdaras i
 CROSS JOIN WorkflowTypes w
 LEFT JOIN Performance p

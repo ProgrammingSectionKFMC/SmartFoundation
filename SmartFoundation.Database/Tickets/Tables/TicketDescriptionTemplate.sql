@@ -1,4 +1,4 @@
-CREATE TABLE [Tickets].[TicketDescriptionTemplate] (
+﻿CREATE TABLE [Tickets].[TicketDescriptionTemplate] (
     [templateID]        BIGINT          IDENTITY (1, 1) NOT NULL,
     [templateCode]      NVARCHAR (50)   NOT NULL,
     [templateName_A]    NVARCHAR (500)  NOT NULL,
@@ -20,22 +20,21 @@ CREATE TABLE [Tickets].[TicketDescriptionTemplate] (
 );
 
 
-GO
-
-CREATE NONCLUSTERED INDEX [IX_TicketDescriptionTemplate_Active_Order]
-    ON [Tickets].[TicketDescriptionTemplate]([templateActive] ASC, [displayOrder] ASC, [templateID] ASC);
 
 
 GO
 
-CREATE NONCLUSTERED INDEX [IX_TicketDescriptionTemplate_Class]
-    ON [Tickets].[TicketDescriptionTemplate]([ticketClassID_FK] ASC);
+
 
 
 GO
 
-CREATE NONCLUSTERED INDEX [IX_TicketDescriptionTemplate_Service]
-    ON [Tickets].[TicketDescriptionTemplate]([serviceID_FK] ASC);
+
+
+
+GO
+
+
 
 
 GO

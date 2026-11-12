@@ -2,5 +2,14 @@ CREATE SCHEMA [MoveData]
     AUTHORIZATION [dbo];
 
 
+
+
 GO
+GRANT EXECUTE
+    ON SCHEMA::[MoveData] TO [SAMIDEV];
+
+
+GO
+GRANT ALTER
+    ON SCHEMA::[MoveData] TO [SAMIDEV];
 

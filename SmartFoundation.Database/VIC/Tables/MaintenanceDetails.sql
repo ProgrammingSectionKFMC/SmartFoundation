@@ -1,4 +1,4 @@
-CREATE TABLE [VIC].[MaintenanceDetails] (
+﻿CREATE TABLE [VIC].[MaintenanceDetails] (
     [MaintDetailesID]   INT            IDENTITY (1, 1) NOT NULL,
     [MaintOrdID_FK]     INT            NULL,
     [typesID_FK]        INT            NULL,
@@ -19,10 +19,11 @@ CREATE TABLE [VIC].[MaintenanceDetails] (
 );
 
 
+
+
 GO
 
-CREATE NONCLUSTERED INDEX [IX_MaintenanceDetails_New_MaintOrdID]
-    ON [VIC].[MaintenanceDetails]([MaintOrdID_FK] ASC);
+
 
 
 GO

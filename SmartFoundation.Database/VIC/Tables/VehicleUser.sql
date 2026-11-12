@@ -1,4 +1,4 @@
-CREATE TABLE [VIC].[VehicleUser] (
+﻿CREATE TABLE [VIC].[VehicleUser] (
     [vehicleUserID] INT            IDENTITY (1, 1) NOT NULL,
     [generalNo]     BIGINT         NULL,
     [nationalID]    NVARCHAR (20)  NULL,
@@ -12,22 +12,21 @@ CREATE TABLE [VIC].[VehicleUser] (
 );
 
 
-GO
-
-CREATE NONCLUSTERED INDEX [IX_VehicleUser_Idara]
-    ON [VIC].[VehicleUser]([IdaraID_FK] ASC, [userActive] ASC);
 
 
 GO
 
-CREATE NONCLUSTERED INDEX [IX_VehicleUser_NationalID]
-    ON [VIC].[VehicleUser]([nationalID] ASC) WHERE ([nationalID] IS NOT NULL);
+
 
 
 GO
 
-CREATE UNIQUE NONCLUSTERED INDEX [UX_VehicleUser_GeneralNo]
-    ON [VIC].[VehicleUser]([generalNo] ASC) WHERE ([generalNo] IS NOT NULL);
+
+
+
+GO
+
+
 
 
 GO

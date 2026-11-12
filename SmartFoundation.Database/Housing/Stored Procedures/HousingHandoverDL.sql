@@ -1,4 +1,4 @@
-
+﻿
 CREATE PROCEDURE [Housing].[HousingHandoverDL]
       @pageName_         NVARCHAR(400)
     , @idaraID           INT
@@ -35,69 +35,104 @@ BEGIN
     END;
 
     ------------------------------------------------------------
-    -- 1. Buildinghandover Data
-    -- المباني المتاحة حسب الحالة والإدارة والصلاحيات
-    ------------------------------------------------------------
+-- 1. Buildinghandover Data
+-- Materialize the complete view before applying filters
+------------------------------------------------------------
 
-    SELECT DISTINCT
-          b.buildingDetailsID
-        , b.buildingDetailsNo
-        , b.militaryLocationName_A
-        , b.militaryAreaCityName_A
-        , b.militaryAreaName_A
-        , b.buildingUtilityTypeName_A
-        , b.LastActionTypeID
-        , b.LastActionTypeName
-        , CASE
-              WHEN b.LastActionTypeID = 57
-                  THEN N'المبنى خالٍ بانتظار اتخاذ إجراء'
-              ELSE b.LastActionTypeBuildingAlias
-          END AS LastActionTypeBuildingAlias
-        , b.LastActionID
-        , b.LastActionNote
-        , CONVERT(NVARCHAR(10), b.LastActionEntryDate, 23)
-          + N'  '
-          + CONVERT(NVARCHAR(10), b.LastActionEntryDate, 8)
-            AS LastActionEntryDatestring
-        , b.LastActionEntryDate
+DROP TABLE IF EXISTS #HandoverBuildings;
 
-    FROM Housing.V_GetGeneralListForBuilding b
+SELECT
+      b.buildingDetailsID
+    , b.buildingDetailsNo
+    , b.BuildingIdaraID
+    , b.buildingDetailsActive
+    , b.militaryLocationName_A
+    , b.militaryAreaCityName_A
+    , b.militaryAreaName_A
+    , b.buildingUtilityTypeName_A
+    , b.LastActionTypeID
+    , b.LastActionTypeName
+    , b.LastActionTypeBuildingAlias
+    , b.LastActionID
+    , b.LastActionNote
+    , b.LastActionEntryDate
+INTO #HandoverBuildings
+FROM Housing.V_GetGeneralListForBuilding b
 
-    WHERE b.buildingDetailsActive = 1
-      AND b.LastActionTypeID = @LastActionTypeID
-      AND b.BuildingIdaraID = @idaraID
 
-      AND EXISTS
-      (
-          SELECT 1
-          FROM Housing.Buildinghandover h
-          WHERE h.BuildingActionTypeID_FK = b.LastActionTypeID
-            AND h.BuildinghandoverActive = 1
+------------------------------------------------------------
+-- Apply department, status and permission filters
+-- only after the view result is materialized
+------------------------------------------------------------
 
-            AND
-            (
-                (
-                    @UseDepartmentActions = 1
-                    AND h.IdaraID_FK = @idaraID
-                )
-                OR
-                (
-                    @UseDepartmentActions = 0
-                    AND h.IdaraID_FK IS NULL
-                )
-            )
-
-            AND EXISTS
-            (
-                SELECT 1
-                FROM dbo.V_GetListUserPermission d
-                WHERE d.permissionTypeRoleID = 20
-                  AND d.userID = @entrydata
-                  AND d.permissionTypeID = h.PermissionTypeID_FK
-            )
+SELECT DISTINCT
+      b.buildingDetailsID
+    , b.buildingDetailsNo
+    , b.militaryLocationName_A
+    , b.militaryAreaCityName_A
+    , b.militaryAreaName_A
+    , b.buildingUtilityTypeName_A
+    , b.LastActionTypeID
+    , b.LastActionTypeName
+    , CASE
+          WHEN b.LastActionTypeID = 57
+          THEN N'المبنى خالٍ بانتظار اتخاذ إجراء'
+          ELSE b.LastActionTypeBuildingAlias
+      END AS LastActionTypeBuildingAlias
+    , b.LastActionID
+    , b.LastActionNote
+    , CONVERT(
+          NVARCHAR(10),
+          b.LastActionEntryDate,
+          23
       )
+      + N'  '
+      + CONVERT(
+          NVARCHAR(10),
+          b.LastActionEntryDate,
+          8
+      ) AS LastActionEntryDatestring
+    , b.LastActionEntryDate
 
-    ORDER BY b.LastActionEntryDate DESC;
+FROM #HandoverBuildings b
+
+WHERE b.buildingDetailsActive = 1
+  AND b.LastActionTypeID = @LastActionTypeID
+  AND b.BuildingIdaraID = @idaraID
+
+  AND EXISTS
+  (
+      SELECT 1
+      FROM Housing.Buildinghandover h
+      WHERE h.BuildingActionTypeID_FK =
+            b.LastActionTypeID
+        AND h.BuildinghandoverActive = 1
+
+        AND
+        (
+            (
+                @UseDepartmentActions = 1
+                AND h.IdaraID_FK = @idaraID
+            )
+            OR
+            (
+                @UseDepartmentActions = 0
+                AND h.IdaraID_FK IS NULL
+            )
+        )
+
+        AND EXISTS
+        (
+            SELECT 1
+            FROM dbo.V_GetListUserPermission d
+            WHERE d.permissionTypeRoleID = 20
+              AND d.userID = @entrydata
+              AND d.permissionTypeID =
+                  h.PermissionTypeID_FK
+        )
+  )
+
+ORDER BY b.LastActionEntryDate DESC;
 
 
     ------------------------------------------------------------
