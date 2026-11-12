@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using SmartFoundation.Mvc.Services.DataLoad;
 using System.Data;
 
 namespace SmartFoundation.Mvc.Controllers.Tickets
@@ -23,41 +24,69 @@ namespace SmartFoundation.Mvc.Controllers.Tickets
         /// Returns the ticket drawer content as a partial view for the given ticket.
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> TicketDrawer(int id)
+        public async Task<IActionResult> TicketDrawer([FromServices] RequestScopedDataLoadService requestDataLoad, int id)
         {
+            //  قراءة السيشن والكونتكست
             if (!InitPageContext(out _) || string.IsNullOrWhiteSpace(usersId))
                 return Unauthorized();
 
             if (id <= 0)
                 return BadRequest();
 
-            // "TicketDetails" stays the DB page that owns ticket read permissions and data.
-            DataSet ds = await _mastersServies.GetDataLoadDataSetAsync(
-                "TicketDetails", IdaraId, usersId, HostName, id.ToString());
+            ControllerName = "Ticket";
+            PageName = "TicketDrawer";
 
-            var permissions = (ds?.Tables?.Count ?? 0) > 0 ? ds!.Tables[0] : null;
-            if (permissions is null || permissions.Rows.Count == 0)
+            var pageParameters = new Dictionary<string, object?>(
+               StringComparer.OrdinalIgnoreCase)
+            {
+                ["pageName_"] = PageName,
+                ["parameter_01"] = id
+            };
+
+            if (IdaraId != null)
+                pageParameters["idaraID"] = Convert.ToInt32(IdaraId);
+
+            if (usersId != null)
+                pageParameters["entrydata"] = Convert.ToInt32(usersId);
+
+            if (HostName != null)
+                pageParameters["hostname"] = HostName;
+
+            // Masters_DataLoad -> [Tickets].[TicketDrawerDL]
+            // [0] الصلاحيات  [1] صلاحيات صفحة قائمة التذاكر  [2] بيانات التذكرة  [3] سجل الإجراءات
+            // [4] التذاكر الفرعية  [5] فترات الإيقاف  [6] مراجعات الجودة  [7] طلبات التوضيح  [8] المرفقات
+            DataSet ds = await requestDataLoad.GetDataLoadDataSetAsync(pageParameters);
+
+            //  تقسيم الداتا سيت للجدول الأول + جداول أخرى
+            SplitDataSet(ds);
+
+            //  التحقق من الصلاحيات: النافذة تابعة لقائمة التذاكر وقراءة التذكرة تتطلب SELECT هناك
+            //  (TicketDrawerDL لا يُرجع بيانات التذكرة أصلاً بدون هذه الصلاحية)
+            bool canSELECT = false;
+            if (dt1 != null && dt1.Columns.Contains("permissionTypeName_E"))
+            {
+                foreach (DataRow row in dt1.Rows)
+                {
+                    var permissionName = row["permissionTypeName_E"]?.ToString()?.Trim().ToUpper();
+                    if (permissionName == "SELECT") canSELECT = true;
+                }
+            }
+
+            if (!canSELECT)
                 return StatusCode(StatusCodes.Status403Forbidden);
 
-            var ticketTable = ResolveUsableTable(ds, "ticketID", "ticketNo");
-            if (ticketTable is null || ticketTable.Rows.Count == 0)
+            if (dt2 == null || dt2.Rows.Count == 0)
                 return NotFound();
 
             var model = new TicketDrawerViewModel
             {
-                Ticket = ConvertTableToDictionaryList(ticketTable)[0],
-                History = ConvertTableToDictionaryList(
-                    await LoadTicketDataTableAsync("TicketHistory", id, "actionTypeCode", "actionDate")),
-                ChildTickets = ConvertTableToDictionaryList(
-                    await LoadTicketDataTableAsync("ChildTickets", id, "ticketID", "ticketNo")),
-                PauseSessions = ConvertTableToDictionaryList(
-                    await LoadTicketDataTableAsync("PauseSessions", id, "ticketPauseSessionID", "pauseStart")),
-                QualityReviews = ConvertTableToDictionaryList(
-                    await LoadTicketDataTableAsync("QualityReviews", id, "qualityReviewID", "entryDate")),
-                ClarificationRequests = ConvertTableToDictionaryList(
-                    await LoadClarificationRequestsFallbackAsync(id)),
-                Attachments = ConvertTableToDictionaryList(
-                    await LoadTicketDataTableAsync("TicketAttachments", id, "ticketAttachmentID", "fileName"))
+                Ticket = ConvertTableToDictionaryList(dt2)[0],
+                History = ConvertTableToDictionaryList(dt3),
+                ChildTickets = ConvertTableToDictionaryList(dt4),
+                PauseSessions = ConvertTableToDictionaryList(dt5),
+                QualityReviews = ConvertTableToDictionaryList(dt6),
+                ClarificationRequests = ConvertTableToDictionaryList(dt7),
+                Attachments = ConvertTableToDictionaryList(dt8)
             };
 
             return PartialView("_TicketDrawer", model);

@@ -151,7 +151,7 @@
              SELECT TOP (1) r.[FullName_A] AS [ResidentName_A]
              FROM [Housing].[V_GetFullResidentDetails] r
              WHERE r.[residentInfoID] = t.[requesterResidentID_FK]
-               AND (r.[IdaraID] = @idaraID OR @idaraID IS NULL)
+               AND (r.[IdaraID] = @idaraID)
          ) rres
          -- Resolution SLA
          OUTER APPLY (
@@ -164,7 +164,7 @@
              ORDER BY sl.[ticketSLAID] DESC
          ) sla
          WHERE t.[ticketActive] = 1
-           AND (t.[idaraID_FK] = @idaraID OR @idaraID IS NULL)
+           AND (t.[idaraID_FK] = @idaraID)
            AND (t.[ticketID] = @filterTicketID OR @filterTicketID IS NULL)
            AND (t.[ticketNo] = @filterTicketNo OR @filterTicketNo IS NULL)
            AND (t.[ticketStatusID_FK] = @filterStatusID OR @filterStatusID IS NULL)
@@ -291,7 +291,7 @@
              WHERE f.[DSDID] = t.[currentDSDID_FK]
          ) dsd
          WHERE t.[ticketActive] = 1
-           AND (t.[idaraID_FK] = @idaraID OR @idaraID IS NULL)
+           AND (t.[idaraID_FK] = @idaraID)
            AND (t.[ticketStatusID_FK] = @filterStatusID OR @filterStatusID IS NULL)
            AND (t.[serviceID_FK] = @filterServiceID OR @filterServiceID IS NULL)
            AND (t.[currentDSDID_FK] = @filterDSDID OR @filterDSDID IS NULL)
@@ -305,7 +305,7 @@
          SELECT [serviceID], [serviceName_A], [serviceName_E]
          FROM [Tickets].[Service]
          WHERE [serviceActive] = 1
-           AND ([idaraID_FK] = @idaraID OR @idaraID IS NULL OR [idaraID_FK] IS NULL)
+           AND ([idaraID_FK] = @idaraID OR [idaraID_FK] IS NULL)
          ORDER BY [serviceID];
 
          RETURN;
@@ -380,7 +380,7 @@
            -- تعديل 07: منع قراءة تفاصيل تذكرة من إدارة أخرى.
            AND EXISTS (SELECT 1 FROM [Tickets].[Ticket] parentTicket
                        WHERE parentTicket.[ticketID] = th.[ticketID_FK]
-                         AND (parentTicket.[idaraID_FK] = @idaraID OR @idaraID IS NULL))
+                         AND (parentTicket.[idaraID_FK] = @idaraID))
          ORDER BY th.[ticketHistoryID];
 
          RETURN;
@@ -415,7 +415,7 @@
            -- تعديل 07: منع قراءة تفاصيل تذكرة من إدارة أخرى.
            AND EXISTS (SELECT 1 FROM [Tickets].[Ticket] parentTicket
                        WHERE parentTicket.[ticketID] = ct.[parentTicketID_FK]
-                         AND (parentTicket.[idaraID_FK] = @idaraID OR @idaraID IS NULL))
+                         AND (parentTicket.[idaraID_FK] = @idaraID))
            AND ct.[ticketActive] = 1
          ORDER BY ct.[ticketID] DESC;
 
@@ -443,7 +443,7 @@
            -- تعديل 07: منع قراءة تفاصيل تذكرة من إدارة أخرى.
            AND EXISTS (SELECT 1 FROM [Tickets].[Ticket] parentTicket
                        WHERE parentTicket.[ticketID] = ps.[ticketID_FK]
-                         AND (parentTicket.[idaraID_FK] = @idaraID OR @idaraID IS NULL))
+                         AND (parentTicket.[idaraID_FK] = @idaraID))
          ORDER BY ps.[ticketPauseSessionID] DESC;
 
          RETURN;
@@ -468,7 +468,7 @@
            -- تعديل 07: منع قراءة تفاصيل تذكرة من إدارة أخرى.
            AND EXISTS (SELECT 1 FROM [Tickets].[Ticket] parentTicket
                        WHERE parentTicket.[ticketID] = sla.[ticketID_FK]
-                         AND (parentTicket.[idaraID_FK] = @idaraID OR @idaraID IS NULL))
+                         AND (parentTicket.[idaraID_FK] = @idaraID))
            AND sla.[ticketSLAActive] = 1
          ORDER BY sla.[ticketSLAID];
 
@@ -496,7 +496,7 @@
            -- تعديل 07: منع قراءة تفاصيل تذكرة من إدارة أخرى.
            AND EXISTS (SELECT 1 FROM [Tickets].[Ticket] parentTicket
                        WHERE parentTicket.[ticketID] = qr.[ticketID_FK]
-                         AND (parentTicket.[idaraID_FK] = @idaraID OR @idaraID IS NULL))
+                         AND (parentTicket.[idaraID_FK] = @idaraID))
            AND qr.[qualityReviewActive] = 1
          ORDER BY qr.[qualityReviewID] DESC;
 
@@ -525,7 +525,7 @@
            -- تعديل 07: منع قراءة تفاصيل تذكرة من إدارة أخرى.
            AND EXISTS (SELECT 1 FROM [Tickets].[Ticket] parentTicket
                        WHERE parentTicket.[ticketID] = ac.[ticketID_FK]
-                         AND (parentTicket.[idaraID_FK] = @idaraID OR @idaraID IS NULL))
+                         AND (parentTicket.[idaraID_FK] = @idaraID))
            AND ac.[arbitrationCaseActive] = 1
          ORDER BY ac.[arbitrationCaseID] DESC;
 
@@ -550,7 +550,7 @@
            -- تعديل 07: منع قراءة تفاصيل تذكرة من إدارة أخرى.
            AND EXISTS (SELECT 1 FROM [Tickets].[Ticket] parentTicket
                        WHERE parentTicket.[ticketID] = ta.[ticketID_FK]
-                         AND (parentTicket.[idaraID_FK] = @idaraID OR @idaraID IS NULL))
+                         AND (parentTicket.[idaraID_FK] = @idaraID))
            AND ta.[ticketAttachmentActive] = 1
          ORDER BY ta.[ticketAttachmentID] DESC;
 
@@ -634,6 +634,11 @@
              , cr.[requestDate]
              , cr.[responseDate]
          FROM [Tickets].[ClarificationRequest] cr
+         -- The request is visible only through a ticket of the caller's Idara.
+         INNER JOIN [Tickets].[Ticket] t
+             ON t.[ticketID] = cr.[ticketID_FK]
+            AND t.[idaraID_FK] = @idaraID
+            AND t.[ticketActive] = 1
          LEFT JOIN [Tickets].[ClarificationReason] r ON r.[clarificationReasonID] = cr.[clarificationReasonID_FK]
          WHERE cr.[ticketID_FK] = @filterTicketID
            AND ISNULL(cr.[clarificationActive], 1) = 1
@@ -668,9 +673,9 @@
          LEFT JOIN [Tickets].[ArbitrationReason] ar ON ac.[arbitrationReasonID_FK] = ar.[arbitrationReasonID]
          WHERE ac.[arbitrationStatus] = N'OPEN'
            AND ac.[arbitrationCaseActive] = 1
-           AND (ac.[idaraID_FK] = @idaraID OR @idaraID IS NULL)
+           AND (ac.[idaraID_FK] = @idaraID)
            -- تعديل 09: التحقق أيضًا من نطاق الإدارة في التذكرة المرتبطة.
-           AND (t.[idaraID_FK] = @idaraID OR @idaraID IS NULL)
+           AND (t.[idaraID_FK] = @idaraID)
          ORDER BY ac.[arbitrationCaseID] DESC;
 
          RETURN;
@@ -689,9 +694,9 @@
          INNER JOIN [Tickets].[Ticket] t ON qr.[ticketID_FK] = t.[ticketID]
          WHERE qr.[finalized] = 0
            AND qr.[qualityReviewActive] = 1
-           AND (qr.[idaraID_FK] = @idaraID OR @idaraID IS NULL)
+           AND (qr.[idaraID_FK] = @idaraID)
            -- تعديل 09: التحقق أيضًا من نطاق الإدارة في التذكرة المرتبطة.
-           AND (t.[idaraID_FK] = @idaraID OR @idaraID IS NULL)
+           AND (t.[idaraID_FK] = @idaraID)
          ORDER BY qr.[qualityReviewID] DESC;
 
          RETURN;
@@ -713,9 +718,9 @@
          INNER JOIN [Tickets].[Ticket] t ON sla.[ticketID_FK] = t.[ticketID]
          WHERE sla.[isBreached] = 1
            AND sla.[ticketSLAActive] = 1
-           AND (sla.[idaraID_FK] = @idaraID OR @idaraID IS NULL)
+           AND (sla.[idaraID_FK] = @idaraID)
            -- تعديل 09: التحقق أيضًا من نطاق الإدارة في التذكرة المرتبطة.
-           AND (t.[idaraID_FK] = @idaraID OR @idaraID IS NULL)
+           AND (t.[idaraID_FK] = @idaraID)
          ORDER BY sla.[ticketSLAID] DESC;
 
          RETURN;

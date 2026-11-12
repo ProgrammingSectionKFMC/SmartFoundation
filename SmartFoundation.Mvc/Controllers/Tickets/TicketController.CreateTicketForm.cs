@@ -9,19 +9,26 @@ namespace SmartFoundation.Mvc.Controllers.Tickets
         /// <summary>
         /// Fields for the "تذكرة جديدة" form. The user only answers who is reporting, what the
         /// problem is and where; Tickets.TicketSP (INSERT_TICKET) derives class, title,
-        /// description, priority and the resident's location.
+        /// description, priority and the resident's location. The requester employee is taken
+        /// from the session by TicketSP, not from the form.
         /// </summary>
         /// <remarks>
-        /// Masters_CRUD INSERT_TICKET mapping: p02 requesterType, p03 requesterUser, p04 resident,
+        /// All lists come from the TicketList page DataSet (Tickets.TicketListDL):
+        /// [14] requester types, [15] residents, [3] services + [8] classes, [16] buildings,
+        /// [17] reasons (loaded by service through /crud/DDLFiltered).
+        /// Masters_CRUD INSERT_TICKET mapping: p02 requesterType, p04 resident,
         /// p05 service, p07 description, p12 building, p14 location text, p17 reason,
         /// p18 reporter name, p19 reporter phone, p20 urgent.
         /// </remarks>
-        private async Task<List<FieldConfig>> BuildCreateTicketFieldsAsync(string? requesterUserValue)
+        private List<FieldConfig> BuildCreateTicketFields(
+            string? pageName,
+            string currentUrl,
+            string requestToken,
+            DataTable? requesterTypes,
+            List<OptionItem> residentOptions,
+            List<OptionItem> serviceOptions,
+            List<OptionItem> buildingOptions)
         {
-            var requesterTypes = ResolveUsableTable(
-                await _mastersServies.GetDataLoadDataSetAsync("RequesterTypeDDL", IdaraId, usersId, HostName),
-                "requesterTypeCode");
-
             string? TypeId(string code) => requesterTypes?.Rows.Cast<DataRow>()
                 .FirstOrDefault(r => string.Equals(r["requesterTypeCode"]?.ToString(), code, StringComparison.OrdinalIgnoreCase))?["requesterTypeID"]?.ToString();
 
@@ -41,83 +48,77 @@ namespace SmartFoundation.Mvc.Controllers.Tickets
 
             return new List<FieldConfig>
             {
-                new() { Name = "pageName_",          Type = "hidden", Value = "TicketDetails" },
-                new() { Name = "ActionType",         Type = "hidden", Value = "INSERT_TICKET" },
-                new() { Name = "idaraID",            Type = "hidden", Value = IdaraId },
-                new() { Name = "entrydata",          Type = "hidden", Value = usersId },
-                new() { Name = "hostname",           Type = "hidden", Value = HostName },
-                new() { Name = "redirectAction",     Type = "hidden", Value = "TicketList" },
-                new() { Name = "redirectController", Type = "hidden", Value = "Ticket" },
-                new() { Name = "p03",                Type = "hidden", Value = requesterUserValue },
+                new FieldConfig { Name = "pageName_",          Type = "hidden", Value = pageName },
+                new FieldConfig { Name = "ActionType",         Type = "hidden", Value = "INSERT_TICKET" },
+                new FieldConfig { Name = "redirectUrl",     Type = "hidden", Value = currentUrl },
+                new FieldConfig { Name = "redirectAction",     Type = "hidden", Value = pageName },
+                new FieldConfig { Name = "redirectController", Type = "hidden", Value = "Ticket" },
+                new FieldConfig { Name = "__RequestVerificationToken", Type = "hidden", Value = requestToken },
 
-                new()
+                new FieldConfig
                 {
                     Label = "من صاحب البلاغ؟", Name = "p02", Type = "select", Required = true, ColCss = "6",
                     Options = reporterOptions, Value = employeeType, ShowFieldsWhen = showWhen
                 },
-                new()
+                new FieldConfig
                 {
                     Label = "الساكن", Name = "p04", Type = "select", Required = true, ColCss = "6", Select2 = true,
-                    Options = await GetTicketDdlOptionsAsync("FullName_A", "residentInfoID", "1", "ResidentDDL"),
+                    Options = residentOptions,
                     Placeholder = "ابحث بالاسم أو رقم الهوية",
                     HelpText = "يُحدَّد موقع البلاغ تلقائياً من سكن الساكن."
                 },
-                new() { Label = "اسم المبلّغ", Name = "p18", Type = "text", ColCss = "6", MaxLength = 200, Placeholder = "اختياري" },
-                new() { Label = "جوال المبلّغ", Name = "p19", Type = "text", ColCss = "6", MaxLength = 15, TextMode = "number", Placeholder = "اختياري — 05xxxxxxxx" },
+                new FieldConfig { Label = "اسم المبلّغ", Name = "p18", Type = "text", ColCss = "6", MaxLength = 200, Placeholder = "اختياري" },
+                new FieldConfig { Label = "جوال المبلّغ", Name = "p19", Type = "text", ColCss = "6", MaxLength = 15, TextMode = "number", Placeholder = "اختياري — 05xxxxxxxx" },
 
-                new()
+                new FieldConfig
                 {
                     Label = "نوع المشكلة", Name = "p05", Type = "select", Required = true, ColCss = "6", Select2 = true,
-                    Options = await BuildGroupedServiceOptionsAsync(),
+                    Options = serviceOptions,
                     Placeholder = "ابحث عن المشكلة، مثل: سباكة، كهرباء، إنترنت"
                 },
-                new()
+                new FieldConfig
                 {
                     Label = "السبب", Name = "p17", Type = "select", ColCss = "6", Select2 = true,
                     Options = new List<OptionItem>(),
                     DependsOn = "p05",
-                    DependsUrl = "/crud/DDLFiltered?FK=serviceID_FK&textcol=ticketReasonName_A&ValueCol=ticketReasonID&PageName=TicketReasonDDL&TableIndex=1",
+                    DependsUrl = "/crud/DDLFiltered?FK=serviceID_FK&textcol=ticketReasonName_A&ValueCol=ticketReasonID&PageName=TicketList&TableIndex=17",
                     HelpText = "اختياري — يساعد على تحديد الأولوية."
                 },
-                new()
+                new FieldConfig
                 {
                     Label = "تفاصيل المشكلة", Name = "p07", Type = "textarea", ColCss = "6", MaxLength = 2000,
                     Placeholder = "اكتب ما تلاحظه بإيجاز (اختياري)"
                 },
 
-                new()
+                new FieldConfig
                 {
                     Label = "المبنى", Name = "p12", Type = "select", ColCss = "6", Select2 = true,
-                    Options = await GetTicketDdlOptionsAsync("buildingDetailsNo", "buildingDetailsNo", "1", "BuildingDDL"),
+                    Options = buildingOptions,
                     Placeholder = "اختياري"
                 },
-                new()
+                new FieldConfig
                 {
                     Label = "الموقع", Name = "p14", Type = "text", ColCss = "6", MaxLength = 200,
                     Placeholder = "الحي، الشارع، أقرب معلم",
                     HelpText = "مطلوب للبلاغ العام."
                 },
-                new() { Label = "الحالة عاجلة", Name = "p20", Type = "checkbox", ColCss = "6" }
+                new FieldConfig { Label = "الحالة عاجلة", Name = "p20", Type = "checkbox", ColCss = "6" }
             };
         }
 
         /// <summary>
         /// All active services as one searchable list, labelled "الفئة — الخدمة".
         /// </summary>
-        private async Task<List<OptionItem>> BuildGroupedServiceOptionsAsync()
+        private static List<OptionItem> BuildGroupedServiceOptions(DataTable? services, DataTable? classes)
         {
-            var services = ResolveUsableTable(
-                await _mastersServies.GetDataLoadDataSetAsync("ServiceDDL", IdaraId, usersId, HostName),
-                "serviceID");
-            var classes = ResolveUsableTable(
-                await _mastersServies.GetDataLoadDataSetAsync("TicketClassDDL", IdaraId, usersId, HostName),
-                "ticketClassID");
+            var classNames = new Dictionary<string, string>();
+            if (classes != null && classes.Columns.Contains("ticketClassID") && classes.Columns.Contains("ticketClassName_A"))
+            {
+                foreach (DataRow r in classes.Rows)
+                    classNames[r["ticketClassID"]?.ToString() ?? ""] = r["ticketClassName_A"]?.ToString() ?? "";
+            }
 
-            var classNames = classes?.Rows.Cast<DataRow>().ToDictionary(
-                r => r["ticketClassID"]?.ToString() ?? "",
-                r => r["ticketClassName_A"]?.ToString() ?? "") ?? new Dictionary<string, string>();
-
-            if (services == null)
+            if (services == null || !services.Columns.Contains("serviceID"))
                 return new List<OptionItem>();
 
             return services.Rows.Cast<DataRow>()

@@ -2446,39 +2446,49 @@ END
     -- ============================================================
     --                       TICKETS MODULE
     -- ============================================================
-    ELSE IF @pageName_ IN (N'TicketList', N'TicketDetails', N'TicketHistory', N'StatusDDL',
-                           N'ChildTickets', N'PauseSessions', N'TicketSLAs',
-                           N'QualityReviews', N'ArbitrationCases', N'TicketAttachments',
-                           N'PauseReasonDDL', N'ArbitrationReasonDDL', N'QualityReviewResultDDL',
-                           N'RequesterTypeDDL', N'TicketClassDDL', N'PriorityDDL',
-                           N'OpenArbitrations', N'PendingReviews', N'BreachedSLAs',
-                           N'TicketAdminLookup', N'ResidentDDL', N'BuildingDDL',
-                           N'TicketReasonDDL', N'TicketDescriptionTemplateDDL', N'DSDDL', N'DsdUsersDDL', N'DsdUsersAllDDL', N'ClarificationReasonDDL', N'ClarificationRequests', N'DSDTreeDDL')
+     -------------------------------------------------------------------
+--                     PAGE: TicketAdmin
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'TicketAdmin'
     BEGIN
-        EXEC [Tickets].[TicketDL]
+        
+        -- Handover Print Get Data
+        EXEC [Tickets].[TicketAdminDL]
+       @pageName_  = @pageName_
+        , @idaraID   = @idaraID
+        , @entryData  = @entrydata
+        , @hostName   = @hostname
+        , @filterServiceID  = @parameter_01
+        , @filterTicketClassID = @parameter_02
+    END
+     -------------------------------------------------------------------
+--                     PAGE: TicketList
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'TicketList'
+    BEGIN
+
+        EXEC [Tickets].[TicketListDL]
+              @pageName_        = @pageName_
+            , @idaraID          = @idaraID
+            , @entryData        = @entrydata
+            , @hostName         = @hostname
+            , @filterStatusID   = @parameter_03
+            , @filterServiceID  = @parameter_04
+            , @filterDSDID      = @parameter_06
+    END
+     -------------------------------------------------------------------
+--                     PAGE: TicketDrawer
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'TicketDrawer'
+    BEGIN
+
+        EXEC [Tickets].[TicketDrawerDL]
               @pageName_   = @pageName_
             , @idaraID     = @idaraID
             , @entryData   = @entrydata
             , @hostName    = @hostname
-            , @filterTicketID       = @parameter_01
-            , @filterTicketNo       = @parameter_02
-            , @filterStatusID       = @parameter_03
-            , @filterServiceID      = @parameter_04
-            , @filterAssignedUserID = @parameter_05
-            , @filterDSDID          = @parameter_06;
+            , @ticketID    = @parameter_01
     END
-
-              ELSE IF @pageName_ IN (N'ServiceCatalogueList', N'RoutingRuleLookup', N'SLAPolicyLookup',
-                   N'SuggestionReview', N'ServiceDDL')
-              BEGIN
-            EXEC [Tickets].[ServiceDL]
-                  @pageName_             = @pageName_
-                , @idaraID               = @idaraID
-                , @entryData             = @entrydata
-                , @hostName              = @hostname
-                , @filterServiceID       = @parameter_01
-                , @filterTicketClassID   = @parameter_02;
-              END
 
 
     -------------------------------------------------------------------

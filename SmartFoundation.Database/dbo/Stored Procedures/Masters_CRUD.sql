@@ -4072,14 +4072,14 @@ END
 
 
         ----------------------------------------------------------------
-        -- Tickets (TicketList / TicketDetails)
+        -- Tickets: TicketList (every ticket action)
         ----------------------------------------------------------------
-        ELSE IF @pageName_ IN ('TicketList', 'TicketDetails', 'Tickets')
+        ELSE IF @pageName_ = 'TicketList'
         BEGIN
             IF (
                 SELECT COUNT(*) FROM dbo.V_GetListUserPermission v
                 WHERE v.userID = @entrydata
-                  AND v.menuName_E = N'TicketDetails'
+                  AND v.menuName_E = @pageName_
                   AND v.permissionTypeName_E = @ActionType
             ) <= 0
             BEGIN
@@ -4296,32 +4296,6 @@ END
                                         , @hostName                       = @hostName
                                         , @performerUserID                = @entrydata;
                         END
-                        ELSE IF @ActionType = 'DECIDE_ARBITRATION'
-                        BEGIN
-                                INSERT INTO @Result(IsSuccessful, Message_)
-                                EXEC [Tickets].[TicketSP]
-                                            @Action                         = @ActionType
-                                        , @arbitrationCaseID              = @parameter_01
-                                        , @decisionType                   = @parameter_02
-                                        , @decisionTargetDSDID_FK         = @parameter_03
-                                        , @decisionNotes                  = @parameter_04
-                                        , @idaraID_FK                     = @idaraID
-                                        , @entryData                      = @entrydata
-                                        , @hostName                       = @hostName
-                                        , @performerUserID                = @entrydata;
-                        END
-                        ELSE IF @ActionType = 'CANCEL_ARBITRATION'
-                        BEGIN
-                                INSERT INTO @Result(IsSuccessful, Message_)
-                                EXEC [Tickets].[TicketSP]
-                                            @Action                         = @ActionType
-                                        , @arbitrationCaseID              = @parameter_01
-                                        , @decisionNotes                  = @parameter_02
-                                        , @idaraID_FK                     = @idaraID
-                                        , @entryData                      = @entrydata
-                                        , @hostName                       = @hostName
-                                        , @performerUserID                = @entrydata;
-                        END
                         ELSE
                         BEGIN
                                 SET @ok = 0;
@@ -4334,16 +4308,18 @@ END
         END
 
                 ----------------------------------------------------------------
-                -- Service Catalogue
+                -- Tickets: TicketAdmin (settings tabs, services, arbitration decisions)
+                -- ActionType = permission name (INSERTTICKETCLASS, INSERTSERVICE, DECIDE_ARBITRATION ...).
+                -- TicketAdminSP / ServiceSP use INSERT_xxx action names, so the '_' is added back
+                -- only when calling them, after the standard permission check.
                 ----------------------------------------------------------------
                 ELSE IF @pageName_ = 'TicketAdmin'
                 BEGIN
-                        -- INSERT_TICKETCLASS -> INSERTTICKETCLASS (permission names used by TicketController.TicketAdmin)
                         IF (
                                 SELECT COUNT(*) FROM dbo.V_GetListUserPermission v
                                 WHERE v.userID = @entrydata
                                     AND v.menuName_E = @pageName_
-                                    AND v.permissionTypeName_E = REPLACE(@ActionType, '_', '')
+                                    AND v.permissionTypeName_E = @ActionType
                         ) <= 0
                         BEGIN
                                 SET @ok = 0;
@@ -4353,156 +4329,113 @@ END
 
                         DELETE FROM @Result;
 
-                        INSERT INTO @Result(IsSuccessful, Message_)
-                        EXEC [Tickets].[TicketAdminSP]
-                                  @Action      = @ActionType
-                                , @recordID    = @parameter_01
-                                , @code        = @parameter_02
-                                , @name_A      = @parameter_03
-                                , @name_E      = @parameter_04
-                                , @desc        = @parameter_05
-                                , @level       = @parameter_06
-                                , @idaraID_FK  = @idaraID
-                                , @entryData   = @entrydata
-                                , @hostName    = @hostName;
+                        IF @ActionType = 'DECIDE_ARBITRATION'
+                        BEGIN
+                                INSERT INTO @Result(IsSuccessful, Message_)
+                                EXEC [Tickets].[TicketSP]
+                                          @Action                 = @ActionType
+                                        , @arbitrationCaseID      = @parameter_01
+                                        , @decisionType           = @parameter_02
+                                        , @decisionTargetDSDID_FK = @parameter_03
+                                        , @decisionNotes          = @parameter_04
+                                        , @idaraID_FK             = @idaraID
+                                        , @entryData              = @entrydata
+                                        , @hostName               = @hostName
+                                        , @performerUserID        = @entrydata;
+                        END
+                        ELSE IF @ActionType = 'CANCEL_ARBITRATION'
+                        BEGIN
+                                INSERT INTO @Result(IsSuccessful, Message_)
+                                EXEC [Tickets].[TicketSP]
+                                          @Action                 = @ActionType
+                                        , @arbitrationCaseID      = @parameter_01
+                                        , @decisionNotes          = @parameter_02
+                                        , @idaraID_FK             = @idaraID
+                                        , @entryData              = @entrydata
+                                        , @hostName               = @hostName
+                                        , @performerUserID        = @entrydata;
+                        END
+                        ELSE IF @ActionType IN ('INSERTSERVICE', 'UPDATESERVICE', 'DELETESERVICE')
+                        BEGIN
+                                -- Responsible unit chosen in the service form: section (p13), else branch (p12), else department (p11).
+                                DECLARE @ServiceTargetDSDID INT = COALESCE(
+                                      TRY_CAST(NULLIF(NULLIF(NULLIF(LTRIM(RTRIM(@parameter_13)), N''), N'-99999'), N'-1') AS INT)
+                                    , TRY_CAST(NULLIF(NULLIF(NULLIF(LTRIM(RTRIM(@parameter_12)), N''), N'-99999'), N'-1') AS INT)
+                                    , TRY_CAST(NULLIF(NULLIF(NULLIF(LTRIM(RTRIM(@parameter_11)), N''), N'-99999'), N'-1') AS INT));
+                                DECLARE @ServiceSpAction NVARCHAR(50) = STUFF(@ActionType, 7, 0, N'_'); -- INSERTSERVICE -> INSERT_SERVICE
 
-                        SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
-                        GOTO Finish;
-                END
-                ELSE IF @pageName_ = 'ServiceCatalogueList'
-                BEGIN
-                        DECLARE @ServiceRequiredPermission NVARCHAR(200) = CASE @ActionType
-                                WHEN 'INSERT_SERVICE' THEN 'INSERTSERVICE'
-                                WHEN 'UPDATE_SERVICE' THEN 'UPDATESERVICE'
-                                WHEN 'DELETE_SERVICE' THEN 'DELETESERVICE'
-                                WHEN 'INSERT_ROUTING_RULE' THEN 'MANAGEROUTINGRULES'
-                                WHEN 'CLOSE_ROUTING_RULE' THEN 'MANAGEROUTINGRULES'
-                                WHEN 'UPSERT_SLA_POLICY' THEN 'MANAGESLAPOLICIES'
-                                WHEN 'APPROVE_SERVICE_SUGGESTION' THEN 'APPROVESERVICESUGGESTION'
-                                ELSE @ActionType
-                        END;
+                                IF @ActionType = 'DELETESERVICE'
+                                BEGIN
+                                        INSERT INTO @Result(IsSuccessful, Message_)
+                                        EXEC [Tickets].[ServiceSP]
+                                                  @Action     = @ServiceSpAction
+                                                , @idaraID_FK = @idaraID
+                                                , @serviceID  = @parameter_01
+                                                , @entryData  = @entrydata
+                                                , @hostName   = @hostName;
+                                END
+                                ELSE IF @ActionType = 'INSERTSERVICE'
+                                BEGIN
+                                        INSERT INTO @Result(IsSuccessful, Message_)
+                                        EXEC [Tickets].[ServiceSP]
+                                                  @Action                = @ServiceSpAction
+                                                , @idaraID_FK            = @idaraID
+                                                , @serviceCode           = @parameter_02
+                                                , @serviceName_A         = @parameter_03
+                                                , @serviceName_E         = @parameter_04
+                                                , @serviceDesc           = @parameter_05
+                                                , @ticketClassID_FK      = @parameter_06
+                                                , @defaultPriorityID_FK  = @parameter_07
+                                                , @requiresLocation      = @parameter_08
+                                                , @allowsChildTickets    = @parameter_09
+                                                , @requiresQualityReview = @parameter_10
+                                                , @targetDSDID_FK        = @ServiceTargetDSDID
+                                                , @entryData             = @entrydata
+                                                , @hostName              = @hostName;
+                                END
+                                ELSE
+                                BEGIN
+                                        INSERT INTO @Result(IsSuccessful, Message_)
+                                        EXEC [Tickets].[ServiceSP]
+                                                  @Action                = @ServiceSpAction
+                                                , @idaraID_FK            = @idaraID
+                                                , @serviceID             = @parameter_01
+                                                , @serviceCode           = @parameter_02
+                                                , @serviceName_A         = @parameter_03
+                                                , @serviceName_E         = @parameter_04
+                                                , @serviceDesc           = @parameter_05
+                                                , @ticketClassID_FK      = @parameter_06
+                                                , @defaultPriorityID_FK  = @parameter_07
+                                                , @requiresLocation      = @parameter_08
+                                                , @allowsChildTickets    = @parameter_09
+                                                , @requiresQualityReview = @parameter_10
+                                                , @targetDSDID_FK        = @ServiceTargetDSDID
+                                                , @entryData             = @entrydata
+                                                , @hostName              = @hostName;
+                                END
+                        END
+                        ELSE IF @ActionType IN (
+                                  'INSERTTICKETCLASS', 'UPDATETICKETCLASS', 'DELETETICKETCLASS'
+                                , 'INSERTPRIORITY', 'UPDATEPRIORITY', 'DELETEPRIORITY'
+                                , 'INSERTTICKETSTATUS', 'UPDATETICKETSTATUS', 'DELETETICKETSTATUS'
+                                , 'INSERTPAUSEREASON', 'UPDATEPAUSEREASON', 'DELETEPAUSEREASON'
+                                , 'INSERTARBITRATIONREASON', 'UPDATEARBITRATIONREASON', 'DELETEARBITRATIONREASON'
+                                , 'INSERTQUALITYREVIEWRESULT', 'UPDATEQUALITYREVIEWRESULT', 'DELETEQUALITYREVIEWRESULT')
+                        BEGIN
+                                DECLARE @AdminSpAction NVARCHAR(50) = STUFF(@ActionType, 7, 0, N'_'); -- INSERTTICKETCLASS -> INSERT_TICKETCLASS
 
-                        IF (
-                                SELECT COUNT(*) FROM dbo.V_GetListUserPermission v
-                                WHERE v.userID = @entrydata
-                                    AND v.menuName_E = @pageName_
-                                    AND v.permissionTypeName_E = @ServiceRequiredPermission
-                        ) <= 0
-                        BEGIN
-                                SET @ok = 0;
-                                SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
-                                GOTO Finish;
-                        END
-
-                        DELETE FROM @Result;
-
-                        -- Responsible unit chosen in the service form: section (p13), else branch (p12), else department (p11).
-                        DECLARE @ServiceTargetDSDID INT = COALESCE(
-                              TRY_CAST(NULLIF(NULLIF(NULLIF(LTRIM(RTRIM(@parameter_13)), N''), N'-99999'), N'-1') AS INT)
-                            , TRY_CAST(NULLIF(NULLIF(NULLIF(LTRIM(RTRIM(@parameter_12)), N''), N'-99999'), N'-1') AS INT)
-                            , TRY_CAST(NULLIF(NULLIF(NULLIF(LTRIM(RTRIM(@parameter_11)), N''), N'-99999'), N'-1') AS INT));
-
-                        IF @ActionType = 'INSERT_SERVICE'
-                        BEGIN
                                 INSERT INTO @Result(IsSuccessful, Message_)
-                                EXEC [Tickets].[ServiceSP]
-                                         @Action                 = @ActionType
-                                     , @serviceCode            = @parameter_02
-                                     , @serviceName_A          = @parameter_03
-                                     , @serviceName_E          = @parameter_04
-                                     , @serviceDesc            = @parameter_05
-                                     , @idaraID_FK             = @idaraID
-                                     , @ticketClassID_FK       = @parameter_06
-                                     , @defaultPriorityID_FK   = @parameter_07
-                                     , @requiresLocation       = @parameter_08
-                                     , @allowsChildTickets     = @parameter_09
-                                     , @requiresQualityReview  = @parameter_10
-                                     , @targetDSDID_FK         = @ServiceTargetDSDID
-                                     , @entryData              = @entrydata
-                                     , @hostName               = @hostName;
-                        END
-                        ELSE IF @ActionType = 'UPDATE_SERVICE'
-                        BEGIN
-                                INSERT INTO @Result(IsSuccessful, Message_)
-                                EXEC [Tickets].[ServiceSP]
-                                         @Action                 = @ActionType
-                                         , @idaraID_FK             = @idaraID
-                                     , @serviceID              = @parameter_01
-                                     , @serviceCode            = @parameter_02
-                                     , @serviceName_A          = @parameter_03
-                                     , @serviceName_E          = @parameter_04
-                                     , @serviceDesc            = @parameter_05
-                                     , @ticketClassID_FK       = @parameter_06
-                                     , @defaultPriorityID_FK   = @parameter_07
-                                     , @requiresLocation       = @parameter_08
-                                     , @allowsChildTickets     = @parameter_09
-                                     , @requiresQualityReview  = @parameter_10
-                                     , @targetDSDID_FK         = @ServiceTargetDSDID
-                                     , @entryData              = @entrydata
-                                     , @hostName               = @hostName;
-                        END
-                        ELSE IF @ActionType = 'DELETE_SERVICE'
-                        BEGIN
-                                INSERT INTO @Result(IsSuccessful, Message_)
-                                EXEC [Tickets].[ServiceSP]
-                                         @Action                 = @ActionType
-                                         , @idaraID_FK             = @idaraID
-                                     , @serviceID              = @parameter_01
-                                     , @entryData              = @entrydata
-                                     , @hostName               = @hostName;
-                        END
-                        ELSE IF @ActionType = 'INSERT_ROUTING_RULE'
-                        BEGIN
-                                INSERT INTO @Result(IsSuccessful, Message_)
-                                EXEC [Tickets].[ServiceSP]
-                                         @Action                 = @ActionType
-                                     , @serviceID              = @parameter_01
-                                     , @idaraID_FK             = @idaraID
-                                     , @targetDSDID_FK         = @parameter_02
-                                     , @queueDistributorID_FK  = @parameter_03
-                                     , @changeReason           = @parameter_04
-                                     , @approvedByUserID       = @entrydata
-                                     , @effectiveFrom          = @parameter_05
-                                     , @entryData              = @entrydata
-                                     , @hostName               = @hostName;
-                        END
-                        ELSE IF @ActionType = 'CLOSE_ROUTING_RULE'
-                        BEGIN
-                                INSERT INTO @Result(IsSuccessful, Message_)
-                                EXEC [Tickets].[ServiceSP]
-                                         @Action                 = @ActionType
-                                         , @idaraID_FK             = @idaraID
-                                     , @serviceID              = @parameter_01
-                                     , @entryData              = @entrydata
-                                     , @hostName               = @hostName;
-                        END
-                        ELSE IF @ActionType = 'UPSERT_SLA_POLICY'
-                        BEGIN
-                                INSERT INTO @Result(IsSuccessful, Message_)
-                                EXEC [Tickets].[ServiceSP]
-                                         @Action                               = @ActionType
-                                     , @serviceID                            = @parameter_01
-                                     , @idaraID_FK                           = @idaraID
-                                     , @priorityID_FK                        = @parameter_02
-                                     , @firstResponseTargetMinutes           = @parameter_03
-                                     , @assignmentTargetMinutes              = @parameter_04
-                                     , @operationalCompletionTargetMinutes   = @parameter_05
-                                     , @finalClosureTargetMinutes            = @parameter_06
-                                     , @entryData                            = @entrydata
-                                     , @hostName                             = @hostName;
-                        END
-                        ELSE IF @ActionType = 'APPROVE_SERVICE_SUGGESTION'
-                        BEGIN
-                                INSERT INTO @Result(IsSuccessful, Message_)
-                                EXEC [Tickets].[ServiceSP]
-                                         @Action                               = @ActionType
-                                         , @idaraID_FK             = @idaraID
-                                     , @serviceCatalogSuggestionID           = @parameter_01
-                                     , @approvedByUserID                     = @entrydata
-                                     , @approvalNotes_A                      = @parameter_02
-                                     , @approvalNotes                        = @parameter_03
-                                     , @entryData                            = @entrydata
-                                     , @hostName                             = @hostName;
+                                EXEC [Tickets].[TicketAdminSP]
+                                          @Action      = @AdminSpAction
+                                        , @recordID    = @parameter_01
+                                        , @code        = @parameter_02
+                                        , @name_A      = @parameter_03
+                                        , @name_E      = @parameter_04
+                                        , @desc        = @parameter_05
+                                        , @level       = @parameter_06
+                                        , @idaraID_FK  = @idaraID
+                                        , @entryData   = @entrydata
+                                        , @hostName    = @hostName;
                         END
                         ELSE
                         BEGIN

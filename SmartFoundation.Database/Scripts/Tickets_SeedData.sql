@@ -8,9 +8,12 @@
               reasons, templates, routing rules, SLA policies, history action types ...).
               Rows keep their original IDs. Only MISSING rows are inserted; existing rows are
               never updated or deleted, so local changes are kept.
-      Part 2  dbo program / menus / distributors / permission types for the ticket pages
-              (TicketList, TicketDetails, TicketAdmin, ServiceCatalogueList).
+      Part 2  dbo program / menus / distributors / permission types for the two ticket pages.
+              Each page owns its permissions (Housing pattern):
+                TicketList  - every ticket action (INSERT_TICKET, ROUTE_TICKET, START_WORK ...)
+                TicketAdmin - settings tabs, services and arbitration decisions
               Matched by name or code (IDs differ between databases); only missing rows are added.
+              Databases seeded before this layout: run Tickets_PermissionsConsolidation.sql.
 
     What it does NOT do:
       - No tickets, history, attachments or other transactional data.
@@ -566,29 +569,24 @@ INSERT INTO dbo.Menu (menuName_A, menuName_E, menuDescription, parentMenuID_FK, 
 SELECT s.menuName_A, s.menuName_E, s.menuDescription, NULL, s.menuLink, @programID, s.menuSerial, s.menuActive, s.isDashboard, s.PageLvl
 FROM (VALUES
     (N'قائمة التذاكر', N'TicketList', N'Ticket List', N'TicketList', 1, 1, 0, 3),
-    (N'إجراءات التذاكر', N'TicketDetails', N'Ticket Details', N'TicketDetails', 2, 1, 0, 3),
-    (N'إعدادات التذاكر', N'TicketAdmin', N'Ticket Admin', N'TicketAdmin', 3, 1, 0, 2),
-    (N'دليل الخدمات', N'ServiceCatalogueList', N'Service Catalogue', N'ServiceCatalogueList', 4, 1, 0, 2)
+    (N'إعدادات التذاكر', N'TicketAdmin', N'Ticket Admin', N'TicketAdmin', 2, 1, 0, 2)
 ) AS s (menuName_A, menuName_E, menuDescription, menuLink, menuSerial, menuActive, isDashboard, PageLvl)
 WHERE NOT EXISTS (SELECT 1 FROM dbo.Menu m WHERE m.menuName_E = s.menuName_E AND m.programID_FK = @programID);
 
 -- PageLvl 0 hides the ticket pages from the permissions screen (it lists levels 1-3 only).
 -- Fix menus created by earlier runs of this script.
-UPDATE m SET PageLvl = CASE m.menuName_E WHEN N'TicketAdmin' THEN 2 WHEN N'ServiceCatalogueList' THEN 2 ELSE 3 END
+UPDATE m SET PageLvl = CASE m.menuName_E WHEN N'TicketAdmin' THEN 2 ELSE 3 END
 FROM dbo.Menu m
 WHERE m.programID_FK = @programID
   AND m.PageLvl = 0
-  AND m.menuName_E IN (N'TicketList', N'TicketDetails', N'TicketAdmin', N'ServiceCatalogueList');
+  AND m.menuName_E IN (N'TicketList', N'TicketAdmin');
 
 -- Distributors (permission groups per page)
 INSERT INTO dbo.Distributor (distributorName_A, distributorName_E, distributorDescription, distributorCode, distributorActive, distributorType_FK, roleID_FK, entryDate)
 SELECT s.distributorName_A, s.distributorName_E, s.distributorDescription, s.distributorCode, s.distributorActive, s.distributorType_FK, s.roleID_FK, GETDATE()
 FROM (VALUES
-    (N'قائمة التذاكر: عرض وإنشاء التذاكر', N'Perm - TicketList', N'TicketList', N'TKT-TLIST', 1, 4, 1),
-    (N'إجراءات التذاكر: توجيه وإسناد وحل وإغلاق', N'Perm - TicketDetails', N'TicketDetails', N'TKT-TDET', 1, 4, 1),
-    (N'إعدادات التذاكر: الفئات والأولويات والحالات', N'Perm - TicketAdmin', N'TicketAdmin', N'TKT-TADM', 1, 4, 1),
-    (N'الصلاحيات - إدارة التذاكر', N'Perm - Tickets CRUD', N'Tickets', N'TKT-CRUD', 1, 4, 1),
-    (N'دليل الخدمات: إضافة وتعديل الخدمات', N'Perm - Service Catalogue', N'Service Catalogue', N'TKT-SCAT', 1, 4, 1)
+    (N'قائمة التذاكر: إنشاء التذاكر والعمل عليها', N'Perm - TicketList', N'TicketList', N'TKT-TLIST', 1, 4, 1),
+    (N'إعدادات التذاكر: الإعدادات والخدمات والتحكيم', N'Perm - TicketAdmin', N'TicketAdmin', N'TKT-TADM', 1, 4, 1)
 ) AS s (distributorName_A, distributorName_E, distributorDescription, distributorCode, distributorActive, distributorType_FK, roleID_FK)
 WHERE NOT EXISTS (SELECT 1 FROM dbo.Distributor d WHERE d.distributorCode = s.distributorCode);
 
@@ -654,76 +652,57 @@ WHERE NOT EXISTS (SELECT 1 FROM dbo.PermissionType p WHERE p.permissionTypeName_
 INSERT INTO dbo.DistributorPermissionType (permissionTypeID_FK, DistributorID_FK, distributorPermissionTypeStartDate, distributorPermissionTypeActive, permissionAuthLvl, entryDate)
 SELECT pt.permissionTypeID, d.distributorID, GETDATE(), s.active, s.authLvl, GETDATE()
 FROM (VALUES
-    (N'TKT-CRUD', N'ACCESS', 1, 3),
-    (N'TKT-CRUD', N'DELETE', 1, 3),
-    (N'TKT-CRUD', N'INSERT', 1, 3),
-    (N'TKT-CRUD', N'REQUEST_CLARIFICATION', 1, 3),
-    (N'TKT-CRUD', N'RESPOND_CLARIFICATION', 1, 3),
-    (N'TKT-CRUD', N'SELECT', 1, 3),
-    (N'TKT-CRUD', N'UPDATE', 1, 3),
-    (N'TKT-SCAT', N'ACCESS', 1, 3),
-    (N'TKT-SCAT', N'APPROVESERVICESUGGESTION', 1, 3),
-    (N'TKT-SCAT', N'DELETESERVICE', 1, 3),
-    (N'TKT-SCAT', N'INSERTSERVICE', 1, 3),
-    (N'TKT-SCAT', N'MANAGEROUTINGRULES', 1, 3),
-    (N'TKT-SCAT', N'MANAGESLAPOLICIES', 1, 3),
-    (N'TKT-SCAT', N'UPDATESERVICE', 1, 3),
-    (N'TKT-TADM', N'ACCESS', 1, 3),
-    (N'TKT-TADM', N'DELETEARBITRATIONREASON', 1, 3),
-    (N'TKT-TADM', N'DELETEPAUSEREASON', 1, 3),
-    (N'TKT-TADM', N'DELETEPRIORITY', 1, 3),
-    (N'TKT-TADM', N'DELETEQUALITYREVIEWRESULT', 1, 3),
-    (N'TKT-TADM', N'DELETETICKETCLASS', 1, 3),
-    (N'TKT-TADM', N'DELETETICKETSTATUS', 1, 3),
-    (N'TKT-TADM', N'INSERTARBITRATIONREASON', 1, 3),
-    (N'TKT-TADM', N'INSERTPAUSEREASON', 1, 3),
-    (N'TKT-TADM', N'INSERTPRIORITY', 1, 3),
-    (N'TKT-TADM', N'INSERTQUALITYREVIEWRESULT', 1, 3),
-    (N'TKT-TADM', N'INSERTTICKETCLASS', 1, 3),
-    (N'TKT-TADM', N'INSERTTICKETSTATUS', 1, 3),
-    (N'TKT-TADM', N'REQUEST_CLARIFICATION', 1, 3),
-    (N'TKT-TADM', N'RESPOND_CLARIFICATION', 1, 3),
-    (N'TKT-TADM', N'UPDATEARBITRATIONREASON', 1, 3),
-    (N'TKT-TADM', N'UPDATEPAUSEREASON', 1, 3),
-    (N'TKT-TADM', N'UPDATEPRIORITY', 1, 3),
-    (N'TKT-TADM', N'UPDATEQUALITYREVIEWRESULT', 1, 3),
-    (N'TKT-TADM', N'UPDATETICKETCLASS', 1, 3),
-    (N'TKT-TADM', N'UPDATETICKETSTATUS', 1, 3),
-    (N'TKT-TDET', N'ACCESS', 1, 3),
-    (N'TKT-TDET', N'ASSIGN_TICKET', 1, 3),
-    (N'TKT-TDET', N'CANCEL_ARBITRATION', 1, 3),
-    (N'TKT-TDET', N'CLOSE_TICKET', 1, 3),
-    (N'TKT-TDET', N'CREATE_CHILD_TICKET', 1, 3),
-    (N'TKT-TDET', N'DECIDE_ARBITRATION', 1, 3),
-    (N'TKT-TDET', N'DELETE', 1, 3),
-    (N'TKT-TDET', N'DELETE_ATTACHMENT', 1, 3),
-    (N'TKT-TDET', N'FINALIZE_QUALITY_REVIEW', 1, 3),
-    (N'TKT-TDET', N'INSERT', 1, 3),
-    (N'TKT-TDET', N'INSERT_TICKET', 1, 3),
-    (N'TKT-TDET', N'PAUSE_TICKET', 1, 3),
-    (N'TKT-TDET', N'RAISE_ARBITRATION', 1, 3),
-    (N'TKT-TDET', N'REASSIGN_TICKET', 1, 3),
-    (N'TKT-TDET', N'REJECT_TICKET', 1, 3),
-    (N'TKT-TDET', N'REOPEN_TICKET', 1, 3),
-    (N'TKT-TDET', N'REQUEST_CLARIFICATION', 1, 3),
-    (N'TKT-TDET', N'RESOLVE_TICKET', 1, 3),
-    (N'TKT-TDET', N'RESPOND_CLARIFICATION', 1, 3),
-    (N'TKT-TDET', N'RESUME_TICKET', 1, 3),
-    (N'TKT-TDET', N'ROUTE_TICKET', 1, 3),
-    (N'TKT-TDET', N'SELECT', 1, 3),
-    (N'TKT-TDET', N'START_WORK', 1, 3),
-    (N'TKT-TDET', N'SUBMIT_QUALITY_REVIEW', 1, 3),
-    (N'TKT-TDET', N'UPDATE', 1, 3),
-    (N'TKT-TDET', N'UPDATE_PRIORITY', 1, 3),
-    (N'TKT-TDET', N'UPLOAD_ATTACHMENT', 1, 3),
+    -- TicketList: every ticket action
     (N'TKT-TLIST', N'ACCESS', 1, 3),
-    (N'TKT-TLIST', N'DELETE', 1, 3),
+    (N'TKT-TLIST', N'SELECT', 1, 3),
     (N'TKT-TLIST', N'INSERT', 1, 3),
+    (N'TKT-TLIST', N'UPDATE', 1, 3),
+    (N'TKT-TLIST', N'DELETE', 1, 3),
     (N'TKT-TLIST', N'INSERT_TICKET', 1, 3),
+    (N'TKT-TLIST', N'ROUTE_TICKET', 1, 3),
+    (N'TKT-TLIST', N'REJECT_TICKET', 1, 3),
+    (N'TKT-TLIST', N'ASSIGN_TICKET', 1, 3),
+    (N'TKT-TLIST', N'REASSIGN_TICKET', 1, 3),
+    (N'TKT-TLIST', N'UPDATE_PRIORITY', 1, 3),
+    (N'TKT-TLIST', N'START_WORK', 1, 3),
+    (N'TKT-TLIST', N'RESOLVE_TICKET', 1, 3),
+    (N'TKT-TLIST', N'PAUSE_TICKET', 1, 3),
+    (N'TKT-TLIST', N'RESUME_TICKET', 1, 3),
     (N'TKT-TLIST', N'REQUEST_CLARIFICATION', 1, 3),
     (N'TKT-TLIST', N'RESPOND_CLARIFICATION', 1, 3),
-    (N'TKT-TLIST', N'SELECT', 1, 3),
-    (N'TKT-TLIST', N'UPDATE', 1, 3)
+    (N'TKT-TLIST', N'RAISE_ARBITRATION', 1, 3),
+    (N'TKT-TLIST', N'CREATE_CHILD_TICKET', 1, 3),
+    (N'TKT-TLIST', N'SUBMIT_QUALITY_REVIEW', 1, 3),
+    (N'TKT-TLIST', N'FINALIZE_QUALITY_REVIEW', 1, 3),
+    (N'TKT-TLIST', N'CLOSE_TICKET', 1, 3),
+    (N'TKT-TLIST', N'REOPEN_TICKET', 1, 3),
+    (N'TKT-TLIST', N'UPLOAD_ATTACHMENT', 1, 3),
+    (N'TKT-TLIST', N'DELETE_ATTACHMENT', 1, 3),
+    -- TicketAdmin: settings tabs, services, arbitration decisions
+    (N'TKT-TADM', N'ACCESS', 1, 3),
+    (N'TKT-TADM', N'INSERTTICKETCLASS', 1, 3),
+    (N'TKT-TADM', N'UPDATETICKETCLASS', 1, 3),
+    (N'TKT-TADM', N'DELETETICKETCLASS', 1, 3),
+    (N'TKT-TADM', N'INSERTPRIORITY', 1, 3),
+    (N'TKT-TADM', N'UPDATEPRIORITY', 1, 3),
+    (N'TKT-TADM', N'DELETEPRIORITY', 1, 3),
+    (N'TKT-TADM', N'INSERTTICKETSTATUS', 1, 3),
+    (N'TKT-TADM', N'UPDATETICKETSTATUS', 1, 3),
+    (N'TKT-TADM', N'DELETETICKETSTATUS', 1, 3),
+    (N'TKT-TADM', N'INSERTPAUSEREASON', 1, 3),
+    (N'TKT-TADM', N'UPDATEPAUSEREASON', 1, 3),
+    (N'TKT-TADM', N'DELETEPAUSEREASON', 1, 3),
+    (N'TKT-TADM', N'INSERTARBITRATIONREASON', 1, 3),
+    (N'TKT-TADM', N'UPDATEARBITRATIONREASON', 1, 3),
+    (N'TKT-TADM', N'DELETEARBITRATIONREASON', 1, 3),
+    (N'TKT-TADM', N'INSERTQUALITYREVIEWRESULT', 1, 3),
+    (N'TKT-TADM', N'UPDATEQUALITYREVIEWRESULT', 1, 3),
+    (N'TKT-TADM', N'DELETEQUALITYREVIEWRESULT', 1, 3),
+    (N'TKT-TADM', N'INSERTSERVICE', 1, 3),
+    (N'TKT-TADM', N'UPDATESERVICE', 1, 3),
+    (N'TKT-TADM', N'DELETESERVICE', 1, 3),
+    (N'TKT-TADM', N'DECIDE_ARBITRATION', 1, 3),
+    (N'TKT-TADM', N'CANCEL_ARBITRATION', 1, 3)
 ) AS s (distributorCode, permissionTypeName_E, active, authLvl)
 CROSS APPLY (SELECT TOP 1 distributorID FROM dbo.Distributor WHERE distributorCode = s.distributorCode ORDER BY distributorID) d
 CROSS APPLY (SELECT TOP 1 permissionTypeID FROM dbo.PermissionType WHERE permissionTypeName_E = s.permissionTypeName_E ORDER BY permissionTypeID) pt
@@ -734,9 +713,7 @@ INSERT INTO dbo.MenuDistributor (menuID_FK, distributorID_FK, roleID_FK, isDenie
 SELECT m.menuID, d.distributorID, s.roleID_FK, s.isDenied, s.active
 FROM (VALUES
     (N'TicketList', N'TKT-TLIST', 1, NULL, 1),
-    (N'TicketDetails', N'TKT-TDET', 1, NULL, 1),
-    (N'TicketAdmin', N'TKT-TADM', 1, NULL, 1),
-    (N'ServiceCatalogueList', N'TKT-SCAT', 1, NULL, 1)
+    (N'TicketAdmin', N'TKT-TADM', 1, NULL, 1)
 ) AS s (menuName_E, distributorCode, roleID_FK, isDenied, active)
 CROSS APPLY (SELECT TOP 1 menuID FROM dbo.Menu WHERE menuName_E = s.menuName_E AND programID_FK = @programID ORDER BY menuID) m
 CROSS APPLY (SELECT TOP 1 distributorID FROM dbo.Distributor WHERE distributorCode = s.distributorCode ORDER BY distributorID) d
