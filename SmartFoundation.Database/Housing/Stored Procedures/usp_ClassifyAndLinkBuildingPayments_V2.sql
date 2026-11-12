@@ -182,6 +182,8 @@ WHERE
        OR paymentRow.deductListID_FK = @DeductListID)
 
   AND paymentRow.buildingPayementActive = 1
+  -- RENT-only temporal classification: source-linked electricity/penalty are immutable here.
+  AND paymentRow.BillChargeTypeID_FK = 1
 
   AND
   (

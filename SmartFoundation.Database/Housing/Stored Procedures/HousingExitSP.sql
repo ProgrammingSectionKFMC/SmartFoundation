@@ -323,128 +323,13 @@ END;
 
          
         
-        -- EXIT_DELIVERY_ANY_BUILDING_BILL_MONTH_GUARD_V1_BEGIN
-        -- Block on ANY current-month bill of the building, active or inactive,
-        -- including rent, services and penalties. Historical imported bills
-        -- must not be counted solely because their entryDate was in this month.
-        IF @Action IN (N'HOUSINGEXIT', N'EDITHOUSINGEXIT')
-        BEGIN
-            DECLARE @ExitMonthStartForBillGuard DATE =
-                DATEFROMPARTS(YEAR(@ExitDate_DATE), MONTH(@ExitDate_DATE), 1);
-            DECLARE @NextExitMonthForBillGuard DATE =
-                DATEADD(MONTH, 1, @ExitMonthStartForBillGuard);
+       -- EXIT_MONTHLY_BILL_NON_BLOCKING_V2
+-- Issued bills do not automatically block physical exit.
+-- Financial obligations remain unchanged.
+-- Occupancy identity, dates and independent billing
+-- integrity protections are handled separately.
 
-            IF @BuildingDetailsID_BIGINT IS NULL OR @IdaraID_INT IS NULL
-                THROW 50001, N'تعذر التحقق من فواتير المبنى بسبب بيانات غير مكتملة.', 1;
 
-            IF EXISTS
-            (
-                SELECT 1
-                FROM Housing.Bills b WITH (UPDLOCK, HOLDLOCK)
-                WHERE b.buildingDetailsID = @BuildingDetailsID_BIGINT
-                  AND b.idaraID_FK = @IdaraID_INT
-                  AND NOT
-                  (
-                    b.BillActive=0
-                    AND EXISTS
-                    (
-                      SELECT 1 FROM Housing.BuildingAction old54
-                      WHERE old54.buildingActionTypeID_FK=54
-                        AND old54.buildingActionActive=1
-                        AND old54.buildingDetailsID_FK=@BuildingDetailsID_BIGINT
-                        AND old54.IdaraId_FK=@IdaraID_INT
-                        AND EXISTS
-                        (
-                          SELECT 1 FROM Housing.BuildingAction cancel55
-                          WHERE cancel55.buildingActionTypeID_FK=55
-                            AND cancel55.buildingActionActive=1
-                            AND cancel55.residentInfoID_FK=old54.residentInfoID_FK
-                            AND cancel55.buildingDetailsID_FK=old54.buildingDetailsID_FK
-                            AND cancel55.IdaraId_FK=old54.IdaraId_FK
-                            AND EXISTS
-                            (
-                              SELECT 1 FROM Housing.fn_BuildingAction_ChainToRoot(cancel55.buildingActionID) anc
-                              WHERE anc.buildingActionID=old54.buildingActionID
-                            )
-                        )
-                        AND
-                        (
-                          (b.ExitRequestActionID_FK=old54.buildingActionID
-                           AND b.CanceledDate IS NOT NULL)
-                          OR
-                          EXISTS
-                          (
-                            SELECT 1 FROM Housing.MeterRead oldRead
-                            JOIN Housing.BuildingAction action59
-                              ON action59.buildingActionID=oldRead.buildingActionID_FK
-                            WHERE b.meterReadID=oldRead.meterReadID
-                              AND b.BillTypeID_FK=3
-                              AND b.BillChargeTypeID_FK IN (2,3,4)
-                              AND oldRead.meterReadTypeID_FK=3
-                              AND oldRead.meterReadActive=0
-                              AND action59.buildingActionTypeID_FK=59
-                              AND action59.buildingActionActive=1
-                              AND action59.residentInfoID_FK=old54.residentInfoID_FK
-                              AND action59.buildingDetailsID_FK=old54.buildingDetailsID_FK
-                              AND action59.IdaraId_FK=old54.IdaraId_FK
-                              AND EXISTS
-                              (
-                                SELECT 1 FROM Housing.fn_BuildingAction_ChainToRoot(action59.buildingActionID) anc
-                                WHERE anc.buildingActionID=old54.buildingActionID
-                              )
-                          )
-                        )
-                    )
-                  )
-
-                  -- An already issued reading-meter bill is a valid monthly baseline,
-                  -- not a reason to block physical exit. Its original ID/status stay unchanged.
-                  AND NOT
-                  (
-                      b.BillActive = 1
-                      AND b.BillTypeID_FK = 2
-                      AND b.BillChargeTypeID_FK IN (2,3,4)
-                      AND b.residentInfoID_FK = @ResidentInfoID_BIGINT
-                      AND b.generalNo_FK = @GeneralNo_BIGINT
-                      AND b.PeriodYear = YEAR(@ExitDate_DATE)
-                      AND b.PeriodMonth = MONTH(@ExitDate_DATE)
-                      AND EXISTS
-                      (
-                          SELECT 1 FROM Housing.MeterRead baseline WITH (UPDLOCK, HOLDLOCK)
-                          WHERE baseline.meterReadID = b.meterReadID
-                            AND baseline.meterID_FK = b.meterID
-                            AND baseline.meterReadTypeID_FK = 2
-                            AND baseline.meterReadActive = 1
-                            AND baseline.buildingDetailsID = @BuildingDetailsID_BIGINT
-                            AND baseline.IdaraID_FK = @IdaraID_INT
-                            AND baseline.residentInfoID_FK = @ResidentInfoID_BIGINT
-                            AND CONVERT(DATE, COALESCE(baseline.dateOfRead,baseline.entryDate)) <= @ExitDate_DATE
-                      )
-                  )
-                  AND
-                  (
-                      (b.PeriodYear = YEAR(@ExitMonthStartForBillGuard)
-                       AND b.PeriodMonth = MONTH(@ExitMonthStartForBillGuard))
-                      OR
-                      (b.BillsFromDate < @NextExitMonthForBillGuard
-                       AND b.BillsToDate >= @ExitMonthStartForBillGuard)
-                      OR
-                      (
-                          -- EXIT_DELIVERY_ENTRYDATE_FALLBACK_V2
-                          -- Never treat migration entryDate as a billing period
-                          -- when period month/year or dates identify an older period.
-                          (COALESCE(b.PeriodYear,0) NOT BETWEEN 1900 AND 9999
-                           OR COALESCE(b.PeriodMonth,0) NOT BETWEEN 1 AND 12)
-                          AND (b.BillsFromDate IS NULL OR b.BillsToDate IS NULL)
-                          AND b.entryDate >= @ExitMonthStartForBillGuard
-                          AND b.entryDate < @NextExitMonthForBillGuard
-                      )
-                  )
-            )
-                THROW 50001,
-                    N'لا يمكن إنشاء أو تعديل الإخلاء بعد إصدار أي فاتورة تخص المبنى في الشهر الحالي؛ يلزم مراجعة الفوترة.', 1;
-        END;
-        -- EXIT_DELIVERY_ANY_BUILDING_BILL_MONTH_GUARD_V1_END
 
         -- EXIT_LAST_BILL_END_GUARD_V1_BEGIN
         -- Only exit creation/edit: prevent a physical exit date earlier than the end
@@ -2771,7 +2656,7 @@ DECLARE @PreviousBillPeriodID        BIGINT = NULL;
 DECLARE @FixedBillsInserted          INT = 0;
 
 DECLARE @billPeriodID                 BIGINT
-SET @billPeriodID = (select top(1) b.billPeriodID from Housing.BillPeriod b where b.IdaraId_FK = 1 and b.billPeriodTypeID_FK =(select t.billPeriodTypeID from Housing.BillPeriodType t where t.meterServiceTypeID_FK = 1) order by b.billPeriodID desc)
+SET @billPeriodID = (select top(1) b.billPeriodID from Housing.BillPeriod b where b.IdaraId_FK = @IdaraID_INT and b.billPeriodTypeID_FK =(select t.billPeriodTypeID from Housing.BillPeriodType t where t.meterServiceTypeID_FK = 1) order by b.billPeriodID desc)
 
 ------------------------------------------------------------
 -- تحويل تاريخ الخروج

@@ -21,10 +21,13 @@
     [hostName]                       NVARCHAR (2000)  NULL,
     [buildingPaymentLinkStatusID_FK] INT              NULL,
     [paymentLinkNote]                NVARCHAR (1000)  NULL,
+    [disactiveReason]                NVARCHAR (4000)  NULL,
     CONSTRAINT [PK_BuildingPayment] PRIMARY KEY CLUSTERED ([paymentID] ASC),
     CONSTRAINT [FK_BuildingPayment_BuildingPaymentLinkStatus] FOREIGN KEY ([buildingPaymentLinkStatusID_FK]) REFERENCES [Housing].[BuildingPaymentLinkStatus] ([buildingPaymentLinkStatusID]),
     CONSTRAINT [FK_BuildingPayment_UnallocatedRefund] FOREIGN KEY ([UnallocatedRefundID_FK]) REFERENCES [Housing].[UnallocatedPaymentRefund] ([RefundID])
 );
+
+
 
 
 

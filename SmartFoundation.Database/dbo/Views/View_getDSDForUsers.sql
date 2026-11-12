@@ -1,4 +1,5 @@
-﻿CREATE VIEW dbo.View_getDSDForUsers
+﻿
+CREATE VIEW [dbo].[View_getDSDForUsers]
 AS
 SELECT        ud.distributorID_FK, ud.userID_FK, asd.DSDName_A, d.DSDID_FK
 FROM            dbo.UserDistributor AS ud INNER JOIN
@@ -7,14 +8,14 @@ FROM            dbo.UserDistributor AS ud INNER JOIN
                                 FROM            dbo.Distributor AS dt LEFT OUTER JOIN
                                                          dbo.DeptSecDiv AS dsd ON dsd.DSDID = dt.DSDID_FK LEFT OUTER JOIN
                                                          dbo.Department AS de ON dsd.deptID_FK = de.deptID
-                                WHERE        (1 = 1) AND (dt.distributorType_FK = 1) AND (de.deptActive = 1) AND (de.deptEndDate IS NULL) AND (de.idaraID_FK = 1) AND (dsd.secID_FK IS NULL) AND (dsd.divID_FK IS NULL)
+                                WHERE        (1 = 1) AND (dt.distributorType_FK = 1) AND (de.deptActive = 1) AND (de.deptEndDate IS NULL)  AND (dsd.secID_FK IS NULL) AND (dsd.divID_FK IS NULL)
                                 UNION
                                 SELECT        dt.distributorID, dt.DSDID_FK, de.deptID, se.secID, NULL AS divID, N'قسم' + ' ' + de.deptName_A + ' ' + N'فرع' + ' ' + se.secName_A AS DSDName_A
                                 FROM            dbo.Distributor AS dt LEFT OUTER JOIN
                                                          dbo.DeptSecDiv AS dsd ON dsd.DSDID = dt.DSDID_FK LEFT OUTER JOIN
                                                          dbo.Department AS de ON dsd.deptID_FK = de.deptID LEFT OUTER JOIN
                                                          dbo.Section AS se ON se.secID = dsd.secID_FK
-                                WHERE        (1 = 1) AND (dt.distributorType_FK = 1) AND (de.deptActive = 1) AND (de.deptEndDate IS NULL) AND (de.idaraID_FK = 1) AND (se.secActive = 1) AND (se.secEndDate IS NULL) AND (dsd.divID_FK IS NULL)
+                                WHERE        (1 = 1) AND (dt.distributorType_FK = 1) AND (de.deptActive = 1) AND (de.deptEndDate IS NULL)  AND (se.secActive = 1) AND (se.secEndDate IS NULL) AND (dsd.divID_FK IS NULL)
                                 UNION
                                 SELECT        dt.distributorID, dt.DSDID_FK, de.deptID, se.secID, NULL AS divID, N'قسم' + ' ' + de.deptName_A + ' ' + N'فرع' + ' ' + se.secName_A + ' ' + N'شعبة' + dv.divName_A AS DSDName_A
                                 FROM            dbo.Distributor AS dt LEFT OUTER JOIN
@@ -22,21 +23,21 @@ FROM            dbo.UserDistributor AS ud INNER JOIN
                                                          dbo.Department AS de ON dsd.deptID_FK = de.deptID LEFT OUTER JOIN
                                                          dbo.Section AS se ON se.secID = dsd.secID_FK LEFT OUTER JOIN
                                                          dbo.Divison AS dv ON dv.divID = dsd.divID_FK
-                                WHERE        (1 = 1) AND (dt.distributorType_FK = 1) AND (de.deptActive = 1) AND (de.deptEndDate IS NULL) AND (de.idaraID_FK = 1) AND (se.secActive = 1) AND (se.secEndDate IS NULL) AND (dv.divActive = 1) AND 
+                                WHERE        (1 = 1) AND (dt.distributorType_FK = 1) AND (de.deptActive = 1) AND (de.deptEndDate IS NULL)  AND (se.secActive = 1) AND (se.secEndDate IS NULL) AND (dv.divActive = 1) AND 
                                                          (dv.divEndDate IS NULL)) AS asd ON asd.distributorID = ud.distributorID_FK
 WHERE        EXISTS
                              (SELECT        dt.distributorID
                                 FROM            dbo.Distributor AS dt LEFT OUTER JOIN
                                                          dbo.DeptSecDiv AS dsd ON dsd.DSDID = dt.DSDID_FK LEFT OUTER JOIN
                                                          dbo.Department AS de ON dsd.deptID_FK = de.deptID
-                                WHERE        (1 = 1) AND (dt.distributorType_FK = 1) AND (de.deptActive = 1) AND (de.deptEndDate IS NULL) AND (de.idaraID_FK = 1) AND (dsd.secID_FK IS NULL) AND (dsd.divID_FK IS NULL)
+                                WHERE        (1 = 1) AND (dt.distributorType_FK = 1) AND (de.deptActive = 1) AND (de.deptEndDate IS NULL)  AND (dsd.secID_FK IS NULL) AND (dsd.divID_FK IS NULL)
                                 UNION
                                 SELECT        dt.distributorID
                                 FROM            dbo.Distributor AS dt LEFT OUTER JOIN
                                                          dbo.DeptSecDiv AS dsd ON dsd.DSDID = dt.DSDID_FK LEFT OUTER JOIN
                                                          dbo.Department AS de ON dsd.deptID_FK = de.deptID LEFT OUTER JOIN
                                                          dbo.Section AS se ON se.secID = dsd.secID_FK
-                                WHERE        (1 = 1) AND (dt.distributorType_FK = 1) AND (de.deptActive = 1) AND (de.deptEndDate IS NULL) AND (de.idaraID_FK = 1) AND (se.secActive = 1) AND (se.secEndDate IS NULL) AND (dsd.divID_FK IS NULL)
+                                WHERE        (1 = 1) AND (dt.distributorType_FK = 1) AND (de.deptActive = 1) AND (de.deptEndDate IS NULL)  AND (se.secActive = 1) AND (se.secEndDate IS NULL) AND (dsd.divID_FK IS NULL)
                                 UNION
                                 SELECT        dt.distributorID
                                 FROM            dbo.Distributor AS dt LEFT OUTER JOIN
@@ -44,7 +45,7 @@ WHERE        EXISTS
                                                          dbo.Department AS de ON dsd.deptID_FK = de.deptID LEFT OUTER JOIN
                                                          dbo.Section AS se ON se.secID = dsd.secID_FK LEFT OUTER JOIN
                                                          dbo.Divison AS dv ON dv.divID = dsd.divID_FK
-                                WHERE        (1 = 1) AND (dt.distributorType_FK = 1) AND (de.deptActive = 1) AND (de.deptEndDate IS NULL) AND (de.idaraID_FK = 1) AND (se.secActive = 1) AND (se.secEndDate IS NULL) AND (dv.divActive = 1) AND 
+                                WHERE        (1 = 1) AND (dt.distributorType_FK = 1) AND (de.deptActive = 1) AND (de.deptEndDate IS NULL)  AND (se.secActive = 1) AND (se.secEndDate IS NULL) AND (dv.divActive = 1) AND 
                                                          (dv.divEndDate IS NULL)) AND (d.distributorType_FK = 1) AND (ud.UDEndDate IS NULL) AND (ud.UDActive = 1)
 
 GO

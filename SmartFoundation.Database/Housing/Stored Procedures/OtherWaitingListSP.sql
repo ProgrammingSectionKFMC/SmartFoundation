@@ -35,6 +35,9 @@ BEGIN
     DECLARE @IdaraID_INT INT = TRY_CONVERT(INT, NULLIF(@idaraID_FK, ''));
     DECLARE @buildingDetailsNo nvarchar(500)
     set @buildingDetailsNo = (select top(1) b.buildingDetailsNo from Housing.V_GetGeneralListForBuilding b where b.buildingDetailsID = @buildingDetailsID and b.BuildingIdaraID = @idaraID_FK order by b.buildingDetailsID desc)
+    DECLARE @ActionTypeID int 
+    set @ActionTypeID = (select w.ActionTypeID from Housing.V_WaitingList w where w.ActionID = @ActionID)
+    
     BEGIN TRY
         -- Transaction-safe
         IF @tc = 0
@@ -50,7 +53,7 @@ BEGIN
 
             IF NULLIF(LTRIM(RTRIM(@ActionID)), N'') IS NULL
             BEGIN
-                ;THROW 50001, N'يوجد خطأ بجلب بيانات سجل الانتظار - Action ID', 1;
+                 ;THROW 50001, N'يوجد خطأ بجلب بيانات سجل الانتظار - Action ID', 1;
             END
 
             IF NULLIF(LTRIM(RTRIM(@residentInfoID_FK)), N'') IS NULL
@@ -77,7 +80,8 @@ BEGIN
             BEGIN
                 ;THROW 50001, N'تاريخ القرار مطلوب', 1;
             END
-
+            if(@ActionTypeID Not in (7))
+            Begin
          IF NULLIF(LTRIM(RTRIM(@WaitingClassID)), N'') IS NULL
             BEGIN
                 ;THROW 50001, N'فئة سجل الانتظار مطلوبة', 1;
@@ -87,7 +91,7 @@ BEGIN
             BEGIN
                 ;THROW 50001, N'ترتيب سجل الانتظار مطلوبة', 1;
             END
-
+            END
 
         ----------------------------------------------------------------
         -- MOVETOASSIGNLIST
@@ -244,7 +248,8 @@ BEGIN
         1;
 END;
 
-
+if(@ActionTypeID Not in (7))
+            Begin
               
                 DECLARE @MyOrder int;
                 DECLARE @ErrMsg_  nvarchar(4000);
@@ -271,6 +276,7 @@ END;
                     ;THROW 50001, @ErrMsg_, 1;
                 END
                 
+                END
                 --IF cast(@MyOrder as int) <> 1
                 --BEGIN
                 --    SET @ErrMsg_ =
@@ -311,7 +317,8 @@ END;
                 , @buildingActionDecisionDate
                 , @buildingDetailsID
                 , @buildingDetailsNo
-                , @WaitingClassID
+                , case when @ActionTypeID = 7 then null
+                  else @WaitingClassID END
                 , @WaitingOrderTypeID
                 , 1
                 , @Notes

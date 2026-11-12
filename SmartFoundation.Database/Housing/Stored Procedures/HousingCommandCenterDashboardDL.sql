@@ -22,6 +22,60 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    /* Dashboard department access scope */
+DECLARE @TrustedIdaraID INT = NULL;
+DECLARE @CanViewAllDepartments BIT = 0;
+DECLARE @UserActive BIT = 0;
+
+SELECT
+    @TrustedIdaraID = v.IdaraID,
+    @UserActive = ISNULL(v.userActive, 0),
+    @CanViewAllDepartments =
+        CASE
+            WHEN v.userActive = 1
+             AND v.ShowFullDashboard = 1
+            THEN 1
+            ELSE 0
+        END
+FROM dbo.V_GetFullSystemUsersDetails v
+WHERE v.usersID = @entrydata;
+
+-- Reject missing, inactive or mismatched user context.
+IF @UserActive <> 1
+   OR @TrustedIdaraID IS NULL
+   OR @idaraID IS NULL
+   OR @idaraID <> @TrustedIdaraID
+BEGIN
+    THROW 50040,
+        N'تعذر التحقق من هوية المستخدم وإدارته',
+        1;
+END;
+
+-- Restrict access to other departments.
+IF @targetIdaraID IS NOT NULL
+   AND @CanViewAllDepartments = 0
+   AND @targetIdaraID <> @TrustedIdaraID
+BEGIN
+    THROW 50041,
+        N'غير مصرح بعرض بيانات هذه الإدارة',
+        1;
+END;
+
+
+IF @targetIdaraID IS NOT NULL
+   AND NOT EXISTS
+   (
+       SELECT 1
+       FROM dbo.Idara i
+       WHERE i.idaraID = @targetIdaraID
+         AND i.idaraShowInCommandCenter = 1
+   )
+BEGIN
+    THROW 50042,
+        N'هذه الإدارة غير متاحة للعرض في الشاشة التفاعلية',
+        1;
+END;
+
     /* ============================================================
        HCC FINANCE ONLY - eligible movements after first occupancy
        Financial dashboard (dt4/dt11) + finance detail modes.
@@ -196,8 +250,8 @@ IF @targetIdaraID IS NOT NULL
    AND LOWER(ISNULL(@section, N'')) = N'waitinglist'
 BEGIN
     -- Maintain current scope until CanViewAllHousingDashboard is implemented.
-    IF @idaraID IS NULL
-       OR @targetIdaraID <> @idaraID
+    IF @CanViewAllDepartments = 0
+   AND @targetIdaraID <> @TrustedIdaraID
     BEGIN
         THROW 50001,
             N'غير مصرح بعرض قوائم انتظار هذه الإدارة',
@@ -1426,14 +1480,12 @@ BEGIN
                b.buildingClassID_FK
 
 
-        LEFT JOIN Housing.V_LastActionForBuilding la
-            ON la.buildingDetailsID =
-               b.buildingDetailsID
+        LEFT JOIN Housing.V_GetGeneralListForBuilding operational
+    ON operational.buildingDetailsID = b.buildingDetailsID
+   AND operational.BuildingIdaraID = b.IdaraId_FK
 
-
-        LEFT JOIN Housing.BuildingAction a
-            ON a.buildingActionID =
-               la.buildingActionID
+LEFT JOIN Housing.BuildingAction a
+    ON a.buildingActionID = operational.LastActionID
 
 
         LEFT JOIN Housing.BuildingActionType at
@@ -5375,7 +5427,8 @@ IF @targetIdaraID IS NOT NULL
 BEGIN
     -- Same interim department restriction as WaitingListDetails.
     -- Reconcile later with the separately approved CanViewAllHousingDashboard flag.
-    IF @idaraID IS NULL OR @targetIdaraID <> @idaraID
+    IF @CanViewAllDepartments = 0
+   AND @targetIdaraID <> @TrustedIdaraID
     BEGIN
         THROW 50021, N'غير مصرح بعرض دورات هذه الإدارة', 1;
     END;
@@ -5756,14 +5809,12 @@ WHEN a.buildingActionTypeID_FK IN (45, 46, 47)
         FROM Housing.BuildingDetails b
 
 
-        INNER JOIN Housing.V_LastActionForBuilding la
-            ON la.buildingDetailsID =
-               b.buildingDetailsID
-
+        INNER JOIN Housing.V_GetGeneralListForBuilding operational
+            ON operational.buildingDetailsID = b.buildingDetailsID
+           AND operational.BuildingIdaraID = b.IdaraId_FK
 
         INNER JOIN Housing.BuildingAction a
-            ON a.buildingActionID =
-               la.buildingActionID
+            ON a.buildingActionID = operational.LastActionID
 
 
         LEFT JOIN Housing.BuildingActionType at
@@ -6260,6 +6311,112 @@ END
 END
 
 
+    /* ============================================================
+       HCC MAIN DASHBOARD: one scoped operational action per building
+       - Matching eligibility from Housing.V_GetGeneralListForBuilding
+       - Raw TOP (1) uses existing BuildingAction last-by-details index
+       - Special 3/58 exceptions keep the ORIGINAL lineage rule
+       - Main dashboard only: detail branches already RETURNed
+       - No changes to shared View / TVF / data
+       ============================================================ */
+    DROP TABLE IF EXISTS #HCC_MainOperational;
+
+    SELECT
+          bd.buildingDetailsID
+        , bd.IdaraId_FK AS BuildingIdaraID
+        , rawLast.buildingActionID AS LastActionID
+        , rawLast.buildingActionTypeID_FK AS LastActionTypeID
+    INTO #HCC_MainOperational
+    FROM Housing.BuildingDetails bd
+    INNER JOIN Housing.BuildingType bt
+        ON bt.buildingTypeID = bd.buildingTypeID_FK
+    INNER JOIN Housing.BuildingUtilityType bu
+        ON bu.buildingUtilityTypeID = bd.buildingUtilityTypeID_FK
+    INNER JOIN Housing.MilitaryLocation m
+        ON m.militaryLocationID = bd.militaryLocationID_FK
+    INNER JOIN Housing.MilitaryAreaCity mac
+        ON mac.militaryAreaCityID = m.militaryAreaCityID_FK
+    INNER JOIN Housing.MilitaryArea ma
+        ON ma.militaryAreaID = mac.militaryAreaID_FK
+    INNER JOIN Housing.BuildingClass bc
+        ON bc.buildingClassID = bd.buildingClassID_FK
+    INNER JOIN dbo.Idara i
+        ON i.idaraID = bd.IdaraId_FK
+    OUTER APPLY
+    (
+        SELECT TOP (1)
+              ba.buildingActionID
+            , ba.buildingActionTypeID_FK
+        FROM Housing.BuildingAction ba
+        WHERE ba.buildingDetailsID_FK = bd.buildingDetailsID
+          AND ba.buildingActionActive = 1
+        ORDER BY ba.buildingActionID DESC
+    ) AS rawLast
+    WHERE bd.buildingDetailsActive = 1
+      AND bd.buildingUtilityTypeID_FK IN (1, 11, 13, 15)
+      AND bt.buildingTypeActive = 1
+      AND bu.buildingUtilityTypeActive = 1
+      AND m.militaryLocationActive = 1
+      AND bc.buildingClassActive = 1
+      AND mac.militaryAreaCityActive = 1
+      AND ma.militaryAreaIsActive = 1
+      AND bd.buildingDetailsStartDate IS NOT NULL
+      AND bu.buildingUtilityTypeStartDate IS NOT NULL
+      AND (bd.buildingDetailsEndDate IS NULL OR bd.buildingDetailsEndDate > GETDATE())
+      AND (bu.buildingUtilityTypeEndDate IS NULL OR bu.buildingUtilityTypeEndDate > GETDATE())
+      AND i.idaraShowInCommandCenter = 1
+      AND (@CanViewAllDepartments = 1 OR i.idaraID = @TrustedIdaraID)
+    OPTION (RECOMPILE);
+
+    CREATE UNIQUE CLUSTERED INDEX IX_HCC_MainOperational_Building
+        ON #HCC_MainOperational (buildingDetailsID);
+
+    /* Explicit second statement prevents repeated lineage evaluation
+       for buildings whose newest action is not 3 or 58. The fallback
+       is EXACTLY the original NOT (...) predicate; it can skip any
+       number of excluded 3/58 rows, not just the newest one. */
+    UPDATE operational
+    SET
+          LastActionID = corrected.buildingActionID
+        , LastActionTypeID = corrected.buildingActionTypeID_FK
+    FROM #HCC_MainOperational AS operational
+    OUTER APPLY
+    (
+        SELECT TOP (1)
+              ba.buildingActionID
+            , ba.buildingActionTypeID_FK
+        FROM Housing.BuildingAction ba
+        WHERE ba.buildingDetailsID_FK = operational.buildingDetailsID
+          AND ba.buildingActionActive = 1
+          AND NOT
+          (
+              ba.buildingActionTypeID_FK IN (3, 58)
+              AND EXISTS
+              (
+                  SELECT 1
+                  FROM Housing.fn_BuildingAction_ChainToRoot(ba.buildingActionID) ancestor
+                  JOIN Housing.BuildingAction stage57
+                    ON stage57.buildingActionID = ancestor.buildingActionID
+                   AND stage57.buildingActionTypeID_FK = 57
+                   AND stage57.buildingActionActive = 1
+                   AND stage57.buildingDetailsID_FK = operational.buildingDetailsID
+                   AND stage57.IdaraId_FK = operational.BuildingIdaraID
+                  JOIN Housing.BuildingAction operatingRoot
+                    ON operatingRoot.buildingDetailsID_FK = operational.buildingDetailsID
+                   AND operatingRoot.IdaraId_FK = operational.BuildingIdaraID
+                   AND operatingRoot.buildingActionActive = 1
+                   AND operatingRoot.buildingActionParentID IS NULL
+                   AND operatingRoot.residentInfoID_FK IS NULL
+                   AND operatingRoot.buildingActionTypeID_FK IN (4, 5, 62)
+                   AND operatingRoot.buildingActionID > stage57.buildingActionID
+                   AND operatingRoot.buildingActionID < ba.buildingActionID
+              )
+          )
+        ORDER BY ba.buildingActionID DESC
+    ) AS corrected
+    WHERE operational.LastActionTypeID IN (3, 58)
+    OPTION (RECOMPILE);
+
     -------------------------------------------------------------------
     -- الإدارات المفعلة للظهور في لوحة القيادة
     -------------------------------------------------------------------
@@ -6275,6 +6432,10 @@ END
         , i.organizationID_FK
     FROM dbo.Idara i
     WHERE i.idaraShowInCommandCenter = 1
+    AND (
+    @CanViewAllDepartments = 1
+    OR i.idaraID = @TrustedIdaraID
+)
     ORDER BY i.idaraID ASC;
 
 
@@ -6332,16 +6493,21 @@ LEFT JOIN Housing.BuildingDetails b
    AND b.buildingDetailsActive = 1
    AND b.buildingUtilityTypeID_FK IN (1, 11, 13, 15)
 
-LEFT JOIN Housing.V_LastActionForBuilding la
-    ON la.buildingDetailsID = b.buildingDetailsID
+LEFT JOIN #HCC_MainOperational operational
+    ON operational.buildingDetailsID = b.buildingDetailsID
+   AND operational.BuildingIdaraID = b.IdaraId_FK
 
 LEFT JOIN Housing.BuildingAction a
-    ON a.buildingActionID = la.buildingActionID
+    ON a.buildingActionID = operational.LastActionID
 
 LEFT JOIN Housing.BuildingActionType t
     ON t.buildingActionTypeID = a.buildingActionTypeID_FK
 
 WHERE i.idaraShowInCommandCenter = 1
+AND (
+    @CanViewAllDepartments = 1
+    OR i.idaraID = @TrustedIdaraID
+)
 
 GROUP BY
     i.idaraID
@@ -6395,12 +6561,21 @@ ORDER BY
 
     FROM Housing.V_WaitingList w
 
-    INNER JOIN Housing.WaitingClass c
-        ON c.waitingClassID = w.WaitingClassID
+INNER JOIN Housing.ResidentInfo ri
+    ON ri.residentInfoID = w.residentInfoID
+   AND ri.residentInfoActive = 1
 
-    INNER JOIN dbo.Idara di
-        ON di.idaraID = w.IdaraId
-       AND di.idaraShowInCommandCenter = 1
+INNER JOIN Housing.WaitingClass c
+    ON c.waitingClassID = w.WaitingClassID
+
+INNER JOIN dbo.Idara di
+    ON di.idaraID = w.IdaraId
+
+   AND di.idaraShowInCommandCenter = 1
+   AND (
+       @CanViewAllDepartments = 1
+       OR di.idaraID = @TrustedIdaraID
+   )
 
     WHERE w.residentInfoID IS NOT NULL
       AND w.WaitingClassID IS NOT NULL
@@ -6498,6 +6673,10 @@ LEFT JOIN WaitingChosen w
     ON w.idaraID = i.idaraID
 
 WHERE i.idaraShowInCommandCenter = 1
+AND (
+    @CanViewAllDepartments = 1
+    OR i.idaraID = @TrustedIdaraID
+)
 
 GROUP BY i.idaraID
 ORDER BY i.idaraID ASC
@@ -6949,6 +7128,10 @@ LEFT JOIN FinancialByIdara f
 
 WHERE
     i.idaraShowInCommandCenter = 1
+    AND (
+    @CanViewAllDepartments = 1
+    OR i.idaraID = @TrustedIdaraID
+)
 
 ORDER BY
     i.idaraID;
@@ -7012,19 +7195,22 @@ LEFT JOIN Housing.MilitaryLocation m
     ON m.militaryLocationID =
        b.militaryLocationID_FK
 
-LEFT JOIN Housing.V_LastActionForBuilding la
-    ON la.buildingDetailsID =
-       b.buildingDetailsID
+LEFT JOIN #HCC_MainOperational operational
+    ON operational.buildingDetailsID = b.buildingDetailsID
+   AND operational.BuildingIdaraID = b.IdaraId_FK
 
 LEFT JOIN Housing.BuildingAction a
-    ON a.buildingActionID =
-       la.buildingActionID
+    ON a.buildingActionID = operational.LastActionID
 
 LEFT JOIN Housing.BuildingActionType t
     ON t.buildingActionTypeID =
        a.buildingActionTypeID_FK
 
 WHERE i.idaraShowInCommandCenter = 1
+AND (
+    @CanViewAllDepartments = 1
+    OR i.idaraID = @TrustedIdaraID
+)
 
 GROUP BY
       i.idaraID
@@ -7228,7 +7414,7 @@ ORDER BY
        AND b.buildingDetailsActive = 1
        AND b.buildingUtilityTypeID_FK IN (1,11,13,15)
 
-    LEFT JOIN Housing.V_GetGeneralListForBuilding operational
+    LEFT JOIN #HCC_MainOperational operational
     ON operational.buildingDetailsID = b.buildingDetailsID
    AND operational.BuildingIdaraID = b.IdaraId_FK
 
@@ -7240,6 +7426,10 @@ LEFT JOIN Housing.BuildingAction a
            a.buildingActionTypeID_FK
 
     WHERE i.idaraShowInCommandCenter = 1
+    AND (
+    @CanViewAllDepartments = 1
+    OR i.idaraID = @TrustedIdaraID
+)
 ),
 Grouped AS
 (
@@ -7475,13 +7665,12 @@ INTO #HCC_CurrentProcedures
 
 FROM Housing.BuildingDetails b
 
-INNER JOIN Housing.V_LastActionForBuilding la
-    ON la.buildingDetailsID =
-       b.buildingDetailsID
+INNER JOIN #HCC_MainOperational operational
+    ON operational.buildingDetailsID = b.buildingDetailsID
+   AND operational.BuildingIdaraID = b.IdaraId_FK
 
 INNER JOIN Housing.BuildingAction a
-    ON a.buildingActionID =
-       la.buildingActionID
+    ON a.buildingActionID = operational.LastActionID
 
 LEFT JOIN Housing.BuildingActionType at
     ON at.buildingActionTypeID =
@@ -7494,6 +7683,10 @@ INNER JOIN dbo.Idara i
 WHERE
 
         i.idaraShowInCommandCenter = 1
+        AND (
+    @CanViewAllDepartments = 1
+    OR i.idaraID = @TrustedIdaraID
+)
 
     AND b.buildingDetailsActive = 1
 
@@ -7601,6 +7794,10 @@ LEFT JOIN #HCC_CurrentProcedures p
 
 WHERE
     i.idaraShowInCommandCenter = 1
+    AND (
+    @CanViewAllDepartments = 1
+    OR i.idaraID = @TrustedIdaraID
+)
 
 GROUP BY
     i.idaraID
@@ -7776,6 +7973,10 @@ DROP TABLE IF EXISTS #HCC_CurrentProcedures;
     SELECT i.idaraID
     FROM dbo.Idara i
     WHERE i.idaraShowInCommandCenter = 1
+    AND (
+    @CanViewAllDepartments = 1
+    OR i.idaraID = @TrustedIdaraID
+)
 ),
 NativeCompletedEnds AS
 (
@@ -7955,6 +8156,10 @@ ORDER BY i.idaraID, w.SortOrder;
 
         AND
         i.idaraShowInCommandCenter = 1
+        AND (
+    @CanViewAllDepartments = 1
+    OR i.idaraID = @TrustedIdaraID
+)
 
         AND
     b.TotalPrice > 0
@@ -8017,6 +8222,10 @@ PaymentsByResidentType AS
 
         AND
         i.idaraShowInCommandCenter = 1
+        AND (
+    @CanViewAllDepartments = 1
+    OR i.idaraID = @TrustedIdaraID
+)
 
     GROUP BY
           p.IdaraId_FK
@@ -8245,5 +8454,7 @@ ORDER BY
 
 
 
+
+    DROP TABLE IF EXISTS #HCC_MainOperational;
 
 END

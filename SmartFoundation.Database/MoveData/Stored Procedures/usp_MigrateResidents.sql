@@ -1,5 +1,4 @@
-﻿
-CREATE   PROCEDURE [MoveData].[usp_MigrateResidents]
+﻿CREATE PROCEDURE [MoveData].[usp_MigrateResidents]
     @IdaraId BIGINT,
     @RollbackAfterTest BIT = 1
 AS
@@ -46,6 +45,163 @@ BEGIN
     --   Select the newest inactive version.
     ------------------------------------------------------------
 
+    
+    /* TRIAL2_GENERIC_RESIDENT_ELIGIBILITY_20261105
+       Action count is across the source resident's generalNo, NOT hardcoded IDs. */
+    SELECT
+        TRY_CONVERT(bigint,r.residentInfoID) AS ResidentInfoID,
+        TRY_CONVERT(bigint,r.generalNo) AS GeneralNo
+    INTO #EligibleMigrationResidents
+    FROM [KFMC].[Housing].[ResidentInfo] r
+WHERE r.residentInfoActive = 1
+  AND TRY_CONVERT(bigint,r.generalNo) IS NOT NULL
+  AND TRY_CONVERT(bigint,r.generalNo) NOT IN (0,1,18)
+  AND EXISTS
+      (
+          SELECT 1
+          FROM [KFMC].[Housing].[BuildingAction] a
+          WHERE a.generalNo_FK = TRY_CONVERT(bigint,r.generalNo)
+          GROUP BY a.generalNo_FK
+          HAVING COUNT_BIG(*) > 1
+             OR MAX(CASE WHEN a.buildingActionTypeID_FK <> 6 THEN 1 ELSE 0 END) = 1
+      );
+    /* RESIDENT_IDENTITY_GATES_NO_UID_20261107
+       Source: KFMC read-only. Diagnose ALL offending rows before THROW.
+       Target has no generalNo on ResidentInfo: resolve it through ResidentDetails.
+       An eligible source resident without details remains eligible. */
+    CREATE TABLE #ResidentMigrationConflicts
+    (
+        ConflictType nvarchar(90) NOT NULL,
+        ConflictKey nvarchar(200) NULL,
+        SourceResidentInfoID bigint NULL,
+        SourceGeneralNo bigint NULL,
+        SourceNationalID nvarchar(100) NULL,
+        TargetResidentInfoID bigint NULL,
+        TargetGeneralNo bigint NULL,
+        TargetNationalID nvarchar(100) NULL,
+        ExplanationArabic nvarchar(500) NOT NULL
+    );
+
+    SELECT e.ResidentInfoID, e.GeneralNo,
+           NULLIF(LTRIM(RTRIM(CONVERT(nvarchar(100),s.NationalID))),N'') AS NationalID
+      INTO #EligibleResidentIdentity
+    FROM #EligibleMigrationResidents e
+    JOIN KFMC.Housing.ResidentInfo s
+      ON TRY_CONVERT(bigint,s.residentInfoID)=e.ResidentInfoID;
+
+    /* 1 - duplicate eligible source general number: output every row. */
+    INSERT #ResidentMigrationConflicts
+    (ConflictType,ConflictKey,SourceResidentInfoID,SourceGeneralNo,SourceNationalID,ExplanationArabic)
+    SELECT N'SOURCE_DUPLICATE_GENERAL',CONVERT(nvarchar(200),s.GeneralNo),
+           s.ResidentInfoID,s.GeneralNo,s.NationalID,
+           N'الرقم العام مرتبط بأكثر من سجل مستفيد مؤهل في KFMC'
+    FROM #EligibleResidentIdentity s
+    WHERE EXISTS
+      (SELECT 1 FROM #EligibleResidentIdentity g
+       WHERE g.GeneralNo=s.GeneralNo
+       GROUP BY g.GeneralNo HAVING COUNT_BIG(*)>1);
+
+    /* 2 - duplicate nonblank national ID among eligible source residents. */
+    INSERT #ResidentMigrationConflicts
+    (ConflictType,ConflictKey,SourceResidentInfoID,SourceGeneralNo,SourceNationalID,ExplanationArabic)
+    SELECT N'SOURCE_DUPLICATE_NATIONAL_ID',s.NationalID,
+           s.ResidentInfoID,s.GeneralNo,s.NationalID,
+           N'رقم الهوية مرتبط بأكثر من مستفيد مؤهل في KFMC'
+    FROM #EligibleResidentIdentity s
+    WHERE s.NationalID IS NOT NULL
+      AND EXISTS
+      (SELECT 1 FROM #EligibleResidentIdentity n
+       WHERE n.NationalID=s.NationalID
+       GROUP BY n.NationalID HAVING COUNT_BIG(*)>1);
+
+    /* 3a - source's generalNo already assigned in target to a different ID.
+       DISTINCT because target can have multiple historical details for one ID. */
+    INSERT #ResidentMigrationConflicts
+    (ConflictType,ConflictKey,SourceResidentInfoID,SourceGeneralNo,SourceNationalID,
+     TargetResidentInfoID,TargetGeneralNo,TargetNationalID,ExplanationArabic)
+    SELECT DISTINCT N'TARGET_GENERAL_ASSIGNED_TO_OTHER_ID',CONVERT(nvarchar(200),s.GeneralNo),
+           s.ResidentInfoID,s.GeneralNo,s.NationalID,
+           t.residentInfoID,TRY_CONVERT(bigint,d.generalNo_FK),
+           NULLIF(LTRIM(RTRIM(CONVERT(nvarchar(100),t.NationalID))),N''),
+           N'الرقم العام للمصدر موجود في تفاصيل مستفيد آخر في DATACORE'
+    FROM #EligibleResidentIdentity s
+    JOIN Housing.ResidentDetails d
+      ON TRY_CONVERT(bigint,d.generalNo_FK)=s.GeneralNo
+    JOIN Housing.ResidentInfo t ON t.residentInfoID=d.residentInfoID_FK
+    WHERE t.residentInfoID<>s.ResidentInfoID;
+
+    /* 3b - same source/target resident ID, but historical target generalNo differs.
+       This is a genuine collision on an existing detail, not a missing-detail case. */
+    INSERT #ResidentMigrationConflicts
+    (ConflictType,ConflictKey,SourceResidentInfoID,SourceGeneralNo,SourceNationalID,
+     TargetResidentInfoID,TargetGeneralNo,TargetNationalID,ExplanationArabic)
+    SELECT DISTINCT N'TARGET_ID_HAS_OTHER_GENERAL',CONVERT(nvarchar(200),s.ResidentInfoID),
+           s.ResidentInfoID,s.GeneralNo,s.NationalID,
+           t.residentInfoID,TRY_CONVERT(bigint,d.generalNo_FK),
+           NULLIF(LTRIM(RTRIM(CONVERT(nvarchar(100),t.NationalID))),N''),
+           N'معرف المستفيد مطابق لكن تفاصيله في DATACORE مرتبطة برقم عام مختلف'
+    FROM #EligibleResidentIdentity s
+    JOIN Housing.ResidentInfo t ON t.residentInfoID=s.ResidentInfoID
+    JOIN Housing.ResidentDetails d ON d.residentInfoID_FK=t.residentInfoID
+    WHERE TRY_CONVERT(bigint,d.generalNo_FK) IS NULL
+       OR TRY_CONVERT(bigint,d.generalNo_FK)<>s.GeneralNo;
+
+    /* 3c - target resident identity conflict, even without target details. */
+    INSERT #ResidentMigrationConflicts
+    (ConflictType,ConflictKey,SourceResidentInfoID,SourceGeneralNo,SourceNationalID,
+     TargetResidentInfoID,TargetNationalID,ExplanationArabic)
+    SELECT N'TARGET_IDENTITY_MISMATCH',CONVERT(nvarchar(200),s.ResidentInfoID),
+           s.ResidentInfoID,s.GeneralNo,s.NationalID,t.residentInfoID,
+           NULLIF(LTRIM(RTRIM(CONVERT(nvarchar(100),t.NationalID))),N''),
+           N'معرف المستفيد موجود لكن رقم الهوية الوطنية في الهدف لا يطابق المصدر'
+    FROM #EligibleResidentIdentity s
+    JOIN Housing.ResidentInfo t ON t.residentInfoID=s.ResidentInfoID
+    WHERE ISNULL(NULLIF(LTRIM(RTRIM(CONVERT(nvarchar(100),t.NationalID))),N''),N'')
+          <> ISNULL(s.NationalID,N'');
+
+    /* 3d - source national ID belongs to a different target resident ID.
+       A matching source/target record with the SAME ID is normal. */
+    INSERT #ResidentMigrationConflicts
+    (ConflictType,ConflictKey,SourceResidentInfoID,SourceGeneralNo,SourceNationalID,
+     TargetResidentInfoID,TargetNationalID,ExplanationArabic)
+    SELECT DISTINCT N'TARGET_NATIONAL_ID_OTHER_ID',s.NationalID,
+           s.ResidentInfoID,s.GeneralNo,s.NationalID,t.residentInfoID,
+           NULLIF(LTRIM(RTRIM(CONVERT(nvarchar(100),t.NationalID))),N''),
+           N'رقم هوية المصدر مستخدم لمعرف مستفيد مختلف في DATACORE'
+    FROM #EligibleResidentIdentity s
+    JOIN Housing.ResidentInfo t
+      ON NULLIF(LTRIM(RTRIM(CONVERT(nvarchar(100),t.NationalID))),N'')=s.NationalID
+     AND t.residentInfoID<>s.ResidentInfoID
+    WHERE s.NationalID IS NOT NULL;
+
+
+    IF EXISTS (SELECT 1 FROM #ResidentMigrationConflicts)
+    BEGIN
+        SELECT ConflictType,COUNT_BIG(*) AS ConflictRows,
+               COUNT(DISTINCT SourceResidentInfoID) AS AffectedSourceResidents
+        FROM #ResidentMigrationConflicts
+        GROUP BY ConflictType ORDER BY ConflictType;
+
+        SELECT ConflictType,ConflictKey,SourceResidentInfoID,SourceGeneralNo,
+               SourceNationalID,TargetResidentInfoID,TargetGeneralNo,
+               TargetNationalID,ExplanationArabic
+        FROM #ResidentMigrationConflicts
+        ORDER BY ConflictType,ConflictKey,SourceGeneralNo,
+                 SourceResidentInfoID,TargetResidentInfoID;
+
+        THROW 58212,
+          N'Resident migration identity/generalNo conflict: diagnostic result sets returned; no residents inserted.',1;
+    END;
+
+    IF EXISTS (SELECT 1 FROM #EligibleMigrationResidents
+               WHERE ResidentInfoID IS NULL OR GeneralNo IS NULL)
+        THROW 58210,N'Eligible KFMC resident has missing identity; cannot safely migrate.',1;
+
+    CREATE UNIQUE CLUSTERED INDEX IX_EligibleMigrationResidents_ResidentInfo
+      ON #EligibleMigrationResidents(ResidentInfoID);
+    CREATE UNIQUE INDEX IX_EligibleMigrationResidents_GeneralNo
+      ON #EligibleMigrationResidents(GeneralNo);
+
     ;WITH RankedDetails AS
     (
         SELECT
@@ -68,7 +224,12 @@ BEGIN
     SELECT *
     INTO #SelectedResidentDetails
     FROM RankedDetails
-    WHERE MigrationRank = 1;
+    WHERE MigrationRank = 1
+          AND EXISTS
+          (
+              SELECT 1 FROM #EligibleMigrationResidents e
+              WHERE e.GeneralNo=TRY_CONVERT(bigint,RankedDetails.generalNo_FK)
+          );
 
     ------------------------------------------------------------
     -- 3. Validate selected ResidentDetails ownership
@@ -109,30 +270,6 @@ BEGIN
     )
         THROW 51005,
             N'Required military units are missing. Migrate military units first.',
-            1;
-
-    ------------------------------------------------------------
-    -- 5. ResidentInfo ID collision protection
-    --    Only eligible residents are checked.
-    ------------------------------------------------------------
-
-    IF EXISTS
-    (
-        SELECT 1
-        FROM KFMC.Housing.ResidentInfo AS s
-
-        JOIN #SelectedResidentDetails AS d
-            ON TRY_CONVERT(BIGINT, d.generalNo_FK) =
-               TRY_CONVERT(BIGINT, s.generalNo)
-
-        JOIN Housing.ResidentInfo AS t
-            ON t.residentInfoID =
-               TRY_CONVERT(BIGINT, s.residentInfoID)
-
-        WHERE t.residentInfoUID <> s.residentInfoUID
-    )
-        THROW 51002,
-            N'A ResidentInfo ID belongs to a different resident.',
             1;
 
     ------------------------------------------------------------
@@ -198,16 +335,11 @@ BEGIN
             )
 
         FROM KFMC.Housing.ResidentInfo AS s
-
-        WHERE EXISTS
-        (
-            SELECT 1
-            FROM #SelectedResidentDetails AS d
-            WHERE TRY_CONVERT(BIGINT, d.generalNo_FK) =
-                  TRY_CONVERT(BIGINT, s.generalNo)
-        )
-
-        AND NOT EXISTS
+          WHERE EXISTS
+          (
+              SELECT 1 FROM #EligibleMigrationResidents e
+              WHERE e.ResidentInfoID=TRY_CONVERT(bigint,s.residentInfoID)
+          ) AND NOT EXISTS
         (
             SELECT 1
             FROM Housing.ResidentInfo AS t

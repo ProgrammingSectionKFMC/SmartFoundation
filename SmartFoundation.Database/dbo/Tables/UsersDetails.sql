@@ -30,7 +30,7 @@
     [UDendDate]                     DATETIME        NULL,
     [canceldBy]                     NVARCHAR (500)  NULL,
     [canceldWhy]                    NVARCHAR (4000) NULL,
-    [ShowFullDashboard]             BIT             NULL,
+    [ShowFullDashboard]             BIT             CONSTRAINT [DF_UsersDetails_ShowFullDashboard] DEFAULT ((0)) NULL,
     [IdaraID]                       INT             CONSTRAINT [DF_UsersDetails_IdaraID] DEFAULT ((0)) NULL,
     [entryDate]                     DATETIME        CONSTRAINT [DF_UsersDetails_entryDate] DEFAULT (getdate()) NULL,
     [entryData]                     NVARCHAR (20)   NULL,
@@ -47,6 +47,8 @@
     CONSTRAINT [FK_UsersDetails_Users] FOREIGN KEY ([usersID_FK]) REFERENCES [dbo].[Users] ([usersID]),
     CONSTRAINT [FK_UsersDetails_UserType] FOREIGN KEY ([userTypeID_FK]) REFERENCES [dbo].[UserType] ([userTypeID])
 );
+
+
 
 
 

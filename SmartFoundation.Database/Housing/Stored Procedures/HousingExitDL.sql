@@ -110,7 +110,12 @@ IF @MatchedResidentCount = 0
             and m.IdaraID_FK = w.IdaraId 
             and m.meterForBuildingActive = 1) meterscount,
             convert(nvarchar(10),w.OccupentDate,23) OccupentDate,
-            convert(nvarchar(10),w.ExitDate,23) ExitDate
+            convert(nvarchar(10),w.ExitDate,23) AS ExitDate,
+
+            mgr.PrintManagerCount,
+            mgr.PrintManagerName,
+            mgr.PrintManagerRank,
+            mgr.PrintManagerPosition
            
             
             
@@ -119,6 +124,28 @@ IF @MatchedResidentCount = 0
         ON w.residentInfoID = rd.residentInfoID
         left Join Housing.BuildingActionType ba on w.LastActionTypeID = ba.buildingActionTypeID
         left join Housing.Bills b on w.residentInfoID = b.residentInfoID_FK and w.buildingDetailsID = b.buildingDetailsID and b.BillChargeTypeID_FK = 5 and b.BillActive = 1
+        OUTER APPLY
+        (
+            SELECT
+                COUNT(*) AS PrintManagerCount,
+        
+                CASE WHEN COUNT(*) = 1
+                     THEN MAX(m.ManagerListName)
+                END AS PrintManagerName,
+        
+                CASE WHEN COUNT(*) = 1
+                     THEN MAX(m.ManagerListRank)
+                END AS PrintManagerRank,
+        
+                CASE WHEN COUNT(*) = 1
+                     THEN MAX(m.ManagerListPosition)
+                END AS PrintManagerPosition
+        
+            FROM dbo.ManagerList m
+            WHERE m.ManagerListActive = 1
+              AND m.IdaraID_FK = @idaraID
+              AND m.ManagerListTypeID_FK = 1
+        ) mgr
     WHERE w.IdaraId = @idaraID
     and (w.buildingActionRoot = 2 or w.buildingActionRoot = 3)
       --AND  (w.LastActionTypeID in (2,24))

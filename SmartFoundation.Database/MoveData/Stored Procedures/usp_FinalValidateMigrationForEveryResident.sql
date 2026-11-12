@@ -1,5 +1,4 @@
-﻿
-CREATE   PROCEDURE [MoveData].[usp_FinalValidateMigrationForEveryResident]
+﻿CREATE PROCEDURE [MoveData].[usp_FinalValidateMigrationForEveryResident]
       @IdaraId            BIGINT = 1
     , @GeneralNo          BIGINT = NULL
     , @CutoverDate        DATE = NULL
@@ -154,29 +153,101 @@ BEGIN
     --    from current MoveData.usp_MigrateResidents
     ------------------------------------------------------------
 
-    ;WITH RankedDetails AS
-    (
-        SELECT
-              d.*
-            , ROW_NUMBER() OVER
-              (
-                  PARTITION BY d.generalNo_FK
-                  ORDER BY
-                      CASE
-                          WHEN d.residentDetailsActive = 1 THEN 0
-                          ELSE 1
-                      END,
-                      d.entryDate DESC,
-                      d.residentDetailsID DESC
-              ) AS MigrationRank
-        FROM KFMC.Housing.ResidentDetails d
-    )
-    SELECT *
-    INTO #SelectedResidentDetails
-    FROM RankedDetails
-    WHERE MigrationRank = 1;
+    /* Use the exact resident eligibility policy of usp_MigrateResidents. */
+SELECT
+    TRY_CONVERT(BIGINT, r.residentInfoID) AS ResidentInfoID,
+    TRY_CONVERT(BIGINT, r.generalNo) AS GeneralNo
+INTO #EligibleMigrationResidents
+FROM KFMC.Housing.ResidentInfo r
+WHERE r.residentInfoActive = 1
+  AND TRY_CONVERT(BIGINT, r.generalNo) IS NOT NULL
+  AND TRY_CONVERT(BIGINT, r.generalNo) NOT IN (0,1,18)
+  AND EXISTS
+  (
+      SELECT 1
+      FROM KFMC.Housing.BuildingAction a
+      WHERE a.generalNo_FK = TRY_CONVERT(BIGINT, r.generalNo)
+      GROUP BY a.generalNo_FK
+      HAVING COUNT_BIG(*) > 1
+         OR MAX(
+             CASE WHEN a.buildingActionTypeID_FK <> 6
+                  THEN 1 ELSE 0 END
+         ) = 1
+  );
+
+;WITH RankedDetails AS
+(
+    SELECT
+        d.*,
+        ROW_NUMBER() OVER
+        (
+            PARTITION BY d.generalNo_FK
+            ORDER BY
+                CASE WHEN d.residentDetailsActive = 1
+                     THEN 0 ELSE 1 END,
+                d.entryDate DESC,
+                d.residentDetailsID DESC
+        ) AS MigrationRank
+    FROM KFMC.Housing.ResidentDetails d
+)
+SELECT d.*
+INTO #SelectedResidentDetails
+FROM RankedDetails d
+JOIN #EligibleMigrationResidents e
+  ON e.GeneralNo = TRY_CONVERT(BIGINT, d.generalNo_FK)
+WHERE d.MigrationRank = 1;
 
 
+
+/* Eligible residents must be validated even without ResidentDetails. */
+INSERT INTO #ValidationIssues
+(
+    EntityKey,
+    GeneralNo,
+    ResidentInfoID,
+    SectionName,
+    IssueCode,
+    SourceObject,
+    TargetObject,
+    ReferenceID,
+    FieldName,
+    ExpectedValue,
+    ActualValue,
+    Severity,
+    Notes
+)
+SELECT
+    CONCAT(N'G:', e.GeneralNo),
+    e.GeneralNo,
+    e.ResidentInfoID,
+    N'POPULATION',
+    N'ELIGIBLE_RESIDENT_WITHOUT_DETAILS_NOT_MIGRATED',
+    N'KFMC.Housing.ResidentInfo',
+    N'DATACORE.Housing.ResidentInfo',
+    CONVERT(NVARCHAR(100), e.ResidentInfoID),
+    N'residentInfoID',
+    CONVERT(NVARCHAR(100), e.ResidentInfoID),
+    NULL,
+    'ERROR',
+    N'المستفيد مؤهل للترحيل رغم عدم وجود ResidentDetails، ولكن سجل ResidentInfo غير موجود في DATACORE.'
+FROM #EligibleMigrationResidents e
+WHERE NOT EXISTS
+(
+    SELECT 1
+    FROM #SelectedResidentDetails d
+    WHERE TRY_CONVERT(BIGINT, d.generalNo_FK) = e.GeneralNo
+)
+AND NOT EXISTS
+(
+    SELECT 1
+    FROM Housing.ResidentInfo t
+    WHERE t.residentInfoID = e.ResidentInfoID
+)
+AND
+(
+    @GeneralNo IS NULL
+    OR e.GeneralNo = @GeneralNo
+);
     ------------------------------------------------------------
     -- 3. Ownership validation:
     --    selected ResidentDetails must map to exactly ONE
@@ -186,12 +257,11 @@ BEGIN
     SELECT
           TRY_CONVERT(BIGINT, d.generalNo_FK) AS GeneralNo
         , TRY_CONVERT(BIGINT, d.residentDetailsID) AS ResidentDetailsID
-        , COUNT_BIG(r.residentInfoID) AS ResidentInfoMatches
+        , COUNT_BIG(r.ResidentInfoID) AS ResidentInfoMatches
     INTO #SelectedDetailsOwnership
     FROM #SelectedResidentDetails d
-    LEFT JOIN KFMC.Housing.ResidentInfo r
-        ON TRY_CONVERT(BIGINT, r.generalNo)
-         = TRY_CONVERT(BIGINT, d.generalNo_FK)
+    LEFT JOIN #EligibleMigrationResidents r
+        ON r.GeneralNo = TRY_CONVERT(BIGINT, d.generalNo_FK)
     WHERE
         @GeneralNo IS NULL
         OR TRY_CONVERT(BIGINT, d.generalNo_FK) = @GeneralNo
@@ -247,11 +317,11 @@ BEGIN
               CONVERT
               (
                   NVARCHAR(40),
-                  TRY_CONVERT(BIGINT, d.generalNo_FK)
+                  eligible.GeneralNo
               )
           ) AS EntityKey
 
-        , TRY_CONVERT(BIGINT, d.generalNo_FK) AS GeneralNo
+        , eligible.GeneralNo AS GeneralNo
 
         --------------------------------------------------------
         -- ResidentInfo source / expected
@@ -356,20 +426,20 @@ BEGIN
 
     INTO #ExpectedResidents
 
-    FROM #SelectedResidentDetails d
-
-    JOIN #SelectedDetailsOwnership o
-        ON o.ResidentDetailsID =
-           TRY_CONVERT(BIGINT, d.residentDetailsID)
-       AND o.ResidentInfoMatches = 1
+    FROM #EligibleMigrationResidents eligible
 
     JOIN KFMC.Housing.ResidentInfo r
-        ON TRY_CONVERT(BIGINT, r.generalNo)
-         = TRY_CONVERT(BIGINT, d.generalNo_FK)
+        ON TRY_CONVERT(BIGINT, r.residentInfoID) = eligible.ResidentInfoID
+       AND r.residentInfoActive = 1
 
-    WHERE
-        @GeneralNo IS NULL
-        OR TRY_CONVERT(BIGINT, d.generalNo_FK) = @GeneralNo;
+    LEFT JOIN #SelectedResidentDetails d
+        ON TRY_CONVERT(BIGINT, d.generalNo_FK) = eligible.GeneralNo
+
+    LEFT JOIN #SelectedDetailsOwnership o
+        ON o.ResidentDetailsID = TRY_CONVERT(BIGINT, d.residentDetailsID)
+
+    WHERE (@GeneralNo IS NULL OR eligible.GeneralNo = @GeneralNo)
+      AND (d.residentDetailsID IS NULL OR o.ResidentInfoMatches = 1);
 
 
     ------------------------------------------------------------
@@ -515,7 +585,8 @@ BEGIN
         , 'ERROR'
         , N'The selected source ResidentDetails row was not found in DATACORE by its preserved ID.'
     FROM #ExpectedResidents e
-    WHERE NOT EXISTS
+    WHERE e.SourceResidentDetailsID IS NOT NULL
+      AND NOT EXISTS
     (
         SELECT 1
         FROM Housing.ResidentDetails t
@@ -2184,6 +2255,9 @@ BEGIN
         , sourceAction.buildingActionUDID
 
         , CASE
+              WHEN sourceAction.buildingActionParentID IS NULL
+               AND sourceAction.buildingActionTypeID_FK IN (7,25)
+                  THEN 1
               WHEN sourceAction.buildingActionTypeID_FK = 3
                AND sourceAction.buildingActionExtraInt1 IS NULL
                   THEN 3
@@ -2198,23 +2272,11 @@ BEGIN
 
               WHEN sourceAction.buildingActionTypeID_FK = 3
                AND sourceAction.buildingActionExtraInt1 = 4
-                  THEN 58
+                  THEN 57
 
               WHEN sourceAction.buildingActionTypeID_FK = 3
                AND sourceAction.buildingActionExtraInt1 = 5
                   THEN 3
-
-              WHEN sourceAction.buildingActionTypeID_FK = 18
-               AND NOT EXISTS
-                   (
-                       SELECT 1
-                       FROM KFMC.Housing.BuildingAction laterAction
-                       WHERE laterAction.generalNo_FK =
-                             sourceAction.generalNo_FK
-                         AND laterAction.buildingActionID >
-                             sourceAction.buildingActionID
-                   )
-                  THEN 39
 
               ELSE sourceAction.buildingActionTypeID_FK
           END AS ExpectedActionTypeID
@@ -2262,7 +2324,16 @@ BEGIN
         , sourceAction.buildingActionExtraInt3
         , sourceAction.buildingActionExtraInt4
 
-        , sourceAction.buildingActionExtraType1
+        , CASE
+              WHEN sourceAction.buildingActionParentID IS NULL
+               AND sourceAction.buildingActionTypeID_FK = 7 THEN 17
+              WHEN sourceAction.buildingActionParentID IS NULL
+               AND sourceAction.buildingActionTypeID_FK = 25 THEN 18
+              WHEN sourceAction.buildingActionParentID IS NULL
+               AND sourceAction.buildingActionTypeID_FK = 1
+               AND sourceAction.buildingActionExtraType1 = 99 THEN 5
+              ELSE sourceAction.buildingActionExtraType1
+          END AS buildingActionExtraType1
         , sourceAction.buildingActionExtraType2
         , sourceAction.buildingActionExtraType3
 
@@ -2275,13 +2346,7 @@ BEGIN
                        (
                            duplicateParent.retainedActionID,
 
-                           CASE
-                               WHEN letterAllocationParent.buildingActionID
-                                    IS NOT NULL
-                                   THEN letterAllocationParent.buildingActionParentID
-                           END,
-
-                           sourceAction.buildingActionParentID
+sourceAction.buildingActionParentID
                        ) IS NULL
                       THEN NULL
 
@@ -2292,13 +2357,7 @@ BEGIN
                            (
                                duplicateParent.retainedActionID,
 
-                               CASE
-                                   WHEN letterAllocationParent.buildingActionID
-                                        IS NOT NULL
-                                       THEN letterAllocationParent.buildingActionParentID
-                               END,
-
-                               sourceAction.buildingActionParentID
+sourceAction.buildingActionParentID
                            )
                        )
               END
@@ -2383,23 +2442,161 @@ BEGIN
     (
         SELECT 1
         FROM #FV_DuplicateActionMap duplicateAction
-        WHERE duplicateAction.duplicateActionID =
-              sourceAction.buildingActionID
+        WHERE duplicateAction.duplicateActionID = sourceAction.buildingActionID
+    )
+    AND NOT
+    (
+        sourceAction.buildingActionTypeID_FK=21
+        AND sourceAction.buildingActionActive=1
+        AND EXISTS (SELECT 1 FROM KFMC.Housing.BuildingAction root
+                    WHERE root.buildingActionID=sourceAction.buildingActionParentID
+                      AND root.buildingActionParentID IS NULL
+                      AND root.buildingActionTypeID_FK IN (1,7,25))
+        AND NOT EXISTS (SELECT 1 FROM KFMC.Housing.BuildingAction child
+                        WHERE child.buildingActionParentID=sourceAction.buildingActionID)
+        AND NOT EXISTS (SELECT 1 FROM KFMC.Housing.BuildingAssign a
+                        WHERE a.BuildingActionID_FK=sourceAction.buildingActionID)
+    )
+    AND NOT
+    (
+        sourceAction.buildingActionTypeID_FK=26
+        AND sourceAction.buildingActionActive=1
+        AND EXISTS (SELECT 1 FROM KFMC.Housing.BuildingAction parent27
+                    WHERE parent27.buildingActionID=sourceAction.buildingActionParentID
+                      AND parent27.buildingActionTypeID_FK=27)
+        AND NOT EXISTS (SELECT 1 FROM KFMC.Housing.BuildingAction child
+                        WHERE child.buildingActionParentID=sourceAction.buildingActionID)
+        AND NOT EXISTS (SELECT 1 FROM KFMC.Housing.BuildingAssign a
+                        WHERE a.BuildingActionID_FK=sourceAction.buildingActionID)
     )
 
     AND NOT
     (
         sourceAction.buildingActionTypeID_FK = 27
-
+        AND EXISTS
+        (
+            SELECT 1 FROM KFMC.Housing.BuildingAction letterRoot
+            WHERE letterRoot.buildingActionID = sourceAction.buildingActionParentID
+              AND letterRoot.buildingActionParentID IS NULL
+              AND letterRoot.buildingActionTypeID_FK IN (7,25)
+        )
+        AND NOT EXISTS
+        (
+            SELECT 1 FROM KFMC.Housing.BuildingAction child
+            WHERE child.buildingActionParentID = sourceAction.buildingActionID
+        )
+        AND NOT EXISTS
+        (
+            SELECT 1 FROM KFMC.Housing.BuildingAssign allocation
+            WHERE allocation.BuildingActionID_FK = sourceAction.buildingActionID
+        )
+    )
+    -- FINAL99_LIVE_ALIGN_20261110: terminal 27 is not an eligible current allocation
+    AND NOT
+    (
+        sourceAction.buildingActionTypeID_FK = 27
+        AND sourceAction.buildingActionActive = 1
+        AND NOT EXISTS
+        (
+            SELECT 1 FROM KFMC.Housing.BuildingAction child27
+            WHERE child27.buildingActionParentID = sourceAction.buildingActionID
+        )
+        AND NOT EXISTS
+        (
+            SELECT 1 FROM KFMC.Housing.BuildingAssign assign27
+            WHERE assign27.BuildingActionID_FK = sourceAction.buildingActionID
+        )
         AND EXISTS
         (
             SELECT 1
-            FROM KFMC.Housing.BuildingAction letterRoot
-            WHERE letterRoot.buildingActionID =
-                  sourceAction.buildingActionParentID
-              AND letterRoot.buildingActionTypeID_FK = 7
+            FROM KFMC.Housing.BuildingAction root27
+            JOIN Housing.BuildingAction targetRoot27
+              ON targetRoot27.buildingActionID = root27.buildingActionID
+             AND targetRoot27.buildingActionParentID IS NULL
+             AND targetRoot27.buildingActionTypeID_FK = 1
+             AND targetRoot27.buildingActionUDID = root27.buildingActionUDID
+            WHERE root27.buildingActionID = sourceAction.buildingActionParentID
+              AND root27.buildingActionParentID IS NULL
+              AND root27.buildingActionTypeID_FK = 1
+              AND root27.buildingActionActive = 1
+              AND
+              (
+                  -- Active local SIDE-class waiting roots: no allocation yet.
+                  (
+                    targetRoot27.buildingActionActive = 1
+                    AND EXISTS
+                    (
+                      SELECT 1 FROM Housing.WaitingClass waitingClass27
+                      WHERE waitingClass27.waitingClassID =
+                            sourceAction.buildingActionExtraType1
+                        AND waitingClass27.idara_FK = @IdaraId
+                    )
+                  )
+                  OR
+                  -- Historically disabled source root, verified in duplicate map.
+                  (
+                    targetRoot27.buildingActionActive = 0
+                    -- FINAL99_MAIN_27_OCCUPIED_SIBLING_V3
+                    AND
+                    (
+                        EXISTS
+                        (
+                            SELECT 1 FROM #FV_DuplicateActionMap dm27
+                            WHERE dm27.duplicateActionID = root27.buildingActionID
+                        )
+                        OR
+                        (
+                            -- Retained earlier, completed housing chain under the
+                            -- same resident and SAME main waiting class. This is
+                            -- not an exemption for arbitrary disabled roots.
+                            EXISTS
+                            (
+                                SELECT 1
+                                FROM KFMC.Housing.BuildingAction earlierRoot
+                                JOIN Housing.BuildingAction retainedRoot
+                                  ON retainedRoot.buildingActionID = earlierRoot.buildingActionID
+                                 AND retainedRoot.buildingActionUDID = earlierRoot.buildingActionUDID
+                                 AND retainedRoot.buildingActionActive = 1
+                                 AND retainedRoot.buildingActionTypeID_FK = 1
+                                JOIN KFMC.Housing.BuildingAction earlierHousing
+                                  ON earlierHousing.buildingActionParentID = earlierRoot.buildingActionID
+                                 AND earlierHousing.buildingActionTypeID_FK = 2
+                                 AND earlierHousing.buildingActionActive = 1
+                                JOIN Housing.BuildingAction retainedHousing
+                                  ON retainedHousing.buildingActionID = earlierHousing.buildingActionID
+                                 AND retainedHousing.buildingActionUDID = earlierHousing.buildingActionUDID
+                                 AND retainedHousing.buildingActionParentID = retainedRoot.buildingActionID
+                                 AND retainedHousing.buildingActionTypeID_FK = 2
+                                 AND retainedHousing.buildingActionActive = 1
+                                WHERE earlierRoot.buildingActionParentID IS NULL
+                                  AND earlierRoot.buildingActionTypeID_FK = 1
+                                  AND earlierRoot.buildingActionActive = 1
+                                  AND earlierRoot.buildingActionID <> root27.buildingActionID
+                                  AND TRY_CONVERT(bigint, earlierRoot.generalNo_FK) =
+                                      TRY_CONVERT(bigint, root27.generalNo_FK)
+                                  AND earlierRoot.buildingActionExtraType1 = root27.buildingActionExtraType1
+                                  AND retainedRoot.buildingActionParentID IS NULL
+                            )
+                            -- Prevent an excluded terminal allocation from hiding
+                            -- another operational child in the target.
+                            AND NOT EXISTS
+                            (
+                                SELECT 1
+                                FROM Housing.BuildingAction remainingTargetChild
+                                WHERE remainingTargetChild.buildingActionParentID = root27.buildingActionID
+                            )
+                        )
+                    )
+                    AND NOT EXISTS
+                    (
+                       SELECT 1 FROM Housing.BuildingAction surviving27
+                       WHERE surviving27.buildingActionParentID = root27.buildingActionID
+                    )
+                  )
+              )
         )
-    );
+    )
+;
 
 
     ------------------------------------------------------------
@@ -2441,7 +2638,7 @@ BEGIN
        AND CONVERT(NVARCHAR(100), ownerAction.generalNo_FK)
          = CONVERT(NVARCHAR(100), currentAssign.GeneralNo)
 
-       AND ownerAction.generalNo_FK NOT IN (0,1)
+       AND ownerAction.generalNo_FK NOT IN (0,1,18)
 
     JOIN #ExpectedResidents validResident
         ON validResident.GeneralNo =
@@ -2517,9 +2714,12 @@ BEGIN
     FROM KFMC.Housing.BuildingAction action27
 
     JOIN KFMC.Housing.BuildingAction waitingRoot
-        ON waitingRoot.buildingActionID =
-           action27.buildingActionParentID
+        ON waitingRoot.buildingActionID = action27.buildingActionParentID
        AND waitingRoot.buildingActionTypeID_FK = 1
+    JOIN Housing.BuildingAction migratedRoot
+      ON migratedRoot.buildingActionID=waitingRoot.buildingActionID
+     AND migratedRoot.buildingActionTypeID_FK=1
+     AND migratedRoot.buildingActionActive=1
 
     JOIN #ExpectedResidents e
         ON e.GeneralNo =
@@ -3522,7 +3722,50 @@ BEGIN
         SELECT 1
         FROM #FV_ExpectedSourceActions x
         WHERE x.SourceActionID = s.buildingActionID
-    );
+    )
+    -- FINAL99_LIVE_ALIGN_20261110: preserved disabled historical duplicate root
+    AND NOT
+    (
+        s.buildingActionParentID IS NULL
+        AND s.buildingActionTypeID_FK = 1
+        AND s.buildingActionActive = 1
+        AND t.buildingActionParentID IS NULL
+        AND t.buildingActionTypeID_FK = 1
+        AND t.buildingActionActive = 0
+        AND t.buildingActionUDID = s.buildingActionUDID
+        AND TRY_CONVERT(bigint,t.generalNo_FK) = TRY_CONVERT(bigint,s.generalNo_FK)
+        AND EXISTS
+        (
+            SELECT 1 FROM #FV_DuplicateActionMap dmRoot
+            WHERE dmRoot.duplicateActionID = s.buildingActionID
+        )
+        AND NOT EXISTS
+        (
+            SELECT 1 FROM Housing.BuildingAction activeTargetChild
+            WHERE activeTargetChild.buildingActionParentID = s.buildingActionID
+        )
+        AND NOT EXISTS
+        (
+            SELECT 1
+            FROM KFMC.Housing.BuildingAction sourceChild
+            WHERE sourceChild.buildingActionParentID = s.buildingActionID
+              AND
+              (
+                 sourceChild.buildingActionTypeID_FK <> 27
+                 OR EXISTS
+                 (
+                    SELECT 1 FROM KFMC.Housing.BuildingAction grandchild
+                    WHERE grandchild.buildingActionParentID = sourceChild.buildingActionID
+                 )
+                 OR EXISTS
+                 (
+                    SELECT 1 FROM KFMC.Housing.BuildingAssign sourceAssign
+                    WHERE sourceAssign.BuildingActionID_FK = sourceChild.buildingActionID
+                 )
+              )
+        )
+    )
+;
 
 
     ------------------------------------------------------------
@@ -3724,8 +3967,13 @@ BEGIN
          CONVERT(NVARCHAR(MAX),t.buildingActionExtraType3)),
 
         (N'buildingActionActive',
-         CONVERT(NVARCHAR(MAX),e.buildingActionActive),
-         CONVERT(NVARCHAR(MAX),t.buildingActionActive)),
+          CONVERT(NVARCHAR(MAX),
+             CASE WHEN e.ExpectedParentToken IS NULL
+                       AND e.ExpectedActionTypeID=1
+                       AND e.buildingActionActive=1
+                       AND t.buildingActionActive=0
+                  THEN 0 ELSE e.buildingActionActive END),
+          CONVERT(NVARCHAR(MAX),t.buildingActionActive)),
 
         (N'CustdyRecord',
          CAST(NULL AS NVARCHAR(MAX)),
@@ -4507,7 +4755,7 @@ BEGIN
     ------------------------------------------------------------
 
     SELECT
-          e.EntityKey
+          COALESCE(e.EntityKey, CONCAT(N'B:', CONVERT(NVARCHAR(40), s.BillsID))) AS EntityKey
         , e.GeneralNo
         , e.SourceResidentInfoID AS ResidentInfoID
         , e.SourceResidentDetailsID AS ResidentDetailsID
@@ -4538,32 +4786,7 @@ BEGIN
               charge.MeterServiceTypeID_FK
           ) AS ExpectedMeterServiceTypeID
 
-        , CASE
-              WHEN s.meterReadID IS NOT NULL
-               AND EXISTS
-                   (
-                       SELECT 1
-                       FROM KFMC.Housing.MeterRead originalRead
-
-                       INNER JOIN KFMC.Housing.ResidentInfo originalResident
-                           ON originalResident.generalNo =
-                              originalRead.generalNo_FK
-
-                       WHERE originalRead.meterReadID =
-                             s.meterReadID
-
-                         AND NOT EXISTS
-                             (
-                                 SELECT 1
-                                 FROM KFMC.Housing.ResidentDetails d
-                                 WHERE d.generalNo_FK =
-                                       originalResident.generalNo
-                             )
-                   )
-                  THEN NULL
-
-              ELSE TRY_CONVERT(BIGINT, s.meterReadID)
-          END AS ExpectedMeterReadID
+        , TRY_CONVERT(BIGINT, s.meterReadID) AS ExpectedMeterReadID
 
         , s.CurrentRead
         , s.LastRead
@@ -4632,9 +4855,8 @@ BEGIN
 
     FROM #FV_ElectricSourceRanked s
 
-    JOIN #ExpectedResidents e
-        ON e.GeneralNo =
-           TRY_CONVERT(BIGINT, s.generalNo_FK)
+    LEFT JOIN #ExpectedResidents e
+        ON e.GeneralNo = TRY_CONVERT(BIGINT, s.generalNo_FK)
 
     JOIN Housing.BillChargeType charge
         ON charge.BillChargeTypeID = 2
@@ -4721,7 +4943,9 @@ BEGIN
 
     ) billDate
 
-    WHERE s.migrationRowNo = 1;
+    WHERE s.migrationRowNo = 1
+      AND (s.generalNo_FK IS NULL OR e.SourceResidentInfoID IS NOT NULL)
+      AND (@GeneralNo IS NULL OR e.GeneralNo = @GeneralNo);
 
 
     ------------------------------------------------------------
@@ -4828,14 +5052,15 @@ BEGIN
 
     FROM #FV_ElectricSourceRanked s
 
-    JOIN #ExpectedResidents e
-        ON e.GeneralNo =
-           TRY_CONVERT(BIGINT, s.generalNo_FK)
+    LEFT JOIN #ExpectedResidents e
+        ON e.GeneralNo = TRY_CONVERT(BIGINT, s.generalNo_FK)
 
     JOIN Housing.Bills t
         ON t.BillsID = TRY_CONVERT(BIGINT, s.BillsID)
 
-    WHERE s.migrationRowNo > 1;
+    WHERE s.migrationRowNo > 1
+      AND (s.generalNo_FK IS NULL OR e.SourceResidentInfoID IS NOT NULL)
+      AND (@GeneralNo IS NULL OR e.GeneralNo = @GeneralNo);
 
 
     ------------------------------------------------------------
@@ -5073,6 +5298,9 @@ BEGIN
         , Amount DECIMAL(18,2) NOT NULL
 
         , SourceEntryData NVARCHAR(40) NULL
+        , ExpectedRentDays30 INT NULL
+        , CoveredRentDays30 INT NULL
+        , RentCalculationReason NVARCHAR(250) NULL
     );
 
 
@@ -5231,6 +5459,9 @@ BEGIN
                   ELSE @HistoricalEndDate
               END AS EndDate
 
+            -- Approved 2026-11-08: uniform rent floor for all occupancy cycles.
+            , @RentChargeStartDate AS RentChargeStartForCycle
+
         FROM OccupancyBase o
     ),
     Months AS
@@ -5249,11 +5480,12 @@ BEGIN
             , p.NextOccupancyDate
             , p.SourceEntryData
             , p.EndDate
+            , p.RentChargeStartForCycle
 
             , CASE
                   WHEN p.OccupancyDate <
-                       @RentChargeStartDate
-                      THEN @RentChargeStartDate
+                       p.RentChargeStartForCycle
+                      THEN p.RentChargeStartForCycle
 
                   ELSE DATEFROMPARTS
                        (
@@ -5266,7 +5498,7 @@ BEGIN
         FROM OccupancyPeriods p
 
         WHERE p.OccupancyDate <= p.EndDate
-          AND p.EndDate >= @RentChargeStartDate
+          AND p.EndDate >= p.RentChargeStartForCycle
 
         UNION ALL
 
@@ -5284,6 +5516,7 @@ BEGIN
             , m.NextOccupancyDate
             , m.SourceEntryData
             , m.EndDate
+            , m.RentChargeStartForCycle
 
             , DATEADD(month, 1, m.MonthStart)
 
@@ -5320,8 +5553,8 @@ BEGIN
 
             , CASE
                   WHEN charge.ChargeTypeID = 1
-                   AND p.BillFrom < @RentChargeStartDate
-                      THEN @RentChargeStartDate
+                   AND p.BillFrom < p.RentChargeStartForCycle
+                      THEN p.RentChargeStartForCycle
 
                   WHEN charge.ChargeTypeID = 3
                    AND p.BillFrom < @WaterChargeStartDate
@@ -5342,7 +5575,7 @@ BEGIN
         WHERE
               (
                   charge.ChargeTypeID = 1
-                  AND p.BillTo >= @RentChargeStartDate
+                  AND p.BillTo >= p.RentChargeStartForCycle
               )
 
            OR (
@@ -5415,6 +5648,9 @@ BEGIN
         , ToDate
         , Amount
         , SourceEntryData
+        , ExpectedRentDays30
+        , CoveredRentDays30
+        , RentCalculationReason
     )
     SELECT
           c.EntityKey
@@ -5438,8 +5674,14 @@ BEGIN
         , MONTH(c.MonthStart)
         , YEAR(c.MonthStart)
 
-        , c.ChargeBillFrom
-        , c.ChargeBillTo
+        , CASE WHEN c.ChargeTypeID = 1
+                   AND tariffStats.TotalTariffRows > 0
+               THEN tariffWindow.EffectiveFrom
+               ELSE c.ChargeBillFrom END
+        , CASE WHEN c.ChargeTypeID = 1
+                   AND tariffStats.TotalTariffRows > 0
+               THEN tariffWindow.EffectiveTo
+               ELSE c.ChargeBillTo END
 
         , CASE c.ChargeTypeID
 
@@ -5460,6 +5702,16 @@ BEGIN
           END
 
         , c.SourceEntryData
+        , CASE WHEN c.ChargeTypeID = 1 THEN c.Days30 END
+        , CASE WHEN c.ChargeTypeID = 1 THEN rent.Days30InMonth END
+        , CASE
+            WHEN c.ChargeTypeID <> 1 THEN NULL
+            WHEN tariffStats.TotalTariffRows = 0 THEN N'إيجار صفر: لا توجد أي تعرفة إيجار مسجلة للمبنى'
+            WHEN ISNULL(rent.RentForMonth, 0) = 0 THEN N'إيجار صفر وفق تعرفة مسجلة بقيمة صفر'
+            WHEN ISNULL(rent.Days30InMonth, 0) < c.Days30
+                THEN N'احتساب إيجار جزئي من الشهر وفق تواريخ سريان التعرفة'
+            ELSE NULL
+        END
 
     FROM Calculated c
 
@@ -5471,9 +5723,73 @@ BEGIN
         , MONTH(c.MonthStart)
         , c.EndDate
     ) rent
+    -- A building with no tariff ever gets 0-SAR monthly invoices.
+    -- For a building with tariff history, issue invoices ONLY in effective tariff months.
+    OUTER APPLY
+    (
+        SELECT COUNT_BIG(*) AS TotalTariffRows
+        FROM Housing.BuildingRent tr
+        WHERE tr.buildingDetailsID_FK = c.BuildingDetailsID
+    ) tariffStats
+    -- Aggregate ONLY tariff-table expressions; apply outer invoice bounds
+    -- separately to avoid SQL Server Msg 8124 (outer reference in MIN/MAX).
+    OUTER APPLY
+    (
+        SELECT
+            MIN(CAST(tr.buildingRentStartDate AS date)) AS FirstEffectiveStart,
+            MAX(COALESCE(CAST(tr.buildingRentEndDate AS date),
+                         CONVERT(date, '99991231', 112))) AS LastEffectiveEnd
+        FROM Housing.BuildingRent tr
+        WHERE tr.buildingDetailsID_FK = c.BuildingDetailsID
+          AND tr.buildingRentStartDate IS NOT NULL
+          AND CAST(tr.buildingRentStartDate AS date) <= c.ChargeBillTo
+          AND (tr.buildingRentEndDate IS NULL
+               OR CAST(tr.buildingRentEndDate AS date) >= c.ChargeBillFrom)
+    ) tariffBounds
+    OUTER APPLY
+    (
+        SELECT
+            CASE WHEN tariffBounds.FirstEffectiveStart > c.ChargeBillFrom
+                 THEN tariffBounds.FirstEffectiveStart
+                 ELSE c.ChargeBillFrom END AS EffectiveFrom,
+            CASE WHEN tariffBounds.LastEffectiveEnd < c.ChargeBillTo
+                 THEN tariffBounds.LastEffectiveEnd
+                 ELSE c.ChargeBillTo END AS EffectiveTo
+    ) tariffWindow
+    -- WATER stays exactly as before; rent has two distinct behaviors:
+    --   no tariff records: monthly 0-SAR invoice + explanation;
+    --   tariff history: only months with effective tariff days are invoiced.
+    WHERE c.ChargeTypeID <> 1
+       OR tariffStats.TotalTariffRows = 0
+       OR ISNULL(rent.Days30InMonth, 0) > 0
 
     OPTION (MAXRECURSION 0);
 
+    /* Overlapping tariff-days must not exceed 30/360 eligible month-days. */
+    INSERT INTO #ValidationIssues
+    (
+        EntityKey, GeneralNo, ResidentInfoID, ResidentDetailsID, FullName,
+        SectionName, IssueCode, SourceObject, TargetObject, ReferenceID,
+        FieldName, ExpectedValue, ActualValue, Severity, Notes
+    )
+    SELECT
+        e.EntityKey,e.GeneralNo,e.ResidentInfoID,e.ResidentDetailsID,e.FullName,
+        N'RENT',N'HISTORICAL_RENT_DAY_OVERCOUNT',
+        N'KFMC.Housing.BuildingRent',N'DATACORE.Housing.Bills',
+        CONCAT(e.BuildingDetailsID,N':',CONVERT(nvarchar(10),MIN(e.FromDate),120)),
+        N'Days30InMonth',CONVERT(nvarchar(100),MAX(e.ExpectedRentDays30)),
+        CONVERT(nvarchar(100),MAX(e.CoveredRentDays30)),'ERROR',
+        N'Rate changes produced more charge-days than the eligible occupancy period; correct 30/360 boundaries.'
+    FROM #FV_ExpectedHistoricalResidentBills e
+    WHERE e.ChargeTypeID=1
+      AND ISNULL(e.CoveredRentDays30,0)>e.ExpectedRentDays30
+    GROUP BY e.EntityKey,e.GeneralNo,e.ResidentInfoID,
+             e.ResidentDetailsID,e.FullName,e.BuildingDetailsID;
+
+    /* Zero rent is VALID for buildings without a historical tariff.
+       For buildings with tariff records, only periods of effective tariff
+       coverage are expected. Their month-specific values are independently
+       reconstructed with the same rate-history calculator. */
 
     ------------------------------------------------------------
     -- Rank EXPECTED rows by exact migration key.
@@ -5535,6 +5851,7 @@ BEGIN
         , b.PRICE
         , b.PRICETAX
         , b.TotalPrice
+        , b.RentCalculationReason
 
         , b.CurrentPeriodTax
         , b.meterServiceTypeID
@@ -5583,8 +5900,8 @@ BEGIN
       (
            (
                b.BillChargeTypeID_FK = 1
-               AND CAST(b.BillsToDate AS date)
-                   >= @RentChargeStartDate
+               -- Keep pre-2017 actual rows visible to FULL OUTER JOIN,
+               -- so any such active bill becomes an unexpected claim (FAIL).
            )
 
         OR (
@@ -5644,6 +5961,8 @@ BEGIN
 
         , e.Amount AS ExpectedAmount
         , a.TotalPrice AS ActualAmount
+        , e.RentCalculationReason AS ExpectedRentCalculationReason
+        , a.RentCalculationReason AS ActualRentCalculationReason
 
         , e.SourceEntryData
 
@@ -5693,6 +6012,33 @@ BEGIN
        AND a.ClaimOccurrence =
            e.ClaimOccurrence;
 
+
+    /* Preserve and verify the accounting explanation on each matched rent bill.
+       Existing operational invoices are not in scope; only expected historical
+       migration rows matching both sides are checked. */
+    INSERT INTO #ValidationIssues
+    (
+        EntityKey, GeneralNo, ResidentInfoID, ResidentDetailsID, FullName,
+        SectionName, IssueCode, SourceObject, TargetObject, ReferenceID,
+        FieldName, ExpectedValue, ActualValue, Severity, Notes
+    )
+    SELECT
+        c.EntityKey, c.GeneralNo, c.ResidentInfoID, c.ResidentDetailsID,
+        c.FullName, N'RENT', N'HISTORICAL_RENT_REASON_MISMATCH',
+        N'Expected historical rent calculation', N'DATACORE.Housing.Bills',
+        CONVERT(nvarchar(50),c.BillsID), N'RentCalculationReason',
+        c.ExpectedRentCalculationReason, c.ActualRentCalculationReason,
+        'ERROR', N'Zero or partially billed rent must retain the expected tariff reason.'
+    FROM #FV_HistoricalClaimComparison c
+    WHERE c.ChargeTypeID=1
+      AND c.StagingID IS NOT NULL
+      AND c.BillsID IS NOT NULL
+      AND EXISTS
+      (
+          SELECT c.ExpectedRentCalculationReason
+          EXCEPT
+          SELECT c.ActualRentCalculationReason
+      );
 
     ------------------------------------------------------------
     -- Missing Rent / Water
@@ -6605,7 +6951,7 @@ BEGIN
         , TRY_CONVERT(BIGINT, p.userID_FK)
             AS GeneralNo
 
-        , e.SourceResidentInfoID
+        , eligible.ResidentInfoID
             AS ResidentInfoID
 
         , e.SourceResidentDetailsID
@@ -6631,11 +6977,11 @@ BEGIN
         , p.deductListID_FK
             AS ExpectedDeductListID
 
-        , CASE
-              WHEN d.deductActive = 0
-                  THEN CONVERT(bit, 0)
-              ELSE p.buildingPayementActive
-          END AS ExpectedActive
+        , CONVERT(bit,CASE WHEN eligible.ResidentInfoID IS NOT NULL
+                               AND targetResident.residentInfoID IS NOT NULL
+                               AND ISNULL(p.buildingPayementActive,0)=1
+                               AND ISNULL(d.deductActive,0)=1
+                          THEN 1 ELSE 0 END) AS ExpectedActive
 
         , CONVERT(int, 1)
             AS ExpectedChargeTypeID
@@ -6651,12 +6997,14 @@ BEGIN
         ON d.deductListID = p.deductListID_FK
 
     LEFT JOIN #ExpectedResidents e
-        ON e.GeneralNo =
-           TRY_CONVERT(BIGINT, p.userID_FK)
+        ON e.GeneralNo = TRY_CONVERT(BIGINT, p.userID_FK)
+    LEFT JOIN #EligibleMigrationResidents eligible
+        ON eligible.GeneralNo = TRY_CONVERT(BIGINT, p.userID_FK)
+    LEFT JOIN Housing.ResidentInfo targetResident
+        ON targetResident.residentInfoID = eligible.ResidentInfoID
+       AND targetResident.residentInfoActive=1
 
-    WHERE p.buildingPayementActive = 1
-
-      AND
+    WHERE
       (
           @GeneralNo IS NULL
           OR TRY_CONVERT(BIGINT, p.userID_FK) = @GeneralNo
@@ -7027,8 +7375,9 @@ BEGIN
         , targetList.deductListID
             AS ExpectedDeductListID
 
-        , CONVERT(bit, 1)
-            AS ExpectedActive
+        , CONVERT(bit,CASE WHEN migratedResident.residentInfoID IS NOT NULL
+                                AND ISNULL(sourceList.deductActive,0)=1
+                          THEN 1 ELSE 0 END) AS ExpectedActive
 
         , CONVERT(int, 2)
             AS ExpectedChargeTypeID
@@ -7044,26 +7393,12 @@ BEGIN
         ON b.BillsID = d.billsID_FK
        AND b.migrationRowNo = 1
 
-    LEFT JOIN KFMC.Housing.ResidentInfo sourceResident
-        ON sourceResident.generalNo =
-           b.generalNo_FK
+    LEFT JOIN #ExpectedResidents e
+        ON e.GeneralNo = TRY_CONVERT(BIGINT, b.generalNo_FK)
 
     LEFT JOIN Housing.ResidentInfo migratedResident
-        ON migratedResident.residentInfoID =
-           TRY_CONVERT(BIGINT, sourceResident.residentInfoID)
-       AND migratedResident.residentInfoUID =
-           sourceResident.residentInfoUID
-       AND EXISTS
-       (
-           SELECT 1
-           FROM KFMC.Housing.ResidentDetails eligibleDetails
-           WHERE eligibleDetails.generalNo_FK =
-                 sourceResident.generalNo
-       )
-
-    LEFT JOIN #ExpectedResidents e
-        ON e.GeneralNo =
-           TRY_CONVERT(BIGINT, b.generalNo_FK)
+        ON migratedResident.residentInfoID = e.SourceResidentInfoID
+       AND migratedResident.residentInfoActive = 1
 
     JOIN KFMC.Housing.BillDeductList sourceList
         ON sourceList.billDeductListID =
@@ -7099,6 +7434,11 @@ BEGIN
 
     WHERE d.billPaid = 1
       AND d.paidAmount IS NOT NULL
+      AND EXISTS
+      (
+          SELECT 1 FROM #FV_ExpectedElectricBills expectedBill
+          WHERE expectedBill.SourceBillsID = TRY_CONVERT(BIGINT, b.BillsID)
+      )
 
       AND
       (
@@ -7522,10 +7862,10 @@ BEGIN
         , c.PaidPaymentType
             AS ExpectedPaymentTypeID
 
-        , targetAction.generalNo_FK
+        , TRY_CONVERT(bigint,sourceAction.generalNo_FK)
             AS ExpectedGeneralNo
 
-        , targetAction.residentInfoID_FK
+        , migratedPenaltyResident.residentInfoID
             AS ExpectedResidentInfoID
 
         , CONVERT
@@ -7540,8 +7880,9 @@ BEGIN
         , targetList.deductListID
             AS ExpectedDeductListID
 
-        , CONVERT(bit, 1)
-            AS ExpectedActive
+        , CONVERT(bit,CASE WHEN migratedPenaltyResident.residentInfoID IS NOT NULL
+                                AND ISNULL(c.occupantCustodyActionActive,0)=1
+                          THEN 1 ELSE 0 END) AS ExpectedActive
 
         , CONVERT(int, 5)
             AS ExpectedChargeTypeID
@@ -7549,20 +7890,10 @@ BEGIN
         , CONVERT(int, @IdaraId)
             AS ExpectedIdaraID
 
-        , CONCAT
-          (
-              N'KFMC OccupantCustodyAction #',
-              c.occupantCustodyActionID,
-              CASE
-                  WHEN NULLIF(c.PaidNumber, N'') IS NULL
-                      THEN N''
-                  ELSE CONCAT
-                       (
-                           N'; PaidNumber=',
-                           c.PaidNumber
-                       )
-              END
-          ) AS ExpectedPaymentLinkNote
+        , CONCAT(N'سداد غرامة تاريخية؛ رقم إجراء العهدة ',c.occupantCustodyActionID,
+                 CASE WHEN NULLIF(c.PaidNumber,N'') IS NULL
+                      THEN N'' ELSE CONCAT(N'; رقم السداد ',c.PaidNumber) END)
+            AS ExpectedPaymentLinkNote
 
     INTO #FV_ExpectedPenaltyPayments
 
@@ -7585,12 +7916,13 @@ BEGIN
            )
 
     LEFT JOIN #ExpectedResidents e
-        ON e.GeneralNo =
-           TRY_CONVERT
-           (
-               BIGINT,
-               sourceAction.generalNo_FK
-           )
+        ON e.GeneralNo = TRY_CONVERT(BIGINT, sourceAction.generalNo_FK)
+    LEFT JOIN #EligibleMigrationResidents sourceEligible
+        ON sourceEligible.GeneralNo=TRY_CONVERT(bigint,sourceAction.generalNo_FK)
+    LEFT JOIN Housing.ResidentInfo migratedPenaltyResident
+        ON migratedPenaltyResident.residentInfoID=sourceEligible.ResidentInfoID
+       AND migratedPenaltyResident.residentInfoActive=1
+       AND migratedPenaltyResident.residentInfoID=targetAction.residentInfoID_FK
 
     OUTER APPLY
     (
@@ -8893,7 +9225,8 @@ BEGIN
         , CONVERT(DECIMAL(38,4), e.TotalPrice)
     FROM #FV_ExpectedElectricBills e
     WHERE e.BillActive = 1
-      AND e.TotalPrice > 0;
+      AND e.TotalPrice > 0
+      AND e.ResidentInfoID IS NOT NULL;
 
 
     INSERT INTO #FV_ExpectedFinancialClaims
@@ -9551,7 +9884,7 @@ BEGIN
     --        b) an expected MoveData-generated workflow successor.
     --
     --   3. Independently reconstruct the CURRENT action for every
-    --      building using the approved V_LastActionForBuilding rule
+    --      building using the approved independent operational-current rule
     --      and compare it with the live view.
     --
     -- Notes:
@@ -10164,268 +10497,234 @@ BEGIN
           );
 
 
-    ------------------------------------------------------------
-    -- 18.7 Independently reconstruct CURRENT Action per building
-    --      using the approved V_LastActionForBuilding contract.
-    ------------------------------------------------------------
+  /*
+Replacement for sections 18.7 through 18.10 ONLY of:
+MoveData.usp_FinalValidateMigrationForEveryResident
+Do not execute this fragment standalone. Replace the existing text between
+'-- 18.7 Independently reconstruct' and '-- 18A. WAITING_CLASS_PARITY'.
+Independent reconstruction of Housing.V_GetGeneralListForBuilding semantics.
+No updates or deletes to source/target data.
+*/
 
-    SELECT
-          b.buildingDetailsID
-        , b.buildingDetailsNo
-
-        , CASE
-              WHEN realAction.buildingActionID IS NULL
-                  THEN generatedAction.buildingActionID
-
-              WHEN generatedAction.buildingActionID IS NULL
-                  THEN realAction.buildingActionID
-
-              WHEN generatedAction.entryDate >
-                   realAction.entryDate
-                  THEN generatedAction.buildingActionID
-
-              ELSE realAction.buildingActionID
-          END AS ExpectedCurrentActionID
-
-        , realAction.buildingActionID
-            AS ExpectedRealActionID
-
-        , generatedAction.buildingActionID
-            AS ExpectedGeneratedActionID
-
-        , realAction.entryDate
-            AS RealEntryDate
-
-        , generatedAction.entryDate
-            AS GeneratedEntryDate
-
-    INTO #FV_ExpectedCurrentBuilding
-
-    FROM #FV_CurrentBuildingScope b
-
-    OUTER APPLY
-    (
-        SELECT TOP (1)
-              a.buildingActionID
-            , a.entryDate
-
-        FROM Housing.BuildingAction a
-
-        WHERE TRY_CONVERT
-              (
-                  BIGINT,
-                  a.buildingDetailsID_FK
-              ) = b.buildingDetailsID
-
-          AND a.buildingActionActive = 1
-
-          AND
+------------------------------------------------------------
+-- 18.7 Independently reconstruct operational CURRENT action
+-- and building visibility, without referencing either view.
+------------------------------------------------------------
+SELECT
+      b.buildingDetailsID
+    , b.buildingDetailsNo
+    , CONVERT(BIT, CASE WHEN eligible.IsEligible = 1 THEN 1 ELSE 0 END) AS IsEligibleForCurrentView
+    , currentAction.buildingActionID AS ExpectedCurrentActionID
+    , realAction.buildingActionID AS ExpectedRealActionID
+    , generatedAction.buildingActionID AS ExpectedGeneratedActionID
+    , realAction.entryDate AS RealEntryDate
+    , generatedAction.entryDate AS GeneratedEntryDate
+INTO #FV_ExpectedCurrentBuilding
+FROM #FV_CurrentBuildingScope b
+OUTER APPLY
+(
+    SELECT TOP (1) 1 AS IsEligible
+    FROM Housing.BuildingDetails bd
+    INNER JOIN Housing.BuildingType bt
+        ON bt.buildingTypeID = bd.buildingTypeID_FK
+    INNER JOIN Housing.BuildingUtilityType bu
+        ON bu.buildingUtilityTypeID = bd.buildingUtilityTypeID_FK
+    INNER JOIN Housing.MilitaryLocation ml
+        ON ml.militaryLocationID = bd.militaryLocationID_FK
+    INNER JOIN Housing.MilitaryAreaCity mac
+        ON mac.militaryAreaCityID = ml.militaryAreaCityID_FK
+    INNER JOIN Housing.MilitaryArea ma
+        ON ma.militaryAreaID = mac.militaryAreaID_FK
+    INNER JOIN Housing.BuildingClass bc
+        ON bc.buildingClassID = bd.buildingClassID_FK
+    INNER JOIN dbo.Idara i
+        ON i.IdaraId = bd.IdaraId_FK
+    WHERE bd.buildingDetailsID = b.buildingDetailsID
+      AND bd.buildingDetailsActive = 1
+      AND bt.buildingTypeActive = 1
+      AND bu.buildingUtilityTypeActive = 1
+      AND ml.militaryLocationActive = 1
+      AND bc.buildingClassActive = 1
+      AND mac.militaryAreaCityActive = 1
+      AND ma.militaryAreaIsActive = 1
+      AND bd.buildingDetailsStartDate IS NOT NULL
+      AND bu.buildingUtilityTypeStartDate IS NOT NULL
+      AND (bd.buildingDetailsEndDate IS NULL OR bd.buildingDetailsEndDate > GETDATE())
+      AND (bu.buildingUtilityTypeEndDate IS NULL OR bu.buildingUtilityTypeEndDate > GETDATE())
+) eligible
+OUTER APPLY
+(
+    SELECT TOP (1) a.buildingActionID, a.entryDate
+    FROM Housing.BuildingAction a
+    WHERE TRY_CONVERT(BIGINT, a.buildingDetailsID_FK) = b.buildingDetailsID
+      AND a.buildingActionActive = 1
+      AND (a.buildingActionExtraText4 IS NULL
+           OR a.buildingActionExtraText4 NOT LIKE N'MoveData:%')
+    ORDER BY a.buildingActionID DESC
+) realAction
+OUTER APPLY
+(
+    SELECT TOP (1) a.buildingActionID, a.entryDate
+    FROM Housing.BuildingAction a
+    WHERE TRY_CONVERT(BIGINT, a.buildingDetailsID_FK) = b.buildingDetailsID
+      AND a.buildingActionActive = 1
+      AND a.buildingActionExtraText4 LIKE N'MoveData:%'
+    ORDER BY a.entryDate DESC, a.buildingActionID DESC
+) generatedAction
+OUTER APPLY
+(
+    SELECT TOP (1) ba.buildingActionID
+    FROM Housing.BuildingAction ba
+    INNER JOIN Housing.BuildingDetails bd
+        ON bd.buildingDetailsID = b.buildingDetailsID
+    WHERE ba.buildingDetailsID_FK = bd.buildingDetailsID
+      AND ba.buildingActionActive = 1
+      AND NOT
+      (
+          ba.buildingActionTypeID_FK IN (3, 58)
+          AND EXISTS
           (
-              a.buildingActionExtraText4 IS NULL
-              OR a.buildingActionExtraText4 NOT LIKE N'MoveData:%'
+              SELECT 1
+              FROM Housing.fn_BuildingAction_ChainToRoot(ba.buildingActionID) ancestor
+              INNER JOIN Housing.BuildingAction stage57
+                  ON stage57.buildingActionID = ancestor.buildingActionID
+                 AND stage57.buildingActionTypeID_FK = 57
+                 AND stage57.buildingActionActive = 1
+                 AND stage57.buildingDetailsID_FK = bd.buildingDetailsID
+                 AND stage57.IdaraId_FK = bd.IdaraId_FK
+              INNER JOIN Housing.BuildingAction operatingRoot
+                  ON operatingRoot.buildingDetailsID_FK = bd.buildingDetailsID
+                 AND operatingRoot.IdaraId_FK = bd.IdaraId_FK
+                 AND operatingRoot.buildingActionActive = 1
+                 AND operatingRoot.buildingActionParentID IS NULL
+                 AND operatingRoot.residentInfoID_FK IS NULL
+                 AND operatingRoot.buildingActionTypeID_FK IN (4, 5, 62)
+                 AND operatingRoot.buildingActionID > stage57.buildingActionID
+                 AND operatingRoot.buildingActionID < ba.buildingActionID
           )
+      )
+    ORDER BY ba.buildingActionID DESC
+) currentAction;
 
-        ORDER BY a.buildingActionID DESC
-    ) realAction
+------------------------------------------------------------
+-- 18.8 Materialize new live view; one row per building.
+-- Important: the view may have a row whose LastActionID is NULL.
+------------------------------------------------------------
+SELECT
+      v.buildingDetailsID
+    , COUNT_BIG(*) AS ViewRowCount
+    , MIN(v.LastActionID) AS MinViewActionID
+    , MAX(v.LastActionID) AS MaxViewActionID
+INTO #FV_ViewCurrentBuilding
+FROM Housing.V_GetGeneralListForBuilding v
+INNER JOIN #FV_CurrentBuildingScope b
+    ON b.buildingDetailsID = v.buildingDetailsID
+GROUP BY v.buildingDetailsID;
 
-    OUTER APPLY
-    (
-        SELECT TOP (1)
-              a.buildingActionID
-            , a.entryDate
+------------------------------------------------------------
+-- 18.9 Compare both visibility and current-action selection.
+------------------------------------------------------------
+SELECT
+      e.buildingDetailsID
+    , e.buildingDetailsNo
+    , e.IsEligibleForCurrentView
+    , e.ExpectedCurrentActionID
+    , e.ExpectedRealActionID
+    , e.ExpectedGeneratedActionID
+    , e.RealEntryDate
+    , e.GeneratedEntryDate
+    , ISNULL(v.ViewRowCount, 0) AS ViewRowCount
+    , v.MinViewActionID
+    , v.MaxViewActionID
+    , CASE
+          WHEN e.IsEligibleForCurrentView = 0
+           AND ISNULL(v.ViewRowCount, 0) = 0
+              THEN N'EXCLUDED_BY_VIEW_FILTER'
+          WHEN e.IsEligibleForCurrentView = 1
+           AND ISNULL(v.ViewRowCount, 0) = 1
+           AND
+           (
+               v.MinViewActionID = e.ExpectedCurrentActionID
+               OR (v.MinViewActionID IS NULL AND e.ExpectedCurrentActionID IS NULL)
+           )
+              THEN N'MATCH'
+          ELSE N'MISMATCH'
+      END AS CurrentBuildingStatus
+INTO #FV_BuildingCurrentAudit
+FROM #FV_ExpectedCurrentBuilding e
+LEFT JOIN #FV_ViewCurrentBuilding v
+    ON v.buildingDetailsID = e.buildingDetailsID;
 
-        FROM Housing.BuildingAction a
-
-        WHERE TRY_CONVERT
-              (
-                  BIGINT,
-                  a.buildingDetailsID_FK
-              ) = b.buildingDetailsID
-
-          AND a.buildingActionActive = 1
-
-          AND a.buildingActionExtraText4 LIKE N'MoveData:%'
-
-        ORDER BY
-              a.entryDate DESC
-            , a.buildingActionID DESC
-    ) generatedAction;
-
-
-    ------------------------------------------------------------
-    -- 18.8 Materialize live view rows and enforce one row/building
-    ------------------------------------------------------------
-
-    SELECT
-          v.buildingDetailsID
-        , COUNT_BIG(*) AS ViewRowCount
-        , MIN(v.buildingActionID) AS MinViewActionID
-        , MAX(v.buildingActionID) AS MaxViewActionID
-
-    INTO #FV_ViewCurrentBuilding
-
-    FROM Housing.V_LastActionForBuilding v
-
-    JOIN #FV_CurrentBuildingScope b
-        ON b.buildingDetailsID =
-           v.buildingDetailsID
-
-    GROUP BY v.buildingDetailsID;
-
-
-    ------------------------------------------------------------
-    -- 18.9 Building CURRENT parity
-    ------------------------------------------------------------
-
-    SELECT
-          e.buildingDetailsID
-        , e.buildingDetailsNo
-        , e.ExpectedCurrentActionID
-        , e.ExpectedRealActionID
-        , e.ExpectedGeneratedActionID
-        , e.RealEntryDate
-        , e.GeneratedEntryDate
-
-        , ISNULL(v.ViewRowCount, 0)
-            AS ViewRowCount
-
-        , v.MinViewActionID
-        , v.MaxViewActionID
-
-        , CASE
-              WHEN e.ExpectedCurrentActionID IS NULL
-               AND ISNULL(v.ViewRowCount,0) = 0
-                  THEN N'BOTH_NO_ACTION'
-
-              WHEN ISNULL(v.ViewRowCount,0) = 1
-               AND v.MinViewActionID =
-                   e.ExpectedCurrentActionID
-                  THEN N'MATCH'
-
-              ELSE N'MISMATCH'
-          END AS CurrentBuildingStatus
-
-    INTO #FV_BuildingCurrentAudit
-
-    FROM #FV_ExpectedCurrentBuilding e
-
-    LEFT JOIN #FV_ViewCurrentBuilding v
-        ON v.buildingDetailsID =
-           e.buildingDetailsID;
-
-
-    ------------------------------------------------------------
-    -- 18.10 Building current-action failures
-    ------------------------------------------------------------
-
-    INSERT INTO #ValidationIssues
-    (
-          EntityKey
-        , GeneralNo
-        , ResidentInfoID
-        , ResidentDetailsID
-        , FullName
-        , SectionName
-        , IssueCode
-        , SourceObject
-        , TargetObject
-        , ReferenceID
-        , FieldName
-        , ExpectedValue
-        , ActualValue
-        , Severity
-        , Notes
-    )
-    SELECT
-          NULL
-        , NULL
-        , NULL
-        , NULL
-        , NULL
-
-        , N'CURRENT_ACTION_PARITY'
-
-        , CASE
-              WHEN a.ViewRowCount > 1
-                  THEN N'BUILDING_CURRENT_VIEW_DUPLICATE'
-
-              ELSE N'BUILDING_CURRENT_VIEW_MISMATCH'
-          END
-
-        , N'Independent approved current-action reconstruction'
-        , N'Housing.V_LastActionForBuilding'
-
-        , CONCAT
+------------------------------------------------------------
+-- 18.10 Log only actual mismatches (including duplicate rows).
+------------------------------------------------------------
+INSERT INTO #ValidationIssues
+(
+      EntityKey
+    , GeneralNo
+    , ResidentInfoID
+    , ResidentDetailsID
+    , FullName
+    , SectionName
+    , IssueCode
+    , SourceObject
+    , TargetObject
+    , ReferenceID
+    , FieldName
+    , ExpectedValue
+    , ActualValue
+    , Severity
+    , Notes
+)
+SELECT
+      NULL
+    , NULL
+    , NULL
+    , NULL
+    , NULL
+    , N'CURRENT_ACTION_PARITY'
+    , CASE
+          WHEN a.ViewRowCount > 1 THEN N'BUILDING_CURRENT_VIEW_DUPLICATE'
+          WHEN a.IsEligibleForCurrentView = 0 THEN N'BUILDING_UNEXPECTEDLY_IN_VIEW'
+          WHEN a.ViewRowCount = 0 THEN N'BUILDING_ELIGIBLE_BUT_MISSING'
+          ELSE N'BUILDING_CURRENT_VIEW_MISMATCH'
+      END
+    , N'Independent reconstruction from Housing base tables'
+    , N'Housing.V_GetGeneralListForBuilding'
+    , CONCAT
+      (
+          N'BuildingDetailsID=', CONVERT(NVARCHAR(50), a.buildingDetailsID),
+          N'; BuildingNo=', ISNULL(a.buildingDetailsNo, N'<NULL>')
+      )
+    , N'LastActionID'
+    , CASE
+          WHEN a.IsEligibleForCurrentView = 0 THEN N'<EXCLUDED BY ELIGIBILITY>'
+          ELSE ISNULL(CONVERT(NVARCHAR(50), a.ExpectedCurrentActionID), N'<NO ACTION>')
+      END
+    , CASE
+          WHEN a.ViewRowCount = 0 THEN N'<NO VIEW ROW>'
+          WHEN a.ViewRowCount = 1 THEN
+              ISNULL(CONVERT(NVARCHAR(50), a.MinViewActionID), N'<NO ACTION>')
+          ELSE CONCAT
           (
-              N'BuildingDetailsID=',
-              CONVERT
-              (
-                  NVARCHAR(50),
-                  a.buildingDetailsID
-              ),
-              N'; BuildingNo=',
-              ISNULL(a.buildingDetailsNo,N'<NULL>')
+              N'ROWS=', CONVERT(NVARCHAR(50), a.ViewRowCount),
+              N'; MIN=', ISNULL(CONVERT(NVARCHAR(50), a.MinViewActionID), N'<NULL>'),
+              N'; MAX=', ISNULL(CONVERT(NVARCHAR(50), a.MaxViewActionID), N'<NULL>')
           )
-
-        , N'buildingActionID'
-
-        , ISNULL
-          (
-              CONVERT
-              (
-                  NVARCHAR(50),
-                  a.ExpectedCurrentActionID
-              ),
-              N'<NO ACTION>'
-          )
-
-        , CASE
-              WHEN a.ViewRowCount = 0
-                  THEN N'<NO VIEW ROW>'
-
-              WHEN a.ViewRowCount = 1
-                  THEN CONVERT
-                       (
-                           NVARCHAR(50),
-                           a.MinViewActionID
-                       )
-
-              ELSE CONCAT
-                   (
-                       N'ROWS=',
-                       CONVERT
-                       (
-                           NVARCHAR(50),
-                           a.ViewRowCount
-                       ),
-                       N'; MIN=',
-                       CONVERT
-                       (
-                           NVARCHAR(50),
-                           a.MinViewActionID
-                       ),
-                       N'; MAX=',
-                       CONVERT
-                       (
-                           NVARCHAR(50),
-                           a.MaxViewActionID
-                       )
-                   )
-          END
-
-        , 'ERROR'
-
-        , CASE
-              WHEN a.ViewRowCount > 1
-                  THEN N'V_LastActionForBuilding returned more than one current row for the same building.'
-
-              ELSE N'V_LastActionForBuilding does not match an independent reconstruction of the approved current-action rule.'
-          END
-
-    FROM #FV_BuildingCurrentAudit a
-
-    WHERE a.CurrentBuildingStatus = N'MISMATCH';
-
+      END
+    , N'ERROR'
+    , CASE
+          WHEN a.ViewRowCount > 1 THEN
+              N'V_GetGeneralListForBuilding returned multiple rows for one building.'
+          WHEN a.IsEligibleForCurrentView = 0 THEN
+              N'Building appears in the view although it fails the approved eligibility predicates.'
+          WHEN a.ViewRowCount = 0 THEN
+              N'Eligible building is missing from V_GetGeneralListForBuilding.'
+          ELSE
+              N'V_GetGeneralListForBuilding LastActionID differs from independently reconstructed operational action.'
+      END
+FROM #FV_BuildingCurrentAudit a
+WHERE a.CurrentBuildingStatus = N'MISMATCH';
 
     ------------------------------------------------------------
     -- 18A. WAITING_CLASS_PARITY (global master + historical links)
@@ -10433,6 +10732,66 @@ BEGIN
     -- leaders list; ID 99 is virtual letter housing, not master.
     -- No source/target data are changed by these checks.
     ------------------------------------------------------------
+
+    -- Source-based parity for ALL legacy letter roots, including historical closed chains.
+    -- IDs are used for matching, not as hard-coded exception lists.
+    INSERT INTO #ValidationIssues
+    (EntityKey,GeneralNo,SectionName,IssueCode,SourceObject,TargetObject,
+     ReferenceID,FieldName,ExpectedValue,ActualValue,Severity,Notes)
+    SELECT CASE WHEN TRY_CONVERT(bigint,k.generalNo_FK) IS NULL THEN NULL
+                ELSE CONCAT(N'G:',TRY_CONVERT(bigint,k.generalNo_FK)) END,
+           TRY_CONVERT(bigint,k.generalNo_FK),
+           N'WAITING_CLASS_PARITY',N'LEGACY_LETTER_ROOT_TRANSFORM_MISMATCH',
+           N'KFMC.Housing.BuildingAction',N'DATACORE.Housing.BuildingAction',
+           CONVERT(nvarchar(100),k.buildingActionID),
+           N'Type,Class,Parent',
+           CONCAT(N'Type=1; Class=',CASE WHEN k.buildingActionTypeID_FK=7 THEN 17 ELSE 18 END,
+                  N'; Parent=NULL'),
+           CASE WHEN t.buildingActionID IS NULL THEN N'<MISSING>'
+                ELSE CONCAT(N'Type=',COALESCE(CONVERT(nvarchar(30),t.buildingActionTypeID_FK),N'<NULL>'),
+                            N'; Class=',COALESCE(CONVERT(nvarchar(30),t.buildingActionExtraType1),N'<NULL>'),
+                            N'; Parent=',COALESCE(CONVERT(nvarchar(30),t.buildingActionParentID),N'<NULL>')) END,
+           'ERROR',N'Root ID must be preserved, only its type/class transformed; children are checked separately.'
+    FROM KFMC.Housing.BuildingAction k
+    JOIN #ExpectedResidents eligibleRoot
+      ON eligibleRoot.GeneralNo=TRY_CONVERT(bigint,k.generalNo_FK)
+    LEFT JOIN Housing.BuildingAction t ON t.buildingActionID=k.buildingActionID
+    WHERE k.buildingActionParentID IS NULL
+      AND k.buildingActionTypeID_FK IN (7,25)
+      AND (@GeneralNo IS NULL OR TRY_CONVERT(bigint,k.generalNo_FK)=@GeneralNo)
+      AND (t.buildingActionID IS NULL OR t.buildingActionTypeID_FK<>1
+           OR t.buildingActionTypeID_FK IS NULL
+           OR t.buildingActionExtraType1<>CASE WHEN k.buildingActionTypeID_FK=7 THEN 17 ELSE 18 END
+           OR t.buildingActionExtraType1 IS NULL OR t.buildingActionParentID IS NOT NULL);
+
+    -- Newly approved legacy-letter side classes in Idara 1.
+    -- Check independently of KFMC: these classes are DATACORE-only.
+    INSERT INTO #ValidationIssues
+    (SectionName,IssueCode,TargetObject,ReferenceID,FieldName,
+     ExpectedValue,ActualValue,Severity,Notes)
+    SELECT N'WAITING_CLASS_PARITY', N'MIGRATED_LETTER_CLASS_MISMATCH',
+           N'DATACORE.Housing.WaitingClass', CONVERT(nvarchar(50),x.ClassID),
+           N'NameA,Sequence,Root,Active,Idara',
+           CONCAT(x.ClassName,N'; Sequence=',x.ClassSequence,
+                  N'; Root=NULL; Active=1; Idara=1'),
+           CASE WHEN t.waitingClassID IS NULL THEN N'<MISSING>'
+                ELSE CONCAT(COALESCE(t.waitingClassName_A,N'<NULL>'),
+                   N'; Sequence=',COALESCE(CONVERT(nvarchar(30),t.waitingClassSequence),N'<NULL>'),
+                   N'; Root=',COALESCE(CONVERT(nvarchar(30),t.waitingClassRoot),N'<NULL>'),
+                   N'; Active=',COALESCE(CONVERT(nvarchar(30),t.waitingClassActive),N'<NULL>'),
+                   N'; Idara=',COALESCE(CONVERT(nvarchar(30),t.idara_FK),N'<NULL>')) END,
+           'ERROR', N'Approved migration-only side class for converted legacy letter root.'
+    FROM (VALUES (17,N'خطاب تسكين',3),(18,N'خطاب تسكين عزاب',4))
+         x(ClassID,ClassName,ClassSequence)
+    LEFT JOIN Housing.WaitingClass t ON t.waitingClassID=x.ClassID
+    WHERE t.waitingClassID IS NULL
+       OR t.waitingClassName_A COLLATE DATABASE_DEFAULT <> x.ClassName COLLATE DATABASE_DEFAULT
+       OR t.waitingClassName_A IS NULL
+       OR t.waitingClassSequence <> x.ClassSequence
+       OR t.waitingClassSequence IS NULL
+       OR t.waitingClassRoot IS NOT NULL
+       OR t.waitingClassActive IS NULL OR t.waitingClassActive <> 1
+       OR t.idara_FK IS NULL OR t.idara_FK <> 1;
 
     ;WITH ClassIds AS
     (
@@ -10538,12 +10897,19 @@ BEGIN
         , N'DATACORE.Housing.WaitingClass'
         , CONVERT(nvarchar(100),t.waitingClassID)
         , N'waitingClassID'
-        , N'Only approved classes 1-12'
+        , N'Approved historical classes 1-12 and converted side classes 17/18'
         , CONCAT(t.waitingClassID,N': ',COALESCE(t.waitingClassName_A,N'<NULL>'))
         , 'ERROR'
         , N'ID 99 is a historical virtual letter-housing marker; 13-15 are confirmed test data.'
     FROM Housing.WaitingClass t
-    WHERE t.waitingClassID NOT BETWEEN 1 AND 12;
+    WHERE t.waitingClassID NOT BETWEEN 1 AND 12
+      AND t.waitingClassID NOT IN (17,18)
+      AND (t.waitingClassID=99
+           OR t.waitingClassActive=1
+           OR EXISTS (SELECT 1 FROM Housing.BuildingAction a
+                      WHERE a.buildingActionExtraType1=t.waitingClassID)
+           OR EXISTS (SELECT 1 FROM Housing.AssignPeriod p
+                      WHERE p.WaitingClassID_FK=t.waitingClassID));
 
     -- ExtraType1 is generic. Check it only for waiting-list
     -- workflow action types; virtual 99 remains a valid reference.
@@ -10589,7 +10955,7 @@ BEGIN
         , N'DATACORE.Housing.BuildingAction'
         , CONVERT(nvarchar(100),a.buildingActionID)
         , N'buildingActionExtraType1'
-        , N'Preserved source virtual 99 with action type 1 or 22'
+        , N'Preserved historical non-root 99 only; waiting root 1 with source 99 maps to class 5'
         , CONCAT(N'99; ActionType=',a.buildingActionTypeID_FK)
         , 'ERROR'
         , N'Virtual 99 may not be invented or assigned to an unrelated waiting-list action.'
@@ -10600,9 +10966,11 @@ BEGIN
       AND a.buildingActionExtraType1 = 99
       AND (@GeneralNo IS NULL OR TRY_CONVERT(bigint,a.generalNo_FK) = @GeneralNo)
       AND (s.SourceActionID IS NULL
-           OR s.ExpectedActionTypeID NOT IN (1,22)
+           OR s.ExpectedActionTypeID NOT IN (1,22,27)
            OR s.buildingActionExtraType1 IS NULL
-           OR s.buildingActionExtraType1 <> 99);
+           OR s.buildingActionExtraType1 <> 99
+           OR (a.buildingActionParentID IS NULL
+               AND a.buildingActionTypeID_FK = 1));
 
     -- Compare copied waiting-class values, including 99, using
     -- the already-filtered source actions (duplicates/letter 27 excluded).
@@ -10622,7 +10990,7 @@ BEGIN
         , CASE WHEN t.buildingActionID IS NULL THEN N'<MISSING ACTION>'
                ELSE COALESCE(CONVERT(nvarchar(100),t.buildingActionExtraType1),N'<NULL>') END
         , 'ERROR'
-        , N'Preserved waiting-list action values must exactly match the eligible KFMC source; 99 is not remapped.'
+        , N'Compare with the expected migrated waiting class: legacy root 7=>17, 25=>18 and root 1 class 99=>5; preserve other eligible values.'
     FROM #FV_ExpectedSourceActions s
     LEFT JOIN Housing.BuildingAction t
       ON t.buildingActionID = s.SourceActionID
@@ -10765,6 +11133,199 @@ BEGIN
     ------------------------------------------------------------
     -- 19. Build resident/entity result list
     ------------------------------------------------------------
+
+    IF @GeneralNo IS NULL
+    BEGIN
+    /* MOVE 20261109: full, dynamic source parity; run after migration and before source deletion.
+       No fixed population, payment or meter-read totals. Does not create or update data. */
+    SELECT TRY_CONVERT(bigint, p.paymentID) AS PaymentID,
+           p.PaymentUID,
+           TRY_CONVERT(bigint,p.userID_FK) AS GeneralNo,
+           p.amount,
+           p.deductListID_FK,
+           eligible.ResidentInfoID,
+           CONVERT(bit,CASE WHEN eligible.ResidentInfoID IS NOT NULL
+                        AND targetResident.residentInfoID IS NOT NULL
+                        AND ISNULL(p.buildingPayementActive,0)=1
+                        AND ISNULL(sourceList.deductActive,0)=1
+                       THEN 1 ELSE 0 END) AS ExpectedActive
+    INTO #MV_RentSourceFull
+    FROM KFMC.Housing.BuildingPayment p
+    LEFT JOIN KFMC.Housing.DeductList sourceList
+      ON sourceList.deductListID=p.deductListID_FK
+    LEFT JOIN #EligibleMigrationResidents eligible
+      ON eligible.GeneralNo=TRY_CONVERT(bigint,p.userID_FK)
+    LEFT JOIN Housing.ResidentInfo targetResident
+      ON targetResident.residentInfoID=eligible.ResidentInfoID
+     AND targetResident.residentInfoActive=1;
+
+    CREATE UNIQUE CLUSTERED INDEX IX_MV_RentSourceFull ON #MV_RentSourceFull(PaymentID);
+
+    SELECT s.PaymentID
+    INTO #MV_RentMismatch
+    FROM #MV_RentSourceFull s
+    LEFT JOIN Housing.BuildingPayment t
+      ON t.paymentID=s.PaymentID
+    WHERE t.paymentID IS NULL
+       OR EXISTS
+       (
+           SELECT t.PaymentUID,t.generalNo_FK,t.amount,t.deductListID_FK,
+                  t.residentInfoID_FK,t.buildingPayementActive,t.BillChargeTypeID_FK
+           EXCEPT
+           SELECT s.PaymentUID,s.GeneralNo,s.amount,s.deductListID_FK,
+                  s.ResidentInfoID,s.ExpectedActive,CONVERT(int,1)
+       )
+       OR (s.ExpectedActive=0
+           AND (NULLIF(LTRIM(RTRIM(t.disactiveReason)),N'') IS NULL
+                OR NOT EXISTS
+                (
+                  SELECT 1 FROM dbo.AuditLog audit
+                  WHERE audit.TableName=N'[Housing].[BuildingPayment]'
+                    AND audit.ActionType=N'MIGRATION_PAYMENT_PROTECTED'
+                    AND audit.RecordID=s.PaymentID
+                )));
+
+    SELECT sourceRead.meterReadID AS MeterReadID
+    INTO #MV_MissingMeterReads
+    FROM KFMC.Housing.MeterRead sourceRead
+    LEFT JOIN Housing.MeterRead targetRead
+      ON targetRead.meterReadID=TRY_CONVERT(bigint,sourceRead.meterReadID)
+    WHERE targetRead.meterReadID IS NULL;
+
+    ;WITH IndependentRanked AS
+    (
+       SELECT b.BillsID,b.BillsUID,b.TotalPrice,b.meterReadID,b.BillActive,
+              CASE WHEN ISNULL(b.BillActive,1)=1
+                         AND b.PeriodYear=2024 AND b.PeriodMonth=10
+                   THEN ROW_NUMBER() OVER
+                   (
+                      PARTITION BY b.generalNo_FK,b.buildingDetailsNo,b.PeriodYear,
+                                   b.PeriodMonth,CAST(ISNULL(b.TotalPrice,0) AS decimal(18,2)),
+                                   b.meterID,b.meterNo,b.meterReadID
+                      ORDER BY CASE WHEN EXISTS
+                      (
+                          SELECT 1 FROM KFMC.Housing.BillsDeductListDetails d
+                          WHERE d.billsID_FK=b.BillsID AND d.billPaid=1
+                            AND d.paidAmount IS NOT NULL
+                      ) THEN 1 ELSE 0 END DESC,b.BillsID
+                   )
+                   ELSE 1 END AS RowNo
+       FROM KFMC.Housing.Bills b
+       WHERE b.generalNo_FK IS NULL
+    )
+    SELECT b.BillsID
+    INTO #MV_IndependentBillMismatch
+    FROM IndependentRanked b
+    LEFT JOIN Housing.Bills t
+      ON t.BillsID=TRY_CONVERT(bigint,b.BillsID)
+     AND t.BillChargeTypeID_FK=2
+    WHERE (b.RowNo=1 AND
+          (t.BillsID IS NULL OR t.generalNo_FK IS NOT NULL
+           OR t.residentInfoID_FK IS NOT NULL OR EXISTS
+           (
+               SELECT t.BillsUID,t.TotalPrice,t.meterReadID
+               EXCEPT
+               SELECT b.BillsUID,b.TotalPrice,b.meterReadID
+           )))
+       OR (b.RowNo>1 AND t.BillsID IS NOT NULL);
+
+    SELECT c.occupantCustodyActionID AS CustodyID,
+           CONVERT(uniqueidentifier,HASHBYTES('MD5',
+             CONCAT(N'PENALTY-PAYMENT|',c.occupantCustodyActionID))) AS PaymentUID,
+           c.occupantCustodyActionPenalty AS Amount,
+           TRY_CONVERT(bigint,sa.generalNo_FK) AS GeneralNo,
+           eligible.residentInfoID AS EligibleResidentID,
+           CONVERT(bit,CASE WHEN eligible.residentInfoID IS NOT NULL
+                                  AND ISNULL(c.occupantCustodyActionActive,0)=1
+                            THEN 1 ELSE 0 END) AS ExpectedActive
+    INTO #MV_PaidPenalties
+    FROM KFMC.Housing.OccupantCustodyAction c
+    LEFT JOIN KFMC.Housing.BuildingAction sa ON sa.buildingActionID=c.buildingActionID_FK
+    LEFT JOIN Housing.BuildingAction ta ON ta.buildingActionID=TRY_CONVERT(bigint,c.buildingActionID_FK)
+    OUTER APPLY
+    (
+      SELECT TOP (1) tr.residentInfoID
+      FROM KFMC.Housing.ResidentInfo sr
+      JOIN Housing.ResidentInfo tr
+        ON tr.residentInfoID=TRY_CONVERT(bigint,sr.residentInfoID)
+       AND tr.residentInfoActive=1
+      WHERE sr.generalNo=sa.generalNo_FK
+        AND sr.residentInfoActive=1
+        AND tr.residentInfoID=ta.residentInfoID_FK
+      ORDER BY tr.residentInfoID
+    ) eligible
+    WHERE c.Paid=1;
+
+    SELECT p.CustodyID
+    INTO #MV_PenaltyPaymentMismatch
+    FROM #MV_PaidPenalties p
+    LEFT JOIN Housing.BuildingPayment t ON t.PaymentUID=p.PaymentUID
+    WHERE t.paymentID IS NULL
+       OR EXISTS
+       (
+         SELECT t.amount,t.generalNo_FK,t.residentInfoID_FK,
+                t.BillChargeTypeID_FK,t.buildingPayementActive
+         EXCEPT
+         SELECT p.Amount,p.GeneralNo,p.EligibleResidentID,
+                CONVERT(int,5),p.ExpectedActive
+       )
+       OR (p.ExpectedActive=0
+           AND (NULLIF(LTRIM(RTRIM(t.disactiveReason)),N'') IS NULL
+                OR NOT EXISTS
+                (
+                  SELECT 1 FROM dbo.AuditLog audit
+                  WHERE audit.TableName=N'[Housing].[BuildingPayment]'
+                    AND audit.ActionType=N'MIGRATION_PAYMENT_PROTECTED'
+                    AND audit.RecordID=t.paymentID
+                )));
+
+    /* Global totals are independently derived from source rows; never infer
+       success from the count of target rows alone. */
+
+    IF EXISTS (SELECT 1 FROM #MV_RentMismatch)
+       INSERT INTO #ValidationIssues
+       (EntityKey,SectionName,IssueCode,SourceObject,TargetObject,ReferenceID,
+        FieldName,ExpectedValue,ActualValue,Severity,Notes)
+       SELECT N'GLOBAL:ALL_HISTORICAL_RENT_PAYMENT_MISMATCH',N'PAYMENTS',N'ALL_HISTORICAL_RENT_PAYMENT_MISMATCH',
+              N'Migration source',N'Housing target',
+              (SELECT CONVERT(nvarchar(100),MIN(PaymentID)) FROM #MV_RentMismatch),
+              N'FailedSourceRows',N'0',CONVERT(nvarchar(100),COUNT_BIG(*)),
+              'ERROR',N'Dynamic per-row migration parity failed. See #MV_RentMismatch and the source data.'
+       FROM #MV_RentMismatch;
+
+    IF EXISTS (SELECT 1 FROM #MV_MissingMeterReads)
+       INSERT INTO #ValidationIssues
+       (EntityKey,SectionName,IssueCode,SourceObject,TargetObject,ReferenceID,
+        FieldName,ExpectedValue,ActualValue,Severity,Notes)
+       SELECT N'GLOBAL:MISSING_HISTORICAL_METER_READ',N'METER_READS',N'MISSING_HISTORICAL_METER_READ',
+              N'Migration source',N'Housing target',
+              (SELECT CONVERT(nvarchar(100),MIN(MeterReadID)) FROM #MV_MissingMeterReads),
+              N'FailedSourceRows',N'0',CONVERT(nvarchar(100),COUNT_BIG(*)),
+              'ERROR',N'Dynamic per-row migration parity failed. See #MV_MissingMeterReads and the source data.'
+       FROM #MV_MissingMeterReads;
+
+    IF EXISTS (SELECT 1 FROM #MV_IndependentBillMismatch)
+       INSERT INTO #ValidationIssues
+       (EntityKey,SectionName,IssueCode,SourceObject,TargetObject,ReferenceID,
+        FieldName,ExpectedValue,ActualValue,Severity,Notes)
+       SELECT N'GLOBAL:INDEPENDENT_ELECTRICITY_BILL_MISMATCH',N'ELECTRICITY_CLAIMS',N'INDEPENDENT_ELECTRICITY_BILL_MISMATCH',
+              N'Migration source',N'Housing target',
+              (SELECT CONVERT(nvarchar(100),MIN(BillsID)) FROM #MV_IndependentBillMismatch),
+              N'FailedSourceRows',N'0',CONVERT(nvarchar(100),COUNT_BIG(*)),
+              'ERROR',N'Dynamic per-row migration parity failed. See #MV_IndependentBillMismatch and the source data.'
+       FROM #MV_IndependentBillMismatch;
+
+    IF EXISTS (SELECT 1 FROM #MV_PenaltyPaymentMismatch)
+       INSERT INTO #ValidationIssues
+       (EntityKey,SectionName,IssueCode,SourceObject,TargetObject,ReferenceID,
+        FieldName,ExpectedValue,ActualValue,Severity,Notes)
+       SELECT N'GLOBAL:PAID_PENALTY_MISMATCH',N'PAYMENTS',N'PAID_PENALTY_MISMATCH',
+              N'Migration source',N'Housing target',
+              (SELECT CONVERT(nvarchar(100),MIN(CustodyID)) FROM #MV_PenaltyPaymentMismatch),
+              N'FailedSourceRows',N'0',CONVERT(nvarchar(100),COUNT_BIG(*)),
+              'ERROR',N'Dynamic per-row migration parity failed. See #MV_PenaltyPaymentMismatch and the source data.'
+       FROM #MV_PenaltyPaymentMismatch;
+    END;
 
     CREATE TABLE #ResidentResults
     (
@@ -10996,44 +11557,50 @@ BEGIN
         , @IdaraId AS EffectiveIdaraId
         , @GeneralNo AS RequestedGeneralNo
 
-        , CASE
-              WHEN @GeneralNo IS NULL
-                  THEN N'ALL_ELIGIBLE_RESIDENTS'
+        ,CASE
+    WHEN @GeneralNo IS NULL
+        THEN N'ALL_ELIGIBLE_RESIDENTS'
 
-              WHEN EXISTS
-                   (
-                       SELECT 1
-                       FROM #ExpectedResidents
-                   )
-                  THEN N'ELIGIBLE'
+    WHEN EXISTS
+    (
+        SELECT 1
+        FROM #EligibleMigrationResidents e
+        WHERE e.GeneralNo = @GeneralNo
+    )
+    AND NOT EXISTS
+    (
+        SELECT 1
+        FROM #SelectedResidentDetails d
+        WHERE TRY_CONVERT(BIGINT, d.generalNo_FK) = @GeneralNo
+    )
+        THEN N'ELIGIBLE_WITHOUT_RESIDENTDETAILS'
 
-              WHEN EXISTS
-                   (
-                       SELECT 1
-                       FROM KFMC.Housing.ResidentInfo r
-                       WHERE TRY_CONVERT(BIGINT, r.generalNo)
-                             = @GeneralNo
-                   )
-                   AND NOT EXISTS
-                   (
-                       SELECT 1
-                       FROM KFMC.Housing.ResidentDetails d
-                       WHERE TRY_CONVERT(BIGINT, d.generalNo_FK)
-                             = @GeneralNo
-                   )
-                  THEN N'NOT_ELIGIBLE_NO_RESIDENTDETAILS'
+    WHEN EXISTS
+    (
+        SELECT 1
+        FROM #ExpectedResidents e
+        WHERE e.GeneralNo = @GeneralNo
+    )
+        THEN N'ELIGIBLE'
 
-              WHEN EXISTS
-                   (
-                       SELECT 1
-                       FROM KFMC.Housing.ResidentInfo r
-                       WHERE TRY_CONVERT(BIGINT, r.generalNo)
-                             = @GeneralNo
-                   )
-                  THEN N'SOURCE_MAPPING_ERROR'
+    WHEN EXISTS
+    (
+        SELECT 1
+        FROM #EligibleMigrationResidents e
+        WHERE e.GeneralNo = @GeneralNo
+    )
+        THEN N'SOURCE_MAPPING_ERROR'
 
-              ELSE N'NOT_FOUND_IN_KFMC'
-          END AS ScopeStatus
+    WHEN EXISTS
+    (
+        SELECT 1
+        FROM KFMC.Housing.ResidentInfo r
+        WHERE TRY_CONVERT(BIGINT, r.generalNo) = @GeneralNo
+    )
+        THEN N'EXCLUDED_BY_MIGRATION_POLICY'
+
+    ELSE N'NOT_FOUND_IN_KFMC'
+END AS ScopeStatus
 
         , (
             SELECT COUNT_BIG(*)
@@ -11069,9 +11636,11 @@ BEGIN
           ) AS SelectedResidentDetailsRows
 
         , (
-            SELECT COUNT_BIG(*)
-            FROM #ExpectedResidents
-          ) AS EligibleResidentsExpected
+    SELECT COUNT_BIG(*)
+    FROM #EligibleMigrationResidents e
+    WHERE @GeneralNo IS NULL
+       OR e.GeneralNo = @GeneralNo
+) AS EligibleResidentsExpected
 
         , (
             SELECT COUNT_BIG(DISTINCT i.EntityKey)
@@ -11399,7 +11968,7 @@ BEGIN
         , (
             SELECT COUNT_BIG(*)
             FROM #FV_BuildingCurrentAudit
-            WHERE CurrentBuildingStatus = N'BOTH_NO_ACTION'
+            WHERE CurrentBuildingStatus = N'EXCLUDED_BY_VIEW_FILTER'
           ) AS BuildingsWithNoAction
 
         , (

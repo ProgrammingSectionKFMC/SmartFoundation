@@ -24,6 +24,52 @@ BEGIN
     DECLARE @BillsIdentity bit=0,@DeductIdentity bit=0,@PaymentIdentity bit=0,
             @BillListIdentity bit=0,@BillActionIdentity bit=0,@BillDetailIdentity bit=0;
 
+    /* Only KFMC active residents whose eligible record was migrated in stage 2.
+       Do not require ResidentDetails or match residentInfoUID; stage 2 defines eligibility.
+       Payment/bill scopes and all subsequent parity checks use this exact same mapping. */
+    SELECT CAST(src.generalNo AS bigint) AS GeneralNo,
+           CAST(src.residentInfoID AS bigint) AS ResidentInfoID
+    INTO #EligibleResidentScope
+    FROM KFMC.Housing.ResidentInfo AS src
+    JOIN Housing.ResidentInfo AS tgt
+      ON tgt.residentInfoID=TRY_CONVERT(bigint,src.residentInfoID)
+     AND tgt.residentInfoActive=1
+    WHERE src.residentInfoActive=1
+      AND TRY_CONVERT(bigint,src.generalNo) IS NOT NULL
+      AND TRY_CONVERT(bigint,src.generalNo) NOT IN (0,1,18)
+      AND EXISTS
+      (
+          SELECT 1
+          FROM KFMC.Housing.BuildingAction a
+          WHERE a.generalNo_FK=TRY_CONVERT(bigint,src.generalNo)
+          GROUP BY a.generalNo_FK
+          HAVING COUNT_BIG(*)>1
+             OR MAX(CASE WHEN a.buildingActionTypeID_FK<>6 THEN 1 ELSE 0 END)=1
+      );
+
+    CREATE UNIQUE CLUSTERED INDEX IX_EligibleResidentScope_GeneralNo
+        ON #EligibleResidentScope(GeneralNo);
+    CREATE UNIQUE INDEX IX_EligibleResidentScope_ResidentInfoID
+        ON #EligibleResidentScope(ResidentInfoID);
+
+    /* The only permitted imported electricity bills are:
+       (A) source bills with a truly NULL generalNo_FK (independent bills), OR
+       (B) source bills associated with a verified active migrated resident.
+       Do NOT treat 0, 1, 18, blank/non-numeric or unknown non-NULL as independent.
+       Do NOT assign a NULL-generalNo bill to any beneficiary. */
+    SELECT TRY_CONVERT(bigint,b.BillsID) AS BillsID,
+           TRY_CONVERT(bigint,b.generalNo_FK) AS GeneralNo,
+           eligible.ResidentInfoID
+    INTO #EligibleElectricBills
+    FROM KFMC.Housing.Bills b
+    LEFT JOIN #EligibleResidentScope eligible
+      ON eligible.GeneralNo=TRY_CONVERT(bigint,b.generalNo_FK)
+    WHERE b.generalNo_FK IS NULL
+       OR eligible.GeneralNo IS NOT NULL;
+
+    CREATE UNIQUE CLUSTERED INDEX IX_EligibleElectricBills_BillsID
+        ON #EligibleElectricBills(BillsID);
+
     /* Resolve each legacy entryData once. The original scalar functions are
        retained as the source of truth, but no longer execute once per row. */
     CREATE TABLE #EntryDataMap
@@ -61,6 +107,7 @@ BEGIN
       (
         SELECT
           s.*,
+          eligibleBill.ResidentInfoID AS EligibleResidentInfoID,
           CASE
             WHEN ISNULL(s.BillActive,1)=1
              AND s.PeriodYear=2024
@@ -92,6 +139,8 @@ PARTITION BY
             ELSE 1
           END AS migrationRowNo
         FROM KFMC.Housing.Bills s
+        JOIN #EligibleElectricBills eligibleBill
+          ON eligibleBill.BillsID=TRY_CONVERT(bigint,s.BillsID)
       )
       INSERT INTO Housing.Bills
       (
@@ -112,33 +161,9 @@ PARTITION BY
         
 COALESCE(s.meterServiceTypeID,charge.MeterServiceTypeID_FK),
 
-CASE
-    WHEN s.meterReadID IS NOT NULL
-     AND EXISTS
-     (
-         SELECT 1
-         FROM [KFMC].[Housing].[MeterRead] originalRead
+s.meterReadID,
 
-         INNER JOIN [KFMC].[Housing].[ResidentInfo] originalResident
-             ON originalResident.[generalNo] =
-                originalRead.[generalNo_FK]
-
-         WHERE originalRead.[meterReadID] =
-               s.[meterReadID]
-
-           AND NOT EXISTS
-           (
-               SELECT 1
-               FROM [KFMC].[Housing].[ResidentDetails] details
-               WHERE details.[generalNo_FK] =
-                     originalResident.[generalNo]
-           )
-     )
-    THEN CAST(NULL AS int)
-    ELSE s.meterReadID
-END,
-
-migratedResident.residentInfoID,
+s.EligibleResidentInfoID,
 s.generalNo_FK,
 
         
@@ -163,20 +188,8 @@ s.generalNo_FK,
       OUTER APPLY (SELECT COALESCE(CASE WHEN validPeriodType.meterServiceTypeID_FK=charge.MeterServiceTypeID_FK THEN CAST(validPeriod.billPeriodStartDate AS date) END,CASE WHEN readPeriodType.meterServiceTypeID_FK=charge.MeterServiceTypeID_FK THEN CAST(readPeriod.billPeriodStartDate AS date) END,CASE WHEN s.PeriodYear BETWEEN 1753 AND 9999 AND s.PeriodMonth BETWEEN 1 AND 12 THEN DATEFROMPARTS(s.PeriodYear,s.PeriodMonth,1) END) BillFromDate,COALESCE(CASE WHEN validPeriodType.meterServiceTypeID_FK=charge.MeterServiceTypeID_FK THEN CAST(validPeriod.billPeriodEndDate AS date) END,CASE WHEN readPeriodType.meterServiceTypeID_FK=charge.MeterServiceTypeID_FK THEN CAST(readPeriod.billPeriodEndDate AS date) END,CASE WHEN s.PeriodYear BETWEEN 1753 AND 9999 AND s.PeriodMonth BETWEEN 1 AND 12 THEN EOMONTH(DATEFROMPARTS(s.PeriodYear,s.PeriodMonth,1)) END) BillToDate,COALESCE(CASE WHEN validPeriodType.meterServiceTypeID_FK=charge.MeterServiceTypeID_FK THEN validPeriod.billPeriodStartDate END,CASE WHEN readPeriodType.meterServiceTypeID_FK=charge.MeterServiceTypeID_FK THEN readPeriod.billPeriodStartDate END) CurrentPeriodStart) billDate
       OUTER APPLY (SELECT TOP (1) bp.billPeriodID FROM Housing.BillPeriod bp JOIN Housing.BillPeriodType bpt ON bpt.billPeriodTypeID=bp.billPeriodTypeID_FK WHERE bp.IdaraId_FK=@IdaraId AND bpt.meterServiceTypeID_FK=charge.MeterServiceTypeID_FK AND bp.billPeriodStartDate<billDate.CurrentPeriodStart ORDER BY bp.billPeriodStartDate DESC,bp.billPeriodID DESC) derivedPrevious
       
-LEFT JOIN [KFMC].[Housing].[ResidentInfo] sourceResident
-    ON sourceResident.[generalNo] = s.[generalNo_FK]
-
-LEFT JOIN [Housing].[ResidentInfo] migratedResident
-    ON migratedResident.[residentInfoID] =
-       TRY_CONVERT(bigint, sourceResident.[residentInfoID])
-
-   AND EXISTS
-   (
-       SELECT 1
-       FROM [KFMC].[Housing].[ResidentDetails] eligibleDetails
-       WHERE eligibleDetails.[generalNo_FK] =
-             sourceResident.[generalNo]
-   )
+ /* ResidentInfoID in SourceBills was already verified by #EligibleElectricBills.
+    For a NULL-generalNo source bill it must remain NULL. */
 
       JOIN #EntryDataMap entryMap ON entryMap.EntryDataKey=ISNULL(CONVERT(nvarchar(40),s.entryData),N'')
       WHERE s.migrationRowNo=1
@@ -246,6 +259,8 @@ IF EXISTS
             END AS migrationRowNo
 
         FROM KFMC.Housing.Bills s
+        JOIN #EligibleElectricBills eligibleBill
+          ON eligibleBill.BillsID=TRY_CONVERT(bigint,s.BillsID)
     ) expected
 
     LEFT JOIN Housing.Bills targetBill
@@ -302,35 +317,10 @@ END;
       FROM KFMC.Housing.DeductList s
       JOIN #EntryDataMap entryMap ON entryMap.EntryDataKey=ISNULL(CONVERT(nvarchar(40),s.entryData),N'')
       
-WHERE
+WHERE NOT EXISTS
 (
-    -- المسيرات النشطة
-    s.deductActive = 1
-
-    OR
-
-    -- المسيرات الملغاة التي تحتوي على سدادات تاريخية
-    (
-        s.deductActive = 0
-
-        AND EXISTS
-        (
-            SELECT 1
-            FROM KFMC.Housing.BuildingPayment historicPay
-
-            WHERE historicPay.deductListID_FK =
-                  s.deductListID
-
-              AND historicPay.buildingPayementActive = 1
-        )
-    )
-)
-
-AND NOT EXISTS
-(
-    SELECT 1
-    FROM Housing.DeductList t
-    WHERE t.deductListID = s.deductListID
+    SELECT 1 FROM Housing.DeductList t
+    WHERE t.deductListID=s.deductListID
 );
 
       SET @RentLists=@@ROWCOUNT;
@@ -352,7 +342,16 @@ AND NOT EXISTS
             ELSE CONCAT(ISNULL(s.hostName,N''),N'-',NULLIF(LTRIM(RTRIM(CONVERT(nvarchar(40),s.entryData))),N'')) END
       FROM KFMC.Housing.BillDeductList s
       JOIN #EntryDataMap entryMap ON entryMap.EntryDataKey=ISNULL(CONVERT(nvarchar(40),s.entryData),N'')
-      WHERE NOT EXISTS(SELECT 1 FROM Housing.BillDeductList t WHERE t.billDeductListID=s.billDeductListID);
+      WHERE EXISTS
+      (
+        SELECT 1
+        FROM KFMC.Housing.BillsDeductListDetails d
+        JOIN Housing.Bills eligibleBill
+          ON eligibleBill.BillsID=TRY_CONVERT(bigint,d.billsID_FK)
+         AND eligibleBill.BillChargeTypeID_FK=2
+        WHERE d.billDeductListID_FK=s.billDeductListID
+      )
+        AND NOT EXISTS(SELECT 1 FROM Housing.BillDeductList t WHERE t.billDeductListID=s.billDeductListID);
       SET @BillLists=@@ROWCOUNT;
       SET IDENTITY_INSERT Housing.BillDeductList OFF; SET @BillListIdentity=0;
 
@@ -378,8 +377,15 @@ AND NOT EXISTS
             ELSE CONCAT(ISNULL(s.hostName,N''),N'-',NULLIF(LTRIM(RTRIM(CONVERT(nvarchar(40),s.entryData))),N'')) END
       FROM KFMC.Housing.BillDeductList s
       JOIN KFMC.Housing.BillsDeductListDetails d ON d.billDeductListID_FK=s.billDeductListID
+      JOIN KFMC.Housing.Bills sourceBill
+        ON sourceBill.BillsID=d.billsID_FK
+      JOIN #EligibleElectricBills eligibleBill
+        ON eligibleBill.BillsID=TRY_CONVERT(bigint,sourceBill.BillsID)
+      JOIN Housing.Bills migratedBill
+        ON migratedBill.BillsID=TRY_CONVERT(bigint,sourceBill.BillsID)
+       AND migratedBill.BillChargeTypeID_FK=2
       JOIN #EntryDataMap entryMap ON entryMap.EntryDataKey=ISNULL(CONVERT(nvarchar(40),s.entryData),N'')
-      WHERE d.billPaid=1 AND d.paidAmount IS NOT NULL AND d.paidDate IS NOT NULL
+      WHERE d.billPaid=1 AND d.paidAmount IS NOT NULL
         AND NOT EXISTS
         (
           SELECT 1 FROM Housing.DeductList t
@@ -388,247 +394,143 @@ AND NOT EXISTS
         );
       SET @ElectricSettlementLists=@@ROWCOUNT;
 
-      /* Historical rent payments. */
-      
-/* Historical rent payments. */
-
-SET IDENTITY_INSERT Housing.BuildingPayment ON;
-SET @PaymentIdentity = 1;
-
-INSERT INTO Housing.BuildingPayment
-(
-    paymentID,
-    PaymentUID,
-    buildingPaymentTypeID_FK,
-    generalNo_FK,
-    IDNumber,
-    residentInfoID_FK,
-    rankNameA,
-    unitID,
-    userName,
-    buildingDetailsID_FK,
-    amount,
-    deductListID_FK,
-    buildingPayementActive,
-    BillChargeTypeID_FK,
-    ExtendInsuranceID_FK,
-    IdaraId_FK,
-    entryDate,
-    entryData,
-    hostName,
-    buildingPaymentLinkStatusID_FK,
-    paymentLinkNote
-)
-SELECT
-    CONVERT(bigint, p.paymentID),
-    p.PaymentUID,
-    p.buildingPaymentTypeID_FK,
-    CONVERT(bigint, p.userID_FK),
-    p.IDNumber,
-    migratedResident.residentInfoID,
-    p.rankNameA,
-    CONVERT(nvarchar(100), p.unitID),
-    p.userName,
-    NULL,
-    
-p.amount,
-p.deductListID_FK,
-
-CASE
-    WHEN d.deductActive = 0 THEN CONVERT(bit, 0)
-    ELSE p.buildingPayementActive
-END,
-
-1,
-
-    NULL,
-    CONVERT(int, @IdaraId),
-    d.entryDate,
-    entryMap.MappedEntryData,
-
-    CASE
-        WHEN entryMap.MappedEntryData IS NULL
-            THEN d.hostName
-        ELSE CONCAT(
-            ISNULL(d.hostName, N''),
-            N'-',
-            NULLIF(
-                LTRIM(RTRIM(CONVERT(nvarchar(40), d.entryData))),
-                N''
-            )
-        )
-    END,
-
-    CASE
-        WHEN migratedResident.residentInfoID IS NULL THEN 3
-        ELSE 2
-    END,
-
-    CASE
-    WHEN d.deductActive = 0
-        THEN N'سداد تاريخي غير نشط: المسير الأصلي ملغى في KFMC.'
-
-    WHEN r.residentInfoID IS NULL
-        THEN N'مستفيد غير معروف وقت الترحيل.'
-
-    WHEN migratedResident.residentInfoID IS NULL
-        THEN N'المستفيد غير مرتبط بسجل مؤهل في DATACORE وقت الترحيل؛ تم حفظ السداد دون ربط بالمستفيد.'
-
-    ELSE N'سداد إيجار تاريخي بانتظار المطابقة الزمنية مع المبنى.'
-END
-
-FROM KFMC.Housing.BuildingPayment p
-
-LEFT JOIN KFMC.Housing.ResidentInfo r
-    ON r.generalNo = p.userID_FK
-
-LEFT JOIN Housing.ResidentInfo migratedResident
-    ON migratedResident.residentInfoID =
-       TRY_CONVERT(bigint, r.residentInfoID)
-
-   AND migratedResident.residentInfoUID =
-       r.residentInfoUID
-
-   AND EXISTS
-   (
-       SELECT 1
-       FROM KFMC.Housing.ResidentDetails eligibleDetails
-       WHERE eligibleDetails.generalNo_FK = r.generalNo
-   )
-
-INNER JOIN KFMC.Housing.DeductList d
-    ON d.deductListID = p.deductListID_FK
-
-INNER JOIN #EntryDataMap entryMap
-    ON entryMap.EntryDataKey =
-       ISNULL(CONVERT(nvarchar(40), d.entryData), N'')
-
-WHERE p.buildingPayementActive = 1
-
-  AND NOT EXISTS
-  (
-      SELECT 1
-      FROM Housing.BuildingPayment t
-      WHERE t.paymentID =
-            CONVERT(bigint, p.paymentID)
-  );
-
-SET @RentPayments = @@ROWCOUNT;
-
-SET IDENTITY_INSERT Housing.BuildingPayment OFF;
-SET @PaymentIdentity = 0;
-
-
-
-/*
-    Historical rent payments integrity guard.
-
-    Preserve every source payment with
-    buildingPayementActive = 1.
-
-    If the original deduction list was canceled,
-    preserve the payment as inactive in DATACORE.
-*/
-
-IF EXISTS
-(
-    SELECT 1
-    FROM KFMC.Housing.BuildingPayment sourcePayment
-
-    LEFT JOIN KFMC.Housing.DeductList sourceList
-        ON sourceList.deductListID =
-           sourcePayment.deductListID_FK
-
-    LEFT JOIN Housing.DeductList targetList
-        ON targetList.deductListID =
-           sourcePayment.deductListID_FK
-
-    LEFT JOIN Housing.BuildingPayment targetPayment
-        ON targetPayment.paymentID =
-           CONVERT(bigint, sourcePayment.paymentID)
-
-    LEFT JOIN KFMC.Housing.ResidentInfo sourceResident
-        ON sourceResident.generalNo =
-           sourcePayment.userID_FK
-
-    LEFT JOIN Housing.ResidentInfo migratedResident
-        ON migratedResident.residentInfoID =
-           TRY_CONVERT(bigint, sourceResident.residentInfoID)
-
-       AND migratedResident.residentInfoUID =
-           sourceResident.residentInfoUID
-
-       AND EXISTS
-       (
-           SELECT 1
-           FROM KFMC.Housing.ResidentDetails eligibleDetails
-           WHERE eligibleDetails.generalNo_FK =
-                 sourceResident.generalNo
-       )
-
-    WHERE sourcePayment.buildingPayementActive = 1
-
-      AND
+      /* All historical payment rows are retained, including unknown and originally inactive
+         owners. Only an identified eligible resident from #EligibleResidentScope may receive
+         an active payment. The original general number remains as an audit attribute. */
+      CREATE TABLE #NewMigrationPaymentIDs
       (
-          -- مسير المصدر غير موجود أو حالته غير معروفة
-          sourceList.deductListID IS NULL
+          PaymentID bigint NOT NULL PRIMARY KEY
+      );
 
-          OR sourceList.deductActive IS NULL
+      SET IDENTITY_INSERT Housing.BuildingPayment ON;
+      SET @PaymentIdentity=1;
 
-          -- المسير أو السداد لم يُنقل
-          OR targetList.deductListID IS NULL
-
-          OR targetPayment.paymentID IS NULL
-
-          -- حالة المسير تغيرت
-          OR EXISTS
-          (
-              SELECT targetList.deductActive
-              EXCEPT
-              SELECT sourceList.deductActive
-          )
-
-          -- نوع السداد يجب أن يبقى إيجارًا
-          OR ISNULL(
-              targetPayment.BillChargeTypeID_FK, -1
-          ) <> 1
-
-          -- التحقق من هوية السداد ومبلغه ونشاطه
-          OR EXISTS
-          (
-              SELECT
-                  CONVERT(bigint, sourcePayment.userID_FK),
-                  sourcePayment.PaymentUID,
-                  sourcePayment.amount,
-                  sourcePayment.deductListID_FK,
-
-                  CASE
-                      WHEN sourceList.deductActive = 0
-                          THEN CONVERT(bit, 0)
-                      ELSE sourcePayment.buildingPayementActive
-                  END,
-
-                  migratedResident.residentInfoID
-
-              EXCEPT
-
-              SELECT
-                  targetPayment.generalNo_FK,
-                  targetPayment.PaymentUID,
-                  targetPayment.amount,
-                  targetPayment.deductListID_FK,
-                  targetPayment.buildingPayementActive,
-                  targetPayment.residentInfoID_FK
-          )
+      INSERT INTO Housing.BuildingPayment
+      (
+          paymentID, PaymentUID, buildingPaymentTypeID_FK, generalNo_FK, IDNumber,
+          residentInfoID_FK, rankNameA, unitID, userName, buildingDetailsID_FK,
+          amount, deductListID_FK, buildingPayementActive, BillChargeTypeID_FK,
+          ExtendInsuranceID_FK, IdaraId_FK, entryDate, entryData, hostName,
+          buildingPaymentLinkStatusID_FK, paymentLinkNote, disactiveReason
       )
-)
-BEGIN
-    THROW 56022,
-        N'فشل التحقق من سدادات الإيجار: يوجد سداد مفقود أو اختلاف في المبلغ أو الهوية أو حالة النشاط أو المسير.',
-        1;
-END;
+      OUTPUT inserted.paymentID INTO #NewMigrationPaymentIDs(PaymentID)
+      SELECT
+          CONVERT(bigint,p.paymentID), p.PaymentUID, p.buildingPaymentTypeID_FK,
+          TRY_CONVERT(bigint,p.userID_FK), p.IDNumber,
+          eligible.ResidentInfoID, p.rankNameA, CONVERT(nvarchar(100),p.unitID),
+          p.userName, NULL, p.amount, p.deductListID_FK,
+          CONVERT(bit,CASE WHEN eligible.ResidentInfoID IS NOT NULL
+                             AND ISNULL(p.buildingPayementActive,0)=1
+                             AND ISNULL(d.deductActive,0)=1
+                           THEN 1 ELSE 0 END),
+          1, NULL, CONVERT(int,@IdaraId), d.entryDate, entryMap.MappedEntryData,
+          CASE WHEN entryMap.MappedEntryData IS NULL THEN d.hostName
+               ELSE CONCAT(ISNULL(d.hostName,N''),N'-',
+                           NULLIF(LTRIM(RTRIM(CONVERT(nvarchar(40),d.entryData))),N'')) END,
+          CASE WHEN eligible.ResidentInfoID IS NULL THEN 3 ELSE 2 END,
+          CASE WHEN eligible.ResidentInfoID IS NULL
+               THEN N'سداد تاريخي محفوظ دون إسناد مالي لمستفيد مؤهل.'
+               ELSE N'سداد إيجار تاريخي بانتظار المطابقة الزمنية مع المبنى.' END,
+          NULLIF(CONCAT
+          (
+            CASE WHEN eligible.ResidentInfoID IS NULL THEN
+                 CASE
+                   WHEN NOT EXISTS
+                   (SELECT 1 FROM KFMC.Housing.ResidentInfo sr
+                    WHERE sr.generalNo=p.userID_FK)
+                     THEN N'تم تعطيل السداد لعدم وجود ملف مستفيد مطابق للرقم العام؛ '
+                   WHEN EXISTS
+                   (SELECT 1 FROM KFMC.Housing.ResidentInfo sr
+                    WHERE sr.generalNo=p.userID_FK AND sr.residentInfoActive=1)
+                     THEN N'تم تعطيل السداد لعدم وجود مستفيد نشط مؤهل للترحيل؛ '
+                   ELSE N'تم تعطيل السداد لأن ملف المستفيد غير نشط؛ '
+                 END
+                 ELSE N'' END,
+            CASE WHEN ISNULL(p.buildingPayementActive,0)<>1
+                 THEN N'حركة السداد معطلة في السجل التاريخي؛ ' ELSE N'' END,
+            CASE WHEN ISNULL(d.deductActive,0)<>1
+                 THEN N'المسير التاريخي غير نشط؛ ' ELSE N'' END
+          ),N'')
+      FROM KFMC.Housing.BuildingPayment p
+      INNER JOIN KFMC.Housing.DeductList d
+        ON d.deductListID=p.deductListID_FK
+      LEFT JOIN #EligibleResidentScope eligible
+        ON eligible.GeneralNo=TRY_CONVERT(bigint,p.userID_FK)
+      INNER JOIN #EntryDataMap entryMap
+        ON entryMap.EntryDataKey=ISNULL(CONVERT(nvarchar(40),d.entryData),N'')
+      WHERE NOT EXISTS
+      (
+          SELECT 1 FROM Housing.BuildingPayment t
+          WHERE t.paymentID=CONVERT(bigint,p.paymentID)
+      );
 
+      SET @RentPayments=@@ROWCOUNT;
+      SET IDENTITY_INSERT Housing.BuildingPayment OFF;
+      SET @PaymentIdentity=0;
 
+      /* All source records must be present; inactive or unmatched records are NOT lost.
+         Preserve the source amount, UID, original general number, deduction-list ID,
+         and expected financial active state for the mapped resident. */
+      IF EXISTS
+      (
+          SELECT 1 FROM KFMC.Housing.BuildingPayment p
+          LEFT JOIN KFMC.Housing.DeductList d
+            ON d.deductListID=p.deductListID_FK
+          LEFT JOIN #EligibleResidentScope eligible
+            ON eligible.GeneralNo=TRY_CONVERT(bigint,p.userID_FK)
+          LEFT JOIN Housing.DeductList targetList
+            ON targetList.deductListID=p.deductListID_FK
+          LEFT JOIN Housing.BuildingPayment targetPayment
+            ON targetPayment.paymentID=TRY_CONVERT(bigint,p.paymentID)
+          WHERE d.deductListID IS NULL OR targetList.deductListID IS NULL
+             OR targetPayment.paymentID IS NULL
+             OR EXISTS
+             (
+                 SELECT targetPayment.PaymentUID, targetPayment.generalNo_FK,
+                        targetPayment.amount, targetPayment.deductListID_FK,
+                        targetPayment.residentInfoID_FK,
+                        targetPayment.buildingPayementActive,
+                        targetPayment.BillChargeTypeID_FK
+                 EXCEPT
+                 SELECT p.PaymentUID,TRY_CONVERT(bigint,p.userID_FK),
+                        p.amount,p.deductListID_FK,eligible.ResidentInfoID,
+                        CONVERT(bit,CASE WHEN eligible.ResidentInfoID IS NOT NULL
+                            AND ISNULL(p.buildingPayementActive,0)=1
+                            AND ISNULL(d.deductActive,0)=1 THEN 1 ELSE 0 END),1
+             )
+             OR (targetPayment.buildingPayementActive=0
+                 AND NULLIF(LTRIM(RTRIM(targetPayment.disactiveReason)),N'') IS NULL)
+             OR EXISTS
+             (
+                 SELECT targetList.deductActive EXCEPT SELECT d.deductActive
+             )
+      )
+          THROW 56022,N'فشل مطابقة جميع حركات السداد التاريخية أو أسباب تعطيلها.',1;
+
+      /* Full-source monetary and row-count parity. This may not be weakened to
+         count only active/known owners: every historical payment must survive. */
+      IF
+      (
+          SELECT COUNT_BIG(*) FROM KFMC.Housing.BuildingPayment
+      ) <> (
+          SELECT COUNT_BIG(*)
+          FROM KFMC.Housing.BuildingPayment p
+          JOIN Housing.BuildingPayment t
+            ON t.paymentID=TRY_CONVERT(bigint,p.paymentID)
+      )
+      OR EXISTS
+      (
+          SELECT
+              (SELECT SUM(CAST(ISNULL(p.amount,0) AS decimal(38,2)))
+               FROM KFMC.Housing.BuildingPayment p)
+          EXCEPT
+          SELECT
+              (SELECT SUM(CAST(ISNULL(t.amount,0) AS decimal(38,2)))
+               FROM KFMC.Housing.BuildingPayment p
+               JOIN Housing.BuildingPayment t
+                 ON t.paymentID=TRY_CONVERT(bigint,p.paymentID))
+      )
+          THROW 56025,N'لم تتم مطابقة عدد ومبالغ جميع حركات السداد التاريخية.',1;
 
       /* Mark active legacy Excel deduction lists after their payments are available.
          The original workbooks no longer exist, so a stable synthetic hash identifies
@@ -646,7 +548,7 @@ END;
             HASHBYTES
             (
               'SHA2_256',
-              CONCAT(N'LEGACY-KFMC-EXCEL:',sourceDeduct.deductListID)
+              CONCAT(N'HISTORICAL-EXCEL-LIST:',sourceDeduct.deductListID)
             ),
             2
           )
@@ -675,7 +577,7 @@ END;
             HASHBYTES
             (
               'SHA2_256',
-              CONCAT(N'LEGACY-KFMC-EXCEL:',sourceDeduct.deductListID)
+              CONCAT(N'HISTORICAL-EXCEL-LIST:',sourceDeduct.deductListID)
             ),
             2
           )
@@ -702,6 +604,8 @@ END;
        CASE WHEN entryMap.MappedEntryData IS NULL THEN s.hostName
             ELSE CONCAT(ISNULL(s.hostName,N''),N'-',NULLIF(LTRIM(RTRIM(CONVERT(nvarchar(40),s.entryData))),N'')) END
       FROM KFMC.Housing.BillDeductAction s
+      JOIN Housing.BillDeductList migratedList
+        ON migratedList.billDeductListID=s.billDeductListID_FK
       JOIN #EntryDataMap entryMap ON entryMap.EntryDataKey=ISNULL(CONVERT(nvarchar(40),s.entryData),N'')
       WHERE NOT EXISTS(SELECT 1 FROM Housing.BillDeductAction t WHERE t.billDeductActionID=s.billDeductActionID);
       SET @BillActions=@@ROWCOUNT;
@@ -735,6 +639,9 @@ INNER JOIN Housing.Bills migratedBill
    -- منع ربط تفاصيل الكهرباء بفاتورة إيجار أو ماء
    AND migratedBill.BillChargeTypeID_FK = 2
 
+JOIN Housing.BillDeductList migratedList
+    ON migratedList.billDeductListID=s.billDeductListID_FK
+
 JOIN #EntryDataMap entryMap
     ON entryMap.EntryDataKey =
        ISNULL(CONVERT(nvarchar(40), s.entryData), N'')
@@ -748,7 +655,7 @@ JOIN #EntryDataMap entryMap
 
       
 /*
-    Verify ALL electricity bill details:
+    Verify all electricity bill details for selected migrated bills:
     paid, unpaid, active and inactive.
 
     No source detail may be silently skipped
@@ -760,10 +667,12 @@ IF EXISTS
     SELECT 1
     FROM KFMC.Housing.BillsDeductListDetails s
 
-    LEFT JOIN KFMC.Housing.Bills sourceBill
-        ON sourceBill.BillsID = s.billsID_FK
+    JOIN KFMC.Housing.Bills sourceBill
+        ON sourceBill.BillsID=s.billsID_FK
+    JOIN #EligibleElectricBills eligibleBill
+        ON eligibleBill.BillsID=TRY_CONVERT(bigint,sourceBill.BillsID)
 
-    LEFT JOIN Housing.Bills targetBill
+    JOIN Housing.Bills targetBill
         ON targetBill.BillsID =
            CONVERT(bigint, s.billsID_FK)
        AND targetBill.BillsUID = sourceBill.BillsUID
@@ -779,8 +688,6 @@ IF EXISTS
 
     WHERE
         sourceBill.BillsID IS NULL
-
-        OR targetBill.BillsID IS NULL
 
         OR targetList.billDeductListID IS NULL
 
@@ -830,15 +737,27 @@ END;
       INSERT INTO Housing.BuildingPayment
       (PaymentUID,buildingPaymentTypeID_FK,generalNo_FK,IDNumber,residentInfoID_FK,
        buildingDetailsID_FK,amount,deductListID_FK,buildingPayementActive,
-       BillChargeTypeID_FK,IdaraId_FK,entryDate,entryData,hostName)
+       BillChargeTypeID_FK,IdaraId_FK,entryDate,entryData,hostName,
+       buildingPaymentLinkStatusID_FK,paymentLinkNote,disactiveReason)
+      OUTPUT inserted.paymentID INTO #NewMigrationPaymentIDs(PaymentID)
       SELECT d.billsDeductListDetailsUID,COALESCE(d.paymentType,1),CONVERT(bigint,b.generalNo_FK),
        r.NationalID,
-migratedResident.residentInfoID,
+eligibleElectricResident.ResidentInfoID,
 CONVERT(nvarchar(400),b.buildingDetailsID),
-       d.paidAmount,targetList.deductListID,1,2,CONVERT(int,@IdaraId),d.entryDate,
-       entryMap.MappedEntryData,
+       d.paidAmount,targetList.deductListID,
+       CONVERT(bit,CASE WHEN eligibleElectricResident.ResidentInfoID IS NOT NULL
+                            AND ISNULL(sourceList.deductActive,0)=1
+                         THEN 1 ELSE 0 END),
+       2,CONVERT(int,@IdaraId),d.entryDate,entryMap.MappedEntryData,
        CASE WHEN entryMap.MappedEntryData IS NULL THEN d.hostName
-            ELSE CONCAT(ISNULL(d.hostName,N''),N'-',NULLIF(LTRIM(RTRIM(CONVERT(nvarchar(40),d.entryData))),N'')) END
+            ELSE CONCAT(ISNULL(d.hostName,N''),N'-',NULLIF(LTRIM(RTRIM(CONVERT(nvarchar(40),d.entryData))),N'')) END,
+       CASE WHEN eligibleElectricResident.ResidentInfoID IS NULL THEN 3 WHEN b.buildingDetailsID IS NOT NULL THEN 1 ELSE 2 END,
+       N'تسوية افتتاحية تاريخية لسداد فاتورة كهرباء.',
+       CASE WHEN eligibleElectricResident.ResidentInfoID IS NULL
+            THEN N'تم تعطيل سداد الكهرباء لعدم وجود مستفيد نشط مؤهل مرتبط بالفاتورة التاريخية.'
+            WHEN ISNULL(sourceList.deductActive,0)<>1
+            THEN N'تم تعطيل سداد الكهرباء لأن مسير الفواتير التاريخية غير نشط.'
+            ELSE NULL END
       FROM KFMC.Housing.BillsDeductListDetails d
       
 INNER JOIN KFMC.Housing.Bills b
@@ -851,24 +770,15 @@ INNER JOIN Housing.Bills migratedBill
    AND migratedBill.BillsUID = b.BillsUID
    AND migratedBill.BillChargeTypeID_FK = 2
 
--- المستفيد الأصلي في KFMC
+-- NULL-generalNo electricity bills are independent; their payment remains
+-- unassigned, with NULL generalNo_FK / residentInfoID_FK / IDNumber.
+JOIN #EligibleElectricBills eligibleBill
+    ON eligibleBill.BillsID=TRY_CONVERT(bigint,b.BillsID)
 LEFT JOIN KFMC.Housing.ResidentInfo r
-    ON r.generalNo = b.generalNo_FK
-
--- ربط السداد بالمستفيد المؤهل الموجود فعليًا في DATACORE
-LEFT JOIN Housing.ResidentInfo migratedResident
-    ON migratedResident.residentInfoID =
-       TRY_CONVERT(bigint, r.residentInfoID)
-
-   AND migratedResident.residentInfoUID =
-       r.residentInfoUID
-
-   AND EXISTS
-   (
-       SELECT 1
-       FROM KFMC.Housing.ResidentDetails eligibleDetails
-       WHERE eligibleDetails.generalNo_FK = r.generalNo
-   )
+    ON r.residentInfoID=eligibleBill.ResidentInfoID
+   AND r.residentInfoActive=1
+LEFT JOIN #EligibleResidentScope eligibleElectricResident
+    ON eligibleElectricResident.GeneralNo=TRY_CONVERT(bigint,b.generalNo_FK)
 
       JOIN KFMC.Housing.BillDeductList sourceList ON sourceList.billDeductListID=d.billDeductListID_FK
       JOIN Housing.DeductList targetList ON targetList.deductUID=
@@ -878,6 +788,19 @@ LEFT JOIN Housing.ResidentInfo migratedResident
       WHERE d.billPaid=1 AND d.paidAmount IS NOT NULL
         AND NOT EXISTS(SELECT 1 FROM Housing.BuildingPayment p WHERE p.PaymentUID=d.billsDeductListDetailsUID);
       SET @ElectricPayments=@@ROWCOUNT;
+      /* MIGRATION_ELECTRIC_PROVENANCE_GUARD_V1 */
+      IF EXISTS (
+        SELECT 1
+        FROM KFMC.Housing.BillsDeductListDetails sd
+        JOIN KFMC.Housing.Bills sb ON sb.BillsID=sd.billsID_FK
+        JOIN Housing.BuildingPayment tp ON tp.PaymentUID=sd.billsDeductListDetailsUID
+        WHERE sd.billPaid=1 AND sd.paidAmount IS NOT NULL
+          AND tp.BillChargeTypeID_FK=2 AND tp.buildingPayementActive=1
+          AND (tp.residentInfoID_FK IS NULL OR tp.buildingPaymentLinkStatusID_FK<>1
+               OR TRY_CONVERT(bigint,tp.buildingDetailsID_FK) IS NULL
+               OR TRY_CONVERT(bigint,tp.buildingDetailsID_FK)<>TRY_CONVERT(bigint,sb.buildingDetailsID))
+      ) THROW 56038,N'Electricity payment did not preserve source building/status 1.',1;
+
 
 
       
@@ -906,22 +829,11 @@ IF EXISTS
         ON sourceList.billDeductListID =
            d.billDeductListID_FK
 
-    LEFT JOIN KFMC.Housing.ResidentInfo r
-        ON r.generalNo = b.generalNo_FK
-
+    JOIN #EligibleElectricBills eligibleBill
+      ON eligibleBill.BillsID=TRY_CONVERT(bigint,b.BillsID)
     LEFT JOIN Housing.ResidentInfo migratedResident
-        ON migratedResident.residentInfoID =
-           TRY_CONVERT(bigint, r.residentInfoID)
-
-       AND migratedResident.residentInfoUID =
-           r.residentInfoUID
-
-       AND EXISTS
-       (
-           SELECT 1
-           FROM KFMC.Housing.ResidentDetails eligible
-           WHERE eligible.generalNo_FK = r.generalNo
-       )
+      ON migratedResident.residentInfoID=eligibleBill.ResidentInfoID
+     AND migratedResident.residentInfoActive=1
 
     WHERE d.billPaid = 1
       AND d.paidAmount IS NOT NULL
@@ -987,7 +899,12 @@ IF EXISTS
 
                 AND payment.BillChargeTypeID_FK = 2
 
-                AND payment.buildingPayementActive = 1
+                AND payment.buildingPayementActive = CONVERT(bit,
+                      CASE WHEN migratedResident.residentInfoID IS NOT NULL
+                                 AND ISNULL(sourceList.deductActive,0)=1
+                           THEN 1 ELSE 0 END)
+                AND (payment.buildingPayementActive=1 OR
+                     NULLIF(LTRIM(RTRIM(payment.disactiveReason)),N'') IS NOT NULL)
 
                 AND targetList.BillChargeTypeID_FK = 2
 
@@ -1040,6 +957,472 @@ BEGIN
         1;
 END;
 
+
+      /* 56024: never allow personal invoices for excluded owners, or financially active
+         payments for absent/ineligible owners. An inactive payment may retain original
+         generalNo but must have NULL residentInfoID_FK and a documented reason. */
+      IF EXISTS
+      (
+          SELECT 1 FROM Housing.Bills b
+          LEFT JOIN #EligibleResidentScope e
+            ON e.GeneralNo=TRY_CONVERT(bigint,b.generalNo_FK)
+          WHERE b.BillChargeTypeID_FK=2 AND
+            ((b.generalNo_FK IS NULL AND b.residentInfoID_FK IS NOT NULL)
+             OR (b.generalNo_FK IS NOT NULL AND
+                 (e.ResidentInfoID IS NULL OR b.residentInfoID_FK<>e.ResidentInfoID)))
+      ) OR EXISTS
+      (
+          SELECT 1 FROM Housing.BuildingPayment pay
+          LEFT JOIN #EligibleResidentScope e
+            ON e.GeneralNo=TRY_CONVERT(bigint,pay.generalNo_FK)
+          WHERE pay.BillChargeTypeID_FK IN (1,2) AND
+          (
+             (e.ResidentInfoID IS NULL AND
+               (pay.residentInfoID_FK IS NOT NULL
+                OR ISNULL(pay.buildingPayementActive,0)<>0
+                OR NULLIF(LTRIM(RTRIM(pay.disactiveReason)),N'') IS NULL))
+             OR
+             (e.ResidentInfoID IS NOT NULL AND
+                (pay.residentInfoID_FK IS NULL
+                 OR pay.residentInfoID_FK<>e.ResidentInfoID))
+             OR
+             (ISNULL(pay.buildingPayementActive,0)=0 AND
+                NULLIF(LTRIM(RTRIM(pay.disactiveReason)),N'') IS NULL)
+          )
+      )
+          THROW 56024,N'فشل حماية أهلية الفواتير والسدادات المعطلة أو غير المسندة.',1;
+
+      /* A permanent local audit entry for every newly imported inactive payment.
+         No source database name or sensitive personal identifier is written to Notes. */
+      INSERT INTO dbo.AuditLog
+          (TableName,ActionType,RecordID,PerformedBy,Notes)
+      SELECT N'[Housing].[BuildingPayment]',N'MIGRATION_PAYMENT_PROTECTED',
+             pay.paymentID,N'MoveData',
+             CONCAT(N'PaymentID=',pay.paymentID,
+                    N'; DeductListID=',COALESCE(CONVERT(nvarchar(40),pay.deductListID_FK),N'NULL'),
+                    N'; Reason=',COALESCE(pay.disactiveReason,N'سداد تاريخي غير نشط'))
+      FROM #NewMigrationPaymentIDs imported
+      JOIN Housing.BuildingPayment pay ON pay.paymentID=imported.PaymentID
+      WHERE ISNULL(pay.buildingPayementActive,0)=0;
+
+
+      /* MIGRATION_INTEGRATED_RENT_CLASSIFICATION_V1 */
+    CREATE TABLE #ResidentMatch
+    (
+        generalNo bigint NOT NULL PRIMARY KEY,
+        residentInfoID bigint NOT NULL
+    );
+
+    ;WITH RankedDetails AS
+    (
+        SELECT detailsRow.generalNo_FK,detailsRow.residentInfoID_FK,
+               ROW_NUMBER() OVER(PARTITION BY detailsRow.generalNo_FK
+                 ORDER BY detailsRow.residentDetailsActive DESC,detailsRow.residentDetailsID DESC) rowNumber
+        FROM Housing.ResidentDetails detailsRow
+        WHERE detailsRow.generalNo_FK IS NOT NULL AND detailsRow.residentInfoID_FK IS NOT NULL
+    )
+    INSERT #ResidentMatch(generalNo,residentInfoID)
+    SELECT generalNo_FK,residentInfoID_FK FROM RankedDetails WHERE rowNumber=1;
+
+    CREATE TABLE #PaymentBase
+(
+    paymentID bigint NOT NULL PRIMARY KEY,
+    oldStatusID int NULL,
+    residentInfoID bigint NULL,
+    effectivePaymentDate date NULL,
+    effectivePaymentEndDate date NULL,
+    isHijriPeriod bit NOT NULL
+);
+
+    CREATE TABLE #HijriPeriodMap
+(
+      issueYear  int NOT NULL
+    , issueMonth int NOT NULL
+    , PeriodFrom date NOT NULL
+    , PeriodTo   date NOT NULL
+    , PRIMARY KEY (issueYear, issueMonth)
+);
+
+INSERT INTO #HijriPeriodMap
+(
+      issueYear
+    , issueMonth
+    , PeriodFrom
+    , PeriodTo
+)
+SELECT
+      g.yearH
+    , g.monthH
+    , MIN(CONVERT(date, g.gregorianDate))
+    , MAX(CONVERT(date, g.gregorianDate))
+FROM dbo._GregorianHijriDate g
+WHERE g.yearH BETWEEN 1300 AND 1600
+  AND g.monthH BETWEEN 1 AND 12
+GROUP BY
+      g.yearH
+    , g.monthH;
+
+
+INSERT #PaymentBase
+(
+      paymentID
+    , oldStatusID
+    , residentInfoID
+    , effectivePaymentDate
+    , effectivePaymentEndDate
+    , isHijriPeriod
+)
+SELECT
+      paymentRow.paymentID
+    , paymentRow.buildingPaymentLinkStatusID_FK
+    , COALESCE
+      (
+          paymentRow.residentInfoID_FK,
+          residentMatch.residentInfoID
+      )
+
+    , CASE
+          WHEN deductRow.issueYear BETWEEN 1300 AND 1600
+           AND deductRow.issueMonth BETWEEN 1 AND 12
+              THEN hijri.PeriodFrom
+
+          WHEN deductRow.issueYear BETWEEN 1900 AND 9999
+           AND deductRow.issueMonth BETWEEN 1 AND 12
+              THEN TRY_CONVERT
+                   (
+                       date,
+                       CONCAT
+                       (
+                           deductRow.issueYear,
+                           N'-',
+                           RIGHT
+                           (
+                               N'0'
+                               + CONVERT
+                                 (
+                                     nvarchar(2),
+                                     deductRow.issueMonth
+                                 ),
+                               2
+                           ),
+                           N'-01'
+                       )
+                   )
+
+          ELSE CONVERT(date, deductRow.paymentDate)
+      END
+
+    , CASE
+          WHEN deductRow.issueYear BETWEEN 1300 AND 1600
+           AND deductRow.issueMonth BETWEEN 1 AND 12
+              THEN hijri.PeriodTo
+
+          WHEN deductRow.issueYear BETWEEN 1900 AND 9999
+           AND deductRow.issueMonth BETWEEN 1 AND 12
+              THEN EOMONTH
+                   (
+                       TRY_CONVERT
+                       (
+                           date,
+                           CONCAT
+                           (
+                               deductRow.issueYear,
+                               N'-',
+                               RIGHT
+                               (
+                                   N'0'
+                                   + CONVERT
+                                     (
+                                         nvarchar(2),
+                                         deductRow.issueMonth
+                                     ),
+                                   2
+                               ),
+                               N'-01'
+                           )
+                       )
+                   )
+
+          ELSE CONVERT(date, deductRow.paymentDate)
+      END
+
+    , CASE
+          WHEN deductRow.issueYear BETWEEN 1300 AND 1600
+           AND deductRow.issueMonth BETWEEN 1 AND 12
+              THEN CONVERT(bit, 1)
+
+          ELSE CONVERT(bit, 0)
+      END
+
+FROM Housing.BuildingPayment paymentRow
+
+LEFT JOIN Housing.DeductList deductRow
+    ON deductRow.deductListID =
+       paymentRow.deductListID_FK
+
+LEFT JOIN #ResidentMatch residentMatch
+    ON residentMatch.generalNo =
+       paymentRow.generalNo_FK
+
+LEFT JOIN #HijriPeriodMap hijri
+    ON hijri.issueYear = deductRow.issueYear
+   AND hijri.issueMonth = deductRow.issueMonth
+
+WHERE
+      paymentRow.BillChargeTypeID_FK = 1
+
+  AND paymentRow.BillChargeTypeID_FK = 1
+
+  AND paymentRow.buildingPayementActive = 1
+
+  AND paymentRow.BillChargeTypeID_FK = 1
+
+  AND
+(
+       paymentRow.buildingPaymentLinkStatusID_FK IS NULL
+
+    OR paymentRow.buildingPaymentLinkStatusID_FK IN (2,3,4)
+
+    OR
+    (
+        paymentRow.buildingPaymentLinkStatusID_FK = 1
+        AND deductRow.issueYear BETWEEN 1300 AND 1600
+        AND deductRow.issueMonth BETWEEN 1 AND 12
+    )
+)
+
+OPTION(RECOMPILE);
+
+    CREATE INDEX IX_PaymentBase_ResidentDates
+      ON #PaymentBase(residentInfoID,effectivePaymentDate,effectivePaymentEndDate) INCLUDE(paymentID,oldStatusID);
+
+    CREATE TABLE #OccupancyRoots
+    (
+        rootActionID bigint NOT NULL PRIMARY KEY,
+        residentInfoID bigint NOT NULL,
+        buildingDetailsID bigint NOT NULL,
+        occupancyDate date NOT NULL
+    );
+
+    INSERT #OccupancyRoots(rootActionID,residentInfoID,buildingDetailsID,occupancyDate)
+    SELECT actionRow.buildingActionID,actionRow.residentInfoID_FK,actionRow.buildingDetailsID_FK,
+           CONVERT(date,actionRow.buildingActionDate)
+    FROM Housing.BuildingAction actionRow
+    WHERE actionRow.buildingActionTypeID_FK=2 AND actionRow.buildingActionActive=1
+      AND actionRow.residentInfoID_FK IS NOT NULL AND actionRow.buildingDetailsID_FK IS NOT NULL
+      AND actionRow.buildingActionDate IS NOT NULL;
+
+    CREATE INDEX IX_OccupancyRoots_Resident
+      ON #OccupancyRoots(residentInfoID,occupancyDate) INCLUDE(rootActionID,buildingDetailsID);
+
+    CREATE TABLE #ActionTree
+    (
+        rootActionID bigint NOT NULL,
+        buildingActionID bigint NOT NULL,
+        buildingActionTypeID int NULL,
+        buildingActionDate datetime NULL,
+        treeLevel int NOT NULL
+    );
+
+    ;WITH ActionTree AS
+    (
+        SELECT rootRow.rootActionID,actionRow.buildingActionID,
+               actionRow.buildingActionTypeID_FK,actionRow.buildingActionDate,0 treeLevel
+        FROM #OccupancyRoots rootRow
+        JOIN Housing.BuildingAction actionRow ON actionRow.buildingActionID=rootRow.rootActionID
+        UNION ALL
+        SELECT treeRow.rootActionID,childRow.buildingActionID,
+               childRow.buildingActionTypeID_FK,childRow.buildingActionDate,treeRow.treeLevel+1
+        FROM ActionTree treeRow
+        JOIN Housing.BuildingAction childRow
+          ON childRow.buildingActionParentID=treeRow.buildingActionID
+         AND childRow.buildingActionActive=1
+        WHERE treeRow.treeLevel<100
+    )
+    INSERT #ActionTree(rootActionID,buildingActionID,buildingActionTypeID,buildingActionDate,treeLevel)
+    SELECT rootActionID,buildingActionID,buildingActionTypeID_FK,buildingActionDate,treeLevel
+    FROM ActionTree OPTION(MAXRECURSION 0);
+
+    CREATE INDEX IX_ActionTree_RootType
+      ON #ActionTree(rootActionID,buildingActionTypeID) INCLUDE(buildingActionDate);
+
+    CREATE TABLE #OccupancyPeriods
+    (
+        residentInfoID bigint NOT NULL,
+        buildingDetailsID bigint NOT NULL,
+        occupancyDate date NOT NULL,
+        exitDate date NULL,
+        rootActionID bigint NOT NULL PRIMARY KEY
+    );
+
+    INSERT #OccupancyPeriods(residentInfoID,buildingDetailsID,occupancyDate,exitDate,rootActionID)
+    SELECT rootRow.residentInfoID,rootRow.buildingDetailsID,rootRow.occupancyDate,
+           MIN(CASE WHEN treeRow.buildingActionTypeID=3 THEN CONVERT(date,treeRow.buildingActionDate) END),
+           rootRow.rootActionID
+    FROM #OccupancyRoots rootRow
+    LEFT JOIN #ActionTree treeRow ON treeRow.rootActionID=rootRow.rootActionID
+    GROUP BY rootRow.residentInfoID,rootRow.buildingDetailsID,rootRow.occupancyDate,rootRow.rootActionID;
+
+    CREATE INDEX IX_OccupancyPeriods_ResidentDates
+      ON #OccupancyPeriods(residentInfoID,occupancyDate,exitDate) INCLUDE(buildingDetailsID);
+
+    CREATE TABLE #CandidateBuildings
+    (
+        paymentID bigint NOT NULL,
+        buildingDetailsID bigint NOT NULL,
+        CONSTRAINT PK_CandidateBuildings PRIMARY KEY(paymentID,buildingDetailsID)
+    );
+
+    INSERT #CandidateBuildings(paymentID,buildingDetailsID)
+    SELECT DISTINCT paymentBase.paymentID,occupancy.buildingDetailsID
+    FROM #PaymentBase paymentBase
+JOIN #OccupancyPeriods occupancy
+  ON occupancy.residentInfoID =
+     paymentBase.residentInfoID
+
+ AND paymentBase.isHijriPeriod = 0
+
+ AND paymentBase.effectivePaymentEndDate >=
+     occupancy.occupancyDate
+
+ AND paymentBase.effectivePaymentDate <=
+     ISNULL
+     (
+         occupancy.exitDate,
+         CONVERT(date, GETDATE())
+     )
+     AND paymentBase.effectivePaymentEndDate>=occupancy.occupancyDate
+     AND paymentBase.effectivePaymentDate<=ISNULL(occupancy.exitDate,CONVERT(date,GETDATE()));
+
+    CREATE TABLE #CandidateSummary
+    (
+        paymentID bigint NOT NULL PRIMARY KEY,
+        candidateCount int NOT NULL,
+        proposedBuildingDetailsID bigint NULL
+    );
+    INSERT #CandidateSummary
+    SELECT paymentID,COUNT(*),MIN(buildingDetailsID) FROM #CandidateBuildings GROUP BY paymentID;
+
+    CREATE TABLE #FirstOccupancy
+    (
+        residentInfoID bigint NOT NULL PRIMARY KEY,
+        firstOccupancyDate date NOT NULL
+    );
+    INSERT #FirstOccupancy
+    SELECT residentInfoID,MIN(occupancyDate) FROM #OccupancyPeriods GROUP BY residentInfoID;
+
+    CREATE TABLE #Proposal
+    (
+        paymentID bigint NOT NULL PRIMARY KEY,
+        residentInfoID bigint NULL,
+        effectivePaymentDate date NULL,
+        effectivePaymentEndDate date NULL,
+        firstOccupancyDate date NULL,
+        candidateBuildingCount int NOT NULL,
+        proposedBuildingDetailsID bigint NULL,
+        oldStatusID int NULL,
+        proposedStatusID int NOT NULL,
+        proposalReason nvarchar(1000) NOT NULL
+    );
+
+    INSERT #Proposal
+SELECT
+       paymentBase.paymentID,
+       paymentBase.residentInfoID,
+       paymentBase.effectivePaymentDate,
+       paymentBase.effectivePaymentEndDate,
+       firstOccupancy.firstOccupancyDate,
+       ISNULL(candidateSummary.candidateCount,0),
+
+       CASE
+            WHEN paymentBase.isHijriPeriod = 0
+             AND candidateSummary.candidateCount = 1
+                THEN candidateSummary.proposedBuildingDetailsID
+            ELSE NULL
+       END,
+
+       paymentBase.oldStatusID,
+
+       CASE
+            WHEN paymentBase.residentInfoID IS NULL
+                THEN 3
+
+            WHEN paymentBase.isHijriPeriod = 1
+             AND paymentBase.effectivePaymentEndDate IS NOT NULL
+             AND firstOccupancy.firstOccupancyDate IS NOT NULL
+             AND paymentBase.effectivePaymentEndDate < firstOccupancy.firstOccupancyDate
+                THEN 4
+
+            WHEN paymentBase.isHijriPeriod = 1
+                THEN 2
+
+            WHEN paymentBase.effectivePaymentEndDate IS NOT NULL
+             AND firstOccupancy.firstOccupancyDate IS NOT NULL
+             AND paymentBase.effectivePaymentEndDate < firstOccupancy.firstOccupancyDate
+                THEN 4
+
+            WHEN candidateSummary.candidateCount = 1
+                THEN 1
+
+            ELSE 2
+       END,
+
+       CASE
+            WHEN paymentBase.residentInfoID IS NULL
+                THEN N'لم يتم العثور على ملف المستفيد.'
+
+            WHEN paymentBase.effectivePaymentDate IS NULL
+                THEN N'تعذر تحديد تاريخ ميلادي موثوق للسداد.'
+
+            WHEN firstOccupancy.firstOccupancyDate IS NULL
+                THEN N'المستفيد معروف ولكن لا توجد له فترة سكن.'
+
+            WHEN paymentBase.isHijriPeriod = 1
+             AND paymentBase.effectivePaymentEndDate < firstOccupancy.firstOccupancyDate
+                THEN N'السداد الهجري يسبق أول فترة سكن معروفة.'
+
+            WHEN paymentBase.isHijriPeriod = 1
+                THEN N'سداد تاريخي بفترة هجرية؛ تم الاحتفاظ به كرصد عام للمستفيد دون ربطه بمبنى.'
+
+            WHEN paymentBase.effectivePaymentEndDate < firstOccupancy.firstOccupancyDate
+                THEN N'السداد يسبق أول فترة سكن معروفة.'
+
+            WHEN candidateSummary.candidateCount = 1
+                THEN N'تم تحديد مبنى واحد من فترة السكن في تاريخ السداد.'
+
+            WHEN candidateSummary.candidateCount > 1
+                THEN N'تاريخ السداد يقع داخل أكثر من فترة سكن؛ بقي رصيدا عاما.'
+
+            ELSE N'السداد بعد أول سكن ولكنه خارج فترة سكن محددة؛ بقي رصيدا عاما.'
+       END
+
+FROM #PaymentBase paymentBase
+
+LEFT JOIN #CandidateSummary candidateSummary
+    ON candidateSummary.paymentID = paymentBase.paymentID
+
+LEFT JOIN #FirstOccupancy firstOccupancy
+    ON firstOccupancy.residentInfoID = paymentBase.residentInfoID;
+
+
+
+      IF (SELECT COUNT_BIG(*) FROM #Proposal) <>
+         (SELECT COUNT_BIG(*) FROM Housing.BuildingPayment WHERE BillChargeTypeID_FK=1 AND buildingPayementActive=1)
+         THROW 56039,N'Rent classifier coverage mismatch.',1;
+      UPDATE paymentRow
+      SET paymentRow.residentInfoID_FK=proposal.residentInfoID,
+          paymentRow.buildingDetailsID_FK=CASE WHEN proposal.proposedStatusID=1 THEN CONVERT(nvarchar(400),proposal.proposedBuildingDetailsID) ELSE NULL END,
+          paymentRow.buildingPaymentLinkStatusID_FK=proposal.proposedStatusID,
+          paymentRow.paymentLinkNote=proposal.proposalReason
+      OUTPUT inserted.paymentID,deleted.buildingPaymentLinkStatusID_FK,inserted.buildingPaymentLinkStatusID_FK,
+             deleted.buildingDetailsID_FK,inserted.buildingDetailsID_FK,N'AUTO_TEMPORAL',inserted.paymentLinkNote,N'MoveData',GETDATE()
+      INTO Housing.BuildingPaymentLinkAudit
+      (paymentID_FK,oldLinkStatusID,newLinkStatusID,oldBuildingDetailsID,newBuildingDetailsID,linkMethod,linkNote,changedBy,changedDate)
+      FROM Housing.BuildingPayment paymentRow JOIN #Proposal proposal ON proposal.paymentID=paymentRow.paymentID
+      WHERE ISNULL(paymentRow.residentInfoID_FK,-1)<>ISNULL(proposal.residentInfoID,-1)
+         OR ISNULL(paymentRow.buildingPaymentLinkStatusID_FK,-1)<>proposal.proposedStatusID
+         OR ISNULL(NULLIF(LTRIM(RTRIM(paymentRow.buildingDetailsID_FK)),N''),N'-1')<>
+            ISNULL(CASE WHEN proposal.proposedStatusID=1 THEN CONVERT(nvarchar(400),proposal.proposedBuildingDetailsID) END,N'-1');
 
       SELECT @RollbackAfterTest RollbackAfterTest,@Bills ElectricBillsInserted,
        @RentLists RentDeductListsInserted,@RentPayments RentPaymentsInserted,

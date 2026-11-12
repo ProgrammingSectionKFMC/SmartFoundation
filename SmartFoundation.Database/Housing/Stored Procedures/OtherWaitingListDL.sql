@@ -20,8 +20,11 @@ BEGIN
     set @WaitingClassID = TRY_CAST(@WaitingClassID_nvar as int)
   -- WaitingList Data
 
-         
-   SELECT 
+        
+      BEGIN
+
+
+      SELECT 
             w.ActionID,
             ROW_NUMBER() OVER (
             ORDER BY w.ActionDecisionDate ASC,w.ActionDecisionNo ASC, w.GeneralNo ASC
@@ -55,16 +58,17 @@ FROM Housing.V_WaitingList w
 
 
 
+
+      
+      END
+
      -- WaitingClass DDL
-            SELECT c.waitingClassID,c.waitingClassName_A
+            SELECT c.waitingClassID,c.waitingClassName_A,waitingClassSequence
             FROM [DATACORE].[Housing].[WaitingClass] c
-            where (c.WaitingClassID not in(1,2,3,4,11)) and (c.idara_FK = @idaraID)
+            where (c.WaitingClassID not in(1,2,3,4,11) ) and (c.idara_FK = @idaraID)
             AND c.waitingClassActive = 1
+
             order by c.waitingClassSequence asc
-
-
-
-       
 -- Houses DDL
 -- Same house eligibility rules as Housing.AssignDL
 

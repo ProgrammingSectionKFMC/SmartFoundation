@@ -1,105 +1,17 @@
-﻿
-CREATE   PROCEDURE [MoveData].[usp_MigrateResidentContacts]
-    @RollbackAfterTest bit = 1
-AS
-BEGIN
-    SET NOCOUNT ON;
-    SET XACT_ABORT ON;
-
-    IF NOT EXISTS (SELECT 1 FROM Housing.ResidentInfo)
-        THROW 53700, N'Run MoveData.usp_MigrateResidents before migrating resident contacts.', 1;
-
-    IF EXISTS
-    (
-        SELECT 1
-        FROM KFMC.dbo.contactInfo sourceContact
-        JOIN KFMC.Housing.ResidentInfo sourceResident
-          ON sourceResident.generalNo = sourceContact.userID_FK
-        LEFT JOIN Housing.ResidentContactType targetType
-          ON targetType.residentcontanctTypeID = sourceContact.contanctTypeID_FK
-        WHERE sourceContact.contanctTypeID_FK IS NOT NULL
-          AND targetType.residentcontanctTypeID IS NULL
-    )
-        THROW 53701, N'A resident contact uses a type missing from DATACORE.Housing.ResidentContactType.', 1;
-
-    DECLARE @Inserted bigint = 0;
-
-    BEGIN TRY
-        BEGIN TRANSACTION;
-
-        INSERT INTO Housing.ResidentContactInfo
-        (
-            residentInfoID_FK,
-            residentcontanctTypeID_FK,
-            residentcontactDetails,
-            residentcontactInfoStartDate,
-            residentcontactInfoEndDate,
-            residentcontactInfoNote,
-            residentcontactInfoActive,
-            entryDate,
-            entryData,
-            hostName
-        )
-        SELECT
-            targetResident.residentInfoID,
-            sourceContact.contanctTypeID_FK,
-            sourceContact.contactDetails,
-            sourceContact.contactInfoStartDate,
-            sourceContact.contactInfoEndDate,
-            NULL,
-            sourceContact.contactInfoActive,
-            sourceContact.entryDate,
-            [MoveData].[fn_MapEntryData](sourceContact.entryData),
-            [MoveData].[fn_MapHostName](sourceContact.hostName, sourceContact.entryData)
-        FROM KFMC.dbo.contactInfo sourceContact
-        JOIN KFMC.Housing.ResidentInfo sourceResident
-          ON sourceResident.generalNo = sourceContact.userID_FK
+﻿CREATE PROCEDURE [MoveData].[usp_MigrateResidentContacts]     @RollbackAfterTest bit = 1 AS BEGIN     SET NOCOUNT ON;     SET XACT_ABORT ON;      IF NOT EXISTS (SELECT 1 FROM Housing.ResidentInfo)         THROW 53700, N'Run MoveData.usp_MigrateResidents before migrating resident contacts.', 1;      IF EXISTS     (         SELECT 1         FROM KFMC.dbo.contactInfo sourceContact         JOIN KFMC.Housing.ResidentInfo sourceResident
+          ON sourceResident.generalNo=sourceContact.userID_FK
+         AND sourceResident.residentInfoActive=1
+        JOIN Housing.ResidentInfo eligibleTarget
+          ON eligibleTarget.residentInfoID=TRY_CONVERT(bigint,sourceResident.residentInfoID)
+         AND eligibleTarget.residentInfoActive=1         LEFT JOIN Housing.ResidentContactType targetType           ON targetType.residentcontanctTypeID = sourceContact.contanctTypeID_FK         WHERE sourceContact.contanctTypeID_FK IS NOT NULL           AND targetType.residentcontanctTypeID IS NULL     )         THROW 53701, N'A resident contact uses a type missing from DATACORE.Housing.ResidentContactType.', 1;      DECLARE @Inserted bigint = 0;      BEGIN TRY         BEGIN TRANSACTION;          INSERT INTO Housing.ResidentContactInfo         (             residentInfoID_FK,             residentcontanctTypeID_FK,             residentcontactDetails,             residentcontactInfoStartDate,             residentcontactInfoEndDate,             residentcontactInfoNote,             residentcontactInfoActive,             entryDate,             entryData,             hostName         )         SELECT             targetResident.residentInfoID,             sourceContact.contanctTypeID_FK,             sourceContact.contactDetails,             sourceContact.contactInfoStartDate,             sourceContact.contactInfoEndDate,             NULL,             sourceContact.contactInfoActive,             sourceContact.entryDate,             [MoveData].[fn_MapEntryData](sourceContact.entryData),             [MoveData].[fn_MapHostName](sourceContact.hostName, sourceContact.entryData)         FROM KFMC.dbo.contactInfo sourceContact         JOIN KFMC.Housing.ResidentInfo sourceResident
+          ON sourceResident.generalNo=sourceContact.userID_FK
+         AND sourceResident.residentInfoActive=1
         JOIN Housing.ResidentInfo targetResident
-          ON targetResident.residentInfoID = CONVERT(bigint, sourceResident.residentInfoID)
-        WHERE NOT EXISTS
-        (
-            SELECT 1
-            FROM Housing.ResidentContactInfo targetContact
-            WHERE targetContact.residentInfoID_FK = targetResident.residentInfoID
-              AND ISNULL(targetContact.residentcontanctTypeID_FK, -1) =
-                  ISNULL(sourceContact.contanctTypeID_FK, -1)
-              AND ISNULL(targetContact.residentcontactDetails, N'') =
-                  ISNULL(sourceContact.contactDetails, N'')
-              AND ISNULL(targetContact.residentcontactInfoStartDate, CONVERT(datetime, '19000101', 112)) =
-                  ISNULL(sourceContact.contactInfoStartDate, CONVERT(datetime, '19000101', 112))
-              AND ISNULL(targetContact.residentcontactInfoEndDate, CONVERT(datetime, '19000101', 112)) =
-                  ISNULL(sourceContact.contactInfoEndDate, CONVERT(datetime, '19000101', 112))
-              AND ISNULL(targetContact.residentcontactInfoActive, 0) =
-                  ISNULL(sourceContact.contactInfoActive, 0)
-        );
-
-        SET @Inserted = @@ROWCOUNT;
-
-        SELECT
-            @RollbackAfterTest RollbackAfterTest,
-            @Inserted ResidentContactsInserted,
-            (SELECT COUNT_BIG(*) FROM Housing.ResidentContactInfo) TargetResidentContactsTotal,
-            (SELECT COUNT_BIG(*)
-             FROM KFMC.dbo.contactInfo sourceContact
+          ON targetResident.residentInfoID=TRY_CONVERT(bigint,sourceResident.residentInfoID)
+         AND targetResident.residentInfoActive=1         WHERE NOT EXISTS         (             SELECT 1             FROM Housing.ResidentContactInfo targetContact             WHERE targetContact.residentInfoID_FK = targetResident.residentInfoID               AND ISNULL(targetContact.residentcontanctTypeID_FK, -1) =                   ISNULL(sourceContact.contanctTypeID_FK, -1)               AND ISNULL(targetContact.residentcontactDetails, N'') =                   ISNULL(sourceContact.contactDetails, N'')               AND ISNULL(targetContact.residentcontactInfoStartDate, CONVERT(datetime, '19000101', 112)) =                   ISNULL(sourceContact.contactInfoStartDate, CONVERT(datetime, '19000101', 112))               AND ISNULL(targetContact.residentcontactInfoEndDate, CONVERT(datetime, '19000101', 112)) =                   ISNULL(sourceContact.contactInfoEndDate, CONVERT(datetime, '19000101', 112))               AND ISNULL(targetContact.residentcontactInfoActive, 0) =                   ISNULL(sourceContact.contactInfoActive, 0)         );          SET @Inserted = @@ROWCOUNT;          SELECT             @RollbackAfterTest RollbackAfterTest,             @Inserted ResidentContactsInserted,             (SELECT COUNT_BIG(*) FROM Housing.ResidentContactInfo) TargetResidentContactsTotal,             (SELECT COUNT_BIG(*)              FROM KFMC.dbo.contactInfo sourceContact
              JOIN KFMC.Housing.ResidentInfo sourceResident
-               ON sourceResident.generalNo = sourceContact.userID_FK) SourceResidentContacts,
-            (SELECT COUNT_BIG(*)
-             FROM KFMC.dbo.contactInfo sourceContact
-             WHERE NOT EXISTS
-             (
-                 SELECT 1 FROM KFMC.Housing.ResidentInfo sourceResident
-                 WHERE sourceResident.generalNo = sourceContact.userID_FK
-             )) ExcludedNonResidentContacts,
-            (SELECT COUNT_BIG(*) FROM Housing.ResidentContactInfo
-             WHERE residentcontactInfoActive = 1) ActiveResidentContacts,
-            (SELECT COUNT_BIG(*) FROM Housing.ResidentContactInfo
-             WHERE ISNULL(residentcontactInfoActive, 0) = 0) InactiveResidentContacts;
-
-        IF @RollbackAfterTest = 1 ROLLBACK TRANSACTION;
-        ELSE COMMIT TRANSACTION;
-    END TRY
-    BEGIN CATCH
-        IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
-        THROW;
-    END CATCH;
-END;
+               ON sourceResident.generalNo=sourceContact.userID_FK
+              AND sourceResident.residentInfoActive=1
+             JOIN Housing.ResidentInfo eligibleTarget
+               ON eligibleTarget.residentInfoID=TRY_CONVERT(bigint,sourceResident.residentInfoID)
+              AND eligibleTarget.residentInfoActive=1) SourceResidentContacts,             (SELECT COUNT_BIG(*)              FROM KFMC.dbo.contactInfo sourceContact              WHERE NOT EXISTS              (                  SELECT 1 FROM KFMC.Housing.ResidentInfo sourceResident                  WHERE sourceResident.generalNo = sourceContact.userID_FK              )) ExcludedNonResidentContacts,             (SELECT COUNT_BIG(*) FROM Housing.ResidentContactInfo              WHERE residentcontactInfoActive = 1) ActiveResidentContacts,             (SELECT COUNT_BIG(*) FROM Housing.ResidentContactInfo              WHERE ISNULL(residentcontactInfoActive, 0) = 0) InactiveResidentContacts;          IF @RollbackAfterTest = 1 ROLLBACK TRANSACTION;         ELSE COMMIT TRANSACTION;     END TRY     BEGIN CATCH         IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;         THROW;     END CATCH; END;

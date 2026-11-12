@@ -1,14 +1,18 @@
-﻿CREATE VIEW [dbo].[V_GetFullSystemUsersDetails]
+﻿
+CREATE VIEW [dbo].[V_GetFullSystemUsersDetails]
 AS
 WITH LastUserDetails AS
 (
     SELECT
         ud.*,
         ROW_NUMBER() OVER
-        (
-            PARTITION BY ud.usersID_FK
-            ORDER BY ud.entryDate DESC, ud.usersDetailsID DESC
-        ) AS rn
+(
+    PARTITION BY ud.usersID_FK
+    ORDER BY
+        CASE WHEN ud.userActive = 1 THEN 0 ELSE 1 END,
+        ud.entryDate DESC,
+        ud.usersDetailsID DESC
+) AS rn
     FROM dbo.UsersDetails ud
 ),
 LastEntryUserDetails AS
@@ -18,7 +22,10 @@ LastEntryUserDetails AS
         ROW_NUMBER() OVER
         (
             PARTITION BY eud.usersID_FK
-            ORDER BY eud.entryDate DESC, eud.usersDetailsID DESC
+            ORDER BY
+    CASE WHEN eud.userActive = 1 THEN 0 ELSE 1 END,
+    eud.entryDate DESC,
+    eud.usersDetailsID DESC
         ) AS rn
     FROM dbo.UsersDetails eud
 ),
@@ -70,7 +77,17 @@ SELECT
     ua.UsersAuthTypeName_A,
 
     -- الحالة الحالية
-    lud.userActive,
+lud.userActive,
+
+-- صلاحية عرض جميع الإدارات
+CAST(
+    CASE
+        WHEN lud.userActive = 1
+         AND lud.ShowFullDashboard = 1
+        THEN 1
+        ELSE 0
+    END
+AS BIT) AS ShowFullDashboard,
     CASE
         WHEN lud.userActive = 1 THEN N'نشط'
         WHEN lud.userActive = 0 THEN N'معطل'

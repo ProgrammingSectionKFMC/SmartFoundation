@@ -45,11 +45,8 @@ SELECT
     ISNULL(gf.LastActionTypeID, 8) AS LastAction
 INTO #building
 FROM Housing.V_GetGeneralListForBuilding gf
-LEFT JOIN Housing.V_LastActionForBuilding v
-    ON gf.LastActionID = v.buildingActionID
-WHERE gf.buildingUtilityTypeID_FK IN (1,11)
-and gf.BuildingIdaraID = @idaraID
-;
+WHERE gf.buildingUtilityTypeID_FK IN (1, 11)
+  AND gf.BuildingIdaraID = @idaraID;
 
 CREATE CLUSTERED INDEX IX_building_LastAction
     ON #building (LastAction);

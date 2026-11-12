@@ -86,9 +86,12 @@
     [SplitDate]              DATETIME         NULL,
     [SplitBy]                NVARCHAR (20)    NULL,
     [CanceledDate]           DATETIME         NULL,
+    [RentCalculationReason]  NVARCHAR (250)   NULL,
     CONSTRAINT [PK_Bills] PRIMARY KEY CLUSTERED ([BillsID] ASC),
     CONSTRAINT [FK_Bills_ParentBills] FOREIGN KEY ([ParentBillsID_FK]) REFERENCES [Housing].[Bills] ([BillsID])
 );
+
+
 
 
 

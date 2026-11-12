@@ -47,7 +47,11 @@ BEGIN
         FromDate date NOT NULL,
         ToDate date NOT NULL,
         Amount decimal(18,2) NOT NULL,
-        SourceEntryData nvarchar(40) NULL
+        SourceEntryData nvarchar(40) NULL,
+        -- Migration-only audit fields: detect uncovered historical rent periods.
+        ExpectedRentDays30 int NULL,
+        CoveredRentDays30 int NULL,
+        RentCalculationReason nvarchar(250) NULL
     );
 
     ;WITH OccupancyBase AS
@@ -65,6 +69,10 @@ BEGIN
         FROM [KFMC].[Housing].[BuildingAction] actionRow
         JOIN [KFMC].[Housing].[ResidentInfo] resident
           ON resident.[generalNo] = actionRow.[generalNo_FK]
+         AND resident.residentInfoActive=1
+        JOIN Housing.ResidentInfo eligibleTarget
+          ON eligibleTarget.residentInfoID=TRY_CONVERT(bigint,resident.residentInfoID)
+         AND eligibleTarget.residentInfoActive=1
         JOIN [KFMC].[Housing].[BuildingDetails] building
           ON LTRIM(RTRIM(building.[buildingDetailsNo])) = LTRIM(RTRIM(actionRow.[buildingDetailsNo]))
         OUTER APPLY
@@ -109,23 +117,26 @@ BEGIN
                 WHEN NextOccupancyDate IS NOT NULL AND DATEADD(day, -1, NextOccupancyDate) < @HistoricalEndDate
                     THEN DATEADD(day, -1, NextOccupancyDate)
                 ELSE @HistoricalEndDate
-            END AS EndDate
+            END AS EndDate,
+            -- All historical rent billing starts on or after 2017-10-01.
+-- The occupancy date applies when it is later than this cutoff.
+@RentChargeStartDate AS RentChargeStartForCycle
         FROM OccupancyBase
     ),
     Months AS
     (
         SELECT *,
             CASE
-                WHEN OccupancyDate < @RentChargeStartDate THEN @RentChargeStartDate
+                WHEN OccupancyDate < RentChargeStartForCycle THEN RentChargeStartForCycle
                 ELSE DATEFROMPARTS(YEAR(OccupancyDate), MONTH(OccupancyDate), 1)
             END AS MonthStart
         FROM OccupancyPeriods
         WHERE OccupancyDate <= EndDate
-          AND EndDate >= @RentChargeStartDate
+          AND EndDate >= RentChargeStartForCycle
         UNION ALL
         SELECT buildingActionID, generalNo_FK, residentInfoID, buildingDetailsID,
                buildingDetailsNo, OccupancyDate, ExitDate, NextOccupancyDate,
-               SourceEntryData, EndDate,
+               SourceEntryData, EndDate, RentChargeStartForCycle,
                DATEADD(month, 1, MonthStart)
         FROM Months
         WHERE DATEADD(month, 1, MonthStart) <= EndDate
@@ -143,8 +154,8 @@ BEGIN
             billPeriod.*,
             charge.ChargeTypeID,
             CASE
-                WHEN charge.ChargeTypeID = 1 AND billPeriod.BillFrom < @RentChargeStartDate
-                    THEN @RentChargeStartDate
+                WHEN charge.ChargeTypeID = 1 AND billPeriod.BillFrom < billPeriod.RentChargeStartForCycle
+                    THEN billPeriod.RentChargeStartForCycle
                 WHEN charge.ChargeTypeID = 3 AND billPeriod.BillFrom < @WaterChargeStartDate
                     THEN @WaterChargeStartDate
                 ELSE billPeriod.BillFrom
@@ -152,7 +163,7 @@ BEGIN
             billPeriod.BillTo AS ChargeBillTo
         FROM BillPeriods billPeriod
         CROSS JOIN (VALUES (1), (3)) charge(ChargeTypeID)
-        WHERE (charge.ChargeTypeID = 1 AND billPeriod.BillTo >= @RentChargeStartDate)
+        WHERE (charge.ChargeTypeID = 1 AND billPeriod.BillTo >= billPeriod.RentChargeStartForCycle)
            OR (charge.ChargeTypeID = 3 AND billPeriod.BillTo >= @WaterChargeStartDate)
     ),
     Calculated AS
@@ -171,7 +182,8 @@ BEGIN
     (
         ChargeTypeID, BillTypeID, ResidentInfoID, GeneralNo, BuildingDetailsID,
         BuildingDetailsNo, PeriodMonth, PeriodYear, FromDate, ToDate, Amount,
-        SourceEntryData
+        SourceEntryData, ExpectedRentDays30, CoveredRentDays30,
+        RentCalculationReason
     )
     SELECT
         calculation.ChargeTypeID,
@@ -180,19 +192,127 @@ BEGIN
         CONVERT(bigint, calculation.residentInfoID), CONVERT(bigint, calculation.generalNo_FK),
         CONVERT(bigint, calculation.buildingDetailsID), calculation.buildingDetailsNo,
         MONTH(calculation.MonthStart), YEAR(calculation.MonthStart),
-        calculation.ChargeBillFrom, calculation.ChargeBillTo,
+        CASE WHEN calculation.ChargeTypeID = 1
+                   AND tariffStats.TotalTariffRows > 0
+             THEN tariffWindow.EffectiveFrom
+             ELSE calculation.ChargeBillFrom END,
+        CASE WHEN calculation.ChargeTypeID = 1
+                   AND tariffStats.TotalTariffRows > 0
+             THEN tariffWindow.EffectiveTo
+             ELSE calculation.ChargeBillTo END,
         CASE calculation.ChargeTypeID
             WHEN 1 THEN ISNULL(rent.RentForMonth, 0)
             WHEN 3 THEN CAST((@WaterMonthlyAmount / 30.0) * calculation.Days30 AS decimal(18,2))
         END,
-        calculation.SourceEntryData
+        calculation.SourceEntryData,
+        CASE WHEN calculation.ChargeTypeID = 1 THEN calculation.Days30 END,
+        CASE WHEN calculation.ChargeTypeID = 1 THEN rent.Days30InMonth END,
+        CASE
+            WHEN calculation.ChargeTypeID <> 1 THEN NULL
+            WHEN tariffStats.TotalTariffRows = 0 THEN N'إيجار صفر: لا توجد أي تعرفة إيجار مسجلة للمبنى'
+            WHEN ISNULL(rent.RentForMonth, 0) = 0 THEN N'إيجار صفر وفق تعرفة مسجلة بقيمة صفر'
+            WHEN ISNULL(rent.Days30InMonth, 0) < calculation.Days30
+                THEN N'احتساب إيجار جزئي من الشهر وفق تواريخ سريان التعرفة'
+            ELSE NULL
+        END
     FROM Calculated calculation
     OUTER APPLY [Housing].[fn_CalcBuildingRent_ForOneMonth]
     (
         CONVERT(int, calculation.buildingDetailsID), calculation.OccupancyDate,
         YEAR(calculation.MonthStart), MONTH(calculation.MonthStart), calculation.EndDate
     ) rent
+    -- A building with no tariff ever gets 0-SAR monthly invoices.
+    -- For a building with tariff history, issue invoices ONLY in effective tariff months.
+    OUTER APPLY
+    (
+        SELECT COUNT_BIG(*) AS TotalTariffRows
+        FROM Housing.BuildingRent tr
+        WHERE tr.buildingDetailsID_FK = calculation.BuildingDetailsID
+    ) tariffStats
+    -- Aggregate ONLY tariff-table expressions; apply outer invoice bounds
+    -- separately to avoid SQL Server Msg 8124 (outer reference in MIN/MAX).
+    OUTER APPLY
+    (
+        SELECT
+            MIN(CAST(tr.buildingRentStartDate AS date)) AS FirstEffectiveStart,
+            MAX(COALESCE(CAST(tr.buildingRentEndDate AS date),
+                         CONVERT(date, '99991231', 112))) AS LastEffectiveEnd
+        FROM Housing.BuildingRent tr
+        WHERE tr.buildingDetailsID_FK = calculation.BuildingDetailsID
+          AND tr.buildingRentStartDate IS NOT NULL
+          AND CAST(tr.buildingRentStartDate AS date) <= calculation.ChargeBillTo
+          AND (tr.buildingRentEndDate IS NULL
+               OR CAST(tr.buildingRentEndDate AS date) >= calculation.ChargeBillFrom)
+    ) tariffBounds
+    OUTER APPLY
+    (
+        SELECT
+            CASE WHEN tariffBounds.FirstEffectiveStart > calculation.ChargeBillFrom
+                 THEN tariffBounds.FirstEffectiveStart
+                 ELSE calculation.ChargeBillFrom END AS EffectiveFrom,
+            CASE WHEN tariffBounds.LastEffectiveEnd < calculation.ChargeBillTo
+                 THEN tariffBounds.LastEffectiveEnd
+                 ELSE calculation.ChargeBillTo END AS EffectiveTo
+    ) tariffWindow
+    -- WATER stays exactly as before; rent has two distinct behaviors:
+    --   no tariff records: monthly 0-SAR invoice + explanation;
+    --   tariff history: only months with effective tariff days are invoiced.
+    WHERE calculation.ChargeTypeID <> 1
+       OR tariffStats.TotalTariffRows = 0
+       OR ISNULL(rent.Days30InMonth, 0) > 0
     OPTION (MAXRECURSION 0);
+
+    /* Resident-specific historical bills must belong to a migrated active source
+       resident. Vacancy-derived bills (ResidentInfoID NULL) remain building-only
+       and must use the complete source occupancy history for vacancy boundaries. */
+    IF EXISTS
+    (
+        SELECT 1
+        FROM #HistoricalBills b
+        WHERE b.ResidentInfoID IS NOT NULL
+          AND NOT EXISTS
+          (
+              SELECT 1 FROM KFMC.Housing.ResidentInfo src
+              JOIN Housing.ResidentInfo tgt
+                ON tgt.residentInfoID=TRY_CONVERT(bigint,src.residentInfoID)
+               AND tgt.residentInfoActive=1
+              WHERE src.residentInfoActive=1
+                AND TRY_CONVERT(bigint,src.residentInfoID)=b.ResidentInfoID
+                AND TRY_CONVERT(bigint,src.generalNo)=b.GeneralNo
+          )
+    )
+      THROW 55018,N'An inactive or unqualified resident has historical rent/water bills staged.',1;
+
+    /* Never silently overcharge a 30/360 month when tariff changes at
+       30/31 or other boundary dates. A gapped tariff is allowed, but
+       covered charge-days cannot exceed days in the occupancy month. */
+    IF EXISTS
+    (
+        SELECT 1 FROM #HistoricalBills h
+        WHERE h.ChargeTypeID = 1
+          AND ISNULL(h.CoveredRentDays30,0) > h.ExpectedRentDays30
+    )
+    BEGIN
+        SELECT TOP (50) GeneralNo, BuildingDetailsNo, FromDate, ToDate,
+                        ExpectedRentDays30, CoveredRentDays30
+        FROM #HistoricalBills
+        WHERE ChargeTypeID=1
+          AND ISNULL(CoveredRentDays30,0) > ExpectedRentDays30
+        ORDER BY GeneralNo,FromDate;
+        THROW 55008,
+            N'Historical rent tariff ranges overcount 30/360 days. Review rate changes and calculation before migration.',
+            1;
+    END;
+
+    /* Approved rent tariff policy (2026-11-07):
+       - No BuildingRent rows at all: generate a zero-amount rent invoice every
+         historical occupancy month, with an explicit reason.
+       - At least one BuildingRent row: ONLY bill effective tariff intervals;
+         no bill before the first start date, after the final end date, or in
+         fully uncovered months. Partial months are prorated by the existing
+         time-segmented Housing.fn_CalcBuildingRent_ForOneMonth function.
+       The former 55007 missing-coverage gate is intentionally removed. */
+
     /* Explicit vacant-house water periods: never assign these rows to either resident. */
     ;WITH VacancyOccupancyBase AS
     (
@@ -346,7 +466,8 @@ BEGIN
             [PeriodMonth], [PeriodYear], [buildingDetailsNo], [buildingUtilityTypeID], [buildingDetailsID],
             [residentInfoID_FK], [generalNo_FK], [PRICE], [PRICETAX], [TotalPrice],
             [buildingRentTypeID_FK], [BillsFromDate], [BillsToDate], [BillActive],
-            [idaraID_FK], [entryDate], [entryData], [hostName]
+            [idaraID_FK], [entryDate], [entryData], [hostName],
+            [RentCalculationReason]
         )
         SELECT
             NEWID(), sourceBill.ChargeTypeID, sourceBill.BillTypeID, previousBillingPeriod.billPeriodID, billingPeriod.billPeriodID, charge.MeterServiceTypeID_FK,
@@ -374,7 +495,8 @@ BEGIN
             sourceBill.FromDate, sourceBill.ToDate, 1, @IdaraId,
             GETDATE(), entryMap.MappedEntryData,
             CASE WHEN entryMap.MappedEntryData IS NULL THEN N'Data Migration'
-                 ELSE CONCAT(N'Data Migration-', NULLIF(LTRIM(RTRIM(sourceBill.SourceEntryData)), N'')) END
+                 ELSE CONCAT(N'Data Migration-', NULLIF(LTRIM(RTRIM(sourceBill.SourceEntryData)), N'')) END,
+            sourceBill.RentCalculationReason
         FROM #HistoricalBills sourceBill
         JOIN Housing.BillChargeType charge ON charge.BillChargeTypeID=sourceBill.ChargeTypeID
         JOIN Housing.BuildingDetails targetBuilding ON targetBuilding.buildingDetailsID=sourceBill.BuildingDetailsID
@@ -411,6 +533,16 @@ BEGIN
                @InsertedRent [AvailableRentBills], @InsertedWater [AvailableWaterBills],
                (SELECT SUM(Amount) FROM #HistoricalBills WHERE ChargeTypeID = 1) [RentTotal],
                (SELECT SUM(Amount) FROM #HistoricalBills WHERE ChargeTypeID = 3) [WaterTotal];
+
+        /* Reasons are also emitted as a transparent audit result set. */
+        SELECT
+            ISNULL(RentCalculationReason, N'تعرفة سارية للفترة') AS RentCalculationReason,
+            COUNT_BIG(*) AS RentBills,
+            SUM(Amount) AS RentTotal
+        FROM #HistoricalBills
+        WHERE ChargeTypeID = 1
+        GROUP BY RentCalculationReason
+        ORDER BY RentCalculationReason;
 
         IF @RollbackAfterTest = 1 ROLLBACK TRANSACTION; ELSE COMMIT TRANSACTION;
     END TRY

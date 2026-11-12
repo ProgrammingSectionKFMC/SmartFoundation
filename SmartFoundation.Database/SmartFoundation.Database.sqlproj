@@ -817,6 +817,16 @@
     <Build Include="MoveData\Stored Procedures\usp_FinalizeVacantBuildingActions.sql" />
     <Build Include="Housing\Stored Procedures\SyncAssignPeriodHistory.sql" />
     <Build Include="Housing\Tables\BuildingPaymentExcelImportDetail.sql" />
+    <Build Include="dbo\Tables\ManagerListType.sql" />
+    <Build Include="dbo\Tables\ManagerList.sql" />
+    <Build Include="dbo\Tables\HousingExcelReview_20261108.sql" />
+    <Build Include="Housing\Views\V_WaitingList_20261111.sql" />
+    <Build Include="Housing\Views\V_GetGeneralListForBuilding_20261111.sql" />
+    <Build Include="Housing\Views\V_GetGeneralListForBuilding_20261110.sql" />
+    <Build Include="Housing\Stored Procedures\HousingHistoricalResidentSP.sql" />
+    <Build Include="Housing\Stored Procedures\HousingHistoricalResidentDL.sql" />
+    <Build Include="dbo\Stored Procedures\ManagerListSP.sql" />
+    <Build Include="dbo\Stored Procedures\ManagerListDL.sql" />
   </ItemGroup>
   <ItemGroup>
     <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\150\SqlSchemas\master.dacpac">

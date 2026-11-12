@@ -828,7 +828,19 @@ END
     --
 
     --
+     -------------------------------------------------------------------
+    --                     PAGE: ManagerList
+    -------------------------------------------------------------------
+        ELSE IF @pageName_ = 'ManagerList'
+        BEGIN
 
+                EXEC [dbo].[ManagerListDL]
+                      @pageName_                      = @pageName_
+                    , @idaraID                        = @idaraID
+                    , @entryData                      = @entrydata
+                    , @hostName                       = @hostName
+          
+        END
     --
 
 
@@ -1124,7 +1136,19 @@ ELSE IF @pageName_ = 'buildingUtilityType'
         END
 
 
+    -------------------------------------------------------------------
+    --                     PAGE: HousingHistoricalResident
+    -------------------------------------------------------------------
 
+        ELSE IF @pageName_ = N'HousingHistoricalResident'
+        BEGIN
+            EXEC [Housing].[HousingHistoricalResidentDL]
+                  @pageName_          = @pageName_
+                , @idaraID            = @idaraID
+                , @entrydata          = @entrydata
+                , @hostname           = @hostname
+                , @WaitingClassID_nvar = @parameter_01;
+        END
 
 
     -------------------------------------------------------------------
@@ -1335,6 +1359,28 @@ ELSE IF @pageName_ = 'buildingUtilityType'
                     , @hostName                       = @hostName
                     , @NationalID                      =@parameter_01
 
+
+           
+
+
+        END
+
+
+         -------------------------------------------------------------------
+    --                     PAGE: RentExemption
+    -------------------------------------------------------------------
+        ELSE IF @pageName_ = 'OtherWaitingListManagment'
+        BEGIN
+
+
+            -- One Resident Data
+
+          EXEC [Housing].[OtherWaitingListManagmentDL]
+                      @pageName_                      = @pageName_
+                    , @idaraID                        = @idaraID
+                    , @entryData                      = @entrydata
+                    , @hostName                       = @hostName
+                    
 
            
 
@@ -2418,8 +2464,31 @@ BEGIN
     -- The permission result is already returned by Masters_DataLoad.
     ---------------------------------------------------------------
 
-    IF ISNULL(@parameter_20, N'') <> N'HEADER_PERMISSION_ONLY'
-    BEGIN
+            IF ISNULL(@parameter_20, N'') = N'DASHBOARD_SCOPE_ONLY'
+        BEGIN
+            SELECT
+                  i.idaraID
+                , v.IdaraID AS TrustedIdaraID
+                , CAST(
+                    CASE WHEN v.ShowFullDashboard = 1
+                         THEN 1 ELSE 0 END
+                    AS BIT
+                  ) AS ShowFullDashboard
+            FROM dbo.V_GetFullSystemUsersDetails v
+            INNER JOIN dbo.Idara i
+                ON i.idaraShowInCommandCenter = 1
+               AND (
+                    v.ShowFullDashboard = 1
+                    OR i.idaraID = v.IdaraID
+               )
+            WHERE v.usersID = @entrydata
+              AND v.userActive = 1
+              AND v.IdaraID = @idaraID
+            ORDER BY i.idaraID;
+        END
+        ELSE IF ISNULL(@parameter_20, N'')
+            <> N'HEADER_PERMISSION_ONLY'
+        BEGIN
 
         EXEC [Housing].[HousingCommandCenterDashboardDL]
               @pageName_        = @pageName_
@@ -2441,44 +2510,6 @@ BEGIN
     END;
 
 END
-
-
-    -- ============================================================
-    --                       TICKETS MODULE
-    -- ============================================================
-    ELSE IF @pageName_ IN (N'TicketList', N'TicketDetails', N'TicketHistory', N'StatusDDL',
-                           N'ChildTickets', N'PauseSessions', N'TicketSLAs',
-                           N'QualityReviews', N'ArbitrationCases', N'TicketAttachments',
-                           N'PauseReasonDDL', N'ArbitrationReasonDDL', N'QualityReviewResultDDL',
-                           N'RequesterTypeDDL', N'TicketClassDDL', N'PriorityDDL',
-                           N'OpenArbitrations', N'PendingReviews', N'BreachedSLAs',
-                           N'TicketAdminLookup', N'ResidentDDL', N'BuildingDDL',
-                           N'TicketReasonDDL', N'TicketDescriptionTemplateDDL', N'DSDDL', N'DsdUsersDDL', N'DsdUsersAllDDL', N'ClarificationReasonDDL', N'ClarificationRequests', N'DSDTreeDDL')
-    BEGIN
-        EXEC [Tickets].[TicketDL]
-              @pageName_   = @pageName_
-            , @idaraID     = @idaraID
-            , @entryData   = @entrydata
-            , @hostName    = @hostname
-            , @filterTicketID       = @parameter_01
-            , @filterTicketNo       = @parameter_02
-            , @filterStatusID       = @parameter_03
-            , @filterServiceID      = @parameter_04
-            , @filterAssignedUserID = @parameter_05
-            , @filterDSDID          = @parameter_06;
-    END
-
-              ELSE IF @pageName_ IN (N'ServiceCatalogueList', N'RoutingRuleLookup', N'SLAPolicyLookup',
-                   N'SuggestionReview', N'ServiceDDL')
-              BEGIN
-            EXEC [Tickets].[ServiceDL]
-                  @pageName_             = @pageName_
-                , @idaraID               = @idaraID
-                , @entryData             = @entrydata
-                , @hostName              = @hostname
-                , @filterServiceID       = @parameter_01
-                , @filterTicketClassID   = @parameter_02;
-              END
 
 
     -------------------------------------------------------------------

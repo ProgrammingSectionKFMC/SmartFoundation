@@ -47,7 +47,10 @@ BEGIN
                 ,br.buildingRentStartDate
                 ,br.buildingRentEndDate
                 ,bd.IdaraId_FK
-                ,isnull(bat.buildingActionTypeBuildingAlias,N'لايوجد اجراء مسجل بالنظام') buildingActionTypeBuildingAlias
+                ,ISNULL(
+                            gf.LastActionTypeBuildingAlias,
+                            N'لايوجد اجراء مسجل بالنظام'
+                        ) AS buildingActionTypeBuildingAlias
                 ,ISNULL(serviceSummary.ElectrcityServices, 0) ElectrcityServices
                 ,ISNULL(serviceSummary.WaterServices, 0) WaterServices
                 ,ISNULL(serviceSummary.GasServices, 0) GasServices
@@ -66,9 +69,7 @@ BEGIN
             inner join [DATACORE].[Housing].[BuildingClass] bc on bd.buildingClassID_FK = bc.buildingClassID
             left  join [DATACORE].[Housing].[BuildingRent] br on bd.buildingDetailsID = br.buildingDetailsID_FK and br.buildingRentActive = 1 and br.buildingRentStartDate <= GETDATE() and (br.buildingRentEndDate >= GETDATE() or br.buildingRentEndDate is null)
             left join [DATACORE].[Housing].[BuildingRentType] brt on br.buildingRentTypeID_FK = brt.buildingRentTypeID and brt.buildingRentTypeActive =1
-            LEFT join [DATACORE].[Housing].[V_LastActionForBuilding] lb on bd.buildingDetailsID = lb.buildingDetailsID
-            left join DATACORE.Housing.BuildingAction ba on lb.buildingActionID = ba.buildingActionID and ba.buildingActionActive = 1
-            LEFT join DATACORE.Housing.BuildingActionType bat on ba.buildingActionTypeID_FK = bat.buildingActionTypeID and bat.buildingActionTypeActive = 1
+            INNER JOIN [DATACORE].[Housing].[V_GetGeneralListForBuilding] gf ON gf.buildingDetailsID = bd.buildingDetailsID
             LEFT JOIN
             (
                 SELECT

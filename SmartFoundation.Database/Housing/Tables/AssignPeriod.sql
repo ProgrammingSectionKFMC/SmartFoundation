@@ -16,6 +16,12 @@
     [entryDate]                DATETIME        CONSTRAINT [DF_AssignPeriod_entryDate] DEFAULT (getdate()) NULL,
     [entryData]                NVARCHAR (20)   NULL,
     [hostName]                 NVARCHAR (200)  NULL,
+    [IsHistoricalOccupancy]    BIT             CONSTRAINT [DF_AssignPeriod_IsHistoricalOccupancy] DEFAULT ((0)) NOT NULL,
     CONSTRAINT [PK_AssignPeriod] PRIMARY KEY CLUSTERED ([AssignPeriodID] ASC)
 );
+
+
+GO
+CREATE UNIQUE NONCLUSTERED INDEX [UX_AssignPeriod_Historical_Idara_WaitingClass]
+    ON [Housing].[AssignPeriod]([IdaraId_FK] ASC, [WaitingClassID_FK] ASC) WHERE ([IsHistoricalOccupancy]=(1));
 

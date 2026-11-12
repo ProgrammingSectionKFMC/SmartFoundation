@@ -1,11 +1,12 @@
-﻿CREATE VIEW [dbo].[V_DSD]
+﻿
+CREATE VIEW [dbo].[V_DSD]
 AS
 SELECT       dsd.DSDID, dp.deptID, dp.deptName_A, dp.deptName_E, dp.deptDescription, s.secID, s.secName_A, s.secName_E, s.secDescription, d.divID, d.divName_A, d.divName_E, d.divDescription
 FROM            dbo.DeptSecDiv AS dsd INNER JOIN
                          dbo.Department AS dp ON dsd.deptID_FK = dp.deptID INNER JOIN
                          dbo.Section AS s ON dsd.secID_FK = s.secID INNER JOIN
                          dbo.Divison AS d ON dsd.divID_FK = d.divID
-WHERE        (1 = 1) AND (dp.deptStartDate IS NOT NULL) AND (dp.deptEndDate IS NULL) AND (dp.deptActive = 1) AND (dp.idaraID_FK = 1) AND (s.secStartDate IS NOT NULL) AND (s.secEndDate IS NULL) AND (s.secActive = 1) AND 
+WHERE        (1 = 1) AND (dp.deptStartDate IS NOT NULL) AND (dp.deptEndDate IS NULL) AND (dp.deptActive = 1)  AND (s.secStartDate IS NOT NULL) AND (s.secEndDate IS NULL) AND (s.secActive = 1) AND 
                          (d.divStartDate IS NOT NULL) AND (d.divEndDate IS NULL) AND (d.divActive = 1)
 
 GO

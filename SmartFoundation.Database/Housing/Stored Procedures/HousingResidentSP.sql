@@ -46,6 +46,11 @@ BEGIN
     DECLARE @buildingDetailsNo nvarchar(200) 
     set @buildingDetailsNo = (select b.buildingDetailsNo from Housing.V_GetGeneralListForBuilding b where b.buildingDetailsID = @buildingDetailsID);
 
+
+    DECLARE @ActionTypeID int 
+    set @ActionTypeID = (select w.ActionTypeID from Housing.V_WaitingList w where w.ActionID = @ActionID)
+    
+
     Declare @HasMeterService int
     set @HasMeterService =(select count(*) 
     from  Housing.MeterForBuilding m 
@@ -69,7 +74,7 @@ BEGIN
    
 
 
-         IF @Action IN(N'CustdyRecord')
+         IF @Action IN(N'HOUSINGESRESIDENTSCUSTDY')
         BEGIN
          
             IF NULLIF(LTRIM(RTRIM(@Notes)), N'') IS NULL
@@ -255,7 +260,38 @@ BEGIN
             IF @OccupancyLockResult < 0
                 THROW 50001, N'تجري معالجة أخرى للمنزل؛ يرجى إعادة المحاولة.', 1;
 
+                ------------------------------------------------------------
+-- منع تنفيذ تسكينين متزامنين للمستفيد نفسه
+-- عبر جميع الإدارات والمنازل
+------------------------------------------------------------
+DECLARE @ResidentOccupancyID BIGINT =
+    TRY_CONVERT(BIGINT, NULLIF(@residentInfoID, N''));
 
+IF @ResidentOccupancyID IS NULL OR @ResidentOccupancyID <= 0
+BEGIN
+    THROW 50001, N'رقم المستفيد غير صحيح', 1;
+END;
+
+DECLARE @ResidentLockResult INT;
+
+DECLARE @ResidentLockResource NVARCHAR(255) =
+    CONCAT(
+        N'Housing.ResidentOccupancy:',
+        @ResidentOccupancyID
+    );
+
+EXEC @ResidentLockResult = sys.sp_getapplock
+      @Resource = @ResidentLockResource
+    , @LockMode = N'Exclusive'
+    , @LockOwner = N'Transaction'
+    , @LockTimeout = 10000;
+
+IF @ResidentLockResult < 0
+BEGIN
+    THROW 50001,
+          N'تجري معالجة تسكين أخرى للمستفيد؛ يرجى إعادة المحاولة.',
+          1;
+END;
 
                  IF EXISTS
 (
@@ -316,13 +352,24 @@ END;
                 , @CurrentAssignActionTypeID INT
                 , @BuildingStateBeforeAssign INT;
 
-SET @OccupentDateValue =
-    TRY_CONVERT(DATE, NULLIF(@OccupentDate, N''));
+--SET @OccupentDateValue =
+--    TRY_CONVERT(DATE, NULLIF(@OccupentDate, N''));
 
-IF @OccupentDateValue IS NULL
-BEGIN
-    ;THROW 50001, N'تاريخ التسكين غير صحيح', 1;
-END;
+--IF @OccupentDateValue IS NULL
+--BEGIN
+--    ;THROW 50001, N'تاريخ التسكين غير صحيح', 1;
+--END;
+
+------------------------------------------------------------
+-- التسكين العادي: تاريخ يوم التنفيذ من SQL Server
+-- التسكين التاريخي مخصص للصفحة الاستثنائية
+------------------------------------------------------------
+DECLARE @SqlOccupentDate DATE = CAST(GETDATE() AS DATE);
+
+SET @OccupentDateValue = @SqlOccupentDate;
+
+SET @OccupentDate =
+    CONVERT(NVARCHAR(10), @SqlOccupentDate, 23);
 
 ------------------------------------------------------------
 -- الشرط الأول:
@@ -453,21 +500,56 @@ BEGIN
     ;THROW 50001, @PreviousOccupancyMessage, 1;
 END;
 
+
+
+
 ------------------------------------------------------------
--- الوصول من آخر حركة حالية 47 إلى حركة التخصيص الحالية
---
--- التخصيص الأول  = 38
--- التخصيص الثاني = 40
+-- تحديد مسار التسكين من سجل الانتظار الفعلي
+-- القوائم الرئيسية: 38/40
+-- القوائم الجانبية: انتقال مباشر إلى 45
+------------------------------------------------------------
+DECLARE @IsSideWaitingList BIT = NULL;
+
+SELECT @IsSideWaitingList =
+    CASE
+        WHEN w.ActionTypeID = 7
+          OR (
+                w.WaitingClassID IS NOT NULL
+                AND w.WaitingClassID NOT IN (1, 2, 3, 4, 11)
+             )
+        THEN 1
+        ELSE 0
+    END
+FROM Housing.V_WaitingList w
+WHERE w.ActionID = @ActionID
+  AND w.residentInfoID =
+      TRY_CONVERT(BIGINT, @residentInfoID)
+  AND w.buildingDetailsID =
+      TRY_CONVERT(BIGINT, @buildingDetailsID)
+  AND w.IdaraId = @IdaraID_INT
+  AND w.LastActionID =
+      TRY_CONVERT(BIGINT, @LastActionID)
+  AND w.LastActionTypeID = 47;
+
+IF @IsSideWaitingList IS NULL
+BEGIN
+    THROW 50001,
+        N'بيانات طلب التسكين غير متطابقة أو تغيرت حالته',
+        1;
+END;
+
+------------------------------------------------------------
+-- تتبع سلسلة الإجراءات الحالية
 ------------------------------------------------------------
 ;WITH CurrentActionChain AS
 (
     SELECT
-          ba.buildingActionID
-        , ba.buildingActionTypeID_FK
-        , ba.buildingActionParentID
-        , ba.buildingDetailsID_FK
-        , ba.residentInfoID_FK
-        , 0 AS ChainLevel
+        ba.buildingActionID,
+        ba.buildingActionTypeID_FK,
+        ba.buildingActionParentID,
+        ba.buildingDetailsID_FK,
+        ba.residentInfoID_FK,
+        0 AS ChainLevel
     FROM Housing.BuildingAction ba
     WHERE ba.buildingActionID =
           TRY_CONVERT(BIGINT, @LastActionID)
@@ -481,12 +563,12 @@ END;
     UNION ALL
 
     SELECT
-          parentBa.buildingActionID
-        , parentBa.buildingActionTypeID_FK
-        , parentBa.buildingActionParentID
-        , parentBa.buildingDetailsID_FK
-        , parentBa.residentInfoID_FK
-        , child.ChainLevel + 1
+        parentBa.buildingActionID,
+        parentBa.buildingActionTypeID_FK,
+        parentBa.buildingActionParentID,
+        parentBa.buildingDetailsID_FK,
+        parentBa.residentInfoID_FK,
+        child.ChainLevel + 1
     FROM Housing.BuildingAction parentBa
     INNER JOIN CurrentActionChain child
         ON parentBa.buildingActionID =
@@ -500,57 +582,70 @@ END;
       AND parentBa.buildingActionActive = 1
 )
 SELECT TOP (1)
-      @CurrentAssignActionID = buildingActionID
-    , @CurrentAssignActionTypeID = buildingActionTypeID_FK
+    @CurrentAssignActionID = buildingActionID,
+    @CurrentAssignActionTypeID = buildingActionTypeID_FK
 FROM CurrentActionChain
-WHERE buildingActionTypeID_FK IN (38, 40)
+WHERE
+    (
+        @IsSideWaitingList = 0
+        AND buildingActionTypeID_FK IN (38, 40)
+    )
+    OR
+    (
+        @IsSideWaitingList = 1
+        AND buildingActionTypeID_FK = 45
+        AND buildingActionParentID = @ActionID
+    )
 ORDER BY ChainLevel ASC
 OPTION (MAXRECURSION 10);
 
 IF @CurrentAssignActionID IS NULL
-   OR @CurrentAssignActionTypeID NOT IN (38, 40)
 BEGIN
-    ;THROW 50001,
-        N'تعذر تحديد حركة التخصيص المرتبطة بطلب التسكين',
+    THROW 50001,
+        N'تعذر تحديد حركة التخصيص أو النقل لإجراءات التسكين المرتبطة بالطلب',
         1;
 END;
 
-------------------------------------------------------------
--- الشرط الثاني:
--- آخر حالة فعلية للمنزل قبل التخصيص الحالي يجب أن تكون حالة جاهزية.
-------------------------------------------------------------
-SELECT TOP (1)
-    @BuildingStateBeforeAssign =
-        previousAction.buildingActionTypeID_FK
-FROM Housing.BuildingAction previousAction
-WHERE previousAction.buildingDetailsID_FK =
-      TRY_CONVERT(BIGINT, @buildingDetailsID)
-  AND previousAction.buildingActionActive = 1
-  AND previousAction.buildingActionID <
-      @CurrentAssignActionID
 
-  AND previousAction.buildingActionTypeID_FK IN (5, 39, 41, 42, 43, 44)
-ORDER BY previousAction.buildingActionID DESC;
+------------------------------------------------------------
+-- منع وجود مسار تسكين جارٍ آخر للمستفيد
+-- مع احترام أولوية القوائم الرئيسية على الجانبية
+------------------------------------------------------------
+IF EXISTS
+(
+    SELECT 1
+    FROM Housing.V_WaitingList otherW
+    WHERE otherW.residentInfoID = @ResidentOccupancyID
+      AND otherW.ActionID <> @ActionID
+      AND
+      (
+          -- موافقة أو إجراءات تسكين جارية على سجل آخر
+          otherW.LastActionTypeID IN (45, 46, 47)
 
-IF @BuildingStateBeforeAssign IS NULL
-   OR @BuildingStateBeforeAssign NOT IN (5, 39, 41, 42, 43, 44)
+          OR
+
+          -- القوائم الرئيسية لها الأولوية على الجانبية
+          (
+              @IsSideWaitingList = 1
+              AND otherW.WaitingClassID IN (1, 2, 3, 4, 11)
+              AND otherW.LastActionTypeID IN (38, 40)
+          )
+      )
+)
 BEGIN
-    DECLARE @BuildingStateMessage NVARCHAR(1000);
-
-    SET @BuildingStateMessage =
-        CONCAT(
-              N'لا يمكن اعتماد التسكين؛ المنزل لم يكن جاهزاً للسكن عند تخصيصه. آخر حالة قبل التخصيص: '
-            , ISNULL(
-                  CONVERT(
-                      NVARCHAR(20),
-                      @BuildingStateBeforeAssign
-                  ),
-                  N'غير موجودة'
-              )
-        );
-
-    ;THROW 50001, @BuildingStateMessage, 1;
+    THROW 50001,
+          N'لا يمكن اعتماد التسكين؛ للمستفيد إجراءات تسكين جارية على سجل آخر أو تخصيص رئيسي قائم يمنع التسكين الجانبي.',
+          1;
 END;
+------------------------------------------------------------
+-- القوائم الجانبية:
+-- تم فحص أهلية المنزل عند إنشاء الحركة 45
+-- بواسطة OtherWaitingListSP.
+-- لا تشترط وجود تخصيص 38/40.
+--
+-- تستمر فحوص الإشغال والتعارض والحالة 47 الموجودة
+-- بعد هذا المقطع دون تعديل.
+------------------------------------------------------------
 
 ------------------------------------------------------------
 -- التأكد من عدم تخصيص أو تسكين المنزل لمستفيد آخر
@@ -980,6 +1075,259 @@ BEGIN
             1;
     END;
 
+
+    ------------------------------------------------------------
+-- إلغاء التسكين الجانبي وإعادة المستفيد لقائمة الانتظار
+------------------------------------------------------------
+DECLARE @IsSideCancellation BIT = 0;
+DECLARE @SideOriginalWaitingClassID INT = NULL;
+
+SELECT @SideOriginalWaitingClassID = w.WaitingClassID,
+       @IsSideCancellation =
+    CASE
+        WHEN w.ActionTypeID = 7
+          OR (
+              w.WaitingClassID IS NOT NULL
+              AND w.WaitingClassID NOT IN (1, 2, 3, 4, 11)
+          )
+        THEN 1 ELSE 0
+    END
+FROM Housing.V_WaitingList w
+WHERE w.ActionID = @ActionID
+  AND w.residentInfoID = TRY_CONVERT(BIGINT, @residentInfoID)
+  AND w.buildingDetailsID = TRY_CONVERT(BIGINT, @buildingDetailsID)
+  AND w.IdaraId = @IdaraID_INT
+  AND w.LastActionID = TRY_CONVERT(BIGINT, @LastActionID)
+  AND w.LastActionTypeID = @CurrentActionTypeID;
+
+IF @IsSideCancellation = 1
+BEGIN
+    DECLARE @SideHouseLockResult INT;
+    DECLARE @SideResidentLockResult INT;
+    Declare @OccupancyText Nvarchar(2000);
+    set @OccupancyText = CONCAT(
+            N'Housing.Occupancy:', @IdaraID_INT,
+            N':', TRY_CONVERT(BIGINT, @buildingDetailsID))
+    EXEC @SideHouseLockResult = sys.sp_getapplock
+        @Resource = @OccupancyText
+        ,
+        @LockMode = N'Exclusive',
+        @LockOwner = N'Transaction',
+        @LockTimeout = 10000;
+
+    IF @SideHouseLockResult < 0
+        THROW 50001,
+            N'تجري معالجة أخرى للمنزل؛ يرجى إعادة المحاولة.', 1;
+            Declare @ResourceText nvarchar(2000)
+            set @ResourceText = CONCAT(
+            N'Housing.ResidentOccupancy:',
+            TRY_CONVERT(BIGINT, @residentInfoID)
+        )
+    EXEC @SideResidentLockResult = sys.sp_getapplock
+        @Resource = @ResourceText,
+        @LockMode = N'Exclusive',
+        @LockOwner = N'Transaction',
+        @LockTimeout = 10000;
+
+    IF @SideResidentLockResult < 0
+        THROW 50001,
+            N'تجري معالجة أخرى للمستفيد؛ يرجى إعادة المحاولة.', 1;
+
+    -- إعادة التحقق بعد الحصول على الأقفال
+    IF NOT EXISTS
+    (
+        SELECT 1
+        FROM Housing.V_WaitingList w
+        WHERE w.ActionID = @ActionID
+          AND w.residentInfoID = TRY_CONVERT(BIGINT, @residentInfoID)
+          AND w.buildingDetailsID = TRY_CONVERT(BIGINT, @buildingDetailsID)
+          AND w.IdaraId = @IdaraID_INT
+          AND w.LastActionID = TRY_CONVERT(BIGINT, @LastActionID)
+          AND w.LastActionTypeID = @CurrentActionTypeID
+    )
+        THROW 50001,
+            N'تغيرت حالة طلب التسكين؛ حدّث الصفحة.', 1;
+
+    IF EXISTS
+    (
+        SELECT 1
+        FROM Housing.V_Occupant o
+        WHERE o.residentInfoID = TRY_CONVERT(BIGINT, @residentInfoID)
+    )
+        THROW 50001,
+            N'لا يمكن الإلغاء بعد التسكين النهائي.', 1;
+
+    DECLARE @Side45 BIGINT = NULL;
+    DECLARE @Side46 BIGINT = NULL;
+    DECLARE @Side47 BIGINT = NULL;
+
+    ;WITH SideChain AS
+    (
+        SELECT
+            b.buildingActionID,
+            b.buildingActionParentID,
+            b.buildingActionTypeID_FK,
+            0 AS ChainLevel
+        FROM Housing.BuildingAction b
+        WHERE b.buildingActionID =
+              TRY_CONVERT(BIGINT, @LastActionID)
+          AND b.residentInfoID_FK =
+              TRY_CONVERT(BIGINT, @residentInfoID)
+          AND b.buildingDetailsID_FK =
+              TRY_CONVERT(BIGINT, @buildingDetailsID)
+          AND b.IdaraId_FK = @IdaraID_INT
+          AND b.buildingActionActive = 1
+
+        UNION ALL
+
+        SELECT
+            p.buildingActionID,
+            p.buildingActionParentID,
+            p.buildingActionTypeID_FK,
+            child.ChainLevel + 1
+        FROM Housing.BuildingAction p
+        INNER JOIN SideChain child
+            ON child.buildingActionParentID = p.buildingActionID
+        WHERE child.ChainLevel < 3
+          AND p.buildingActionTypeID_FK IN (45, 46, 47)
+          AND p.residentInfoID_FK =
+              TRY_CONVERT(BIGINT, @residentInfoID)
+          AND p.buildingDetailsID_FK =
+              TRY_CONVERT(BIGINT, @buildingDetailsID)
+          AND p.IdaraId_FK = @IdaraID_INT
+          AND p.buildingActionActive = 1
+    )
+    SELECT
+        @Side45 = MAX(
+            CASE WHEN buildingActionTypeID_FK = 45
+                       AND buildingActionParentID = @ActionID
+                 THEN buildingActionID END
+        ),
+        @Side46 = MAX(
+            CASE WHEN buildingActionTypeID_FK = 46
+                 THEN buildingActionID END
+        ),
+        @Side47 = MAX(
+            CASE WHEN buildingActionTypeID_FK = 47
+                 THEN buildingActionID END
+        )
+    FROM SideChain
+    OPTION (MAXRECURSION 4);
+
+    IF @Side45 IS NULL
+       OR (@CurrentActionTypeID = 46 AND @Side46 IS NULL)
+       OR (@CurrentActionTypeID = 47 AND @Side47 IS NULL)
+        THROW 50001,
+            N'تعذر التحقق من سلسلة التسكين الجانبية.', 1;
+
+    --------------------------------------------------------
+    -- حماية فواتير وقراءات التسكين
+    --------------------------------------------------------
+    IF @Side46 IS NOT NULL
+    BEGIN
+        UPDATE b
+        SET b.BillActive = 0,
+            b.CanceledBy = @CancelReason
+        FROM Housing.Bills b
+        INNER JOIN Housing.MeterRead mr
+            ON mr.meterReadID = b.meterReadID
+        WHERE mr.buildingActionID_FK = @Side46
+          AND mr.residentInfoID_FK =
+              TRY_CONVERT(BIGINT, @residentInfoID)
+          AND mr.buildingDetailsID =
+              TRY_CONVERT(BIGINT, @buildingDetailsID)
+          AND mr.IdaraID_FK = @IdaraID_INT
+          AND mr.meterReadTypeID_FK = 1
+          AND b.BillTypeID_FK = 1
+          AND b.BillActive = 1;
+
+        UPDATE mr
+        SET mr.meterReadActive = 0,
+            mr.CanceledBy = @CancelReason
+        FROM Housing.MeterRead mr
+        WHERE mr.buildingActionID_FK = @Side46
+          AND mr.residentInfoID_FK =
+              TRY_CONVERT(BIGINT, @residentInfoID)
+          AND mr.buildingDetailsID =
+              TRY_CONVERT(BIGINT, @buildingDetailsID)
+          AND mr.IdaraID_FK = @IdaraID_INT
+          AND mr.meterReadTypeID_FK = 1
+          AND mr.meterReadActive = 1;
+    END;
+
+    --------------------------------------------------------
+    -- إلغاء السلسلة منطقيًا، مع حفظ سجلاتها
+    --------------------------------------------------------
+    UPDATE ba
+    SET ba.buildingActionActive = 0
+    FROM Housing.BuildingAction ba
+    WHERE ba.buildingActionID IN (@Side45, @Side46, @Side47)
+      AND ba.residentInfoID_FK =
+          TRY_CONVERT(BIGINT, @residentInfoID)
+      AND ba.buildingDetailsID_FK =
+          TRY_CONVERT(BIGINT, @buildingDetailsID)
+      AND ba.IdaraId_FK = @IdaraID_INT
+      AND ba.buildingActionActive = 1;
+
+    IF @@ROWCOUNT <>
+       (1
+        + CASE WHEN @Side46 IS NULL THEN 0 ELSE 1 END
+        + CASE WHEN @Side47 IS NULL THEN 0 ELSE 1 END)
+        THROW 50001,
+            N'تعذر إلغاء سلسلة التسكين كاملة.', 1;
+
+    -- Verify that the original waiting-list registration is visible again.
+    -- 34/35 belong to inter-department transfer requests, not WAITING.
+    IF NOT EXISTS
+    (
+        SELECT 1
+        FROM Housing.V_WaitingList w
+        WHERE w.ActionID = @ActionID
+          AND w.residentInfoID = TRY_CONVERT(BIGINT, @residentInfoID)
+          AND w.IdaraId = @IdaraID_INT
+          AND (
+               w.WaitingClassID = @SideOriginalWaitingClassID
+               OR (w.WaitingClassID IS NULL AND @SideOriginalWaitingClassID IS NULL)
+          )
+          AND (
+               w.LastActionTypeID IS NULL
+               OR w.LastActionTypeID = w.ActionTypeID
+          )
+          AND (
+               w.LastActionID IS NULL
+               OR w.LastActionID = w.ActionID
+          )
+    )
+        THROW 50001,
+            N'تعذر تأكيد العودة إلى سجل الانتظار الجانبي الأصلي؛ تمت إعادة العملية دون تغيير.',
+            1;
+
+    INSERT INTO dbo.AuditLog
+    (
+        TableName, ActionType, RecordID, PerformedBy, Notes
+    )
+    VALUES
+    (
+        N'[Housing].[BuildingAction]',
+        N'CANCELHOUSINGRESIDENT',
+        @Side45,
+        @entryData,
+        CONCAT(
+            N'SIDE_WAITING_RETURN; Root=', @ActionID,
+            N'; Action45=', @Side45,
+            N'; Action46=', COALESCE(CONVERT(NVARCHAR(30), @Side46), N'NULL'),
+            N'; Action47=', COALESCE(CONVERT(NVARCHAR(30), @Side47), N'NULL'),
+            N'; Reason=', @Notes
+        )
+    );
+
+    SELECT 1 AS IsSuccessful,
+           N'تم إلغاء إجراءات التسكين وإعادة المستفيد إلى قائمة الانتظار الجانبية'
+           AS Message_;
+    RETURN;
+END;
+
+
     ------------------------------------------------------------
     -- قفل آخر حركة وإعادة التحقق وقت التنفيذ
     ------------------------------------------------------------
@@ -1106,50 +1454,61 @@ BEGIN
     -- إذا كانت الحالة 46 أو 47:
     -- إلغاء قراءات وفواتير التسكين المرتبطة بالعملية
     ------------------------------------------------------------
-    IF @CurrentActionTypeID IN (46, 47)
-    BEGIN
-        IF @MeterReadActionID IS NULL
-        BEGIN
-            ;THROW 50001,
-                N'تعذر تحديد حركة طلب قراءة عدادات التسكين',
-                1;
-        END;
+    ------------------------------------------------------------
+-- الحالة 46 يجب أن تكون مرتبطة بحركة طلب قراءة
+------------------------------------------------------------
+IF @CurrentActionTypeID = 46
+   AND @MeterReadActionID IS NULL
+BEGIN
+    THROW 50001,
+        N'تعذر تحديد حركة طلب قراءة عدادات التسكين',
+        1;
+END;
 
-        --------------------------------------------------------
-        -- منع الإلغاء الآلي إذا كانت إحدى فواتير التسكين
-        -- قد دخلت في مسير خصم أو تم تحصيلها
-        --------------------------------------------------------
-        IF EXISTS
-        (
-            SELECT 1
-            FROM Housing.Bills b
-            INNER JOIN Housing.MeterRead mr
-                ON mr.meterReadID = b.meterReadID
-            INNER JOIN Housing.BillsDeductListDetails d
-                ON d.billsID_FK = b.BillsID
-            WHERE mr.buildingActionID_FK =
-                  @MeterReadActionID
-              AND mr.residentInfoID_FK =
-                  TRY_CONVERT(BIGINT, @residentInfoID)
-              AND mr.buildingDetailsID =
-                  TRY_CONVERT(BIGINT, @buildingDetailsID)
-              AND mr.IdaraID_FK = @IdaraID_INT
-              AND mr.meterReadTypeID_FK = 1
-              AND b.BillTypeID_FK = 1
-              AND b.BillActive = 1
-              AND d.billActive = 1
-              AND
-              (
-                    ISNULL(d.billPaid, 0) = 1
-                 OR ISNULL(d.paidAmount, 0) > 0
-                 OR d.billDeductListID_FK IS NOT NULL
-              )
-        )
-        BEGIN
-            ;THROW 50001,
-                N'لا يمكن إلغاء التسكين آلياً؛ توجد فاتورة تسكين مدرجة في خصم أو تحصيل مالي',
-                1;
-        END;
+------------------------------------------------------------
+-- السماح بالحالة 45 -> 47 مباشرة عند عدم وجود عدادات
+-- مع التحقق من الأب الفعلي للحركة 47
+------------------------------------------------------------
+IF @CurrentActionTypeID = 47
+   AND @MeterReadActionID IS NULL
+BEGIN
+    IF NOT EXISTS
+    (
+        SELECT 1
+        FROM Housing.BuildingAction currentAction
+        INNER JOIN Housing.BuildingAction parentAction
+            ON parentAction.buildingActionID =
+               currentAction.buildingActionParentID
+        WHERE currentAction.buildingActionID =
+              TRY_CONVERT(BIGINT, @LastActionID)
+          AND currentAction.buildingActionTypeID_FK = 47
+          AND parentAction.buildingActionTypeID_FK = 45
+          AND currentAction.buildingActionActive = 1
+          AND parentAction.buildingActionActive = 1
+          AND currentAction.residentInfoID_FK =
+              TRY_CONVERT(BIGINT, @residentInfoID)
+          AND parentAction.residentInfoID_FK =
+              TRY_CONVERT(BIGINT, @residentInfoID)
+          AND currentAction.buildingDetailsID_FK =
+              TRY_CONVERT(BIGINT, @buildingDetailsID)
+          AND parentAction.buildingDetailsID_FK =
+              TRY_CONVERT(BIGINT, @buildingDetailsID)
+          AND currentAction.IdaraId_FK = @IdaraID_INT
+          AND parentAction.IdaraId_FK = @IdaraID_INT
+    )
+    BEGIN
+        THROW 50001,
+            N'تعذر التحقق من مسار التسكين المباشر دون عدادات',
+            1;
+    END;
+END;
+
+------------------------------------------------------------
+-- معالجة الفواتير والقراءات فقط عندما توجد حركة 46
+------------------------------------------------------------
+IF @CurrentActionTypeID IN (46, 47)
+   AND @MeterReadActionID IS NOT NULL
+BEGIN
 
         --------------------------------------------------------
         -- تعطيل فواتير التسكين المرتبطة بالقراءات فقط

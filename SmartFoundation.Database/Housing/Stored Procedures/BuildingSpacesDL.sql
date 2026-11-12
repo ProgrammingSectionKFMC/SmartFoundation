@@ -1,4 +1,4 @@
-CREATE PROCEDURE [Housing].[BuildingSpacesDL]
+﻿CREATE PROCEDURE [Housing].[BuildingSpacesDL]
     @pageName_ NVARCHAR(400),
     @idaraID INT,
     @entrydata INT,
@@ -22,9 +22,8 @@ BEGIN
     INNER JOIN [DATACORE].[Housing].[BuildingClass] bc ON bd.buildingClassID_FK = bc.buildingClassID
     LEFT JOIN [DATACORE].[Housing].[BuildingRent] br ON bd.buildingDetailsID = br.buildingDetailsID_FK AND br.buildingRentActive = 1 AND br.buildingRentStartDate <= GETDATE() AND (br.buildingRentEndDate >= GETDATE() OR br.buildingRentEndDate IS NULL)
     LEFT JOIN [DATACORE].[Housing].[BuildingRentType] brt ON br.buildingRentTypeID_FK = brt.buildingRentTypeID AND brt.buildingRentTypeActive = 1
-    LEFT JOIN [DATACORE].[Housing].[V_LastActionForBuilding] lb ON bd.buildingDetailsID = lb.buildingDetailsID
-    LEFT JOIN [DATACORE].[Housing].[BuildingAction] ba ON lb.buildingActionID = ba.buildingActionID AND ba.buildingActionActive = 1
-    LEFT JOIN [DATACORE].[Housing].[BuildingActionType] bat ON ba.buildingActionTypeID_FK = bat.buildingActionTypeID AND bat.buildingActionTypeActive = 1
+    INNER JOIN [DATACORE].[Housing].[V_GetGeneralListForBuilding] gf
+    ON gf.buildingDetailsID = bd.buildingDetailsID
     WHERE bd.buildingDetailsActive = 1
       AND m.militaryLocationActive = 1
       AND bt.buildingTypeActive = 1

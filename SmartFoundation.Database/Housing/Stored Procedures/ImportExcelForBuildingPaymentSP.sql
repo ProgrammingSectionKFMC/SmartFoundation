@@ -53,6 +53,39 @@ BEGIN
            )
             THROW 50001,N'المسير الصادر المحدد غير مرسل أو لا يطابق الإدارة والنوع والفترة.',1;
 
+                /* فترة المسير: ميلادية أو هجرية، دون الاعتماد على تاريخ رفع الملف.
+           المرجع الهجري هو جدول التقويم المعتمد dbo._GregorianHijriDate. */
+        DECLARE @IssueMonthInt INT = TRY_CONVERT(INT, @IssueMonth);
+        DECLARE @IssueYearInt INT = TRY_CONVERT(INT, @IssueYear);
+        DECLARE @ImportIdaraID BIGINT = TRY_CONVERT(BIGINT, @IdaraId_FK);
+        DECLARE @PeriodFrom DATE = NULL;
+        DECLARE @PeriodTo DATE = NULL;
+
+        IF @IssueMonthInt IS NULL OR @IssueMonthInt NOT BETWEEN 1 AND 12
+           OR @IssueYearInt IS NULL
+           OR @ImportIdaraID IS NULL OR @ImportIdaraID <= 0
+            THROW 50001, N'شهر وسنة المسير وإدارة المستخدم مطلوبة وصحيحة.', 1;
+
+        IF @IssueYearInt BETWEEN 1300 AND 1600
+        BEGIN
+            SELECT
+                @PeriodFrom = MIN(CONVERT(DATE, g.gregorianDate)),
+                @PeriodTo = MAX(CONVERT(DATE, g.gregorianDate))
+            FROM dbo._GregorianHijriDate g
+            WHERE g.yearH = @IssueYearInt
+              AND g.monthH = @IssueMonthInt;
+        END
+        ELSE IF @IssueYearInt BETWEEN 1900 AND 9999
+        BEGIN
+            SET @PeriodFrom = DATEFROMPARTS(@IssueYearInt, @IssueMonthInt, 1);
+            SET @PeriodTo = EOMONTH(@PeriodFrom);
+        END
+        ELSE
+            THROW 50001, N'سنة المسير ليست سنة هجرية أو ميلادية مدعومة.', 1;
+
+        IF @PeriodFrom IS NULL OR @PeriodTo IS NULL OR @PeriodFrom > @PeriodTo
+            THROW 50001, N'تعذر تحديد أيام شهر المسير من التقويم المعتمد؛ لم يتم الاستيراد.', 1;
+
         IF @@TRANCOUNT = 0
         BEGIN
             SET @StartedTran = 1;
@@ -221,46 +254,87 @@ DECLARE @DeductListName NVARCHAR(255) =
             ExcelPaymentID BIGINT NOT NULL UNIQUE
         );
 
-        -- تحديد المستفيد بالهوية الوطنية فقط
--- لا يُختار مستفيد عند غياب الهوية أو تكرارها
+               /* تحديد الهوية الوطنية فقط؛ لا نستخدم الرقم العام لتعيين المستفيد.
+           ثم فحص وجود ملف أساسي نشط وتفاصيل حالية نشطة،
+           ثم فحص تاريخ التبعية للإدارة خلال أي يوم من شهر المسير. */
+        CREATE TABLE #ExcelIdentity
+        (
+            IDNumber NVARCHAR(255) NOT NULL PRIMARY KEY,
+            ResidentID BIGINT NULL,
+            MatchCount BIGINT NOT NULL,
+            ResidentActive BIT NOT NULL,
+            HasActiveDetails BIT NOT NULL,
+            InIdaraDuringPeriod BIT NOT NULL
+        );
 
-CREATE TABLE #ExcelIdentity
-(
-    IDNumber NVARCHAR(255) NOT NULL PRIMARY KEY,
-    ResidentID BIGINT NULL,
-    MatchCount BIGINT NOT NULL
-);
+        ;WITH IdentityMatches AS
+        (
+            SELECT
+                ids.IDNumber,
+                CASE WHEN COUNT_BIG(ri.residentInfoID) = 1
+                     THEN MIN(ri.residentInfoID)
+                     ELSE NULL END AS ResidentID,
+                COUNT_BIG(ri.residentInfoID) AS MatchCount
+            FROM (SELECT DISTINCT IDNumber FROM #Clean WHERE IDNumber IS NOT NULL) ids
+            LEFT JOIN Housing.ResidentInfo ri
+                ON NULLIF(LTRIM(RTRIM(ri.NationalID)), N'') = ids.IDNumber
+            GROUP BY ids.IDNumber
+        )
+        INSERT INTO #ExcelIdentity
+            (IDNumber, ResidentID, MatchCount,
+             ResidentActive, HasActiveDetails, InIdaraDuringPeriod)
+        SELECT
+            m.IDNumber,
+            m.ResidentID,
+            m.MatchCount,
+            CONVERT(BIT, CASE WHEN ri.residentInfoActive = 1 THEN 1 ELSE 0 END),
+            CONVERT(BIT, CASE WHEN EXISTS
+            (
+                SELECT 1 FROM Housing.ResidentDetails rd
+                WHERE rd.residentInfoID_FK = m.ResidentID
+                  AND rd.residentDetailsActive = 1
+            ) THEN 1 ELSE 0 END),
+            CONVERT(BIT, CASE WHEN EXISTS
+            (
+                SELECT 1 FROM Housing.ResidentDetails rd
+                WHERE rd.residentInfoID_FK = m.ResidentID
+                  AND rd.IdaraId_FK = @ImportIdaraID
+                  AND rd.residentDetailsStartDate IS NOT NULL
+                  AND CONVERT(DATE, rd.residentDetailsStartDate) <= @PeriodTo
+                  AND (
+                        rd.residentDetailsEndDate >= @PeriodFrom
+                        OR (rd.residentDetailsEndDate IS NULL
+                            AND rd.residentDetailsActive = 1)
+                      )
+            ) THEN 1 ELSE 0 END)
+        FROM IdentityMatches m
+        LEFT JOIN Housing.ResidentInfo ri ON ri.residentInfoID = m.ResidentID;
 
-INSERT INTO #ExcelIdentity
-(
-    IDNumber,
-    ResidentID,
-    MatchCount
-)
-SELECT
-    ids.IDNumber,
+        /* سبب واحد حصري لكل صف، لتكون إحصاءات النجاح دقيقة. */
+        CREATE TABLE #ExcelEligibility
+        (
+            RowNo INT NOT NULL PRIMARY KEY,
+            ResidentID BIGINT NULL,
+            ReasonCode NVARCHAR(40) NOT NULL
+        );
 
-    CASE
-        WHEN COUNT_BIG(ri.residentInfoID) = 1
-        THEN MIN(ri.residentInfoID)
-        ELSE NULL
-    END,
+        INSERT INTO #ExcelEligibility (RowNo, ResidentID, ReasonCode)
+        SELECT
+            c.RowNo,
+            im.ResidentID,
+            CASE
+                WHEN c.IDNumber IS NULL THEN N'MISSING_IDENTITY'
+                WHEN ISNULL(im.MatchCount, 0) = 0 THEN N'IDENTITY_NOT_FOUND'
+                WHEN im.MatchCount > 1 THEN N'IDENTITY_DUPLICATE'
+                WHEN im.ResidentActive = 0 THEN N'RESIDENT_INACTIVE'
+                WHEN im.HasActiveDetails = 0 THEN N'NO_ACTIVE_DETAILS'
+                WHEN im.InIdaraDuringPeriod = 0 THEN N'OUTSIDE_IDARA_PERIOD'
+                ELSE N'ELIGIBLE'
+            END
+        FROM #Clean c
+        LEFT JOIN #ExcelIdentity im ON im.IDNumber = c.IDNumber;
 
-    COUNT_BIG(ri.residentInfoID)
 
-FROM
-(
-    SELECT DISTINCT IDNumber
-    FROM #Clean
-    WHERE IDNumber IS NOT NULL
-) ids
-
-LEFT JOIN Housing.ResidentInfo ri
-    ON NULLIF(
-        LTRIM(RTRIM(ri.NationalID)), N''
-    ) = ids.IDNumber
-
-GROUP BY ids.IDNumber;
 
         MERGE INTO [DATACORE].[Housing].[BuildingPayment] AS target
         USING
@@ -272,18 +346,12 @@ GROUP BY ids.IDNumber;
         c.unitID,
         c.amount,
 
-        CASE
-            WHEN im.MatchCount = 1
-            THEN im.ResidentID
-            ELSE NULL
-        END AS residentInfoID,
-
-        ISNULL(im.MatchCount, 0) AS IdentityMatchCount
+                e.ResidentID AS residentInfoID,
+        CASE WHEN e.ReasonCode = N'ELIGIBLE' THEN 1 ELSE 0 END AS IsEligible
 
     FROM #Clean AS c
-
-    LEFT JOIN #ExcelIdentity im
-        ON im.IDNumber = c.IDNumber
+    JOIN #ExcelEligibility e
+        ON e.RowNo = c.RowNo
 
 ) AS source
         ON 1 = 0
@@ -316,10 +384,7 @@ GROUP BY ids.IDNumber;
                 NULL,
                 source.amount,
                 @DedcutID,
-                CASE
-                    WHEN source.IdentityMatchCount = 1 THEN 1
-                    ELSE 0
-                END,
+                source.IsEligible,
                 @BillChargeTypeID,
                 @IdaraId_FK,
                 GETDATE(),
@@ -359,34 +424,28 @@ GROUP BY ids.IDNumber;
             ir.ExcelPaymentID,
             NULL,
         
-            CASE
-                WHEN im.MatchCount = 1
-                THEN N'IMPORTED'
-                ELSE N'PROTECTED'
+                        CASE WHEN e.ReasonCode = N'ELIGIBLE'
+                 THEN N'IMPORTED' ELSE N'PROTECTED' END,
+            CASE e.ReasonCode
+                WHEN N'MISSING_IDENTITY'
+                    THEN N'تم تعطيل الحسم لعدم إدخال الهوية الوطنية في Excel؛ حُفظ الصف دون احتساب مالي.'
+                WHEN N'IDENTITY_NOT_FOUND'
+                    THEN N'تم تعطيل الحسم لعدم وجود ملف مستفيد مطابق للهوية الوطنية في النظام.'
+                WHEN N'IDENTITY_DUPLICATE'
+                    THEN N'تم تعطيل الحسم لتكرار الهوية الوطنية بين أكثر من ملف مستفيد؛ لم تُنسب الحركة إلى ملف تخميني.'
+                WHEN N'RESIDENT_INACTIVE'
+                    THEN N'تم تعطيل الحسم لأن ملف المستفيد الأساسي غير نشط في النظام.'
+                WHEN N'NO_ACTIVE_DETAILS'
+                    THEN N'تم تعطيل الحسم لعدم وجود سجل تفاصيل نشط للمستفيد في النظام.'
+                WHEN N'OUTSIDE_IDARA_PERIOD'
+                    THEN CONCAT(N'تم تعطيل الحسم لعدم ثبوت تبعية المستفيد للإدارة رقم ',
+                                @ImportIdaraID, N' خلال شهر ', @IssueMonthInt,
+                                N' لسنة ', @IssueYearInt, N'.')
+                ELSE N'تم التحقق من هوية المستفيد ونشاط ملفه وتبعيته لإدارة المسير خلال شهر الحسم.'
             END,
-        
-            CASE
-                WHEN c.IDNumber IS NULL
-                THEN N'لم يتم إدخال رقم الهوية الوطنية؛ السداد محفوظ وغير نشط.'
-        
-                WHEN ISNULL(im.MatchCount, 0) = 0
-                THEN N'رقم الهوية الوطنية غير موجود في النظام؛ السداد محفوظ وغير نشط.'
-        
-                WHEN im.MatchCount > 1
-                THEN N'رقم الهوية الوطنية مرتبط بأكثر من مستفيد؛ السداد محفوظ وغير نشط.'
-        
-                ELSE N'تم تحديد المستفيد بالهوية الوطنية؛ السداد مؤهل للتصنيف والمطابقة.'
-            END,
-        
             LEFT(@entryData, 200)
-        
         FROM #ImportedRows ir
-        
-        JOIN #Clean c
-            ON c.RowNo = ir.RowNo
-        
-        LEFT JOIN #ExcelIdentity im
-            ON im.IDNumber = c.IDNumber;
+        JOIN #ExcelEligibility e ON e.RowNo = ir.RowNo;
 
         IF @@ROWCOUNT <> @Inserted
             THROW 50001,
@@ -675,11 +734,59 @@ GROUP BY ids.IDNumber;
             WHERE deductListID_FK=@DedcutID;
         END
 
+                /* إحصاءات نهائية من السجلات المرفوعة، بعد التصنيف والمطابقة اليدوية. */
+        DECLARE @NoActiveResidentRows INT = 0,
+                @OutsideIdaraRows INT = 0,
+                @ManualCoveredRows INT = @CoveredCount,
+                @ActiveExcelRows INT = 0,
+                @DisabledExcelRows INT = 0,
+                @OtherDisabledRows INT = 0;
+
+        SELECT
+            @NoActiveResidentRows = COUNT(CASE WHEN e.ReasonCode IN
+            (
+                N'MISSING_IDENTITY', N'IDENTITY_NOT_FOUND',
+                N'IDENTITY_DUPLICATE', N'RESIDENT_INACTIVE', N'NO_ACTIVE_DETAILS'
+            ) THEN 1 END),
+            @OutsideIdaraRows = COUNT(CASE
+                WHEN e.ReasonCode = N'OUTSIDE_IDARA_PERIOD' THEN 1 END)
+        FROM #ExcelEligibility e;
+
+        SELECT @ActiveExcelRows = COUNT(*)
+        FROM #ImportedRows ir
+        JOIN Housing.BuildingPayment bp ON bp.paymentID = ir.ExcelPaymentID
+        WHERE bp.buildingPayementActive = 1;
+
+        SET @DisabledExcelRows = @Inserted - @ActiveExcelRows;
+        SET @OtherDisabledRows = @DisabledExcelRows
+                               - @NoActiveResidentRows
+                               - @OutsideIdaraRows
+                               - @ManualCoveredRows;
+
+        IF @OtherDisabledRows < 0
+            THROW 50001, N'تعارض في أعداد أسباب تعطيل حسومات Excel؛ تم التراجع.', 1;
+
         IF @StartedTran = 1 COMMIT;
 
         SELECT CAST(1 AS bit) AS IsSuccessful,
-               CONCAT(N'تم إدخال ', @Inserted, N' صف بنجاح.') AS Message_,
-               @Inserted AS InsertedRows;
+               CONCAT(
+                   N'تم رفع ', @Inserted, N' صف بنجاح. ',
+                   N'المعطّل لعدم وجود ملف مستفيد نشط مطابق للبيانات: ', @NoActiveResidentRows, N' صف. ',
+                   N'المعطّل لعدم ثبوت تبعية المستفيد لإدارة المسير خلال شهر الحسم: ', @OutsideIdaraRows, N' صف. ',
+                   N'المعطّل لوجود سداد يدوي مطابق: ', @ManualCoveredRows, N' صف. ',
+                   N'إجمالي المعطّل: ', @DisabledExcelRows, N' صف. ',
+                   N'المتبقي نشطًا: ', @ActiveExcelRows, N' صف.',
+                   CASE WHEN @OtherDisabledRows > 0
+                        THEN CONCAT(N' تعطيل لأسباب أخرى: ', @OtherDisabledRows, N' صف.')
+                        ELSE N'' END
+               ) AS Message_,
+               @Inserted AS InsertedRows,
+               @NoActiveResidentRows AS NoActiveResidentRows,
+               @OutsideIdaraRows AS OutsideIdaraRows,
+               @ManualCoveredRows AS CoveredByManualRows,
+               @DisabledExcelRows AS DisabledRows,
+               @ActiveExcelRows AS ActiveRows,
+               @OtherDisabledRows AS OtherDisabledRows;
     END TRY
     BEGIN CATCH
         IF @StartedTran = 1 AND @@TRANCOUNT > 0 ROLLBACK;

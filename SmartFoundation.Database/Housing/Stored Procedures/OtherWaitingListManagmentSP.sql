@@ -152,7 +152,7 @@ BEGIN
                 , waitingClassName_E      = ISNULL(@waitingClassName_E, waitingClassName_E)
                 , waitingClassDescription = ISNULL(@waitingClassDescription, waitingClassDescription)
                 , idara_FK               = ISNULL(@IdaraID_INT, idara_FK)
-                , UpdatedBy = ISNULL(ISNULL(UpdatedBy,'')+N','+@entryData, UpdatedBy)
+                , UpdatedBy = ISNULL(ISNULL(UpdatedBy,'')+N','+@entryData+' '+TRY_CONVERT(nvarchar(50),Getdate(),23) +' '+TRY_CONVERT(nvarchar(50),Getdate(),8), UpdatedBy)
                 , UpdatedWhy  = ISNULL(ISNULL(UpdatedWhy,'')+N','+@UpdatedWhy, UpdatedWhy)
             WHERE waitingClassID = @waitingClassID;
 
@@ -226,7 +226,7 @@ BEGIN
             UPDATE  Housing.WaitingClass
             SET
                   waitingClassActive = 0
-                , CancelBy = ISNULL(ISNULL(CancelBy,'')+N','+@entryData, CancelBy)
+                , CancelBy = ISNULL(ISNULL(CancelBy,'')+N','+@entryData+' '+TRY_CONVERT(nvarchar(50),Getdate(),23)+' '+TRY_CONVERT(nvarchar(50),Getdate(),8), CancelBy)
                 , CancelWhy  = ISNULL(ISNULL(CancelWhy,'')+N','+@CancelWhy, CancelWhy)
             WHERE waitingClassID = @waitingClassID;
 

@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BuildingAction] (
+CREATE TABLE [Housing].[BuildingAction] (
     [buildingActionID]              BIGINT           IDENTITY (1, 1) NOT NULL,
     [buildingActionUDID]            UNIQUEIDENTIFIER CONSTRAINT [DF_BuildingAction_buildingActionUDID] DEFAULT (newid()) NULL,
     [buildingActionTypeID_FK]       INT              NULL,
@@ -48,6 +48,7 @@
     [entryDate]                     DATETIME         CONSTRAINT [DF_BuildingAction_entryDate] DEFAULT (getdate()) NULL,
     [entryData]                     NVARCHAR (20)    NULL,
     [hostName]                      NVARCHAR (200)   NULL,
+    [HistoricalOccupentDate]        DATE             NULL,
     CONSTRAINT [PK_BuildingAction] PRIMARY KEY CLUSTERED ([buildingActionID] ASC),
     CONSTRAINT [FK_BuildingAction_BuildingActionSource] FOREIGN KEY ([buildingActionFromSourceID_FK]) REFERENCES [Housing].[BuildingActionSource] ([buildingActionSourceID]),
     CONSTRAINT [FK_BuildingAction_BuildingActionSource1] FOREIGN KEY ([buildingActionToSourceID_FK]) REFERENCES [Housing].[BuildingActionSource] ([buildingActionSourceID]),
@@ -57,6 +58,8 @@
     CONSTRAINT [FK_BuildingAction_BuildingStatus] FOREIGN KEY ([buildingStatusID_FK]) REFERENCES [Housing].[BuildingStatus] ([buildingStatusID]),
     CONSTRAINT [FK_BuildingAction_ResidentInfo] FOREIGN KEY ([residentInfoID_FK]) REFERENCES [Housing].[ResidentInfo] ([residentInfoID])
 );
+
+
 
 
 
@@ -155,3 +158,7 @@ CREATE NONCLUSTERED INDEX [IX_BuildingAction_Type_Active]
 
 
 GO
+CREATE NONCLUSTERED INDEX [IX_BuildingAction_CurrentCycle_Active]
+    ON [Housing].[BuildingAction]([buildingDetailsID_FK] ASC, [IdaraId_FK] ASC, [entryDate] DESC, [buildingActionID] DESC)
+    INCLUDE([buildingActionTypeID_FK], [residentInfoID_FK], [buildingActionParentID]) WHERE ([buildingActionActive]=(1));
+

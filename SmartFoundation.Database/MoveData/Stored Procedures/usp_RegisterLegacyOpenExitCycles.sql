@@ -50,7 +50,7 @@ BEGIN
 
         /*
           Only genuine KFMC exit actions still in progress:
-          extraInt1 1 -> 59; 2/3 -> 57; 4 -> 58.
+          extraInt1 1 -> 59; 2/3 -> 57; 4 -> 57.
           Completed extraInt1=5 and NULL -> 3 are NOT enrolled.
           No synthetic 54 action is created.
         */
@@ -114,7 +114,7 @@ BEGIN
           (
                 (sourceAction.buildingActionExtraInt1 = 1 AND a.buildingActionTypeID_FK = 59)
              OR (sourceAction.buildingActionExtraInt1 IN (2, 3) AND a.buildingActionTypeID_FK = 57)
-             OR (sourceAction.buildingActionExtraInt1 = 4 AND a.buildingActionTypeID_FK = 58)
+             OR (sourceAction.buildingActionExtraInt1 = 4 AND a.buildingActionTypeID_FK = 57)
           );
 
         IF EXISTS

@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using SmartFoundation.Mvc.Services.DataLoad;
 using SmartFoundation.MVC.Reports;
 using SmartFoundation.UI.ViewModels.SmartForm;
 using SmartFoundation.UI.ViewModels.SmartPage;
@@ -7,12 +8,14 @@ using SmartFoundation.UI.ViewModels.SmartTable;
 using System.Data;
 using System.Linq;
 using System.Text.Json;
+using SmartFoundation.Mvc.Services.DataLoad;
+
 
 namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
 {
     public partial class ElectronicBillSystemController : Controller
     {
-        public async Task<IActionResult> Meters(int pdf = 0)
+        public async Task<IActionResult> Meters([FromServices] RequestScopedDataLoadService requestDataLoad, int pdf = 0)
         {
             //  قراءة السيشن والكونتكست
             if (!InitPageContext(out var redirect))
@@ -26,13 +29,29 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
             ControllerName = nameof(ElectronicBillSystem);
             PageName = string.IsNullOrWhiteSpace(PageName) ? "Meters" : PageName;
 
-            var spParameters = new object?[]
+            var ddlParameters = new Dictionary<string, object?>(
+               StringComparer.OrdinalIgnoreCase)
             {
-             PageName ?? "Meters",
-             IdaraId,
-             usersId,
-             HostName
+                ["pageName_"] = PageName ?? "FinancialAuditForUser"
             };
+
+            if (IdaraId != null)
+                ddlParameters["idaraID"] = Convert.ToInt32(IdaraId);
+
+            if (usersId != null)
+                ddlParameters["entrydata"] = Convert.ToInt32(usersId);
+
+            if (HostName != null)
+                ddlParameters["hostname"] = HostName;
+
+            // معاملات تحميل بيانات الصفحة.
+            // نضيف رقم الهوية فقط عند وجوده.
+            var pageParameters = new Dictionary<string, object?>(
+                ddlParameters,
+                StringComparer.OrdinalIgnoreCase);
+
+            
+
 
             var rowsList = new List<Dictionary<string, object?>>();
             var rowsmeterTypeList = new List<Dictionary<string, object?>>();
@@ -41,7 +60,7 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
             var dynamicmeterTypeColumns = new List<TableColumn>();
             var dynamicmeterlinkToBuildingColumns = new List<TableColumn>();
 
-            DataSet ds = await _mastersServies.GetDataLoadDataSetAsync(spParameters);
+            DataSet ds = await requestDataLoad.GetDataLoadDataSetAsync(pageParameters);
 
             //  تقسيم الداتا سيت للجدول الأول + جداول أخرى
             SplitDataSet(ds);
@@ -71,54 +90,89 @@ namespace SmartFoundation.Mvc.Controllers.ElectronicBillSystem
             List<OptionItem> buildingDetailsNoWithMetersOptions = new();
             List<OptionItem> MeterCalculateTypeOptions = new();
 
-            JsonResult? result;
-                string json;
+            DataSet ddlDs = await requestDataLoad
+                  .GetDataLoadDataSetAsync(ddlParameters);
+
+            static List<OptionItem> ReadOptions(
+                DataSet source,
+                int tableIndex,
+                string textColumn,
+                string valueColumn)
+            {
+                if (tableIndex < 0 ||
+                    tableIndex >= source.Tables.Count)
+                {
+                    throw new InvalidOperationException(
+                        $"DDL table index {tableIndex} not found.");
+                }
+
+                DataTable table = source.Tables[tableIndex];
+
+                if (!table.Columns.Contains(textColumn) ||
+                    !table.Columns.Contains(valueColumn))
+                {
+                    throw new InvalidOperationException(
+                        $"DDL columns mismatch at table {tableIndex}.");
+                }
+
+                var options = new List<OptionItem>();
+
+                foreach (DataRow row in table.Rows)
+                {
+                    string value = row[valueColumn]
+                        ?.ToString()?.Trim() ?? "";
+
+                    string text = row[textColumn]
+                        ?.ToString()?.Trim() ?? "";
+
+                    if (!string.IsNullOrEmpty(value))
+                    {
+                        options.Add(new OptionItem
+                        {
+                            Value = value,
+                            Text = text
+                        });
+                    }
+                }
+
+                if (options.Count == 0)
+                {
+                    options.Add(new OptionItem
+                    {
+                        Value = "-1",
+                        Text = "لاتوجد خيارات"
+                    });
+                }
+
+                return options;
+            }
+
+            meterTypeOptions = ReadOptions(
+                ddlDs,
+                5,
+                "meterTypeName_A",
+                "meterTypeID");
+
+            MeterServiceTypeOptions = ReadOptions(
+                ddlDs,
+                4,
+                "meterServiceTypeName_A",
+                "meterServiceTypeID");
+
+            buildingDetailsNoWithMetersOptions = ReadOptions(
+                ddlDs,
+                7,
+                "buildingDetailsNoWithMeters",
+                "buildingDetailsID");
+
+            MeterCalculateTypeOptions = ReadOptions(
+                ddlDs,
+                8,
+                "MeterCalculateTypeName_A",
+                "MeterCalculateTypeID");
 
 
-
-
-                 //// ---------------------- meterTypeOptions ----------------------
-                 result = await _CrudController.GetDDLValues(
-                    "meterTypeName_A", "meterTypeID", "5", nameof(Meters), usersId, IdaraId, HostName
-               ) as JsonResult;
-
-
-                json = JsonSerializer.Serialize(result!.Value);
-
-                meterTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-
-            //// ---------------------- MeterServiceTypeOptions ----------------------
-            result = await _CrudController.GetDDLValues(
-                    "meterServiceTypeName_A", "meterServiceTypeID", "4", nameof(Meters), usersId, IdaraId, HostName
-               ) as JsonResult;
-
-
-                json = JsonSerializer.Serialize(result!.Value);
-
-                MeterServiceTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-
-            //// ---------------------- buildingDetailsNoWithMetersOptions ----------------------
-            result = await _CrudController.GetDDLValues(
-                    "buildingDetailsNoWithMeters", "buildingDetailsID", "7", nameof(Meters), usersId, IdaraId, HostName
-               ) as JsonResult;
-
-
-                json = JsonSerializer.Serialize(result!.Value);
-
-            buildingDetailsNoWithMetersOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-
-
-            //// ---------------------- buildingDetailsNoWithMetersOptions ----------------------
-            result = await _CrudController.GetDDLValues(
-                    "MeterCalculateTypeName_A", "MeterCalculateTypeID", "8", nameof(Meters), usersId, IdaraId, HostName
-               ) as JsonResult;
-
-
-            json = JsonSerializer.Serialize(result!.Value);
-
-            MeterCalculateTypeOptions = JsonSerializer.Deserialize<List<OptionItem>>(json)!;
-
-
+          
             // ----------------------END DDLValues ----------------------
 
 

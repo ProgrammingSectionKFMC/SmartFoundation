@@ -93,9 +93,9 @@ BEGIN
         DELETE FROM support.TeamMember WHERE userID_FK > 12;
 
         /* Preserve operational rows but remove reusable user IDs from nullable, non-FK columns. */
-        UPDATE dbo.DecisionForSolider SET userID_FK = NULL WHERE userID_FK > 12;
+        
         UPDATE dbo.Document SET userID_FK = NULL WHERE userID_FK > 12;
-        UPDATE Tickets.Ticket SET UserID_FK = NULL WHERE UserID_FK > 12;
+        
         UPDATE VIC.vehicleWithUsers SET userID_FK = NULL WHERE userID_FK > 12;
 
         /* Required children of dbo.Users. */

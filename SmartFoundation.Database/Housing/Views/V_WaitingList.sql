@@ -1,19 +1,4 @@
-﻿
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-CREATE   VIEW [Housing].[V_WaitingList]
+﻿CREATE   VIEW [Housing].[V_WaitingList]
 AS
 WITH d AS
 (
@@ -27,6 +12,8 @@ WITH d AS
     FROM Housing.BuildingAction b
     INNER JOIN Housing.BuildingAction x
         ON x.buildingActionParentID = b.buildingActionID
+        AND x.buildingActionActive = 1
+        AND x.buildingActionTypeID_FK <> 18
     WHERE b.buildingActionTypeID_FK in(1,7,25)
       AND b.buildingActionActive = 1
 
@@ -44,6 +31,7 @@ WITH d AS
         ON x.buildingActionParentID = d.buildingActionID
 
         where x.buildingActionActive = 1
+        AND x.buildingActionTypeID_FK <> 18
 ),
 leaf AS
 (
@@ -56,15 +44,16 @@ leaf AS
         ROW_NUMBER() OVER
         (
             PARTITION BY d.RootActionID
-            ORDER BY d.Lvl DESC, d.buildingActionID DESC
+            ORDER BY CONVERT(date, COALESCE(sortAction.buildingActionDate, sortAction.entryDate)) DESC, sortAction.entryDate DESC, d.Lvl DESC, d.buildingActionID DESC
         ) AS rn
-    FROM d
+    FROM d INNER JOIN Housing.BuildingAction sortAction ON sortAction.buildingActionID = d.buildingActionID
     WHERE NOT EXISTS
     (
         SELECT 1
         FROM Housing.BuildingAction ch
         WHERE ch.buildingActionParentID = d.buildingActionID
         AND ch.buildingActionActive = 1
+        AND ch.buildingActionTypeID_FK <> 18
     )
 )
 SELECT
@@ -148,8 +137,9 @@ OUTER APPLY
 ) occupancyAction
 LEFT JOIN Housing.BuildingActionType bt
     ON bt.buildingActionTypeID = l.buildingActionTypeID_FK
-LEFT JOIN Housing.ResidentInfo ri
+INNER JOIN Housing.ResidentInfo ri
     ON ri.residentInfoID = b.residentInfoID_FK
+    AND ri.residentInfoActive = 1
 
 -- ✅ اختر آخر ResidentDetails Active فقط (بدون تكرار)
 OUTER APPLY (

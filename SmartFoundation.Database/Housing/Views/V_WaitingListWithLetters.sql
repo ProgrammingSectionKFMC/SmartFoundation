@@ -1,4 +1,5 @@
 ﻿
+
 CREATE   VIEW [Housing].[V_WaitingListWithLetters]
 AS
 WITH d AS
@@ -115,8 +116,9 @@ LEFT JOIN Housing.BuildingAction la
     ON la.buildingActionID = l.buildingActionID
 LEFT JOIN Housing.BuildingActionType bt
     ON bt.buildingActionTypeID = l.buildingActionTypeID_FK
-LEFT JOIN Housing.ResidentInfo ri
+INNER JOIN Housing.ResidentInfo ri
     ON ri.residentInfoID = b.residentInfoID_FK
+    AND ri.residentInfoActive = 1
 
 -- ✅ اختر آخر ResidentDetails Active فقط (بدون تكرار)
 OUTER APPLY
