@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Maintenance].[MaintenancePriority] (
+CREATE TABLE [Maintenance].[MaintenancePriority] (
     [PriorityID]     INT            NOT NULL,
     [PriorityName_A] NVARCHAR (100) NOT NULL,
     [PriorityCode]   NVARCHAR (50)  NOT NULL,
@@ -11,4 +11,7 @@
     CONSTRAINT [PK_MaintenancePriority] PRIMARY KEY CLUSTERED ([PriorityID] ASC),
     CONSTRAINT [UQ_MaintenancePriority_PriorityCode] UNIQUE NONCLUSTERED ([PriorityCode] ASC)
 );
+
+
+GO
 

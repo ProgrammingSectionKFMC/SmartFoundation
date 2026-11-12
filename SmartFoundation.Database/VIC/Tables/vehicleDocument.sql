@@ -1,4 +1,4 @@
-﻿CREATE TABLE [VIC].[vehicleDocument] (
+CREATE TABLE [VIC].[vehicleDocument] (
     [vehicleDocumentID]        INT            IDENTITY (1, 1) NOT NULL,
     [vehicleDocumentTypeID_FK] INT            NULL,
     [chassisNumber_FK]         NVARCHAR (100) NULL,
@@ -15,4 +15,7 @@
     CONSTRAINT [FK_vehicleDocument_Idara] FOREIGN KEY ([IdaraID_FK]) REFERENCES [dbo].[Idara] ([idaraID]),
     CONSTRAINT [FK_vehicleDocument_Vehicles] FOREIGN KEY ([chassisNumber_FK]) REFERENCES [VIC].[Vehicles] ([chassisNumber])
 );
+
+
+GO
 

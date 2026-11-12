@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Maintenance].[BuildingMaintenanceRequestApproval] (
+CREATE TABLE [Maintenance].[BuildingMaintenanceRequestApproval] (
     [ApprovalID]        BIGINT          IDENTITY (1, 1) NOT NULL,
     [RequestID]         BIGINT          NOT NULL,
     [RequestedByUserID] BIGINT          NULL,
@@ -24,4 +24,7 @@
     CONSTRAINT [FK_BuildingMaintenanceRequestApproval_Request] FOREIGN KEY ([RequestID]) REFERENCES [Maintenance].[BuildingMaintenanceRequest] ([RequestID]),
     CONSTRAINT [FK_BuildingMaintenanceRequestApproval_Status] FOREIGN KEY ([ApprovalStatusID]) REFERENCES [Maintenance].[MaintenanceRequestStatus] ([StatusID])
 );
+
+
+GO
 

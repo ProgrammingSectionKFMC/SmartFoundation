@@ -60,105 +60,121 @@ CREATE TABLE [Housing].[BuildingAction] (
 );
 
 
-
-
-
-
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingAction_ParentID]
     ON [Housing].[BuildingAction]([buildingActionParentID] ASC)
     INCLUDE([buildingActionID], [buildingActionTypeID_FK]);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingAction_ParentID_TypeID]
     ON [Housing].[BuildingAction]([buildingActionParentID] ASC, [buildingActionTypeID_FK] ASC)
     INCLUDE([buildingActionID]);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingAction_buildingDetailsID_FK_buildingActionID]
     ON [Housing].[BuildingAction]([buildingDetailsID_FK] ASC, [buildingActionID] DESC);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingAction_LastByDetails]
     ON [Housing].[BuildingAction]([buildingDetailsID_FK] ASC, [buildingActionID] DESC)
     INCLUDE([buildingActionTypeID_FK], [buildingActionActive], [entryDate], [IdaraId_FK]);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingAction_Waiting]
     ON [Housing].[BuildingAction]([buildingActionTypeID_FK] ASC, [buildingActionActive] ASC, [IdaraId_FK] ASC, [buildingActionParentID] ASC)
-    INCLUDE([buildingActionID], [residentInfoID_FK], [buildingActionDecisionDate], [buildingActionDecisionNo], [buildingActionExtraType1], [buildingActionExtraType2], [buildingActionExtraInt1], [buildingDetailsID_FK], [buildingDetailsNo], [buildingActionNote], [entryDate], [entryData]);
+    INCLUDE([buildingActionID], [residentInfoID_FK], [buildingDetailsNo], [buildingActionNote], [entryDate], [entryData], [buildingActionDecisionDate], [buildingActionDecisionNo], [buildingActionExtraType1], [buildingActionExtraType2], [buildingActionExtraInt1], [buildingDetailsID_FK]);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingAction_Parent_Active]
     ON [Housing].[BuildingAction]([buildingActionParentID] ASC, [buildingActionActive] ASC)
     INCLUDE([buildingActionID], [buildingActionTypeID_FK], [IdaraId_FK]);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingAction_Root_Type_Active]
     ON [Housing].[BuildingAction]([buildingActionTypeID_FK] ASC, [buildingActionActive] ASC, [buildingActionID] ASC)
-    INCLUDE([residentInfoID_FK], [IdaraId_FK], [buildingActionDate], [buildingActionNote], [entryData], [entryDate], [buildingActionDecisionNo], [buildingActionDecisionDate], [buildingActionExtraType1], [buildingActionExtraType2]);
+    INCLUDE([residentInfoID_FK], [IdaraId_FK], [buildingActionDate], [buildingActionExtraType2], [buildingActionNote], [entryData], [entryDate], [buildingActionDecisionNo], [buildingActionDecisionDate], [buildingActionExtraType1]);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingAction_Active_Type_Idara]
     ON [Housing].[BuildingAction]([buildingActionActive] ASC, [buildingActionTypeID_FK] ASC, [IdaraId_FK] ASC)
     INCLUDE([buildingActionID], [buildingActionParentID], [buildingDetailsID_FK], [buildingDetailsNo], [AssignPeriodID_FK], [buildingActionExtraInt1], [buildingActionNote], [entryData], [entryDate]);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingAction_Root_1_7_Active]
     ON [Housing].[BuildingAction]([buildingActionTypeID_FK] ASC, [buildingActionActive] ASC, [buildingActionID] ASC)
     INCLUDE([residentInfoID_FK], [IdaraId_FK], [buildingActionDate], [buildingActionDecisionNo], [buildingActionDecisionDate], [buildingActionExtraType1], [buildingActionExtraType2], [entryData], [entryDate]);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingAction_Resident_Building_Type_Active]
     ON [Housing].[BuildingAction]([residentInfoID_FK] ASC, [buildingDetailsID_FK] ASC, [buildingActionTypeID_FK] ASC, [buildingActionActive] ASC)
     INCLUDE([buildingActionDate], [buildingActionParentID], [buildingActionID]);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingAction_RootType1_Active]
     ON [Housing].[BuildingAction]([buildingActionTypeID_FK] ASC, [buildingActionActive] ASC, [buildingActionID] ASC)
-    INCLUDE([residentInfoID_FK], [IdaraId_FK], [buildingActionDate], [buildingActionNote], [entryData], [entryDate], [buildingActionDecisionNo], [buildingActionDecisionDate], [buildingActionExtraType1], [buildingActionExtraType2]);
+    INCLUDE([residentInfoID_FK], [IdaraId_FK], [buildingActionDate], [buildingActionExtraType2], [buildingActionNote], [entryData], [entryDate], [buildingActionDecisionNo], [buildingActionDecisionDate], [buildingActionExtraType1]);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingAction_Vacate]
     ON [Housing].[BuildingAction]([residentInfoID_FK] ASC, [buildingDetailsID_FK] ASC, [buildingActionTypeID_FK] ASC, [buildingActionActive] ASC, [buildingActionDate] DESC);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingAction_Occupant]
     ON [Housing].[BuildingAction]([residentInfoID_FK] ASC, [buildingDetailsID_FK] ASC, [buildingActionTypeID_FK] ASC, [buildingActionActive] ASC, [buildingActionDate] DESC)
     INCLUDE([buildingActionID]);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingAction_ResidentDetails_TypeDate]
     ON [Housing].[BuildingAction]([residentInfoID_FK] ASC, [buildingDetailsID_FK] ASC, [buildingActionTypeID_FK] ASC, [buildingActionActive] ASC, [buildingActionDate] DESC)
-    INCLUDE([IdaraId_FK], [buildingActionID], [buildingActionParentID]);
+    INCLUDE([buildingActionID], [buildingActionParentID], [IdaraId_FK]);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingAction_LastActionTypeID_NULL]
     ON [Housing].[BuildingAction]([residentInfoID_FK] ASC) WHERE ([buildingActionTypeID_FK] IS NULL);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingAction_Type_Active]
     ON [Housing].[BuildingAction]([buildingActionTypeID_FK] ASC, [buildingActionActive] ASC)
-    INCLUDE([buildingActionID], [buildingActionParentID], [IdaraId_FK], [residentInfoID_FK], [entryData], [buildingActionNote], [buildingActionDate], [buildingActionDecisionDate], [buildingActionDecisionNo], [buildingActionExtraType1], [buildingActionExtraType2], [entryDate]);
+    INCLUDE([buildingActionID], [buildingActionParentID], [IdaraId_FK], [residentInfoID_FK], [buildingActionExtraType2], [entryDate], [entryData], [buildingActionNote], [buildingActionDate], [buildingActionDecisionDate], [buildingActionDecisionNo], [buildingActionExtraType1]);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingAction_CurrentCycle_Active]
     ON [Housing].[BuildingAction]([buildingDetailsID_FK] ASC, [IdaraId_FK] ASC, [entryDate] DESC, [buildingActionID] DESC)
     INCLUDE([buildingActionTypeID_FK], [residentInfoID_FK], [buildingActionParentID]) WHERE ([buildingActionActive]=(1));
+
+
+GO
 

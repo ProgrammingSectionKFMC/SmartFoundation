@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[ResidentRentExemptionType] (
+CREATE TABLE [Housing].[ResidentRentExemptionType] (
     [ResidentRentExemptionTypeID]          BIGINT          IDENTITY (1, 1) NOT NULL,
     [ResidentRentExemptionTypeName_A]      NVARCHAR (1000) NULL,
     [ResidentRentExemptionTypeName_E]      NVARCHAR (1000) NULL,
@@ -12,4 +12,7 @@
     CONSTRAINT [PK_ResidentRentExemptionType] PRIMARY KEY CLUSTERED ([ResidentRentExemptionTypeID] ASC),
     CONSTRAINT [FK_ResidentRentExemptionType_Idara] FOREIGN KEY ([idaraID_FK]) REFERENCES [dbo].[Idara] ([idaraID])
 );
+
+
+GO
 

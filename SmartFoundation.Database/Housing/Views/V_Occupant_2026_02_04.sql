@@ -1,4 +1,4 @@
-﻿CREATE VIEW Housing.[V_Occupant_2026_02_04]
+CREATE VIEW Housing.[V_Occupant_2026_02_04]
 AS
 SELECT        g.ActionID, g.ActionTypeID, g.ActionTypeName, g.GeneralNo, g.PaymentTypeID, g.BuildingNo, g.ActionDate, g.ActionDecisionNo, g.ActionDecisionDate, g.ActionNote, g.ActionFromDate, g.ActionToDate, g.WaitingClassName, 
                          g.WaitingOrderTypeID, g.WaitingOrderTypeName, g.waitingClassSequence, g.buildingActionParentID, g2.ActionTypeID AS ActionTypeIDSeraOrLetter, g2.WaitingClassID, CASE WHEN g3.ActionID IS NULL THEN NULL 
@@ -10,6 +10,7 @@ FROM            Housing.GetGeneralListActionForResident() AS g LEFT OUTER JOIN
 WHERE        (g.ActionTypeID = 2) AND (g1.ActionID IS NULL)
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane1', @value = N'[0E232FF0-B466-11cf-A24F-00AA00A3EFFF, 1.00]
 Begin DesignProperties = 
    Begin PaneConfigurations = 
@@ -160,6 +161,7 @@ Begin DesignProperties =
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane2', @value = N' 1170
          Output = 720
          Append = 1400
@@ -178,5 +180,9 @@ End
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPaneCount', @value = 2, @level0type = N'SCHEMA', @level0name = N'Housing', @level1type = N'VIEW', @level1name = N'V_Occupant_2026_02_04';
+
+
+GO
 

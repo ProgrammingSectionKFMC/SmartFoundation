@@ -1,4 +1,4 @@
-﻿
+
 CREATE   PROCEDURE [Maintenance].[MaintenanceDashboardSP]
       @Action NVARCHAR(200)
     , @idaraID_FK NVARCHAR(10) = NULL
@@ -11,3 +11,6 @@ BEGIN
 
     ;THROW 50001, N'لا توجد عمليات حفظ في لوحة مؤشرات الصيانة حالياً', 1;
 END;
+
+GO
+

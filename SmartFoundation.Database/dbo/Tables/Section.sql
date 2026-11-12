@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[Section] (
+CREATE TABLE [dbo].[Section] (
     [secID]          BIGINT         IDENTITY (1, 1) NOT NULL,
     [secName_A]      NVARCHAR (50)  NULL,
     [secName_E]      NVARCHAR (50)  NULL,
@@ -11,4 +11,7 @@
     [hostName]       NVARCHAR (200) CONSTRAINT [DF_Section_hostName] DEFAULT (host_name()) NULL,
     CONSTRAINT [PK_Section] PRIMARY KEY CLUSTERED ([secID] ASC)
 );
+
+
+GO
 

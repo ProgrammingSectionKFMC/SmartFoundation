@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BuildingActionField] (
+CREATE TABLE [Housing].[BuildingActionField] (
     [buildingActionFieldID]        INT            IDENTITY (1, 1) NOT NULL,
     [buildingActionTypeID_FK]      INT            NULL,
     [buildingActionFieldName_A]    NVARCHAR (100) NULL,
@@ -13,4 +13,7 @@
     CONSTRAINT [PK_BuildingActionField] PRIMARY KEY CLUSTERED ([buildingActionFieldID] ASC),
     CONSTRAINT [FK_BuildingActionField_BuildingActionType] FOREIGN KEY ([buildingActionTypeID_FK]) REFERENCES [Housing].[BuildingActionType] ([buildingActionTypeID])
 );
+
+
+GO
 

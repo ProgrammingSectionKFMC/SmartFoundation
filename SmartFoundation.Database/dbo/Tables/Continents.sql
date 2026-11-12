@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[Continents] (
+CREATE TABLE [dbo].[Continents] (
     [continentID]          INT            IDENTITY (1, 1) NOT NULL,
     [continentName_A]      NVARCHAR (100) NULL,
     [continentName_E]      NVARCHAR (100) NULL,
@@ -8,4 +8,7 @@
     [continentActive]      BIT            NULL,
     PRIMARY KEY CLUSTERED ([continentID] ASC)
 );
+
+
+GO
 

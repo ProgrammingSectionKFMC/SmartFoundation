@@ -1,4 +1,4 @@
-﻿
+
 CREATE   FUNCTION [Housing].[CalculteElectrictyBills_ByLastActiveRead_PeriodSource]
 (
     @MeterID BIGINT
@@ -382,3 +382,6 @@ SELECT
 FROM FinalPrice fp
 LEFT JOIN Housing.MeterServiceType mst
     ON mst.meterServiceTypeID = fp.meterServiceTypeID;
+
+GO
+

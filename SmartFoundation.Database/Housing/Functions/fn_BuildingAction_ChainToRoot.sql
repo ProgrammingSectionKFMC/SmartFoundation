@@ -1,4 +1,4 @@
-﻿CREATE   FUNCTION [Housing].[fn_BuildingAction_ChainToRoot]
+CREATE   FUNCTION [Housing].[fn_BuildingAction_ChainToRoot]
 (
     @buildingActionID BIGINT
 )
@@ -87,3 +87,6 @@ RETURN
     FROM chain c
     CROSS JOIN mx
 );
+
+GO
+

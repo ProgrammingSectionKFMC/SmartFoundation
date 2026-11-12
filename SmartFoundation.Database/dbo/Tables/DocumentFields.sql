@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[DocumentFields] (
+CREATE TABLE [dbo].[DocumentFields] (
     [documentFieldsID]          INT            IDENTITY (1, 1) NOT NULL,
     [documentFieldsName_A]      NVARCHAR (50)  NULL,
     [documentFieldsName_E]      NVARCHAR (50)  NULL,
@@ -15,4 +15,7 @@
     CONSTRAINT [PK_DocumentFields] PRIMARY KEY CLUSTERED ([documentFieldsID] ASC),
     CONSTRAINT [FK_DocumentFields_DocumentType] FOREIGN KEY ([documentTypeID_FK]) REFERENCES [dbo].[DocumentType] ([documentTypeID])
 );
+
+
+GO
 

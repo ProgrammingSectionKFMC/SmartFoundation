@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BuildingSpaceType] (
+CREATE TABLE [Housing].[BuildingSpaceType] (
     [BuildingSpaceTypeID]          INT             IDENTITY (1, 1) NOT NULL,
     [BuildingSpaceTypeCode]        NVARCHAR (50)   NOT NULL,
     [BuildingSpaceTypeName_A]      NVARCHAR (100)  NOT NULL,
@@ -18,8 +18,11 @@
 );
 
 
+GO
+
+CREATE NONCLUSTERED INDEX [IX_BuildingSpaceType_Active_Dates]
+    ON [Housing].[BuildingSpaceType]([BuildingSpaceTypeActive] ASC, [BuildingSpaceTypeStartDate] ASC, [BuildingSpaceTypeEndDate] ASC);
 
 
 GO
-CREATE NONCLUSTERED INDEX [IX_BuildingSpaceType_Active_Dates]
-    ON [Housing].[BuildingSpaceType]([BuildingSpaceTypeActive] ASC, [BuildingSpaceTypeStartDate] ASC, [BuildingSpaceTypeEndDate] ASC);
+

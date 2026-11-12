@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[MenuDistributor] (
+CREATE TABLE [dbo].[MenuDistributor] (
     [menuDistributorID]     INT    IDENTITY (1, 1) NOT NULL,
     [menuID_FK]             BIGINT NULL,
     [distributorID_FK]      BIGINT NULL,
@@ -12,4 +12,7 @@
     CONSTRAINT [FK_MenuDistributor_Role] FOREIGN KEY ([roleID_FK]) REFERENCES [dbo].[Role] ([roleID]),
     CONSTRAINT [FK_MenuDistributor_Users] FOREIGN KEY ([userID_FK]) REFERENCES [dbo].[Users] ([usersID])
 );
+
+
+GO
 

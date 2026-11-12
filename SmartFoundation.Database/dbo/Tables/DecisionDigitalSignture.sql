@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[DecisionDigitalSignture] (
+CREATE TABLE [dbo].[DecisionDigitalSignture] (
     [decisionDigitalSigntureID]      BIGINT           IDENTITY (1, 1) NOT NULL,
     [decisionDigitalSigntureUID]     UNIQUEIDENTIFIER CONSTRAINT [DF_DecisionDigitalSignture_decisionDigitalSigntureUID] DEFAULT (newid()) NULL,
     [transactionID_FK]               BIGINT           NULL,
@@ -11,4 +11,7 @@
     [hostName]                       NVARCHAR (200)   NULL,
     CONSTRAINT [PK_DecisionDigitalSignture] PRIMARY KEY CLUSTERED ([decisionDigitalSigntureID] ASC)
 );
+
+
+GO
 

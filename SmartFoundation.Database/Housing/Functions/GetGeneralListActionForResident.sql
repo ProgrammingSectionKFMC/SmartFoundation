@@ -1,4 +1,4 @@
-﻿
+
 
 
 
@@ -48,4 +48,5 @@ AND (ba.generalNo_FK <> '')
 
 )
 
+GO
 

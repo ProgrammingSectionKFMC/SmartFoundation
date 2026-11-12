@@ -1,4 +1,4 @@
-﻿CREATE VIEW [WH].[V_Class]
+CREATE VIEW [WH].[V_Class]
 AS
 SELECT        categoryLevelID AS ClassID, categoryLevelName_A AS ClassName_A, categoryLevelName_E AS ClassName_E, categoryLevelParentID_FK AS ClassParentID, categoryGroupLifeID_FK AS ClassLifeID, unitID_FK, 
                          categoryLevelDescription AS ClassDescription, oldGroupID AS oldClassID, oldCODE, categoryLevelActive AS CalssActive, hostName, entryDate, entryData
@@ -6,6 +6,7 @@ FROM            WH.CategoryLevel
 WHERE        (categoryLevelParentID_FK IS NOT NULL)
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane1', @value = N'[0E232FF0-B466-11cf-A24F-00AA00A3EFFF, 1.00]
 Begin DesignProperties = 
    Begin PaneConfigurations = 
@@ -133,5 +134,9 @@ End
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPaneCount', @value = 1, @level0type = N'SCHEMA', @level0name = N'WH', @level1type = N'VIEW', @level1name = N'V_Class';
+
+
+GO
 

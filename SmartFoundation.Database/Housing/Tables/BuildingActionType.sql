@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BuildingActionType] (
+CREATE TABLE [Housing].[BuildingActionType] (
     [buildingActionTypeID]            INT             IDENTITY (1, 1) NOT NULL,
     [buildingActionTypeOrder]         INT             NULL,
     [buildingStatusID_FK]             INT             NULL,
@@ -20,7 +20,11 @@
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingActionType_ID]
     ON [Housing].[BuildingActionType]([buildingActionTypeID] ASC)
     INCLUDE([buildingActionTypeName_A], [IsResident]);
+
+
+GO
 

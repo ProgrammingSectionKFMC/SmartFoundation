@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[ExitMeterPeriodicSubstitution] (
+CREATE TABLE [Housing].[ExitMeterPeriodicSubstitution] (
     [SubstitutionID]           BIGINT          IDENTITY (1, 1) NOT NULL,
     [ExitRequestActionID_FK]   BIGINT          NOT NULL,
     [MeterID]                  BIGINT          NOT NULL,
@@ -26,16 +26,22 @@
 
 
 GO
-CREATE UNIQUE NONCLUSTERED INDEX [UX_ExitMeterSubstitution_Active_OriginalRead]
-    ON [Housing].[ExitMeterPeriodicSubstitution]([OriginalMeterReadID] ASC) WHERE ([SubstitutionStatus]=(1));
+
+CREATE UNIQUE NONCLUSTERED INDEX [UX_ExitMeterSubstitution_Exit_Meter_Period]
+    ON [Housing].[ExitMeterPeriodicSubstitution]([ExitRequestActionID_FK] ASC, [MeterID] ASC, [BillPeriodID] ASC);
 
 
 GO
+
 CREATE UNIQUE NONCLUSTERED INDEX [UX_ExitMeterSubstitution_Active_OriginalBill]
     ON [Housing].[ExitMeterPeriodicSubstitution]([OriginalBillsID] ASC) WHERE ([SubstitutionStatus]=(1));
 
 
 GO
-CREATE UNIQUE NONCLUSTERED INDEX [UX_ExitMeterSubstitution_Exit_Meter_Period]
-    ON [Housing].[ExitMeterPeriodicSubstitution]([ExitRequestActionID_FK] ASC, [MeterID] ASC, [BillPeriodID] ASC);
+
+CREATE UNIQUE NONCLUSTERED INDEX [UX_ExitMeterSubstitution_Active_OriginalRead]
+    ON [Housing].[ExitMeterPeriodicSubstitution]([OriginalMeterReadID] ASC) WHERE ([SubstitutionStatus]=(1));
+
+
+GO
 

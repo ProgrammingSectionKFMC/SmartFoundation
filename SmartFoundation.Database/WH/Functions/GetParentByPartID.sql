@@ -1,4 +1,4 @@
-﻿-- =============================================
+-- =============================================
 -- Author:		<Author,,Name>
 -- Create date: <Create Date, ,>
 -- Description:	<Description, ,>
@@ -64,3 +64,6 @@ set @Result = (select @parentName)
 	RETURN  @Result
 
 END
+
+GO
+

@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[MilitaryUnit] (
+CREATE TABLE [dbo].[MilitaryUnit] (
     [militaryUnitID]        INT            IDENTITY (1, 1) NOT NULL,
     [militaryUnitCode]      NVARCHAR (20)  NULL,
     [militaryUnitName_A]    NVARCHAR (100) NULL,
@@ -10,4 +10,7 @@
     [hostName]              NVARCHAR (200) NULL,
     CONSTRAINT [PK_MilitaryUnit] PRIMARY KEY CLUSTERED ([militaryUnitID] ASC)
 );
+
+
+GO
 

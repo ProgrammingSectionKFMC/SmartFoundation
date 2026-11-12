@@ -1,4 +1,4 @@
-﻿
+
 -- Internal helper: APPLY / RESTORE. Default: no resultset for central CRUD callers.
 CREATE   PROCEDURE Housing.ManageExitRentExemptionClosure
       @Action NVARCHAR(10)
@@ -209,3 +209,6 @@ BEGIN
         THROW;
     END CATCH;
 END;
+
+GO
+

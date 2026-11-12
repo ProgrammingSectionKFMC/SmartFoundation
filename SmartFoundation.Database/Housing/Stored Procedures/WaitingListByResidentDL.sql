@@ -1,4 +1,4 @@
-﻿-- =============================================
+-- =============================================
 -- Author:		<Author,,Name>
 -- Create date: <Create Date,,>
 -- Description:	<Description,,>
@@ -201,3 +201,6 @@ ORDER BY
 
     -- Insert statements for procedure here
 END
+
+GO
+

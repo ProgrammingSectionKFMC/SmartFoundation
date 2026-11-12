@@ -1,8 +1,4 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER OFF
-GO
-CREATE PROCEDURE [Tickets].[TicketAdminDL]
+CREATE   PROCEDURE [Tickets].[TicketAdminDL]
 (
       @pageName_  NVARCHAR(400)
     , @idaraID    INT
@@ -298,4 +294,6 @@ BEGIN
         WHERE r.rn = 1;
 
 END
+
 GO
+

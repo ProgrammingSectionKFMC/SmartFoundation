@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Maintenance].[MaintenanceActionType] (
+CREATE TABLE [Maintenance].[MaintenanceActionType] (
     [ActionTypeID]     INT            NOT NULL,
     [ActionTypeName_A] NVARCHAR (150) NOT NULL,
     [ActionTypeCode]   NVARCHAR (80)  NOT NULL,
@@ -11,4 +11,7 @@
     CONSTRAINT [PK_MaintenanceActionType] PRIMARY KEY CLUSTERED ([ActionTypeID] ASC),
     CONSTRAINT [UQ_MaintenanceActionType_ActionTypeCode] UNIQUE NONCLUSTERED ([ActionTypeCode] ASC)
 );
+
+
+GO
 

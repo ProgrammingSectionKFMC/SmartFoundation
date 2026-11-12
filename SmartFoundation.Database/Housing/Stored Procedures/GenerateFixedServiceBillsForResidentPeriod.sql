@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE [Housing].[GenerateFixedServiceBillsForResidentPeriod]
+CREATE   PROCEDURE [Housing].[GenerateFixedServiceBillsForResidentPeriod]
 (
       @ResidentInfoID BIGINT
     , @GeneralNo BIGINT
@@ -473,3 +473,6 @@ OUTER APPLY
         THROW;
     END CATCH;
 END;
+
+GO
+

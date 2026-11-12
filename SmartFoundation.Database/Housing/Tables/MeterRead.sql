@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[MeterRead] (
+CREATE TABLE [Housing].[MeterRead] (
     [meterReadID]         INT             IDENTITY (1, 1) NOT NULL,
     [meterReadTypeID_FK]  INT             NULL,
     [meterID_FK]          BIGINT          NULL,
@@ -24,25 +24,32 @@
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_MeterRead_Period_Meter_Last_Active]
     ON [Housing].[MeterRead]([billPeriodID_FK] ASC, [meterID_FK] ASC, [dateOfRead] DESC, [meterReadID] DESC)
     INCLUDE([meterReadValue], [meterReadTypeID_FK], [generalNo_FK]) WHERE ([meterReadActive]=(1));
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_MeterRead_PeriodActive_Meter_Date]
     ON [Housing].[MeterRead]([billPeriodID_FK] ASC, [meterReadActive] ASC, [meterID_FK] ASC, [dateOfRead] DESC, [meterReadID] DESC)
     INCLUDE([meterReadValue], [meterReadTypeID_FK], [generalNo_FK]);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_MeterRead_Meter_Last2_Active]
     ON [Housing].[MeterRead]([meterID_FK] ASC, [dateOfRead] DESC, [meterReadID] DESC)
     INCLUDE([billPeriodID_FK], [meterReadValue], [meterReadTypeID_FK], [generalNo_FK], [buildingDetailsID], [buildingDetailsNo]) WHERE ([meterReadActive]=(1));
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_MeterRead_Meter_Active_Date]
     ON [Housing].[MeterRead]([meterID_FK] ASC, [meterReadActive] ASC, [dateOfRead] DESC, [meterReadID] DESC)
     INCLUDE([billPeriodID_FK], [meterReadValue], [meterReadTypeID_FK], [generalNo_FK], [buildingDetailsID], [buildingDetailsNo]);
+
+
+GO
 

@@ -1,4 +1,4 @@
-﻿
+
 
 -- =============================================
 -- Author:		<Author,,Name>
@@ -19,4 +19,7 @@ AS
 	  FROM sys.sql_modules m 
 		   INNER JOIN  sys.objects o 
 			 ON m.object_id = o.object_id
-	 WHERE CASE WHEN @isCaseInsenstive = 1 THEN LOWER(m.definition) ELSE m.definition END Like '%'+@textToSearch_+'%' ESCAPE '\' 
+	 WHERE CASE WHEN @isCaseInsenstive = 1 THEN LOWER(m.definition) ELSE m.definition END Like '%'+@textToSearch_+'%' ESCAPE '\'
+
+GO
+

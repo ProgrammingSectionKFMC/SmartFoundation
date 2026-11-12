@@ -1,4 +1,4 @@
-﻿
+
 
 CREATE VIEW [Housing].[V_GetListAllMetersLastAndBeforeLastRead_WithWrap]
 AS
@@ -86,3 +86,6 @@ LEFT JOIN BeforeLastRead b
     ON b.meterID_FK = l.meterID_FK
 LEFT JOIN MeterMax mm
     ON mm.meterID = l.meterID_FK;
+
+GO
+

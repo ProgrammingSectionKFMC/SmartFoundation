@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BuildingRentType] (
+CREATE TABLE [Housing].[BuildingRentType] (
     [buildingRentTypeID]          INT             IDENTITY (1, 1) NOT NULL,
     [buildingRentTypeDays]        INT             NULL,
     [buildingRentTypeName_A]      NVARCHAR (100)  NULL,
@@ -10,4 +10,7 @@
     [hostName]                    NVARCHAR (200)  NULL,
     CONSTRAINT [PK_BuildingRentType] PRIMARY KEY CLUSTERED ([buildingRentTypeID] ASC)
 );
+
+
+GO
 

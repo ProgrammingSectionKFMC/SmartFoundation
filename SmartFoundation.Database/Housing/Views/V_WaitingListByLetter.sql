@@ -1,4 +1,4 @@
-﻿CREATE VIEW Housing.V_WaitingListByLetter
+CREATE VIEW Housing.V_WaitingListByLetter
 AS
 SELECT        ActionID, ActionTypeID, NationalID, GeneralNo, ActionDecisionNo, ActionDecisionDate, WaitingClassID, WaitingClassName, WaitingOrderTypeID, WaitingOrderTypeName, waitingClassSequence, ActionDate, residentInfoID, 
                          fullname, ActionNote, IdaraId, ActionIdaraName, MainActionEntryData, MainActionEntryDate, ToIdaraID, Toidaraname, buildingDetailsID, buildingDetailsNo, LastActionID, LastActionTypeID, LastActionTypeName, 
@@ -8,6 +8,7 @@ FROM            Housing.V_WaitingList
 WHERE        (ActionTypeID = 7)
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane1', @value = N'[0E232FF0-B466-11cf-A24F-00AA00A3EFFF, 1.00]
 Begin DesignProperties = 
    Begin PaneConfigurations = 
@@ -130,5 +131,9 @@ End
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPaneCount', @value = 1, @level0type = N'SCHEMA', @level0name = N'Housing', @level1type = N'VIEW', @level1name = N'V_WaitingListByLetter';
+
+
+GO
 

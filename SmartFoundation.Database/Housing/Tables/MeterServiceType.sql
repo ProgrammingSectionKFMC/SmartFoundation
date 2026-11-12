@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[MeterServiceType] (
+CREATE TABLE [Housing].[MeterServiceType] (
     [meterServiceTypeID]          INT             IDENTITY (1, 1) NOT NULL,
     [meterServiceTypeName_A]      NVARCHAR (100)  NULL,
     [meterServiceTypeName_E]      NVARCHAR (100)  NULL,
@@ -15,6 +15,10 @@
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_MeterServiceType_Active_Dates]
     ON [Housing].[MeterServiceType]([meterServiceTypeID] ASC, [meterServiceTypeActive] ASC, [meterServiceTypeStartDate] ASC, [meterServiceTypeEndDate] ASC);
+
+
+GO
 

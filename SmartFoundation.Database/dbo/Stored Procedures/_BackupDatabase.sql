@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[_BackupDatabase]
+CREATE PROCEDURE [dbo].[_BackupDatabase]
 (
       @1Home2Work   INT
     , @databaseName SYSNAME = N'DATACORE'
@@ -67,3 +67,6 @@ SELECT
     THROW;
 END CATCH
 END
+
+GO
+

@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE [dbo].[ReSetUserPassword]
+CREATE   PROCEDURE [dbo].[ReSetUserPassword]
 (
     @Action              NVARCHAR(200),
     @usersID             NVARCHAR(200) = NULL,
@@ -329,3 +329,6 @@ BEGIN
         ;THROW;
     END CATCH
 END
+
+GO
+

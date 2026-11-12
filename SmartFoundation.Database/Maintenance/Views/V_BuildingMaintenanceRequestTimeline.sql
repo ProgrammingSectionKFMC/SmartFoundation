@@ -1,4 +1,4 @@
-﻿
+
 CREATE   VIEW [Maintenance].[V_BuildingMaintenanceRequestTimeline]
 AS
 SELECT
@@ -33,3 +33,6 @@ LEFT JOIN [Maintenance].[MaintenanceRequestStatus] AS oldStatus
     ON oldStatus.[StatusID] = action.[OldStatusID]
 LEFT JOIN [Maintenance].[MaintenanceRequestStatus] AS newStatus
     ON newStatus.[StatusID] = action.[NewStatusID];
+
+GO
+

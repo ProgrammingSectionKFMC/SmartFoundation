@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[Meter] (
+CREATE TABLE [Housing].[Meter] (
     [meterID]          BIGINT          IDENTITY (1, 1) NOT NULL,
     [meterTypeID_FK]   INT             NULL,
     [meterNo]          NVARCHAR (50)   NOT NULL,
@@ -22,7 +22,11 @@
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_Meter_Active_Idara_DateRange_All]
     ON [Housing].[Meter]([meterActive] ASC, [IdaraId_FK] ASC, [meterStartDate] ASC, [meterEndDate] ASC)
     INCLUDE([meterTypeID_FK], [meterNo]);
+
+
+GO
 

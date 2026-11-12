@@ -1,4 +1,4 @@
-﻿CREATE TABLE [WH].[WarehousePartProperty] (
+CREATE TABLE [WH].[WarehousePartProperty] (
     [warehousePartPropertyID]        INT            IDENTITY (1, 1) NOT NULL,
     [warehousePartID_FK]             BIGINT         NULL,
     [warehousePartPropertyTypeID_FK] INT            NULL,
@@ -11,4 +11,7 @@
     CONSTRAINT [FK_WarehousePartProperty_WarehousePart1] FOREIGN KEY ([warehousePartID_FK]) REFERENCES [WH].[WarehousePart] ([warehousePartID]),
     CONSTRAINT [FK_WarehousePartProperty_WarehousePartPropertyType] FOREIGN KEY ([warehousePartPropertyTypeID_FK]) REFERENCES [WH].[WarehousePartPropertyType] ([warehousePartPropertyTypeID])
 );
+
+
+GO
 

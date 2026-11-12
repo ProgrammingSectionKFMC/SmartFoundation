@@ -1,6 +1,4 @@
-﻿
-
-CREATE PROCEDURE [Housing].[MetersSP] 
+CREATE   PROCEDURE [Housing].[MetersSP] 
 (
       @Action                                     NVARCHAR(100) = NULL
      ,@meterID                                    NVARCHAR(100)   = NULL
@@ -1674,3 +1672,6 @@ END
         ;THROW;
     END CATCH
 END
+
+GO
+

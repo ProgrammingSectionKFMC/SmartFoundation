@@ -1,4 +1,4 @@
-﻿
+
 
 CREATE   VIEW [Housing].[V_FirstMeterReadForAllMeter]
 AS
@@ -34,3 +34,6 @@ SELECT
     hostName
 FROM LastReads
 WHERE rn = 1;
+
+GO
+

@@ -1,4 +1,4 @@
-﻿
+
 CREATE PROCEDURE [dbo].[PagesManagmentSP] 
 (
       @Action                                NVARCHAR(200)
@@ -988,3 +988,6 @@ SET @dateOfBirth_DT         = TRY_CONVERT(date, @dateOfBirth, 23);
         THROW;
     END CATCH
 END
+
+GO
+

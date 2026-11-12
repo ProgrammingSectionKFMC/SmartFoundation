@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[ChartListUsers] (
+CREATE TABLE [dbo].[ChartListUsers] (
     [ChartListUsersID]        INT             IDENTITY (1, 1) NOT NULL,
     [UsersID_FK]              INT             NOT NULL,
     [ChartListID_FK]          INT             NOT NULL,
@@ -12,4 +12,7 @@
     [hostName]                NVARCHAR (200)  CONSTRAINT [DF_ChartListUsers_hostName] DEFAULT (host_name()) NULL,
     CONSTRAINT [PK_ChartListUsers] PRIMARY KEY CLUSTERED ([ChartListUsersID] ASC)
 );
+
+
+GO
 

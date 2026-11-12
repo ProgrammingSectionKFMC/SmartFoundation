@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[DeductListReportDetails] (
+CREATE TABLE [Housing].[DeductListReportDetails] (
     [DeductListReportDetailsID] BIGINT          IDENTITY (1, 1) NOT NULL,
     [DeductListReportID_FK]     BIGINT          NOT NULL,
     [BillsID_FK]                BIGINT          NOT NULL,
@@ -25,4 +25,10 @@
 
 
 GO
-CREATE UNIQUE INDEX UX_DeductListReportDetails_ReportBill ON Housing.DeductListReportDetails(DeductListReportID_FK,BillsID_FK);
+
+CREATE UNIQUE NONCLUSTERED INDEX [UX_DeductListReportDetails_ReportBill]
+    ON [Housing].[DeductListReportDetails]([DeductListReportID_FK] ASC, [BillsID_FK] ASC);
+
+
+GO
+

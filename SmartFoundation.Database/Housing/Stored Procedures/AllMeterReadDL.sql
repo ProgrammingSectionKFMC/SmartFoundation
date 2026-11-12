@@ -1,4 +1,4 @@
-﻿
+
 CREATE PROCEDURE [Housing].[AllMeterReadDL]
       @pageName_              NVARCHAR(400)
     , @idaraID                INT
@@ -404,3 +404,6 @@ AND EXISTS
         
     
 END
+
+GO
+

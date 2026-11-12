@@ -1,4 +1,4 @@
-﻿CREATE TABLE [VIC].[VehicleScrap] (
+CREATE TABLE [VIC].[VehicleScrap] (
     [ScrapID]          BIGINT          IDENTITY (1, 1) NOT NULL,
     [chassisNumber_FK] NVARCHAR (100)  NOT NULL,
     [IdaraID_FK]       BIGINT          NULL,
@@ -19,4 +19,7 @@
     CONSTRAINT [FK_VehicleScrap_TypesRoot_ScrapType] FOREIGN KEY ([ScrapTypeID_FK]) REFERENCES [VIC].[TypesRoot] ([typesID]),
     CONSTRAINT [FK_VehicleScrap_Vehicles] FOREIGN KEY ([chassisNumber_FK]) REFERENCES [VIC].[Vehicles] ([chassisNumber])
 );
+
+
+GO
 

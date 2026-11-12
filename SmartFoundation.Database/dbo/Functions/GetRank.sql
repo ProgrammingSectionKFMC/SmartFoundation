@@ -1,4 +1,4 @@
-﻿CREATE FUNCTION [dbo].[GetRank]
+CREATE FUNCTION [dbo].[GetRank]
 (
 	-- Add the parameters for the function here
 	@userID int
@@ -22,3 +22,6 @@ BEGIN
 	RETURN @result
 
 END
+
+GO
+

@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[EstimatedBillingPolicyDetails] (
+CREATE TABLE [Housing].[EstimatedBillingPolicyDetails] (
     [EstimatedBillingPolicyDetailsID]     BIGINT          IDENTITY (1, 1) NOT NULL,
     [EstimatedBillingPolicyID_FK]         BIGINT          NOT NULL,
     [MeterServiceTypeID_FK]               INT             NOT NULL,
@@ -24,9 +24,12 @@
 );
 
 
-
-
 GO
+
 CREATE NONCLUSTERED INDEX [IX_EstimatedBillingPolicyDetails_Lookup]
     ON [Housing].[EstimatedBillingPolicyDetails]([EstimatedBillingPolicyID_FK] ASC, [MeterServiceTypeID_FK] ASC, [EstimatedBillingPolicyDetailsActive] ASC)
     INCLUDE([BuildingSpaceTypeID_FK], [AverageDailyConsumption], [UsageFactor], [UnitPrice], [UnitCode]);
+
+
+GO
+

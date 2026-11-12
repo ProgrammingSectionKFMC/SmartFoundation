@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[contactInfo] (
+CREATE TABLE [dbo].[contactInfo] (
     [contactInfoID]        INT             IDENTITY (1, 1) NOT NULL,
     [contanctTypeID_FK]    INT             NULL,
     [userID_FK]            INT             NULL,
@@ -13,4 +13,7 @@
     CONSTRAINT [PK_contactInfo] PRIMARY KEY CLUSTERED ([contactInfoID] ASC),
     CONSTRAINT [FK_contactInfo_contactType] FOREIGN KEY ([contanctTypeID_FK]) REFERENCES [dbo].[contactType] ([contanctTypeID])
 );
+
+
+GO
 

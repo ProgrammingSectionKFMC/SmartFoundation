@@ -1,4 +1,4 @@
-﻿CREATE TABLE [VIC].[TypesRoot] (
+CREATE TABLE [VIC].[TypesRoot] (
     [typesID]            INT            IDENTITY (1, 1) NOT NULL,
     [typesName_A]        NVARCHAR (100) NULL,
     [typesName_E]        NVARCHAR (100) NULL,
@@ -12,4 +12,7 @@
     [hostName]           NVARCHAR (200) NULL,
     CONSTRAINT [PK_TypesRoot] PRIMARY KEY CLUSTERED ([typesID] ASC)
 );
+
+
+GO
 

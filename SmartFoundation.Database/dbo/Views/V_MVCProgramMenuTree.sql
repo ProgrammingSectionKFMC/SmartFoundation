@@ -1,4 +1,4 @@
-﻿
+
 CREATE VIEW [dbo].[V_MVCProgramMenuTree] AS
 WITH MenuHierarchy AS (
     -- المستوى 0: البرنامج نفسه
@@ -47,4 +47,6 @@ SELECT
     mh.fullPath,
     mh.level
 FROM MenuHierarchy mh;
+
+GO
 

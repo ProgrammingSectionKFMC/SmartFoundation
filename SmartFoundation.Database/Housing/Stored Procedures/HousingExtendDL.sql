@@ -1,4 +1,4 @@
-﻿-- =============================================
+-- =============================================
 -- Author:		<Author,,Name>
 -- Create date: <Create Date,,>
 -- Description:	<Description,,>
@@ -136,3 +136,6 @@ GROUP BY e.residentInfoID,e.buildingDetailsID
 
 
 END
+
+GO
+

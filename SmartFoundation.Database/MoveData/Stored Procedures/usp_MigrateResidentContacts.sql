@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [MoveData].[usp_MigrateResidentContacts]     @RollbackAfterTest bit = 1 AS BEGIN     SET NOCOUNT ON;     SET XACT_ABORT ON;      IF NOT EXISTS (SELECT 1 FROM Housing.ResidentInfo)         THROW 53700, N'Run MoveData.usp_MigrateResidents before migrating resident contacts.', 1;      IF EXISTS     (         SELECT 1         FROM KFMC.dbo.contactInfo sourceContact         JOIN KFMC.Housing.ResidentInfo sourceResident
+CREATE PROCEDURE [MoveData].[usp_MigrateResidentContacts]     @RollbackAfterTest bit = 1 AS BEGIN     SET NOCOUNT ON;     SET XACT_ABORT ON;      IF NOT EXISTS (SELECT 1 FROM Housing.ResidentInfo)         THROW 53700, N'Run MoveData.usp_MigrateResidents before migrating resident contacts.', 1;      IF EXISTS     (         SELECT 1         FROM KFMC.dbo.contactInfo sourceContact         JOIN KFMC.Housing.ResidentInfo sourceResident
           ON sourceResident.generalNo=sourceContact.userID_FK
          AND sourceResident.residentInfoActive=1
         JOIN Housing.ResidentInfo eligibleTarget
@@ -15,3 +15,6 @@
              JOIN Housing.ResidentInfo eligibleTarget
                ON eligibleTarget.residentInfoID=TRY_CONVERT(bigint,sourceResident.residentInfoID)
               AND eligibleTarget.residentInfoActive=1) SourceResidentContacts,             (SELECT COUNT_BIG(*)              FROM KFMC.dbo.contactInfo sourceContact              WHERE NOT EXISTS              (                  SELECT 1 FROM KFMC.Housing.ResidentInfo sourceResident                  WHERE sourceResident.generalNo = sourceContact.userID_FK              )) ExcludedNonResidentContacts,             (SELECT COUNT_BIG(*) FROM Housing.ResidentContactInfo              WHERE residentcontactInfoActive = 1) ActiveResidentContacts,             (SELECT COUNT_BIG(*) FROM Housing.ResidentContactInfo              WHERE ISNULL(residentcontactInfoActive, 0) = 0) InactiveResidentContacts;          IF @RollbackAfterTest = 1 ROLLBACK TRANSACTION;         ELSE COMMIT TRANSACTION;     END TRY     BEGIN CATCH         IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;         THROW;     END CATCH; END;
+
+GO
+

@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BuildingPaymentExcelImportDetail] (
+CREATE TABLE [Housing].[BuildingPaymentExcelImportDetail] (
     [ImportDetailID]             BIGINT          IDENTITY (1, 1) NOT NULL,
     [DeductListID_FK]            INT             NOT NULL,
     [ExcelRowNo]                 INT             NOT NULL,
@@ -25,11 +25,16 @@
 
 
 GO
+
+CREATE UNIQUE NONCLUSTERED INDEX [UX_BPExcelDetail_ReplacedManual]
+    ON [Housing].[BuildingPaymentExcelImportDetail]([ReplacedManualPaymentID_FK] ASC) WHERE ([ReplacedManualPaymentID_FK] IS NOT NULL);
+
+
+GO
+
 CREATE UNIQUE NONCLUSTERED INDEX [UX_BPExcelDetail_MatchedManual]
     ON [Housing].[BuildingPaymentExcelImportDetail]([MatchedManualPaymentID_FK] ASC) WHERE ([MatchedManualPaymentID_FK] IS NOT NULL);
 
 
 GO
-CREATE UNIQUE NONCLUSTERED INDEX [UX_BPExcelDetail_ReplacedManual]
-    ON [Housing].[BuildingPaymentExcelImportDetail]([ReplacedManualPaymentID_FK] ASC) WHERE ([ReplacedManualPaymentID_FK] IS NOT NULL);
 

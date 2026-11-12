@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[Transactions] (
+CREATE TABLE [dbo].[Transactions] (
     [transactionID]        BIGINT           IDENTITY (1, 1) NOT NULL,
     [transactionUID]       UNIQUEIDENTIFIER CONSTRAINT [DF_Transactions_transactionUID] DEFAULT (newid()) NULL,
     [createrByUserID_FK]   INT              NULL,
@@ -19,4 +19,7 @@
     CONSTRAINT [FK_Transaction_SecurityType] FOREIGN KEY ([securityTypeID_FK]) REFERENCES [dbo].[SecurityType] ([securityTypeID]),
     CONSTRAINT [FK_Transaction_TransactionType] FOREIGN KEY ([transactionTypeID_FK]) REFERENCES [dbo].[TransactionType] ([transactionTypeID])
 );
+
+
+GO
 

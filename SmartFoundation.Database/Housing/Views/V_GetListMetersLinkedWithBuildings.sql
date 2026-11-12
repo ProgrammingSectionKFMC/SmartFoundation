@@ -1,4 +1,4 @@
-﻿
+
 
 CREATE VIEW [Housing].[V_GetListMetersLinkedWithBuildings]
 AS
@@ -15,10 +15,9 @@ WHERE        (1 = 1) AND (mb.meterForBuildingActive = 1) AND (mb.meterForBuildin
                           (bd.buildingDetailsEndDate IS NULL) AND (m.meterActive = 1) AND (m.meterStartDate IS NOT NULL) AND (m.meterEndDate IS NULL) AND (mt.meterTypeActive = 1) AND (mt.meterTypeStartDate IS NOT NULL) AND 
                          (mt.meterTypeEndDate IS NULL)  AND (but.buildingUtilityTypeActive = 1) AND (but.buildingUtilityTypeStartDate IS NOT NULL) AND (but.buildingUtilityTypeEndDate IS NULL) AND 
                          (mst.meterServiceTypeActive = 1) AND (mst.meterServiceTypeStartDate IS NOT NULL) AND (mst.meterServiceTypeEndDate IS NULL) AND (msp.meterServicePriceActive = 1) AND (msp.meterServicePriceStartDate IS NOT NULL)
-                         
-
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane1', @value = N'[0E232FF0-B466-11cf-A24F-00AA00A3EFFF, 1.00]
 Begin DesignProperties = 
    Begin PaneConfigurations = 
@@ -163,6 +162,7 @@ Begin DesignProperties =
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane2', @value = N'    End
       End
    End
@@ -214,5 +214,9 @@ End
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPaneCount', @value = 2, @level0type = N'SCHEMA', @level0name = N'Housing', @level1type = N'VIEW', @level1name = N'V_GetListMetersLinkedWithBuildings';
+
+
+GO
 

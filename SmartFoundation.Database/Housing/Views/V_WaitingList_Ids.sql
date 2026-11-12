@@ -1,4 +1,4 @@
-﻿CREATE   VIEW Housing.V_WaitingList_Ids
+CREATE   VIEW Housing.V_WaitingList_Ids
 AS
 SELECT b.buildingActionID AS ActionID
 FROM Housing.BuildingAction b
@@ -51,3 +51,6 @@ WHERE b.buildingActionTypeID_FK = 1
             )
         )
   );
+
+GO
+

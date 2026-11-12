@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[UploadExcelImportLog] (
+CREATE TABLE [Housing].[UploadExcelImportLog] (
     [ImportLogID]      INT             IDENTITY (1, 1) NOT NULL,
     [FileHash]         CHAR (64)       NOT NULL,
     [OriginalFileName] NVARCHAR (260)  NULL,
@@ -17,15 +17,17 @@
 );
 
 
-
-
 GO
+
 CREATE UNIQUE NONCLUSTERED INDEX [UX_UploadExcelImportLog_FileHash]
     ON [Housing].[UploadExcelImportLog]([FileHash] ASC);
 
 
 GO
+
 CREATE UNIQUE NONCLUSTERED INDEX [UX_UploadExcelImportLog_DeductListID]
-    ON [Housing].[UploadExcelImportLog]([DeductListID_FK] ASC)
-    WHERE [DeductListID_FK] IS NOT NULL;
+    ON [Housing].[UploadExcelImportLog]([DeductListID_FK] ASC) WHERE ([DeductListID_FK] IS NOT NULL);
+
+
+GO
 

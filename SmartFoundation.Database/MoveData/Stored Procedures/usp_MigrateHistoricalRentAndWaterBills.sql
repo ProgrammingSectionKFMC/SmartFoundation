@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [MoveData].[usp_MigrateHistoricalRentAndWaterBills]
+CREATE PROCEDURE [MoveData].[usp_MigrateHistoricalRentAndWaterBills]
     @IdaraId bigint,
     /* مهم عند التشغيل الفعلي: تاريخ نهاية الترحيل وبداية اعتماد النظام الجديد. */
     @CutoverDate date,
@@ -551,3 +551,6 @@ BEGIN
         THROW;
     END CATCH;
 END;
+
+GO
+

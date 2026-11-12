@@ -1,2 +1,10 @@
-﻿CREATE USER [KFMCMODA\Administrator];
+CREATE LOGIN [KFMCMODA\Administrator]
+    FROM WINDOWS WITH DEFAULT_LANGUAGE = [us_english];
+
+
+GO
+ALTER LOGIN [KFMCMODA\Administrator] DISABLE;
+
+
+GO
 

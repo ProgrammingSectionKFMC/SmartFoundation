@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[HousingExcelReview_20261108] (
+CREATE TABLE [dbo].[HousingExcelReview_20261108] (
     [RowNo]             INT             NOT NULL,
     [NationalID]        NVARCHAR (50)   NULL,
     [GeneralNo]         BIGINT          NOT NULL,
@@ -9,4 +9,7 @@
     PRIMARY KEY CLUSTERED ([RowNo] ASC),
     CHECK ([NoID]=(2) OR [NoID]=(1) OR [NoID]=(0))
 );
+
+
+GO
 

@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BuildingDetails] (
+CREATE TABLE [Housing].[BuildingDetails] (
     [buildingDetailsID]          BIGINT          IDENTITY (1, 1) NOT NULL,
     [buildingDetailsNo]          NVARCHAR (20)   NOT NULL,
     [buildingDetailsRooms]       INT             NULL,
@@ -28,13 +28,18 @@
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingDetails_Active_Start_End]
     ON [Housing].[BuildingDetails]([buildingDetailsActive] ASC, [buildingDetailsStartDate] ASC, [buildingDetailsEndDate] ASC)
     INCLUDE([buildingTypeID_FK], [buildingUtilityTypeID_FK], [militaryLocationID_FK], [buildingClassID_FK]);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingDetails_ActiveDates]
     ON [Housing].[BuildingDetails]([buildingDetailsActive] ASC, [buildingDetailsEndDate] ASC, [buildingDetailsStartDate] ASC)
     INCLUDE([buildingDetailsID], [buildingTypeID_FK], [buildingUtilityTypeID_FK], [militaryLocationID_FK], [buildingClassID_FK]);
+
+
+GO
 

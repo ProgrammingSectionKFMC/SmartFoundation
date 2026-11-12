@@ -1,4 +1,4 @@
-﻿
+
 CREATE   PROCEDURE [Maintenance].[MaintenanceApprovalDL]
       @pageName_ NVARCHAR(400)
     , @idaraID INT
@@ -28,3 +28,6 @@ BEGIN
       AND list.[StatusCode] = N'WAITING_APPROVAL'
     ORDER BY list.[RequestDate] DESC, list.[RequestID] DESC;
 END;
+
+GO
+

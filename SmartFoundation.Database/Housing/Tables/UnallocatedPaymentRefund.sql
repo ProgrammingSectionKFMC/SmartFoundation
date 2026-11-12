@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[UnallocatedPaymentRefund] (
+CREATE TABLE [Housing].[UnallocatedPaymentRefund] (
     [RefundID]                  BIGINT           IDENTITY (1, 1) NOT NULL,
     [ResidentInfoID_FK]         BIGINT           NOT NULL,
     [BillChargeTypeID_FK]       INT              NOT NULL,
@@ -31,12 +31,17 @@
 
 
 GO
+
+CREATE UNIQUE NONCLUSTERED INDEX [UX_HUPR_RefundReference]
+    ON [Housing].[UnallocatedPaymentRefund]([IdaraId_FK] ASC, [ResidentInfoID_FK] ASC, [BillChargeTypeID_FK] ASC, [RefundReferenceNormalized] ASC) WHERE ([RefundStatus]=(1));
+
+
+GO
+
 CREATE NONCLUSTERED INDEX [IX_HUPR_ResidentChargeStatus]
     ON [Housing].[UnallocatedPaymentRefund]([IdaraId_FK] ASC, [ResidentInfoID_FK] ASC, [BillChargeTypeID_FK] ASC, [RefundStatus] ASC)
     INCLUDE([RefundAmount], [RefundDate]);
 
 
 GO
-CREATE UNIQUE NONCLUSTERED INDEX [UX_HUPR_RefundReference]
-    ON [Housing].[UnallocatedPaymentRefund]([IdaraId_FK] ASC, [ResidentInfoID_FK] ASC, [BillChargeTypeID_FK] ASC, [RefundReferenceNormalized] ASC) WHERE ([RefundStatus]=(1));
 

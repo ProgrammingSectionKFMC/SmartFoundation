@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BillPeriod] (
+CREATE TABLE [Housing].[BillPeriod] (
     [billPeriodID]        INT            IDENTITY (1, 1) NOT NULL,
     [billPeriodTypeID_FK] INT            NULL,
     [billPeriodName_A]    NVARCHAR (100) NULL,
@@ -17,6 +17,10 @@
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BillPeriod_Idara_Active_Type_PeriodID]
     ON [Housing].[BillPeriod]([IdaraId_FK] ASC, [billPeriodActive] ASC, [billPeriodTypeID_FK] ASC, [billPeriodID] ASC);
+
+
+GO
 

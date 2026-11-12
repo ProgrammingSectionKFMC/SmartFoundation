@@ -1,4 +1,4 @@
-﻿-- =============================================
+-- =============================================
 -- Author:		<Author,,Name>
 -- Create date: <Create Date, ,>
 -- Description:	<Description, ,>
@@ -29,3 +29,6 @@ BEGIN
 	RETURN coalesce(@Result,0)
 
 END
+
+GO
+

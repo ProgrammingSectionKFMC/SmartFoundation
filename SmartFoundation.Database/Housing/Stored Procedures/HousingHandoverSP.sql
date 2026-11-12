@@ -1,4 +1,4 @@
-﻿-- STEP 1 ONLY: change HousingHandoverSP. Does not change the View or action roots.
+-- STEP 1 ONLY: change HousingHandoverSP. Does not change the View or action roots.
 CREATE PROCEDURE [Housing].[HousingHandoverSP]
     @Action NVARCHAR(200),
     @buildingDetailsID NVARCHAR(100) = NULL,
@@ -185,3 +185,6 @@ EXEC @LockResult = sys.sp_getapplock
         THROW;
     END CATCH
 END;
+
+GO
+

@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[AuthenticationLoginGuardSP]
+CREATE   PROCEDURE [dbo].[AuthenticationLoginGuardSP]
     @LoginIdentifier NVARCHAR(20)
 AS
 BEGIN
@@ -141,4 +141,6 @@ BEGIN
         , CAST(NULL AS DATETIME2(3)) AS [LockedUntil]
         , CAST(0 AS INT) AS [RetryAfterSeconds];
 END;
+
+GO
 

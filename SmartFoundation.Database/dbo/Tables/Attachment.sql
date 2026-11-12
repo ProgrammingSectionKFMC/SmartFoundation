@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[Attachment] (
+CREATE TABLE [dbo].[Attachment] (
     [attachmentID]          BIGINT           IDENTITY (1, 1) NOT NULL,
     [attachmentUID]         UNIQUEIDENTIFIER CONSTRAINT [DF_Attachment_attachmentUID] DEFAULT (newid()) NULL,
     [transactionID_FK]      BIGINT           NULL,
@@ -15,4 +15,7 @@
     [hostName]              NVARCHAR (200)   CONSTRAINT [DF_Attachment_hostName] DEFAULT (host_name()) NULL,
     CONSTRAINT [PK_Attachment] PRIMARY KEY CLUSTERED ([attachmentID] ASC)
 );
+
+
+GO
 

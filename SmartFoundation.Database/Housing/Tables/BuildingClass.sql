@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BuildingClass] (
+CREATE TABLE [Housing].[BuildingClass] (
     [buildingClassID]          BIGINT          IDENTITY (1, 1) NOT NULL,
     [buildingClassName_A]      NVARCHAR (100)  NULL,
     [buildingClassName_E]      NVARCHAR (100)  NULL,
@@ -11,4 +11,7 @@
     [hostName]                 NVARCHAR (2000) NULL,
     CONSTRAINT [PK_BuildingClass] PRIMARY KEY CLUSTERED ([buildingClassID] ASC)
 );
+
+
+GO
 

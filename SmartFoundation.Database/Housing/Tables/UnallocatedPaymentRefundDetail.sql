@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[UnallocatedPaymentRefundDetail] (
+CREATE TABLE [Housing].[UnallocatedPaymentRefundDetail] (
     [RefundDetailID]  BIGINT          IDENTITY (1, 1) NOT NULL,
     [RefundID_FK]     BIGINT          NOT NULL,
     [PaymentID_FK]    BIGINT          NOT NULL,
@@ -12,7 +12,11 @@
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_HUPRD_Payment]
     ON [Housing].[UnallocatedPaymentRefundDetail]([PaymentID_FK] ASC)
     INCLUDE([AllocatedAmount]);
+
+
+GO
 

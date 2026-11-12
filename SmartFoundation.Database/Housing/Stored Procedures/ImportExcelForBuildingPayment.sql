@@ -1,4 +1,4 @@
-﻿
+
 CREATE PROCEDURE [Housing].[ImportExcelForBuildingPayment]
 (
     @NationalIDs NVARCHAR(255) = NULL,
@@ -262,3 +262,6 @@ BEGIN
         ;THROW;
     END CATCH
 END
+
+GO
+

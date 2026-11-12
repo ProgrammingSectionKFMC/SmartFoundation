@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE [support].[SupportTeamManagementDL]
+CREATE   PROCEDURE [support].[SupportTeamManagementDL]
       @pageName_      NVARCHAR(400)
     , @idaraID        INT
     , @entrydata      BIGINT
@@ -31,3 +31,6 @@ BEGIN
     WHERE ISNULL(r.PublicView, 1) = 1
     ORDER BY r.roleID;
 END
+
+GO
+

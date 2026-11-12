@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[billPayment] (
+CREATE TABLE [Housing].[billPayment] (
     [billpaymentID]        INT              IDENTITY (1, 1) NOT NULL,
     [billPaymentUID]       UNIQUEIDENTIFIER CONSTRAINT [DF_billPayment_billPaymentUID] DEFAULT (newid()) NOT NULL,
     [billPaymentTypeID_FK] INT              NULL,
@@ -15,4 +15,7 @@
     CONSTRAINT [PK_billPayment] PRIMARY KEY CLUSTERED ([billpaymentID] ASC),
     CONSTRAINT [FK_billPayment_billPaymentType] FOREIGN KEY ([billPaymentTypeID_FK]) REFERENCES [Housing].[billPaymentType] ([billPaymentTypeID])
 );
+
+
+GO
 

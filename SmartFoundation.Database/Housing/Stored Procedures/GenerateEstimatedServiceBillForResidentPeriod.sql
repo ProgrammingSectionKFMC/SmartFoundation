@@ -1,4 +1,4 @@
-CREATE PROCEDURE [Housing].[GenerateEstimatedServiceBillForResidentPeriod]
+CREATE   PROCEDURE [Housing].[GenerateEstimatedServiceBillForResidentPeriod]
 (
       @ResidentInfoID BIGINT
     , @GeneralNo BIGINT
@@ -255,3 +255,6 @@ BEGIN
         THROW;
     END CATCH;
 END;
+
+GO
+

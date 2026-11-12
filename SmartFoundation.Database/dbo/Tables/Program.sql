@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[Program] (
+CREATE TABLE [dbo].[Program] (
     [programID]          INT             IDENTITY (1, 1) NOT NULL,
     [programName_A]      NVARCHAR (100)  NULL,
     [programName_E]      NVARCHAR (100)  NULL,
@@ -16,4 +16,7 @@
     [hostName]           NVARCHAR (200)  NULL,
     CONSTRAINT [PK_Program] PRIMARY KEY CLUSTERED ([programID] ASC)
 );
+
+
+GO
 

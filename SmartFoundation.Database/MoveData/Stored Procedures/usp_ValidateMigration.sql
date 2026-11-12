@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE [MoveData].[usp_ValidateMigration]
+CREATE   PROCEDURE [MoveData].[usp_ValidateMigration]
     @IdaraId bigint = 1,
     @CutoverDate date = NULL,
     @WaterMonthlyAmount decimal(18,2) = 8.25
@@ -2809,3 +2809,6 @@ N'Action 27 requires an existing waiting root of type 1 or 7. Historical inactiv
       )
     ORDER BY t.GeneralNo,t.WaitingClassID,t.RootActionID,Depth100ActionID;
 END;
+
+GO
+

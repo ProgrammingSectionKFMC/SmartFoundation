@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[UserPhoto] (
+CREATE TABLE [dbo].[UserPhoto] (
     [userPhotoID]     INT              IDENTITY (1, 1) NOT NULL,
     [userPhotoUID]    UNIQUEIDENTIFIER CONSTRAINT [DF_UserPhoto_userPhotoUID] DEFAULT (newid()) NULL,
     [userID_FK]       INT              NULL,
@@ -9,4 +9,7 @@
     [hostName]        NVARCHAR (200)   CONSTRAINT [DF_UserPhoto_hostName] DEFAULT (host_name()) NULL,
     CONSTRAINT [PK_UserPhoto] PRIMARY KEY CLUSTERED ([userPhotoID] ASC)
 );
+
+
+GO
 

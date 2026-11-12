@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BillDeductList] (
+CREATE TABLE [Housing].[BillDeductList] (
     [billDeductListID]      INT              IDENTITY (1, 1) NOT NULL,
     [billDeductTypeID_FK]   INT              NULL,
     [billDeductUID]         UNIQUEIDENTIFIER CONSTRAINT [DF_BillDeductList_billDeductUID] DEFAULT (newid()) NOT NULL,
@@ -24,4 +24,7 @@
     CONSTRAINT [FK_BillDeductList_BillDeductType] FOREIGN KEY ([billDeductTypeID_FK]) REFERENCES [Housing].[BillDeductType] ([billDeductTypeID]),
     CONSTRAINT [FK_BillDeductList_BuildingPaymentType] FOREIGN KEY ([paymentTypeID_FK]) REFERENCES [Housing].[BuildingPaymentType] ([buildingPaymentTypeID])
 );
+
+
+GO
 

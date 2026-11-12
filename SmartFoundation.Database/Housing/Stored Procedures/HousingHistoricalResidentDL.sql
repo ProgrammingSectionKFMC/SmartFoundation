@@ -1,4 +1,4 @@
-﻿/*
+/*
   نفس نمط WaitingListDL / OtherWaitingListDL / HousingResidentDL.
   نوع الفئة مستنتج من Housing.WaitingClass.idara_FK ولا يُرسل من الواجهة.
   Masters_DataLoad يرجع جدول الصلاحيات أولا، ثم يرجع هذا الإجراء:
@@ -149,3 +149,6 @@ BEGIN
       )
     ORDER BY b.buildingDetailsNo;
 END;
+
+GO
+

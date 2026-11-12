@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[ResidentStatus] (
+CREATE TABLE [Housing].[ResidentStatus] (
     [residentStatusID]          INT             IDENTITY (1, 1) NOT NULL,
     [residentStatusName_A]      NVARCHAR (100)  NULL,
     [residentStatusName_E]      NVARCHAR (100)  NULL,
@@ -9,4 +9,7 @@
     [hostName]                  NVARCHAR (200)  NULL,
     CONSTRAINT [PK_ResidentStatus] PRIMARY KEY CLUSTERED ([residentStatusID] ASC)
 );
+
+
+GO
 

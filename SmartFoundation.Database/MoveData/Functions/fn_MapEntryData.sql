@@ -1,4 +1,4 @@
-﻿
+
 /*
     Old entryData stores the employee general number.
     New entryData stores dbo.Users.usersID.
@@ -30,3 +30,6 @@ BEGIN
 
     RETURN CONVERT(nvarchar(4000), @MappedUsersID);
 END;
+
+GO
+

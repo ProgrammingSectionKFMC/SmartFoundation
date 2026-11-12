@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[UsersPhoto] (
+CREATE TABLE [dbo].[UsersPhoto] (
     [userPhotoID]     INT              NOT NULL,
     [userPhotoUID]    UNIQUEIDENTIFIER NULL,
     [usersID_FK]      BIGINT           NOT NULL,
@@ -8,4 +8,7 @@
     [entryData]       NVARCHAR (20)    NULL,
     [hostName]        NVARCHAR (200)   NULL
 );
+
+
+GO
 

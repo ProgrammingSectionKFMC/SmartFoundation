@@ -1,4 +1,4 @@
-﻿-- =============================================
+-- =============================================
 -- Author:		<Author,,Name>
 -- Create date: <Create Date,,>
 -- Description:	<Description,,>
@@ -100,3 +100,6 @@ SELECT 8 AS #, N'الاجمالي'           AS N'النوع', CAST(100 AS DECIM
 
    
 END
+
+GO
+

@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Maintenance].[MaintenanceSLA] (
+CREATE TABLE [Maintenance].[MaintenanceSLA] (
     [SLAID]                 BIGINT         IDENTITY (1, 1) NOT NULL,
     [IdaraId_FK]            BIGINT         NOT NULL,
     [MaintenanceCategoryID] BIGINT         NULL,
@@ -18,4 +18,7 @@
     CONSTRAINT [FK_MaintenanceSLA_MaintenanceCategory] FOREIGN KEY ([IdaraId_FK], [MaintenanceCategoryID]) REFERENCES [Maintenance].[MaintenanceCategory] ([IdaraId_FK], [MaintenanceCategoryID]),
     CONSTRAINT [FK_MaintenanceSLA_Priority] FOREIGN KEY ([PriorityID]) REFERENCES [Maintenance].[MaintenancePriority] ([PriorityID])
 );
+
+
+GO
 

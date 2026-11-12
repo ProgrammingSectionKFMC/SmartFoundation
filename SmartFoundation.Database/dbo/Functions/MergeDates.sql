@@ -1,4 +1,4 @@
-﻿
+
 
 -- =============================================
 -- Author:		<Author,,Name>
@@ -45,3 +45,6 @@ END
 	RETURN @MergeDate 
 
 END
+
+GO
+

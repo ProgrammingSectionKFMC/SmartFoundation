@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [support].[SupportInboxSP]
+CREATE PROCEDURE [support].[SupportInboxSP]
 (
       @Action                NVARCHAR(200)
     , @ticketID              BIGINT         = NULL
@@ -188,3 +188,6 @@ BEGIN
         ;THROW;
     END CATCH
 END
+
+GO
+

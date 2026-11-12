@@ -1,4 +1,4 @@
-﻿
+
 CREATE   PROCEDURE [MoveData].[usp_FinalizeVacantBuildingActions]
     @IdaraId BIGINT,
     @RollbackAfterTest BIT = 1
@@ -306,3 +306,6 @@ AND NOT EXISTS
 
     END CATCH;
 END;
+
+GO
+

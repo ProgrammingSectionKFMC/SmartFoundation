@@ -1,4 +1,4 @@
-﻿-- =============================================
+-- =============================================
 -- Author:		<Author,,Name>
 -- Create date: <Create Date,,>
 -- Description:	<Description,,>
@@ -58,3 +58,6 @@ BEGIN
 
     -- Insert statements for procedure here
 END
+
+GO
+

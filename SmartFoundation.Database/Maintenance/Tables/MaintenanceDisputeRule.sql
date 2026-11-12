@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Maintenance].[MaintenanceDisputeRule] (
+CREATE TABLE [Maintenance].[MaintenanceDisputeRule] (
     [DisputeRuleID]    BIGINT          IDENTITY (1, 1) NOT NULL,
     [IdaraId_FK]       BIGINT          NOT NULL,
     [FromDSDID]        BIGINT          NULL,
@@ -17,4 +17,7 @@
     CONSTRAINT [FK_MaintenanceDisputeRule_DeptSecDiv_From] FOREIGN KEY ([FromDSDID]) REFERENCES [dbo].[DeptSecDiv] ([DSDID]),
     CONSTRAINT [FK_MaintenanceDisputeRule_DeptSecDiv_To] FOREIGN KEY ([ToDSDID]) REFERENCES [dbo].[DeptSecDiv] ([DSDID])
 );
+
+
+GO
 

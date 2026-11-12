@@ -1,4 +1,4 @@
-CREATE PROCEDURE [Housing].[BuildingSpacesSP]
+CREATE   PROCEDURE [Housing].[BuildingSpacesSP]
 (
       @Action                     NVARCHAR(200)
     , @BuildingSpaceID            BIGINT          = NULL
@@ -381,3 +381,6 @@ BEGIN
         ;THROW;
     END CATCH
 END
+
+GO
+

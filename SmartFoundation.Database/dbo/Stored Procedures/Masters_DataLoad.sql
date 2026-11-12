@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE [dbo].[Masters_DataLoad]
+CREATE PROCEDURE [dbo].[Masters_DataLoad]
       @pageName_      NVARCHAR(400)
     , @idaraID        INT
     , @entrydata      INT
@@ -2512,6 +2512,127 @@ BEGIN
 END
 
 
+
+    -- ============================================================
+    --                       TICKETS MODULE
+    -- ============================================================
+
+     -------------------------------------------------------------------
+--                     PAGE: TicketAdmin
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'TicketAdmin'
+    BEGIN
+        
+        -- Handover Print Get Data
+        EXEC [Tickets].[TicketAdminDL]
+       @pageName_  = @pageName_
+        , @idaraID   = @idaraID
+        , @entryData  = @entrydata
+        , @hostName   = @hostname
+        , @filterServiceID  = @parameter_01
+        , @filterTicketClassID = @parameter_02
+    END
+     -------------------------------------------------------------------
+--                     PAGE: TicketList
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'TicketList'
+    BEGIN
+
+        EXEC [Tickets].[TicketListDL]
+              @pageName_        = @pageName_
+            , @idaraID          = @idaraID
+            , @entryData        = @entrydata
+            , @hostName         = @hostname
+            , @filterStatusID   = @parameter_03
+            , @filterServiceID  = @parameter_04
+            , @filterDSDID      = @parameter_06
+    END
+     -------------------------------------------------------------------
+--                     PAGE: TicketDrawer
+-------------------------------------------------------------------
+    ELSE IF @pageName_ = 'TicketDrawer'
+    BEGIN
+
+        EXEC [Tickets].[TicketDrawerDL]
+              @pageName_   = @pageName_
+            , @idaraID     = @idaraID
+            , @entryData   = @entrydata
+            , @hostName    = @hostname
+            , @ticketID    = @parameter_01
+    END
+
+
+
+    -- Read routes are guarded with the rights of the two ticket pages (Housing pattern):
+    --   ticket data              -> SELECT on TicketList
+    --   settings / admin data    -> any permission on TicketAdmin
+    --   shared lookups (DDL)     -> either of the two
+    -- 'TicketAdmin' itself returns the services tab data, so the page reads its
+    -- permissions (table 0) and its main data in one call.
+    --ELSE IF @pageName_ IN (N'TicketList', N'TicketDetails', N'TicketHistory', N'StatusDDL',
+    --                       N'ChildTickets', N'PauseSessions', N'TicketSLAs',
+    --                       N'QualityReviews', N'ArbitrationCases', N'TicketAttachments',
+    --                       N'PauseReasonDDL', N'ArbitrationReasonDDL', N'QualityReviewResultDDL',
+    --                       N'RequesterTypeDDL', N'TicketClassDDL', N'PriorityDDL',
+    --                       N'OpenArbitrations', N'PendingReviews', N'BreachedSLAs',
+    --                       N'TicketAdminLookup', N'ResidentDDL', N'BuildingDDL',
+    --                       N'TicketReasonDDL', N'TicketDescriptionTemplateDDL', N'DSDDL', N'DsdUsersDDL', N'DsdUsersAllDDL', N'ClarificationReasonDDL', N'ClarificationRequests', N'DSDTreeDDL',
+    --                       N'TicketAdmin', N'ServiceCatalogueList', N'RoutingRuleLookup', N'SLAPolicyLookup',
+    --                       N'SuggestionReview', N'ServiceDDL')
+    --BEGIN
+    --    DECLARE @tktCanRead BIT =
+    --        CASE WHEN EXISTS (SELECT 1 FROM dbo.ft_UserPagePermissions(@entrydata, N'TicketList') f
+    --                          WHERE f.permissionTypeName_E = N'SELECT') THEN 1 ELSE 0 END;
+    --    DECLARE @tktIsAdmin BIT =
+    --        CASE WHEN EXISTS (SELECT 1 FROM dbo.ft_UserPagePermissions(@entrydata, N'TicketAdmin')) THEN 1 ELSE 0 END;
+
+    --    DECLARE @tktAllowed BIT = CASE
+    --        WHEN @pageName_ IN (N'TicketList', N'TicketDetails', N'TicketHistory', N'ChildTickets',
+    --                            N'PauseSessions', N'TicketSLAs', N'QualityReviews', N'ArbitrationCases',
+    --                            N'TicketAttachments', N'PendingReviews', N'BreachedSLAs', N'ClarificationRequests')
+    --            THEN @tktCanRead
+    --        WHEN @pageName_ IN (N'TicketAdmin', N'ServiceCatalogueList', N'RoutingRuleLookup', N'SLAPolicyLookup',
+    --                            N'SuggestionReview', N'OpenArbitrations', N'TicketAdminLookup', N'DSDTreeDDL')
+    --            THEN @tktIsAdmin
+    --        WHEN @tktCanRead = 1 OR @tktIsAdmin = 1 THEN 1
+    --        ELSE 0
+    --    END;
+
+    --    IF @tktAllowed = 0
+    --    BEGIN
+    --        SELECT 0 AS IsSuccessful, N'عفوا لاتملك صلاحية لقراءة هذه البيانات' AS Message_;
+    --    END
+    --    ELSE IF @pageName_ IN (N'TicketAdmin', N'ServiceCatalogueList', N'RoutingRuleLookup', N'SLAPolicyLookup',
+    --                           N'SuggestionReview', N'ServiceDDL')
+    --    BEGIN
+    --        DECLARE @tktServicePage NVARCHAR(400) =
+    --            CASE WHEN @pageName_ = N'TicketAdmin' THEN N'ServiceCatalogueList' ELSE @pageName_ END;
+
+    --        EXEC [Tickets].[ServiceDL]
+    --              @pageName_             = @tktServicePage
+    --            , @idaraID               = @idaraID
+    --            , @entryData             = @entrydata
+    --            , @hostName              = @hostname
+    --            , @filterServiceID       = @parameter_01
+    --            , @filterTicketClassID   = @parameter_02;
+    --    END
+    --    ELSE
+    --    BEGIN
+    --        EXEC [Tickets].[TicketDL]
+    --              @pageName_   = @pageName_
+    --            , @idaraID     = @idaraID
+    --            , @entryData   = @entrydata
+    --            , @hostName    = @hostname
+    --            , @filterTicketID       = @parameter_01
+    --            , @filterTicketNo       = @parameter_02
+    --            , @filterStatusID       = @parameter_03
+    --            , @filterServiceID      = @parameter_04
+    --            , @filterAssignedUserID = @parameter_05
+    --            , @filterDSDID          = @parameter_06;
+    --    END
+    --END
+
+
     -------------------------------------------------------------------
     --                     PAGE NOT FOUND
     --            DO NOT TOUCH DOWN THIS LINE PLEASE
@@ -2565,3 +2686,6 @@ END
               N'حصل خطأ غير معروف رمز الخطأ : ' + CAST(@IdentityCatchError AS NVARCHAR(200)) AS Message_;
     END CATCH
 END
+
+GO
+

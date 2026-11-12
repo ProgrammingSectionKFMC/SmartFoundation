@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Maintenance].[BuildingMaintenanceRequest] (
+CREATE TABLE [Maintenance].[BuildingMaintenanceRequest] (
     [RequestID]             BIGINT         IDENTITY (1, 1) NOT NULL,
     [IdaraId_FK]            BIGINT         NOT NULL,
     [RequestNo]             NVARCHAR (50)  NULL,
@@ -41,4 +41,7 @@
     CONSTRAINT [FK_BuildingMaintenanceRequest_Status] FOREIGN KEY ([StatusID]) REFERENCES [Maintenance].[MaintenanceRequestStatus] ([StatusID]),
     CONSTRAINT [FK_BuildingMaintenanceRequest_Transactions] FOREIGN KEY ([TransactionID_FK]) REFERENCES [dbo].[Transactions] ([transactionID])
 );
+
+
+GO
 

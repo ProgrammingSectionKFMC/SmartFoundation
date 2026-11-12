@@ -1,4 +1,4 @@
-﻿
+
 CREATE   VIEW [Maintenance].[V_BuildingMaintenanceRequestApprovals]
 AS
 SELECT
@@ -16,3 +16,6 @@ SELECT
     approval.[DecisionDate],
     approval.[IsActive]
 FROM [Maintenance].[BuildingMaintenanceRequestApproval] AS approval;
+
+GO
+

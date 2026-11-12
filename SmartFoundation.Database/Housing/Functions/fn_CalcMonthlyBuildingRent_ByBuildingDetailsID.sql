@@ -1,4 +1,4 @@
-﻿CREATE FUNCTION [Housing].[fn_CalcMonthlyBuildingRent_ByBuildingDetailsID]
+CREATE FUNCTION [Housing].[fn_CalcMonthlyBuildingRent_ByBuildingDetailsID]
 (
       @buildingDetailsID INT
     , @FromDate          DATE
@@ -173,3 +173,6 @@ GROUP BY
     , MonthEnd
     , CalcFromDate
     , CalcToDate;
+
+GO
+

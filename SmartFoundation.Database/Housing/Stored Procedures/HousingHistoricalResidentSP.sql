@@ -1,4 +1,4 @@
-﻿/* Historical page SP, cloned from the exact live HousingResidentSP pasted on 2026-11-10.
+/* Historical page SP, cloned from the exact live HousingResidentSP pasted on 2026-11-10.
    Transaction is handled only by dbo.Masters_CRUD.
    Action types: HISTORICALRESIDENTSTART, HISTORICALRESIDENTCUSTODY,
    HISTORICALRESIDENTFINALIZE, HISTORICALRESIDENTCANCEL.
@@ -2193,3 +2193,6 @@ END;
         ;THROW;
     END CATCH
 END
+
+GO
+

@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[UserDistributor] (
+CREATE TABLE [dbo].[UserDistributor] (
     [UDID]             INT             IDENTITY (1, 1) NOT NULL,
     [userID_FK]        BIGINT          NULL,
     [distributorID_FK] BIGINT          NULL,
@@ -14,4 +14,7 @@
     CONSTRAINT [FK_UserDistributor_Distributor2] FOREIGN KEY ([distributorID_FK]) REFERENCES [dbo].[Distributor] ([distributorID]),
     CONSTRAINT [FK_UserDistributor_Users1] FOREIGN KEY ([userID_FK]) REFERENCES [dbo].[Users] ([usersID])
 );
+
+
+GO
 

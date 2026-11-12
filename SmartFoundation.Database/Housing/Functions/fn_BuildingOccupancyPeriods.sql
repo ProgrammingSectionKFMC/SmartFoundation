@@ -1,4 +1,4 @@
-CREATE FUNCTION [Housing].[fn_BuildingOccupancyPeriods]
+CREATE   FUNCTION [Housing].[fn_BuildingOccupancyPeriods]
 (
     @BuildingDetailsID BIGINT,
     @IdaraID BIGINT
@@ -75,3 +75,6 @@ RETURN
        AND exitEvent.EventOrder = 1
     WHERE occupancy.buildingActionID = occupancy.OccupancyActionID
 );
+
+GO
+

@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[OccupantCustodyAction] (
+CREATE TABLE [Housing].[OccupantCustodyAction] (
     [occupantCustodyActionID]        INT             IDENTITY (1, 1) NOT NULL,
     [buildingActionID_FK]            BIGINT          NULL,
     [custodyActionTypeID_FK]         INT             NULL,
@@ -29,4 +29,7 @@
     CONSTRAINT [FK_OccupantCustodyAction_CustodyOrDamageType] FOREIGN KEY ([custodyOrDamageTypeID_FK]) REFERENCES [Housing].[CustodyOrDamageType] ([custodyOrDamageTypeID]),
     CONSTRAINT [FK_OccupantCustodyAction_OccupantCustodyAction] FOREIGN KEY ([occupantCustodyActionID_Parent]) REFERENCES [Housing].[OccupantCustodyAction] ([occupantCustodyActionID])
 );
+
+
+GO
 

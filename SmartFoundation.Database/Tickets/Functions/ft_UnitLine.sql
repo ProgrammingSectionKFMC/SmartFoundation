@@ -1,7 +1,3 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
 /*
     خط الجهة لتذكرة في جهة معينة (@DSDID):
       - الجهة نفسها والجهات التابعة لها (فروعها وشُعبها)
@@ -14,7 +10,7 @@ GO
       - فحص أهلية المستلم ونطاق المنفّذ في Tickets.TicketSP
     عضوية الموظف في جهة = UserDistributor -> Distributor.DSDID_FK.
 */
-CREATE FUNCTION [Tickets].[ft_UnitLine]
+CREATE   FUNCTION [Tickets].[ft_UnitLine]
 (
     @DSDID INT
 )
@@ -38,4 +34,6 @@ RETURN
          OR (u.[divID_FK] IS NOT NULL AND x.[secID_FK] = u.[secID_FK] AND x.[divID_FK] IS NULL)
       )
 );
+
 GO
+

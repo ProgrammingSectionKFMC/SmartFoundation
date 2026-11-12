@@ -1,4 +1,4 @@
-﻿-- =============================================
+-- =============================================
 -- Author:		<Author,,Name>
 -- Create date: <Create Date,,>
 -- Description:	<Description,,>
@@ -442,3 +442,6 @@ ORDER BY v.BillChargeTypeID;
      END -- End branch for resolved resident (financial queries unchanged).
 
 END
+
+GO
+

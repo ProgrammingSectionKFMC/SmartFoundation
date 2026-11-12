@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BuildingRentActualPayment] (
+CREATE TABLE [Housing].[BuildingRentActualPayment] (
     [rentActualPaymentID]  INT              IDENTITY (1, 1) NOT NULL,
     [rentActualPaymentUID] UNIQUEIDENTIFIER CONSTRAINT [DF_BuildingRentActualPayment_rentActualPaymentUID] DEFAULT (newid()) NULL,
     [generalNo_FK]         INT              NULL,
@@ -13,4 +13,7 @@
     [hostName]             NVARCHAR (200)   CONSTRAINT [DF_BuildingRentActualPayment_hostName] DEFAULT (host_name()) NULL,
     CONSTRAINT [PK_BuildingRentActualPayment] PRIMARY KEY CLUSTERED ([rentActualPaymentID] ASC)
 );
+
+
+GO
 

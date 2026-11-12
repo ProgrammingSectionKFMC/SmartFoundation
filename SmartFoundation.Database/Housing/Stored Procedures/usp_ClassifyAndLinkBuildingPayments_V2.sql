@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE [Housing].[usp_ClassifyAndLinkBuildingPayments_V2]
+CREATE   PROCEDURE [Housing].[usp_ClassifyAndLinkBuildingPayments_V2]
     @PaymentID bigint = NULL,
     @DeductListID int = NULL,
     @ApplyChanges bit = 0,
@@ -451,3 +451,6 @@ LEFT JOIN #FirstOccupancy firstOccupancy
       THROW;
     END CATCH;
 END;
+
+GO
+

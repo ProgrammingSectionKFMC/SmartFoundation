@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Maintenance].[BuildingMaintenanceRequestSLA] (
+CREATE TABLE [Maintenance].[BuildingMaintenanceRequestSLA] (
     [RequestSLAID]      BIGINT         IDENTITY (1, 1) NOT NULL,
     [RequestID]         BIGINT         NOT NULL,
     [InspectionDueDate] DATETIME       NULL,
@@ -18,4 +18,7 @@
     CONSTRAINT [PK_BuildingMaintenanceRequestSLA] PRIMARY KEY CLUSTERED ([RequestSLAID] ASC),
     CONSTRAINT [FK_BuildingMaintenanceRequestSLA_Request] FOREIGN KEY ([RequestID]) REFERENCES [Maintenance].[BuildingMaintenanceRequest] ([RequestID])
 );
+
+
+GO
 

@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BillDeductAction] (
+CREATE TABLE [Housing].[BillDeductAction] (
     [billDeductActionID]        INT             IDENTITY (1, 1) NOT NULL,
     [billDeductListID_FK]       INT             NULL,
     [billDeductListStatusID_FK] INT             NULL,
@@ -12,4 +12,7 @@
     CONSTRAINT [FK_BillDeductAction_BillDeductList] FOREIGN KEY ([billDeductListID_FK]) REFERENCES [Housing].[BillDeductList] ([billDeductListID]),
     CONSTRAINT [FK_BillDeductAction_BillDeductListStatus] FOREIGN KEY ([billDeductListStatusID_FK]) REFERENCES [Housing].[BillDeductListStatus] ([billDeductListStatusID])
 );
+
+
+GO
 

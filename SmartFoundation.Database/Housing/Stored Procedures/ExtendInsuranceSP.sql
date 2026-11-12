@@ -1,4 +1,4 @@
-﻿
+
 CREATE PROCEDURE [Housing].[ExtendInsuranceSP]
 (
       @Action                            NVARCHAR(200)
@@ -371,3 +371,6 @@ BEGIN
         ;THROW;
     END CATCH
 END
+
+GO
+

@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[Bills] (
+CREATE TABLE [Housing].[Bills] (
     [BillsID]                BIGINT           IDENTITY (1, 1) NOT NULL,
     [BillsUID]               UNIQUEIDENTIFIER CONSTRAINT [DF_Bills_BillsUID] DEFAULT (newid()) NULL,
     [BillChargeTypeID_FK]    INT              NULL,
@@ -92,61 +92,65 @@
 );
 
 
-
-
-
-
-
-
-
-
 GO
-CREATE NONCLUSTERED INDEX [IX_Bills_ParentBillsID]
-    ON [Housing].[Bills]([ParentBillsID_FK] ASC, [BillActive] ASC);
 
-
-GO
 CREATE NONCLUSTERED INDEX [IX_Bills_resident_active]
     ON [Housing].[Bills]([residentInfoID_FK] ASC, [BillActive] ASC)
     INCLUDE([TotalPrice], [BillsID]);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_Bills_Period_Idara_ServiceType]
     ON [Housing].[Bills]([CurrentPeriodID] ASC, [idaraID_FK] ASC, [meterServiceTypeID] ASC, [BillTypeID_FK] ASC, [BillActive] ASC, [meterID] ASC)
-    INCLUDE([BillsID], [PeriodMonth], [PeriodYear], [meterNo], [meterName_A], [buildingDetailsNo], [buildingDetailsID], [meterReadID], [CurrentRead], [LastRead], [ReadDiff], [PriceForSlide1], [PriceForSlide2], [PriceForSlide3], [PriceForSlide4], [PriceForSlide5], [PriceForSlide6], [PriceForSlide7], [PriceForSlide8], [PriceForSlide9], [PriceForSlide10], [PRICE], [PRICETAX], [meterServicePrice], [meterServicePriceTAX], [TotalPrice], [residentInfoID_FK], [entryDate], [entryData]);
+    INCLUDE([meterServicePriceTAX], [TotalPrice], [residentInfoID_FK], [entryDate], [entryData], [PriceForSlide8], [PriceForSlide9], [PriceForSlide10], [PRICE], [PRICETAX], [meterServicePrice], [PriceForSlide2], [PriceForSlide3], [PriceForSlide4], [PriceForSlide5], [PriceForSlide6], [PriceForSlide7], [buildingDetailsID], [meterReadID], [CurrentRead], [LastRead], [ReadDiff], [PriceForSlide1], [BillsID], [PeriodMonth], [PeriodYear], [meterNo], [meterName_A], [buildingDetailsNo]);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_Bills_Exists_Readed]
     ON [Housing].[Bills]([CurrentPeriodID] ASC, [idaraID_FK] ASC, [meterServiceTypeID] ASC, [BillTypeID_FK] ASC, [BillActive] ASC, [meterID] ASC);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_Bills_Resident_ServiceType_Avg]
     ON [Housing].[Bills]([residentInfoID_FK] ASC, [meterServiceTypeID] ASC, [BillActive] ASC)
     INCLUDE([TotalPrice]);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_Bills_ResidentServiceLookup]
     ON [Housing].[Bills]([residentInfoID_FK] ASC, [meterServiceTypeID] ASC, [BillActive] ASC, [BillTypeID_FK] ASC, [PeriodYear] DESC, [PeriodMonth] DESC, [CurrentPeriodID] DESC, [BillsID] DESC)
     INCLUDE([TotalPrice]);
 
 
 GO
+
+CREATE NONCLUSTERED INDEX [IX_Bills_CheckDuplicate]
+    ON [Housing].[Bills]([CurrentPeriodID] ASC, [idaraID_FK] ASC, [BillTypeID_FK] ASC, [buildingDetailsID] ASC, [meterServiceTypeID] ASC, [BillActive] ASC);
+
+
+GO
+
+CREATE NONCLUSTERED INDEX [IX_Bills_ParentBillsID]
+    ON [Housing].[Bills]([ParentBillsID_FK] ASC, [BillActive] ASC);
+
+
+GO
+
 CREATE NONCLUSTERED INDEX [IX_Bills_RentDateOverlap]
     ON [Housing].[Bills]([residentInfoID_FK] ASC, [buildingDetailsID] ASC, [idaraID_FK] ASC, [BillChargeTypeID_FK] ASC, [BillActive] ASC, [BillsFromDate] ASC, [BillsToDate] ASC)
     INCLUDE([BillsID], [BillTypeID_FK], [ParentBillsID_FK]);
 
 
 GO
-CREATE NONCLUSTERED INDEX [IX_Bills_CheckDuplicate]
-    ON [Housing].[Bills]([CurrentPeriodID] ASC, [idaraID_FK] ASC, [BillTypeID_FK] ASC, [buildingDetailsID] ASC, [meterServiceTypeID] ASC, [BillActive] ASC);
 
-
-GO
 CREATE NONCLUSTERED INDEX [IX_Bills_CommandCenter_FinancialByType]
     ON [Housing].[Bills]([idaraID_FK] ASC, [BillChargeTypeID_FK] ASC, [residentInfoID_FK] ASC)
     INCLUDE([TotalPrice]) WHERE ([BillActive]=(1) AND [residentInfoID_FK] IS NOT NULL);
+
+
+GO
 

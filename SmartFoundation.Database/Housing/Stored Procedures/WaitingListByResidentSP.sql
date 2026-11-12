@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [Housing].[WaitingListByResidentSP] 
+CREATE PROCEDURE [Housing].[WaitingListByResidentSP] 
 (
       @Action                       NVARCHAR(200)
     , @ActionID                     BIGINT          = NULL
@@ -1897,3 +1897,6 @@ BEGIN
         ;THROW;
     END CATCH
 END
+
+GO
+

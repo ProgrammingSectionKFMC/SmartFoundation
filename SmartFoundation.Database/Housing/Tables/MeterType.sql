@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[MeterType] (
+CREATE TABLE [Housing].[MeterType] (
     [meterTypeID]               INT             IDENTITY (1, 1) NOT NULL,
     [meterServiceTypeID_FK]     INT             NULL,
     [MeterCalculateTypeID_FK]   INT             NULL,
@@ -23,4 +23,7 @@
     CONSTRAINT [FK_MeterType_Idara] FOREIGN KEY ([IdaraId_FK]) REFERENCES [dbo].[Idara] ([idaraID]),
     CONSTRAINT [FK_MeterType_MeterServiceType] FOREIGN KEY ([meterServiceTypeID_FK]) REFERENCES [Housing].[MeterServiceType] ([meterServiceTypeID])
 );
+
+
+GO
 

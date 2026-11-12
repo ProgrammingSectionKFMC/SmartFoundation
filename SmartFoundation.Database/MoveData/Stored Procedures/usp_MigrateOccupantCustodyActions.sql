@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [MoveData].[usp_MigrateOccupantCustodyActions]     @RollbackAfterTest bit = 1 AS BEGIN     SET NOCOUNT ON;     SET XACT_ABORT ON;      IF EXISTS     (         SELECT 1         FROM KFMC.Housing.OccupantCustodyAction sourceRow
+CREATE PROCEDURE [MoveData].[usp_MigrateOccupantCustodyActions]     @RollbackAfterTest bit = 1 AS BEGIN     SET NOCOUNT ON;     SET XACT_ABORT ON;      IF EXISTS     (         SELECT 1         FROM KFMC.Housing.OccupantCustodyAction sourceRow
         JOIN KFMC.Housing.BuildingAction sourceAction
           ON sourceAction.buildingActionID=sourceRow.buildingActionID_FK
         JOIN KFMC.Housing.ResidentInfo sourceResident
@@ -17,3 +17,6 @@
           ON eligibleResident.residentInfoID=eligibleAction.residentInfoID_FK
          AND eligibleResident.residentInfoActive=1
         WHERE NOT EXISTS         (             SELECT 1 FROM Housing.OccupantCustodyAction targetRow             WHERE targetRow.occupantCustodyActionID=sourceRow.occupantCustodyActionID         );          SET @InsertedRows=@@ROWCOUNT;         SET IDENTITY_INSERT Housing.OccupantCustodyAction OFF;         SET @IdentityEnabled=0;          SELECT @RollbackAfterTest RollbackAfterTest,@InsertedRows OccupantCustodyActionsInserted,                (SELECT COUNT_BIG(*) FROM Housing.OccupantCustodyAction) OccupantCustodyActionsAvailable;          IF @RollbackAfterTest=1 ROLLBACK TRANSACTION;         ELSE COMMIT TRANSACTION;     END TRY     BEGIN CATCH         IF @IdentityEnabled=1 SET IDENTITY_INSERT Housing.OccupantCustodyAction OFF;         IF XACT_STATE()<>0 ROLLBACK TRANSACTION;         THROW;     END CATCH; END;
+
+GO
+

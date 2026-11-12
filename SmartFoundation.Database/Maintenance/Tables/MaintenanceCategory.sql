@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Maintenance].[MaintenanceCategory] (
+CREATE TABLE [Maintenance].[MaintenanceCategory] (
     [MaintenanceCategoryID] BIGINT          IDENTITY (1, 1) NOT NULL,
     [IdaraId_FK]            BIGINT          NOT NULL,
     [ParentID]              BIGINT          NULL,
@@ -17,4 +17,7 @@
     CONSTRAINT [FK_MaintenanceCategory_Parent] FOREIGN KEY ([IdaraId_FK], [ParentID]) REFERENCES [Maintenance].[MaintenanceCategory] ([IdaraId_FK], [MaintenanceCategoryID]),
     CONSTRAINT [UQ_MaintenanceCategory_Idara_Category] UNIQUE NONCLUSTERED ([IdaraId_FK] ASC, [MaintenanceCategoryID] ASC)
 );
+
+
+GO
 

@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[ResidentRentExemption] (
+CREATE TABLE [Housing].[ResidentRentExemption] (
     [residentRentExemptionID]          BIGINT          IDENTITY (1, 1) NOT NULL,
     [residentRentExemptionTypeID_FK]   BIGINT          NULL,
     [residentInfoID_FK]                BIGINT          NULL,
@@ -20,4 +20,7 @@
     CONSTRAINT [FK_ResidentRentExemption_ResidentInfo] FOREIGN KEY ([residentInfoID_FK]) REFERENCES [Housing].[ResidentInfo] ([residentInfoID]),
     CONSTRAINT [FK_ResidentRentExemption_ResidentRentExemptionType] FOREIGN KEY ([residentRentExemptionTypeID_FK]) REFERENCES [Housing].[ResidentRentExemptionType] ([ResidentRentExemptionTypeID])
 );
+
+
+GO
 

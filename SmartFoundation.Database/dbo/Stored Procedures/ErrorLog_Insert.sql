@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[ErrorLog_Insert]
+CREATE   PROCEDURE [dbo].[ErrorLog_Insert]
       @ErrorMessage   NVARCHAR(4000)
     , @ErrorSeverity  NVARCHAR(4000) = NULL
     , @ErrorState     NVARCHAR(4000) = NULL
@@ -28,3 +28,6 @@ BEGIN
         , @StackTrace, @InnerException, @RequestPath, @HttpMethod
     );
 END;
+
+GO
+

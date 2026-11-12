@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [MoveData].[usp_MigrateBuildingActions]     @IdaraId bigint,     @RollbackAfterTest bit = 1 AS BEGIN     SET NOCOUNT ON;     /* Normalize migration administration: preserve a valid supplied value, otherwise use Idara 1. */     IF NOT EXISTS (SELECT 1 FROM dbo.Idara WHERE idaraID = 1)
+CREATE PROCEDURE [MoveData].[usp_MigrateBuildingActions]     @IdaraId bigint,     @RollbackAfterTest bit = 1 AS BEGIN     SET NOCOUNT ON;     /* Normalize migration administration: preserve a valid supplied value, otherwise use Idara 1. */     IF NOT EXISTS (SELECT 1 FROM dbo.Idara WHERE idaraID = 1)
      THROW 57990, N'Default migration Idara 1 does not exist.', 1;     IF @IdaraId IS NULL OR NOT EXISTS (SELECT 1 FROM dbo.Idara WHERE idaraID = @IdaraId)
      SET @IdaraId = 1;     SET XACT_ABORT ON;      IF NOT EXISTS (SELECT 1 FROM [dbo].[Idara] WHERE [idaraID] = @IdaraId)
      THROW 54000, N'The supplied IdaraId does not exist in DATACORE.dbo.Idara.', 1;     /* Class remapping 7=>17, 25=>18, 1/99=>5 is approved for Idara 1 only. */     IF @IdaraId <> 1
@@ -1308,3 +1308,6 @@ CASE     WHEN sourceAction.[buildingActionTypeID_FK] = 3
      IF @ActionIdentity = 1 SET IDENTITY_INSERT [Housing].[BuildingAction] OFF;
      IF XACT_STATE() <> 0 ROLLBACK TRANSACTION;
      THROW;     END CATCH; END;
+
+GO
+

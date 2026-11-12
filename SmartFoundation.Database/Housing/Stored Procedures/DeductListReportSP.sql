@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE [Housing].[DeductListReportSP] @Action NVARCHAR(50),@ReportID BIGINT=NULL,@Year INT=NULL,@Month INT=NULL,@BillingType NVARCHAR(20)=NULL,@ServiceID INT=NULL,@CalculationMethod NVARCHAR(30)=NULL,@ReportNo NVARCHAR(50)=NULL,@ExternalReferenceNo NVARCHAR(100)=NULL,@ExternalReferenceDate DATE=NULL,@Notes NVARCHAR(1000)=NULL,@IdaraID BIGINT,@EntryData NVARCHAR(20),@HostName NVARCHAR(200)
+CREATE   PROCEDURE [Housing].[DeductListReportSP] @Action NVARCHAR(50),@ReportID BIGINT=NULL,@Year INT=NULL,@Month INT=NULL,@BillingType NVARCHAR(20)=NULL,@ServiceID INT=NULL,@CalculationMethod NVARCHAR(30)=NULL,@ReportNo NVARCHAR(50)=NULL,@ExternalReferenceNo NVARCHAR(100)=NULL,@ExternalReferenceDate DATE=NULL,@Notes NVARCHAR(1000)=NULL,@IdaraID BIGINT,@EntryData NVARCHAR(20),@HostName NVARCHAR(200)
 AS
 BEGIN
  SET NOCOUNT ON; SET XACT_ABORT ON;
@@ -164,3 +164,6 @@ END;
   THROW;
  END CATCH
 END;
+
+GO
+

@@ -1,4 +1,4 @@
-﻿CREATE TABLE [WH].[CategoryLevel] (
+CREATE TABLE [WH].[CategoryLevel] (
     [categoryLevelID]          BIGINT          IDENTITY (1, 1) NOT NULL,
     [categoryLevelName_A]      NVARCHAR (100)  NULL,
     [categoryLevelName_E]      NVARCHAR (100)  NULL,
@@ -17,4 +17,7 @@
     CONSTRAINT [FK_CategoryLevel_CategoryLevel] FOREIGN KEY ([categoryLevelParentID_FK]) REFERENCES [WH].[CategoryLevel] ([categoryLevelID]),
     CONSTRAINT [FK_CategoryLevel_Unit] FOREIGN KEY ([unitID_FK]) REFERENCES [WH].[Unit] ([unitID])
 );
+
+
+GO
 

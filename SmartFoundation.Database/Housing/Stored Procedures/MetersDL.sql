@@ -1,4 +1,4 @@
-﻿-- =============================================
+-- =============================================
 -- Author:		<Author,,Name>
 -- Create date: <Create Date,,>
 -- Description:	<Description,,>
@@ -302,3 +302,6 @@ from DATACORE.Housing.MeterCalculateType mt where mt.MeterCalculateTypeActive = 
 
 
 END
+
+GO
+

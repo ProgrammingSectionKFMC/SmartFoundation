@@ -1,4 +1,4 @@
-﻿CREATE FUNCTION Housing.fn_GetResidentID
+CREATE FUNCTION Housing.fn_GetResidentID
 (
     @generalNo_FK BIGINT = NULL,
     @NationalID   NVARCHAR(50) = NULL
@@ -24,3 +24,6 @@ BEGIN
 
     RETURN @residentID;
 END;
+
+GO
+

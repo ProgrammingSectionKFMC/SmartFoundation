@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [Housing].[MonthlyBillingMonitorDL]
+CREATE PROCEDURE [Housing].[MonthlyBillingMonitorDL]
       @Year INT = NULL, @Month INT = NULL, @IdaraID BIGINT = NULL
 AS
 BEGIN
@@ -34,3 +34,6 @@ BEGIN
     --(@IdaraID IS NULL OR r.IdaraID_FK=@IdaraID) 
     ORDER BY i.idaraLongName_A;
 END;
+
+GO
+

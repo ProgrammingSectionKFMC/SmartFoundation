@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[Role] (
+CREATE TABLE [dbo].[Role] (
     [roleID]                      BIGINT         IDENTITY (1, 1) NOT NULL,
     [roleName_A]                  NVARCHAR (100) NULL,
     [roleName_E]                  NVARCHAR (100) NULL,
@@ -16,4 +16,7 @@
     [PublicView]                  BIT            NULL,
     CONSTRAINT [PK_Role] PRIMARY KEY CLUSTERED ([roleID] ASC)
 );
+
+
+GO
 

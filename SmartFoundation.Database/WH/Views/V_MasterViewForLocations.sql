@@ -1,4 +1,4 @@
-﻿CREATE   VIEW [WH].[V_MasterViewForLocations]
+CREATE   VIEW [WH].[V_MasterViewForLocations]
 AS
 SELECT
     n.warehousePartID AS locationID,
@@ -69,6 +69,7 @@ LEFT JOIN WH.WarehousePart p7
     ON p7.warehousePartID = p6.warehousePartParentID_FK;
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane1', @value = N'[0E232FF0-B466-11cf-A24F-00AA00A3EFFF, 1.00]
 Begin DesignProperties = 
    Begin PaneConfigurations = 
@@ -218,6 +219,7 @@ Begin DesignProperties =
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane2', @value = N' = 720
          Append = 1400
          NewValue = 1170
@@ -235,5 +237,9 @@ End
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPaneCount', @value = 2, @level0type = N'SCHEMA', @level0name = N'WH', @level1type = N'VIEW', @level1name = N'V_MasterViewForLocations';
+
+
+GO
 

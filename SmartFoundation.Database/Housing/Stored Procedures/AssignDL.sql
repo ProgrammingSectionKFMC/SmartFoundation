@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [Housing].[AssignDL] 
+CREATE PROCEDURE [Housing].[AssignDL] 
 	-- Add the parameters for the stored procedure here
 	  @pageName_      NVARCHAR(400)
     , @idaraID        INT
@@ -446,3 +446,6 @@ WHERE c.BuildingIdaraID = @idaraID
 
    
 END
+
+GO
+

@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BuildingHandover] (
+CREATE TABLE [Housing].[BuildingHandover] (
     [BuildinghandoverID]          INT             IDENTITY (1, 1) NOT NULL,
     [BuildingActionTypeID_FK]     INT             NULL,
     [NextBuildingActionTypeID_FK] INT             NULL,
@@ -10,4 +10,7 @@
     [entryData]                   NVARCHAR (20)   NULL,
     [hostName]                    NVARCHAR (200)  NULL
 );
+
+
+GO
 

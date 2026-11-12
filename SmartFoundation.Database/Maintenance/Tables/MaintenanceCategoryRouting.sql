@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Maintenance].[MaintenanceCategoryRouting] (
+CREATE TABLE [Maintenance].[MaintenanceCategoryRouting] (
     [MaintenanceCategoryRoutingID] BIGINT          IDENTITY (1, 1) NOT NULL,
     [IdaraId_FK]                   BIGINT          NOT NULL,
     [MaintenanceCategoryID]        BIGINT          NOT NULL,
@@ -16,4 +16,7 @@
     CONSTRAINT [FK_MaintenanceCategoryRouting_DeptSecDiv_Responsible] FOREIGN KEY ([ResponsibleDSDID]) REFERENCES [dbo].[DeptSecDiv] ([DSDID]),
     CONSTRAINT [FK_MaintenanceCategoryRouting_MaintenanceCategory] FOREIGN KEY ([IdaraId_FK], [MaintenanceCategoryID]) REFERENCES [Maintenance].[MaintenanceCategory] ([IdaraId_FK], [MaintenanceCategoryID])
 );
+
+
+GO
 

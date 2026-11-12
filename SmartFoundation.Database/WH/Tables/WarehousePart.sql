@@ -1,4 +1,4 @@
-﻿CREATE TABLE [WH].[WarehousePart] (
+CREATE TABLE [WH].[WarehousePart] (
     [warehousePartID]             BIGINT         IDENTITY (1, 1) NOT NULL,
     [warehousePartTypeID_FK]      INT            NULL,
     [warehousePartName]           NVARCHAR (100) NULL,
@@ -14,4 +14,7 @@
     [entryData]                   NVARCHAR (20)  NULL,
     CONSTRAINT [PK_WarehousePart_1] PRIMARY KEY CLUSTERED ([warehousePartID] ASC)
 );
+
+
+GO
 

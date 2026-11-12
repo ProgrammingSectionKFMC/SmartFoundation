@@ -1,5 +1,5 @@
-﻿
-CREATE PROCEDURE [Tickets].[ResidentDDL]
+
+CREATE   PROCEDURE [Tickets].[ResidentDDL]
 (
       @pageName_      NVARCHAR(400)
     , @idaraID        INT
@@ -78,3 +78,6 @@ BEGIN
         RETURN;
     END
 END
+
+GO
+

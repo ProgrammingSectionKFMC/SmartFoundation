@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[Document] (
+CREATE TABLE [dbo].[Document] (
     [documentID]           BIGINT          IDENTITY (1, 1) NOT NULL,
     [transactionID_FK]     BIGINT          NULL,
     [documentTypeID_FK]    INT             NULL,
@@ -52,4 +52,7 @@
     CONSTRAINT [FK_Document_DocumentType] FOREIGN KEY ([documentTypeID_FK]) REFERENCES [dbo].[DocumentType] ([documentTypeID]),
     CONSTRAINT [FK_Document_Transaction] FOREIGN KEY ([transactionID_FK]) REFERENCES [dbo].[Transactions] ([transactionID])
 );
+
+
+GO
 

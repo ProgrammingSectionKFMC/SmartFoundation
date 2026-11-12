@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BuildingActionPermission] (
+CREATE TABLE [Housing].[BuildingActionPermission] (
     [buildingActionPermissionID]   INT             IDENTITY (1, 1) NOT NULL,
     [buildingActionTypeID_FK]      INT             NULL,
     [perviosActionTypeID_FK]       INT             NULL,
@@ -10,4 +10,7 @@
     CONSTRAINT [PK_BuildingActionPermission] PRIMARY KEY CLUSTERED ([buildingActionPermissionID] ASC),
     CONSTRAINT [FK_BuildingActionPermission_BuildingActionType] FOREIGN KEY ([buildingActionTypeID_FK]) REFERENCES [Housing].[BuildingActionType] ([buildingActionTypeID])
 );
+
+
+GO
 

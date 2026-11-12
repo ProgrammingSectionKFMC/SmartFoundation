@@ -1,4 +1,4 @@
-﻿
+
 CREATE VIEW [dbo].[V_GetFullPermissionDetails2026_03_27]
 AS
 SELECT        pr.permissionID, dd.distributorID,m.menuID, p.permissionTypeID, dd.distributorName_A, p.permissionTypeName_A,m.menuName_A, pr.DistributorPermissionTypeID_FK, CASE WHEN pr.UsersID_FK IS NOT NULL 
@@ -30,6 +30,7 @@ FROM            dbo.DistributorPermissionType AS d INNER JOIN
                          dbo.Menu m on md.menuID_FK = m.menuID
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane1', @value = N'[0E232FF0-B466-11cf-A24F-00AA00A3EFFF, 1.00]
 Begin DesignProperties = 
    Begin PaneConfigurations = 
@@ -174,6 +175,7 @@ Begin DesignProperties =
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane2', @value = N'
          Begin Table = "dsd"
             Begin Extent = 
@@ -236,5 +238,9 @@ End
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPaneCount', @value = 2, @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'VIEW', @level1name = N'V_GetFullPermissionDetails2026_03_27';
+
+
+GO
 

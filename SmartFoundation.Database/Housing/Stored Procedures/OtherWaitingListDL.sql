@@ -1,4 +1,4 @@
-﻿-- =============================================
+-- =============================================
 -- Author:		<Author,,Name>
 -- Create date: <Create Date,,>
 -- Description:	<Description,,>
@@ -152,3 +152,6 @@ WHERE c.BuildingIdaraID = @idaraID
 
    
 END
+
+GO
+

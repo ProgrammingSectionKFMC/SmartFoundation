@@ -1,3 +1,6 @@
-﻿CREATE SCHEMA [MVCHousing]
+CREATE SCHEMA [MVCHousing]
     AUTHORIZATION [dbo];
+
+
+GO
 

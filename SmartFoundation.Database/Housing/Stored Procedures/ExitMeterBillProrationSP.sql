@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE [Housing].[ExitMeterBillProrationSP]
+CREATE   PROCEDURE [Housing].[ExitMeterBillProrationSP]
       @Action                  NVARCHAR(20)
     , @ExitRequestActionID     BIGINT
     , @OriginalBillsID         BIGINT
@@ -632,3 +632,6 @@ BEGIN
         THROW;
     END CATCH;
 END;
+
+GO
+

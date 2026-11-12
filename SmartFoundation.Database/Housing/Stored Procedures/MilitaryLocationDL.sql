@@ -1,4 +1,4 @@
-﻿-- =============================================
+-- =============================================
 -- Author:		<Author,,Name>
 -- Create date: <Create Date,,>
 -- Description:	<Description,,>
@@ -41,3 +41,6 @@ BEGIN
             WHERE c.militaryAreaCityActive = 1;
     -- Insert statements for procedure here
 END
+
+GO
+

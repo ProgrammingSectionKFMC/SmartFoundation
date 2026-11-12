@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [MoveData].[usp_MigrateElectricBillsAndPayments]
+CREATE PROCEDURE [MoveData].[usp_MigrateElectricBillsAndPayments]
     @IdaraId bigint,
     @RollbackAfterTest bit = 1
 AS
@@ -1448,3 +1448,6 @@ LEFT JOIN #FirstOccupancy firstOccupancy
       THROW;
     END CATCH;
 END;
+
+GO
+

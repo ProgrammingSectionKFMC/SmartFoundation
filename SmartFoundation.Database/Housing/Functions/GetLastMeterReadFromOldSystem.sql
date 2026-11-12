@@ -1,4 +1,4 @@
-﻿-- =============================================
+-- =============================================
 -- Author:		<Author,,Name>
 -- Create date: <Create Date, ,>
 -- Description:	<Description, ,>
@@ -39,3 +39,6 @@ BEGIN
 	RETURN @ResultVar
 
 END
+
+GO
+

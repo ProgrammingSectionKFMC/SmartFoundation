@@ -1,4 +1,4 @@
-﻿
+
 CREATE PROCEDURE [Housing].[FinancialAuditForExtendAndEvictionsSP] 
 (
       @Action                               NVARCHAR(200)
@@ -1576,3 +1576,6 @@ DECLARE @SourceRemaining DECIMAL(38,2) = NULL,
         ;THROW;
     END CATCH
 END
+
+GO
+

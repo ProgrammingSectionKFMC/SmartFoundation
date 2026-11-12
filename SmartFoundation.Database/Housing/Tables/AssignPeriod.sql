@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[AssignPeriod] (
+CREATE TABLE [Housing].[AssignPeriod] (
     [AssignPeriodID]           BIGINT          IDENTITY (1, 1) NOT NULL,
     [WaitingClassID_FK]        INT             NULL,
     [AssignPeriodDescrption]   NVARCHAR (4000) NULL,
@@ -22,6 +22,10 @@
 
 
 GO
+
 CREATE UNIQUE NONCLUSTERED INDEX [UX_AssignPeriod_Historical_Idara_WaitingClass]
     ON [Housing].[AssignPeriod]([IdaraId_FK] ASC, [WaitingClassID_FK] ASC) WHERE ([IsHistoricalOccupancy]=(1));
+
+
+GO
 

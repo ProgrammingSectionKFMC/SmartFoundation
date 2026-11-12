@@ -1,5 +1,7 @@
-﻿CREATE   VIEW [WH].[V_warehouse] AS SELECT warehousePartID AS warehouseID, warehousePartTypeID_FK AS warehouseTypeID_FK, warehousePartName AS warehouseName, warehousePartParentID_FK AS warehouseParentID_FK, warehousePartActive AS warehouseActive, warehousePartOldName AS warehouseOldName, warehousePartIsChecked AS warehouseIsChecked, hostName AS warehouseHostName, entryDate AS warehouseEntryDate, entryData AS warehouseEntryData, warehousePartName_A, warehousePartOldParentID_FK, IdaraID_FK FROM WH.WarehousePart WHERE warehousePartTypeID_FK = 4;
+CREATE   VIEW [WH].[V_warehouse] AS SELECT warehousePartID AS warehouseID, warehousePartTypeID_FK AS warehouseTypeID_FK, warehousePartName AS warehouseName, warehousePartParentID_FK AS warehouseParentID_FK, warehousePartActive AS warehouseActive, warehousePartOldName AS warehouseOldName, warehousePartIsChecked AS warehouseIsChecked, hostName AS warehouseHostName, entryDate AS warehouseEntryDate, entryData AS warehouseEntryData, warehousePartName_A, warehousePartOldParentID_FK, IdaraID_FK FROM WH.WarehousePart WHERE warehousePartTypeID_FK = 4;
+
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane1', @value = N'[0E232FF0-B466-11cf-A24F-00AA00A3EFFF, 1.00]
 Begin DesignProperties = 
    Begin PaneConfigurations = 
@@ -122,5 +124,9 @@ End
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPaneCount', @value = 1, @level0type = N'SCHEMA', @level0name = N'WH', @level1type = N'VIEW', @level1name = N'V_warehouse';
+
+
+GO
 

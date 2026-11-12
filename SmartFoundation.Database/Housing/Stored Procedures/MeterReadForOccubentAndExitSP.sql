@@ -1,4 +1,4 @@
-﻿
+
 CREATE PROCEDURE [Housing].[MeterReadForOccubentAndExitSP] 
 (
 
@@ -3248,3 +3248,6 @@ END;
         ;THROW;
     END CATCH
 END
+
+GO
+

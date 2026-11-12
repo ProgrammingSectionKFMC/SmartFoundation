@@ -1,4 +1,4 @@
-﻿CREATE TABLE [support].[TicketAssignmentHistory] (
+CREATE TABLE [support].[TicketAssignmentHistory] (
     [ticketAssignmentHistoryID] BIGINT          IDENTITY (1, 1) NOT NULL,
     [ticketID_FK]               BIGINT          NOT NULL,
     [fromTeamMemberID_FK]       BIGINT          NULL,
@@ -14,4 +14,7 @@
     CONSTRAINT [FK_support_TicketAssignmentHistory_Ticket] FOREIGN KEY ([ticketID_FK]) REFERENCES [support].[Ticket] ([ticketID]),
     CONSTRAINT [FK_support_TicketAssignmentHistory_ToMember] FOREIGN KEY ([toTeamMemberID_FK]) REFERENCES [support].[TeamMember] ([teamMemberID])
 );
+
+
+GO
 

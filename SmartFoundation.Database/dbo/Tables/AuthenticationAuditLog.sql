@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[AuthenticationAuditLog] (
+CREATE TABLE [dbo].[AuthenticationAuditLog] (
     [AuthenticationAuditLogID] BIGINT          IDENTITY (1, 1) NOT NULL,
     [EventType]                NVARCHAR (50)   NOT NULL,
     [UsersID_FK]               BIGINT          NULL,
@@ -18,27 +18,30 @@
 );
 
 
-
 GO
+
 CREATE NONCLUSTERED INDEX [IX_AuthenticationAuditLog_LoginIdentifier_OccurredAt]
     ON [dbo].[AuthenticationAuditLog]([LoginIdentifier] ASC, [OccurredAt] DESC);
 
+
 GO
+
 CREATE NONCLUSTERED INDEX [IX_AuthenticationAuditLog_UsersID_EventType_OccurredAt]
     ON [dbo].[AuthenticationAuditLog]([UsersID_FK] ASC, [EventType] ASC, [OccurredAt] DESC);
 
+
 GO
+
 CREATE NONCLUSTERED INDEX [IX_AuthenticationAuditLog_Success_OccurredAt]
     ON [dbo].[AuthenticationAuditLog]([IsSuccessful] ASC, [OccurredAt] DESC);
 
+
 GO
+
 CREATE NONCLUSTERED INDEX [IX_AuthenticationAuditLog_LoginPolicy]
-    ON [dbo].[AuthenticationAuditLog]
-    (
-        [LoginIdentifier] ASC,
-        [EventType] ASC,
-        [FailureReasonCode] ASC,
-        [OccurredAt] DESC
-    )
-    INCLUDE ([UsersID_FK]);
+    ON [dbo].[AuthenticationAuditLog]([LoginIdentifier] ASC, [EventType] ASC, [FailureReasonCode] ASC, [OccurredAt] DESC)
+    INCLUDE([UsersID_FK]);
+
+
+GO
 

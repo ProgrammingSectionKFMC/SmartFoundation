@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [MoveData].[usp_MigrateSystemUsers]
+CREATE   PROCEDURE [MoveData].[usp_MigrateSystemUsers]
     @IdaraId int = 1,
     @DepartmentId int = NULL,
     @DefaultPassword nvarchar(200),
@@ -865,3 +865,6 @@ BEGIN
         THROW;
     END CATCH;
 END;
+
+GO
+

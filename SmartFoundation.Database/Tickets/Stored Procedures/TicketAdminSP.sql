@@ -1,10 +1,10 @@
-﻿
+
 -- Lookup maintenance for the TicketAdmin page (classes, priorities, statuses,
 -- pause reasons, arbitration reasons, quality review results).
 -- Called by dbo.Masters_CRUD for @pageName_ = 'TicketAdmin'.
 -- Codes are generated automatically on insert (CLS-006, PSR-009 ...) and never edited from the form;
 -- codes the ticket workflow relies on are protected from deletion.
-CREATE PROCEDURE [Tickets].[TicketAdminSP]
+CREATE   PROCEDURE [Tickets].[TicketAdminSP]
 (
       @Action        NVARCHAR(200)
     , @recordID      INT            = NULL
@@ -183,3 +183,6 @@ BEGIN
         ;THROW;
     END CATCH
 END
+
+GO
+

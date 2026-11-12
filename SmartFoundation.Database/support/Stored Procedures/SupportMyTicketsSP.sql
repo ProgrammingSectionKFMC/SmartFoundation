@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [support].[SupportMyTicketsSP]
+CREATE PROCEDURE [support].[SupportMyTicketsSP]
 (
       @Action             NVARCHAR(200)
     , @ticketTypeID       TINYINT       = NULL
@@ -129,3 +129,6 @@ BEGIN
         THROW;
     END CATCH
 END
+
+GO
+

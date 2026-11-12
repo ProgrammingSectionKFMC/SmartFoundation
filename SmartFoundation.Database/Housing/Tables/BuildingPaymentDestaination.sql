@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BuildingPaymentDestaination] (
+CREATE TABLE [Housing].[BuildingPaymentDestaination] (
     [buildingPaymentDestainationID]          INT             IDENTITY (1, 1) NOT NULL,
     [buildingPaymentDestainationName_A]      NVARCHAR (100)  NULL,
     [buildingPaymentDestainationName_E]      NVARCHAR (100)  NULL,
@@ -9,4 +9,7 @@
     [hostName]                               NVARCHAR (200)  NULL,
     CONSTRAINT [PK_BuildingPaymentDestaination] PRIMARY KEY CLUSTERED ([buildingPaymentDestainationID] ASC)
 );
+
+
+GO
 

@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BuildingUtilityTypeLinkToBillDeductType] (
+CREATE TABLE [Housing].[BuildingUtilityTypeLinkToBillDeductType] (
     [buildingUtilityTypeLinkToBillDeductTypeID]     INT    IDENTITY (1, 1) NOT NULL,
     [billDeductTypeID_FK]                           INT    NULL,
     [buildingUtilityTypeID_FK]                      BIGINT NULL,
@@ -7,4 +7,7 @@
     CONSTRAINT [FK_BuildingUtilityTypeLinkToBillDeductType_BillDeductType] FOREIGN KEY ([billDeductTypeID_FK]) REFERENCES [Housing].[BillDeductType] ([billDeductTypeID]),
     CONSTRAINT [FK_BuildingUtilityTypeLinkToBillDeductType_BuildingUtilityType] FOREIGN KEY ([buildingUtilityTypeID_FK]) REFERENCES [Housing].[BuildingUtilityType] ([buildingUtilityTypeID])
 );
+
+
+GO
 

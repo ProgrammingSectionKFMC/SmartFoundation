@@ -16,3 +16,6 @@ BEGIN
          @Month=@Month,@Year=@Year,@EntryData=@EntryData,@HostName=@HostName,@RetryFailed=1,
          @OnlyRunID=@MonthlyBillingRunID,@ReturnSummary=0;
 END;
+
+GO
+

@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[CustodyItems] (
+CREATE TABLE [Housing].[CustodyItems] (
     [custodyItemID]          INT              IDENTITY (1, 1) NOT NULL,
     [custodyItemUID]         UNIQUEIDENTIFIER NULL,
     [custodyItemName_A]      NVARCHAR (100)   NULL,
@@ -10,4 +10,7 @@
     [hostName]               NVARCHAR (200)   NULL,
     CONSTRAINT [PK_CustodyItems] PRIMARY KEY CLUSTERED ([custodyItemID] ASC)
 );
+
+
+GO
 

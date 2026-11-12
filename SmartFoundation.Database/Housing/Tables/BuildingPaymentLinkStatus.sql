@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BuildingPaymentLinkStatus] (
+CREATE TABLE [Housing].[BuildingPaymentLinkStatus] (
     [buildingPaymentLinkStatusID]          INT             NOT NULL,
     [buildingPaymentLinkStatusName_A]      NVARCHAR (200)  NOT NULL,
     [buildingPaymentLinkStatusName_E]      NVARCHAR (200)  NULL,
@@ -9,4 +9,7 @@
     [hostName]                             NVARCHAR (200)  NULL,
     CONSTRAINT [PK_BuildingPaymentLinkStatus] PRIMARY KEY CLUSTERED ([buildingPaymentLinkStatusID] ASC)
 );
+
+
+GO
 

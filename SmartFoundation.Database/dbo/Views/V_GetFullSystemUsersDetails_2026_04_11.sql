@@ -1,4 +1,4 @@
-﻿CREATE VIEW dbo.[V_GetFullSystemUsersDetails_2026_04_11]
+CREATE VIEW dbo.[V_GetFullSystemUsersDetails_2026_04_11]
 AS
 SELECT
     u.usersID,
@@ -56,6 +56,7 @@ LEFT JOIN dbo.Idara id
     --u.usersActive = 1;  -- المستخدم نفسه فقط (اختياري حسب رغبتك)
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane1', @value = N'[0E232FF0-B466-11cf-A24F-00AA00A3EFFF, 1.00]
 Begin DesignProperties = 
    Begin PaneConfigurations = 
@@ -205,6 +206,7 @@ Begin DesignProperties =
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane2', @value = N'Alias = 900
          Table = 1170
          Output = 720
@@ -224,5 +226,9 @@ End
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPaneCount', @value = 2, @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'VIEW', @level1name = N'V_GetFullSystemUsersDetails_2026_04_11';
+
+
+GO
 

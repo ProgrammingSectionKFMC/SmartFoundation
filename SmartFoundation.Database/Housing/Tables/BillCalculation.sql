@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BillCalculation] (
+CREATE TABLE [Housing].[BillCalculation] (
     [BillCalculationID]           BIGINT          IDENTITY (1, 1) NOT NULL,
     [BillsID_FK]                  BIGINT          NOT NULL,
     [CalculationMethod]           NVARCHAR (40)   NOT NULL,
@@ -27,9 +27,12 @@
 );
 
 
-
-
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BillCalculation_MethodPolicy]
     ON [Housing].[BillCalculation]([CalculationMethod] ASC, [EstimatedBillingPolicyID_FK] ASC)
     INCLUDE([BillsID_FK], [BillingDays], [AmountBeforeTax], [TaxAmount], [TotalAmount]);
+
+
+GO
+

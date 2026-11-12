@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[MonthlyBillingRun] (
+CREATE TABLE [Housing].[MonthlyBillingRun] (
     [MonthlyBillingRunID]   BIGINT          IDENTITY (1, 1) NOT NULL,
     [IdaraID_FK]            BIGINT          NOT NULL,
     [PeriodYear]            INT             NOT NULL,
@@ -29,7 +29,11 @@
 );
 
 
+GO
+
+CREATE NONCLUSTERED INDEX [IX_MonthlyBillingRun_Status]
+    ON [Housing].[MonthlyBillingRun]([RunStatus] ASC, [PeriodYear] ASC, [PeriodMonth] ASC, [IdaraID_FK] ASC);
+
 
 GO
-CREATE INDEX [IX_MonthlyBillingRun_Status]
-ON [Housing].[MonthlyBillingRun] ([RunStatus], [PeriodYear], [PeriodMonth], [IdaraID_FK]);
+

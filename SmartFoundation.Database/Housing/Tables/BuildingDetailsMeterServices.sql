@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BuildingDetailsMeterServices] (
+CREATE TABLE [Housing].[BuildingDetailsMeterServices] (
     [BuildingDetailsMeterServicesID]        BIGINT          IDENTITY (1, 1) NOT NULL,
     [BuildingDetailsID_FK]                  BIGINT          NULL,
     [MeterServicesTypeID_FK]                INT             NULL,
@@ -14,7 +14,11 @@
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingDetailsMeterServices_HistoricalBilling]
     ON [Housing].[BuildingDetailsMeterServices]([BuildingDetailsID_FK] ASC, [IdaraId_FK] ASC, [MeterServicesTypeID_FK] ASC)
     INCLUDE([BuildingDetailsMeterServicesActive], [BuildingDetailsMeterServicesStartDate], [BuildingDetailsMeterServicesEndDate]);
+
+
+GO
 

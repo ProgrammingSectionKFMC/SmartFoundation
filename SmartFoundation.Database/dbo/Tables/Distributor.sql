@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[Distributor] (
+CREATE TABLE [dbo].[Distributor] (
     [distributorID]          BIGINT         IDENTITY (1, 1) NOT NULL,
     [distributorName_A]      NVARCHAR (100) NULL,
     [distributorName_E]      NVARCHAR (100) NULL,
@@ -18,4 +18,7 @@
     CONSTRAINT [FK_Distributor_DistributorType] FOREIGN KEY ([distributorType_FK]) REFERENCES [dbo].[DistributorType] ([distributorTypeID]),
     CONSTRAINT [FK_Distributor_Role] FOREIGN KEY ([roleID_FK]) REFERENCES [dbo].[Role] ([roleID])
 );
+
+
+GO
 

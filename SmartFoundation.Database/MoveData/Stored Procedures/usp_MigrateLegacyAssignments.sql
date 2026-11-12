@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [MoveData].[usp_MigrateLegacyAssignments]
+CREATE PROCEDURE [MoveData].[usp_MigrateLegacyAssignments]
     @IdaraId bigint,
     @RollbackAfterTest bit = 1
 AS
@@ -629,3 +629,6 @@ BEGIN
         END CATCH;
 
     END;
+
+GO
+

@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[MilitaryArea] (
+CREATE TABLE [Housing].[MilitaryArea] (
     [militaryAreaID]          INT            IDENTITY (1, 1) NOT NULL,
     [militaryAreaCode]        NVARCHAR (10)  NULL,
     [militaryAreaName_A]      NVARCHAR (150) NULL,
@@ -10,4 +10,7 @@
     [hostName]                NVARCHAR (200) NULL,
     CONSTRAINT [PK_MilitaryArea] PRIMARY KEY CLUSTERED ([militaryAreaID] ASC)
 );
+
+
+GO
 

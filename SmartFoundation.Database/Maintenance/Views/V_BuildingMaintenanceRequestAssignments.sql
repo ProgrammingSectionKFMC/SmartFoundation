@@ -1,4 +1,4 @@
-﻿
+
 CREATE   VIEW [Maintenance].[V_BuildingMaintenanceRequestAssignments]
 AS
 SELECT
@@ -19,3 +19,6 @@ SELECT
 FROM [Maintenance].[BuildingMaintenanceRequestAssignment] AS assignment
 INNER JOIN [Maintenance].[BuildingMaintenanceRequest] AS request
     ON request.[RequestID] = assignment.[RequestID];
+
+GO
+

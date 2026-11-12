@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[Notifications] (
+CREATE TABLE [dbo].[Notifications] (
     [NotificationId] BIGINT         IDENTITY (1, 1) NOT NULL,
     [Title]          NVARCHAR (200) NOT NULL,
     [Body]           NVARCHAR (MAX) NOT NULL,
@@ -12,4 +12,7 @@
     [hostName]       NVARCHAR (200) NULL,
     CONSTRAINT [PK__Notifica__20CF2E1236E51D88] PRIMARY KEY CLUSTERED ([NotificationId] ASC)
 );
+
+
+GO
 

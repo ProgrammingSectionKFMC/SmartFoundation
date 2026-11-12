@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[Organization] (
+CREATE TABLE [dbo].[Organization] (
     [OrganizationID]          BIGINT         IDENTITY (1, 1) NOT NULL,
     [OrganizationClass_A]     NVARCHAR (10)  NULL,
     [OrganizationClass_E]     NVARCHAR (10)  NULL,
@@ -13,4 +13,7 @@
     [hostName]                NVARCHAR (200) NULL,
     CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([OrganizationID] ASC)
 );
+
+
+GO
 

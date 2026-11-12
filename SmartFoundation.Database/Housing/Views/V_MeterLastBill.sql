@@ -1,4 +1,4 @@
-﻿
+
 
 CREATE   VIEW [Housing].[V_MeterLastBill]
 AS
@@ -48,3 +48,6 @@ SELECT
     entryDate, entryData, hostName
 FROM x
 WHERE rn = 1;
+
+GO
+

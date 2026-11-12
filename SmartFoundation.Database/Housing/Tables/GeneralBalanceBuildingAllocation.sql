@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[GeneralBalanceBuildingAllocation] (
+CREATE TABLE [Housing].[GeneralBalanceBuildingAllocation] (
     [AllocationID]               BIGINT           IDENTITY (1, 1) NOT NULL,
     [SourcePaymentID_FK]         BIGINT           NOT NULL,
     [TargetBuildingID_FK]        BIGINT           NOT NULL,
@@ -35,22 +35,29 @@
 
 
 GO
-CREATE UNIQUE NONCLUSTERED INDEX [UX_GBBA_TargetMovement]
-    ON [Housing].[GeneralBalanceBuildingAllocation]([TargetMovementPaymentID_FK] ASC);
+
+CREATE NONCLUSTERED INDEX [IX_GBBA_SourceStatus]
+    ON [Housing].[GeneralBalanceBuildingAllocation]([SourcePaymentID_FK] ASC, [AllocationStatus] ASC)
+    INCLUDE([AllocatedAmount], [ResidentInfoID_FK], [BillChargeTypeID_FK], [IdaraID_FK]);
 
 
 GO
-CREATE UNIQUE NONCLUSTERED INDEX [UX_GBBA_SourceMovement]
-    ON [Housing].[GeneralBalanceBuildingAllocation]([SourceMovementPaymentID_FK] ASC);
 
-
-GO
 CREATE NONCLUSTERED INDEX [IX_GBBA_TargetBuilding]
     ON [Housing].[GeneralBalanceBuildingAllocation]([TargetBuildingID_FK] ASC, [AllocationStatus] ASC);
 
 
 GO
-CREATE NONCLUSTERED INDEX [IX_GBBA_SourceStatus]
-    ON [Housing].[GeneralBalanceBuildingAllocation]([SourcePaymentID_FK] ASC, [AllocationStatus] ASC)
-    INCLUDE([AllocatedAmount], [ResidentInfoID_FK], [BillChargeTypeID_FK], [IdaraID_FK]);
+
+CREATE UNIQUE NONCLUSTERED INDEX [UX_GBBA_SourceMovement]
+    ON [Housing].[GeneralBalanceBuildingAllocation]([SourceMovementPaymentID_FK] ASC);
+
+
+GO
+
+CREATE UNIQUE NONCLUSTERED INDEX [UX_GBBA_TargetMovement]
+    ON [Housing].[GeneralBalanceBuildingAllocation]([TargetMovementPaymentID_FK] ASC);
+
+
+GO
 

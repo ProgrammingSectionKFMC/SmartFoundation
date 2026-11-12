@@ -1,4 +1,4 @@
-﻿CREATE TABLE [MoveData].[MigrationExecutionLog] (
+CREATE TABLE [MoveData].[MigrationExecutionLog] (
     [ExecutionLogID]       BIGINT           IDENTITY (1, 1) NOT NULL,
     [MigrationRunID]       UNIQUEIDENTIFIER NOT NULL,
     [StepNumber]           INT              NOT NULL,
@@ -18,6 +18,10 @@
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_MigrationExecutionLog_RunStep]
     ON [MoveData].[MigrationExecutionLog]([MigrationRunID] ASC, [StepNumber] ASC);
+
+
+GO
 

@@ -1,4 +1,4 @@
-﻿
+
 CREATE PROCEDURE [dbo].[Notifications_Create]
 (
     @Title              NVARCHAR(200),
@@ -494,3 +494,6 @@ END
     );
 
 END
+
+GO
+

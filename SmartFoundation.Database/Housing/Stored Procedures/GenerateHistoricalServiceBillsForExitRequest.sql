@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [Housing].[GenerateHistoricalServiceBillsForExitRequest]
+CREATE PROCEDURE [Housing].[GenerateHistoricalServiceBillsForExitRequest]
       @Action NVARCHAR(12)
     , @ExitRequestActionID BIGINT
     , @EntryData NVARCHAR(20) = NULL
@@ -871,3 +871,6 @@ BEGIN
         THROW;
     END CATCH;
 END;
+
+GO
+

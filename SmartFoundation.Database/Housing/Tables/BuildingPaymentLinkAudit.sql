@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BuildingPaymentLinkAudit] (
+CREATE TABLE [Housing].[BuildingPaymentLinkAudit] (
     [buildingPaymentLinkAuditID] BIGINT          IDENTITY (1, 1) NOT NULL,
     [paymentID_FK]               BIGINT          NOT NULL,
     [oldLinkStatusID]            INT             NULL,
@@ -14,6 +14,10 @@
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingPaymentLinkAudit_Payment]
     ON [Housing].[BuildingPaymentLinkAudit]([paymentID_FK] ASC, [changedDate] ASC);
+
+
+GO
 

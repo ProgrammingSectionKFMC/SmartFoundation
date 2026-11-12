@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [Housing].[SyncRentExemptionPayments]
+CREATE PROCEDURE [Housing].[SyncRentExemptionPayments]
       @Action                    NVARCHAR(20)
     , @ResidentRentExemptionID   BIGINT
     , @ThroughDate               DATE = NULL
@@ -341,3 +341,6 @@ END;
         THROW;
     END CATCH;
 END;
+
+GO
+

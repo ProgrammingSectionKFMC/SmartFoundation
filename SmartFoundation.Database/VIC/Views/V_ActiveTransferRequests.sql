@@ -1,4 +1,4 @@
-﻿CREATE   VIEW [VIC].[V_ActiveTransferRequests]
+CREATE   VIEW [VIC].[V_ActiveTransferRequests]
 AS
 WITH LastHist AS
 (
@@ -30,3 +30,6 @@ LEFT JOIN LastHist lh
     ON lh.RequestID_FK = r.RequestID
    AND lh.rn = 1
 WHERE ISNULL(r.active,0) = 1;
+
+GO
+

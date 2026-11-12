@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[MilitaryLocation] (
+CREATE TABLE [Housing].[MilitaryLocation] (
     [militaryLocationID]          INT            IDENTITY (1, 1) NOT NULL,
     [militaryLocationCode]        NVARCHAR (10)  NULL,
     [militaryAreaCityID_FK]       INT            NULL,
@@ -15,4 +15,7 @@
     CONSTRAINT [FK_MilitaryLocation_Idara] FOREIGN KEY ([IdaraId_FK]) REFERENCES [dbo].[Idara] ([idaraID]),
     CONSTRAINT [FK_MilitaryLocation_MilitaryAreaCity] FOREIGN KEY ([militaryAreaCityID_FK]) REFERENCES [Housing].[MilitaryAreaCity] ([militaryAreaCityID])
 );
+
+
+GO
 

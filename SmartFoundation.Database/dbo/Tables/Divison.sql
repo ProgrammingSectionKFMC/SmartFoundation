@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[Divison] (
+CREATE TABLE [dbo].[Divison] (
     [divID]          BIGINT         IDENTITY (1, 1) NOT NULL,
     [divName_A]      NVARCHAR (50)  NULL,
     [divName_E]      NVARCHAR (50)  NULL,
@@ -11,4 +11,7 @@
     [hostName]       NVARCHAR (200) CONSTRAINT [DF_Divison_hostName] DEFAULT (host_name()) NULL,
     CONSTRAINT [PK_Divison] PRIMARY KEY CLUSTERED ([divID] ASC)
 );
+
+
+GO
 

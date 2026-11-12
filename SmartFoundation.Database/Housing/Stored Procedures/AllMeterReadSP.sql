@@ -1,4 +1,4 @@
-﻿
+
 CREATE PROCEDURE [Housing].[AllMeterReadSP] 
 (
       @Action                                     NVARCHAR(100) = NULL
@@ -3205,3 +3205,6 @@ UPDATE Housing.Bills
         ;THROW;
     END CATCH
 END
+
+GO
+

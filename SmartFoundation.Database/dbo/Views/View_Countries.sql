@@ -1,4 +1,4 @@
-﻿CREATE VIEW [dbo].[View_Countries] AS
+CREATE VIEW [dbo].[View_Countries] AS
 SELECT
     c.countryID        AS CountryID,
     c.countryName_A    AS CountryName_A,
@@ -11,3 +11,6 @@ SELECT
     ct.continentName_A AS ContinentName_A_FK
 FROM Countries c
 LEFT JOIN Continents ct ON c.continentID_FK = ct.continentID;
+
+GO
+

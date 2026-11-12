@@ -1,4 +1,4 @@
-﻿-- =============================================
+-- =============================================
 -- Author:		<Author,,Name>
 -- Create date: <Create Date,,>
 -- Description:	<Description,,>
@@ -411,3 +411,6 @@ WHERE v.residentInfoID = @residentInfoID
   );
 END; -- END general-balance ELSE
 END; -- END procedure
+
+GO
+

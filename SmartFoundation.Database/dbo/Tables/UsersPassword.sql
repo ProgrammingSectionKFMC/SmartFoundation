@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[UsersPassword] (
+CREATE TABLE [dbo].[UsersPassword] (
     [usersPasswordID]       BIGINT         IDENTITY (1, 1) NOT NULL,
     [usersID_FK]            BIGINT         NOT NULL,
     [PasswordHash]          VARBINARY (64) NOT NULL,
@@ -14,4 +14,7 @@
     CONSTRAINT [PK_UsersPassword] PRIMARY KEY CLUSTERED ([usersPasswordID] ASC),
     CONSTRAINT [FK_UsersPassword_Users1] FOREIGN KEY ([usersID_FK]) REFERENCES [dbo].[Users] ([usersID])
 );
+
+
+GO
 

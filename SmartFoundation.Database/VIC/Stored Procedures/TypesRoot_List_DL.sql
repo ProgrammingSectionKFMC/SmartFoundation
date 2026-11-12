@@ -1,14 +1,4 @@
-﻿
-/* =========================================================
-   Description:
-   إرجاع قائمة أنواع الجذور (TypesRoot) مع فلترة اختيارية حسب:
-   - ParentID (جذر/فرعي)
-   - ActiveOnly (النشط فقط)
-   - Search (بحث بالاسم عربي/إنجليزي)
-   Type: READ (LOOKUP_LIST / LIST)
-========================================================= */
-
-CREATE     PROCEDURE [VIC].[TypesRoot_List_DL]
+CREATE   PROCEDURE [VIC].[TypesRoot_List_DL]
 (
       @parentID   INT = NULL
     , @activeOnly BIT = 0
@@ -29,18 +19,21 @@ BEGIN
         , t.typesStartDate
         , t.typesEndDate
         , t.typesRoot_ParentID
-    FROM VIC.TypesRoot AS t
-    WHERE 1 = 1
-      AND (
+    FROM VIC.TypesRoot t
+    WHERE
+        (
             (@parentID IS NULL AND t.typesRoot_ParentID IS NULL)
             OR
             (@parentID IS NOT NULL AND t.typesRoot_ParentID = @parentID)
-          )
-      AND (@activeOnly = 0 OR t.typesActive = 1)
-      AND (
+        )
+        AND (@activeOnly = 0 OR t.typesActive = 1)
+        AND (
             @S IS NULL
-            OR t.typesName_A LIKE N'%' + @S + N'%'
-            OR t.typesName_E LIKE N'%' + @S + N'%'
-          )
+            OR t.typesName_A LIKE '%' + @S + '%'
+            OR t.typesName_E LIKE '%' + @S + '%'
+        )
     ORDER BY t.typesName_A;
 END
+
+GO
+

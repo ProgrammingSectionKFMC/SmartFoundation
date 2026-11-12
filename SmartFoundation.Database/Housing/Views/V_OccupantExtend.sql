@@ -1,4 +1,4 @@
-﻿CREATE VIEW Housing.V_OccupantExtend
+CREATE VIEW Housing.V_OccupantExtend
 AS
 SELECT        g.ActionID, g.ActionTypeID, g.ActionTypeName, g.GeneralNo, g.PaymentTypeID, g.PaymentTypeName, g.BuildingNo, g.ActionDate, g.ActionDecisionNo, g.ActionDecisionDate, g.ActionNote, g.ActionFromDate, g.ActionToDate, 
                          g.WaitingClassID, g.WaitingClassName, g.WaitingOrderTypeID, g.WaitingOrderTypeName, g.waitingClassSequence, g.buildingActionParentID
@@ -8,6 +8,7 @@ FROM            Housing.GetGeneralListActionForResident() AS g INNER JOIN
 WHERE        (g.ActionTypeID = 24) AND (g2.ActionID IS NULL)
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane1', @value = N'[0E232FF0-B466-11cf-A24F-00AA00A3EFFF, 1.00]
 Begin DesignProperties = 
    Begin PaneConfigurations = 
@@ -161,5 +162,9 @@ End
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPaneCount', @value = 1, @level0type = N'SCHEMA', @level0name = N'Housing', @level1type = N'VIEW', @level1name = N'V_OccupantExtend';
+
+
+GO
 

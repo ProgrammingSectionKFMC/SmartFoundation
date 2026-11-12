@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BillsDeductListDetails] (
+CREATE TABLE [Housing].[BillsDeductListDetails] (
     [billsDeductListDetailsID]        INT              IDENTITY (1, 1) NOT NULL,
     [billsDeductListDetailsUID]       UNIQUEIDENTIFIER CONSTRAINT [DF_BillsDeductListDetails_billsDeductListDetailsUID] DEFAULT (newid()) NOT NULL,
     [billDeductListDestainationID_FK] INT              NULL,
@@ -23,7 +23,11 @@
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BillsDeduct_active_paid]
     ON [Housing].[BillsDeductListDetails]([billsID_FK] ASC, [billActive] ASC, [billPaid] ASC)
     INCLUDE([paidAmount], [paidDate]);
+
+
+GO
 

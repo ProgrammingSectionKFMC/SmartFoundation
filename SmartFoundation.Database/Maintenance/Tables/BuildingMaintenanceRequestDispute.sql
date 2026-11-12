@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Maintenance].[BuildingMaintenanceRequestDispute] (
+CREATE TABLE [Maintenance].[BuildingMaintenanceRequestDispute] (
     [DisputeID]         BIGINT         IDENTITY (1, 1) NOT NULL,
     [RequestID]         BIGINT         NOT NULL,
     [RaisedByDSDID]     BIGINT         NULL,
@@ -26,4 +26,7 @@
     CONSTRAINT [FK_BuildingMaintenanceRequestDispute_Request] FOREIGN KEY ([RequestID]) REFERENCES [Maintenance].[BuildingMaintenanceRequest] ([RequestID]),
     CONSTRAINT [FK_BuildingMaintenanceRequestDispute_Status] FOREIGN KEY ([DisputeStatusID]) REFERENCES [Maintenance].[MaintenanceRequestStatus] ([StatusID])
 );
+
+
+GO
 

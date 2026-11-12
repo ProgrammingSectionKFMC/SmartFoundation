@@ -1,4 +1,4 @@
-﻿CREATE TABLE [support].[TeamMemberRole] (
+CREATE TABLE [support].[TeamMemberRole] (
     [teamMemberRoleID]     BIGINT         IDENTITY (1, 1) NOT NULL,
     [teamMemberID_FK]      BIGINT         NOT NULL,
     [roleID_FK]            BIGINT         NOT NULL,
@@ -11,4 +11,7 @@
     CONSTRAINT [FK_support_TeamMemberRole_TeamMember] FOREIGN KEY ([teamMemberID_FK]) REFERENCES [support].[TeamMember] ([teamMemberID]),
     CONSTRAINT [UQ_support_TeamMemberRole_MemberRole] UNIQUE NONCLUSTERED ([teamMemberID_FK] ASC, [roleID_FK] ASC)
 );
+
+
+GO
 

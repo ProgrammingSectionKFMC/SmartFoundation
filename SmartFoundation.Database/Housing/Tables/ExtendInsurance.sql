@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[ExtendInsurance] (
+CREATE TABLE [Housing].[ExtendInsurance] (
     [ExtendInsuranceID]            BIGINT          IDENTITY (1, 1) NOT NULL,
     [buildingActionID_FK]          BIGINT          NULL,
     [residentInfoID_FK]            BIGINT          NULL,
@@ -24,4 +24,7 @@
     [hostName]                     NVARCHAR (200)  NULL,
     CONSTRAINT [PK_ExtendInsurance] PRIMARY KEY CLUSTERED ([ExtendInsuranceID] ASC)
 );
+
+
+GO
 

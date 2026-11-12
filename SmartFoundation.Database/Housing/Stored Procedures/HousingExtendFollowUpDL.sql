@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [Housing].[HousingExtendFollowUpDL]
+CREATE PROCEDURE [Housing].[HousingExtendFollowUpDL]
       @pageName_ NVARCHAR(400)
     , @idaraID INT
     , @entrydata INT
@@ -68,3 +68,6 @@ BEGIN
         CAST(w.buildingActionToDate AS DATE) ASC,
         w.GeneralNo ASC;
 END
+
+GO
+

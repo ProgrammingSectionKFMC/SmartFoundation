@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [MoveData].[usp_MigrateAll]      @IdaraId bigint,      /* مهم عند التشغيل الفعلي: تاريخ نهاية الترحيل وبداية اعتماد النظام الجديد. */      @CutoverDate date,      @WaterMonthlyAmount decimal(18,2) = 8.25,      @RollbackAfterTest bit = 1  AS  BEGIN      SET NOCOUNT ON;      SET XACT_ABORT ON;        DECLARE @MigrationRunID uniqueidentifier = NEWID(),              @CurrentStepNumber int = NULL,              @CurrentProcedure sysname = NULL,              @StepStartedAt datetime2(3) = NULL;      /* Findings survive transaction rollback because they are captured in a table variable. */
+CREATE PROCEDURE [MoveData].[usp_MigrateAll]      @IdaraId bigint,      /* مهم عند التشغيل الفعلي: تاريخ نهاية الترحيل وبداية اعتماد النظام الجديد. */      @CutoverDate date,      @WaterMonthlyAmount decimal(18,2) = 8.25,      @RollbackAfterTest bit = 1  AS  BEGIN      SET NOCOUNT ON;      SET XACT_ABORT ON;        DECLARE @MigrationRunID uniqueidentifier = NEWID(),              @CurrentStepNumber int = NULL,              @CurrentProcedure sysname = NULL,              @StepStartedAt datetime2(3) = NULL;      /* Findings survive transaction rollback because they are captured in a table variable. */
       DECLARE @DuplicateGateFindings TABLE
       (
           GeneralNo bigint NULL,
@@ -196,3 +196,6 @@ SUM(CASE WHEN ActionTypeID IN (2,24)
           THROW;
       END CATCH;
   END;
+
+GO
+

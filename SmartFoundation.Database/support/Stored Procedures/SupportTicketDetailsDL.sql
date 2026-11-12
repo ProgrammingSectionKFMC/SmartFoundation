@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE [support].[SupportTicketDetailsDL]
+CREATE   PROCEDURE [support].[SupportTicketDetailsDL]
       @pageName_      NVARCHAR(400)
     , @idaraID        INT
     , @entrydata      BIGINT
@@ -77,3 +77,6 @@ BEGIN
     where teamMemberActive = 1 
     and canReceiveTickets = 1
 END
+
+GO
+

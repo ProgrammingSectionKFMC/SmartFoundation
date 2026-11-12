@@ -1,4 +1,4 @@
-﻿-- =============================================
+-- =============================================
 -- Author:		<Author,,Name>
 -- Create date: <Create Date,,>
 -- Description:	<Description,,>
@@ -23,3 +23,6 @@ RETURN
     INNER JOIN WH.WarehousePart p5 ON p4.warehousePartID = p5.warehousePartParentID_FK
 
 )
+
+GO
+

@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BuildingSpace] (
+CREATE TABLE [Housing].[BuildingSpace] (
     [BuildingSpaceID]        BIGINT          IDENTITY (1, 1) NOT NULL,
     [BuildingDetailsID_FK]   BIGINT          NOT NULL,
     [BuildingSpaceTypeID_FK] INT             NOT NULL,
@@ -27,15 +27,18 @@
 );
 
 
-
-
 GO
+
 CREATE UNIQUE NONCLUSTERED INDEX [UX_BuildingSpace_ActiveSequence]
-    ON [Housing].[BuildingSpace]([BuildingDetailsID_FK] ASC, [BuildingSpaceTypeID_FK] ASC, [BuildingSpaceSequence] ASC)
-    WHERE [BuildingSpaceActive] = (1);
+    ON [Housing].[BuildingSpace]([BuildingDetailsID_FK] ASC, [BuildingSpaceTypeID_FK] ASC, [BuildingSpaceSequence] ASC) WHERE ([BuildingSpaceActive]=(1));
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingSpace_BillingLookup]
     ON [Housing].[BuildingSpace]([BuildingDetailsID_FK] ASC, [BuildingSpaceActive] ASC, [BuildingSpaceStartDate] ASC, [BuildingSpaceEndDate] ASC)
     INCLUDE([BuildingSpaceTypeID_FK], [BuildingSpaceSequence]);
+
+
+GO
+

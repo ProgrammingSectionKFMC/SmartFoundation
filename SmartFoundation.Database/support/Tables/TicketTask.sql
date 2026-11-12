@@ -1,4 +1,4 @@
-﻿CREATE TABLE [support].[TicketTask] (
+CREATE TABLE [support].[TicketTask] (
     [ticketTaskID]              BIGINT         IDENTITY (1, 1) NOT NULL,
     [ticketID_FK]               BIGINT         NOT NULL,
     [taskNo]                    NVARCHAR (40)  NOT NULL,
@@ -29,16 +29,22 @@
 
 
 GO
+
 CREATE UNIQUE NONCLUSTERED INDEX [UX_support_TicketTask_Ticket_Assignee_Active]
     ON [support].[TicketTask]([ticketID_FK] ASC, [assignedToTeamMemberID_FK] ASC) WHERE ([taskActive]=(1));
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_support_TicketTask_Assignee_Status]
     ON [support].[TicketTask]([assignedToTeamMemberID_FK] ASC, [statusID_FK] ASC, [assignedDate] DESC);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_support_TicketTask_Ticket_Order]
     ON [support].[TicketTask]([ticketID_FK] ASC, [taskOrder] ASC, [assignedDate] ASC);
+
+
+GO
 

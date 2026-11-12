@@ -1,4 +1,4 @@
-﻿CREATE TABLE [VIC].[VehiclesDocumentType] (
+CREATE TABLE [VIC].[VehiclesDocumentType] (
     [vehicleDocumentTypeID]     INT            IDENTITY (1, 1) NOT NULL,
     [vehicleDocumentTypeName_A] NVARCHAR (50)  NULL,
     [vehicleDocumentTypeName_E] NVARCHAR (50)  NULL,
@@ -8,4 +8,7 @@
     [hostName]                  NVARCHAR (400) NULL,
     CONSTRAINT [PK_VehiclesDocumentType] PRIMARY KEY CLUSTERED ([vehicleDocumentTypeID] ASC)
 );
+
+
+GO
 

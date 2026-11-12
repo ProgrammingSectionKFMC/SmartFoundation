@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BuildingActionSource] (
+CREATE TABLE [Housing].[BuildingActionSource] (
     [buildingActionSourceID]          INT             IDENTITY (1, 1) NOT NULL,
     [buildingActionSourceName_A]      NVARCHAR (100)  NULL,
     [buildingActionSourceName_E]      NVARCHAR (100)  NULL,
@@ -11,4 +11,7 @@
     [hostName]                        NVARCHAR (200)  NULL,
     CONSTRAINT [PK_BuildingActionSource] PRIMARY KEY CLUSTERED ([buildingActionSourceID] ASC)
 );
+
+
+GO
 

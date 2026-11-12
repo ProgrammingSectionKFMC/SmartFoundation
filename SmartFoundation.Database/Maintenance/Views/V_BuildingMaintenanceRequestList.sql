@@ -1,4 +1,4 @@
-﻿
+
 CREATE   VIEW [Maintenance].[V_BuildingMaintenanceRequestList]
 AS
 SELECT
@@ -69,3 +69,6 @@ OUTER APPLY
       AND action.[IsActive] = 1
     ORDER BY action.[ActionDate] DESC, action.[ActionID] DESC
 ) AS lastAction;
+
+GO
+

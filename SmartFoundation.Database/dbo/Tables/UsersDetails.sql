@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[UsersDetails] (
+CREATE TABLE [dbo].[UsersDetails] (
     [usersDetailsID]                BIGINT          IDENTITY (1, 1) NOT NULL,
     [usersID_FK]                    BIGINT          NOT NULL,
     [GeneralNo]                     BIGINT          NULL,
@@ -49,11 +49,11 @@
 );
 
 
+GO
 
-
+CREATE UNIQUE NONCLUSTERED INDEX [UX_UsersDetails_OnlyOneActive]
+    ON [dbo].[UsersDetails]([usersID_FK] ASC) WHERE ([userActive]=(1));
 
 
 GO
-CREATE UNIQUE NONCLUSTERED INDEX [UX_UsersDetails_OnlyOneActive]
-    ON [dbo].[UsersDetails]([usersID_FK] ASC) WHERE ([userActive]=(1));
 

@@ -1,4 +1,4 @@
-﻿
+
 CREATE FUNCTION [Housing].[fn_BuildingRent_ForMonth]
 (
       @Year  int
@@ -118,3 +118,6 @@ SELECT
 FROM H h
 LEFT JOIN Agg a
     ON a.buildingDetailsID = h.buildingDetailsID;
+
+GO
+

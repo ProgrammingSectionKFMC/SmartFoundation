@@ -1,4 +1,4 @@
-﻿CREATE VIEW [Tickets].[V_TicketFullDetails]
+CREATE VIEW [Tickets].[V_TicketFullDetails]
 AS
 SELECT
       t.[ticketID]
@@ -57,3 +57,6 @@ LEFT JOIN [Tickets].[Priority] p_e
     ON t.[effectivePriorityID_FK] = p_e.[priorityID]
 LEFT JOIN [Tickets].[TicketStatus] ts
     ON t.[ticketStatusID_FK] = ts.[ticketStatusID];
+
+GO
+

@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[DeductType] (
+CREATE TABLE [Housing].[DeductType] (
     [deductTypeID]          INT             IDENTITY (1, 1) NOT NULL,
     [deductTypeName_A]      NVARCHAR (100)  NULL,
     [deductTypeName_E]      NVARCHAR (100)  NULL,
@@ -9,4 +9,7 @@
     [hostName]              NVARCHAR (200)  NULL,
     CONSTRAINT [PK_DeductType] PRIMARY KEY CLUSTERED ([deductTypeID] ASC)
 );
+
+
+GO
 

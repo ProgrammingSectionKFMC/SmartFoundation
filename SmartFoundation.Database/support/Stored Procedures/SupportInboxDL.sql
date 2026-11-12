@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE [support].[SupportInboxDL]
+CREATE   PROCEDURE [support].[SupportInboxDL]
       @pageName_      NVARCHAR(400)
     , @idaraID        INT
     , @entrydata      BIGINT
@@ -62,3 +62,6 @@ BEGIN
     WHERE tm.teamMemberActive = 1 AND tm.canReceiveTickets = 1
     ORDER BY u.nationalID;
 END
+
+GO
+

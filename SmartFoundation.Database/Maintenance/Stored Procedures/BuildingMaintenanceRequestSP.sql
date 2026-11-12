@@ -1,4 +1,4 @@
-﻿
+
 CREATE   PROCEDURE [Maintenance].[BuildingMaintenanceRequestSP]
       @Action NVARCHAR(200)
     , @RequestID NVARCHAR(100) = NULL
@@ -544,3 +544,6 @@ BEGIN
         ;THROW;
     END CATCH
 END
+
+GO
+

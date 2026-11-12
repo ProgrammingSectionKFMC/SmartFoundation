@@ -1,3 +1,6 @@
-﻿CREATE SCHEMA [Maintenance]
+CREATE SCHEMA [Maintenance]
     AUTHORIZATION [dbo];
+
+
+GO
 

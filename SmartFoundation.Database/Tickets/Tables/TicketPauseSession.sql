@@ -1,26 +1,23 @@
-﻿CREATE TABLE [Tickets].[TicketPauseSession](
-	[ticketPauseSessionID] [bigint] IDENTITY(1,1) NOT NULL,
-	[ticketID_FK] [bigint] NOT NULL,
-	[idaraID_FK] [int] NOT NULL,
-	[pauseReasonID_FK] [int] NULL,
-	[relatedChildTicketID_FK] [bigint] NULL,
-	[relatedArbitrationCaseID_FK] [bigint] NULL,
-	[relatedClarificationRequestID_FK] [bigint] NULL,
-	[pauseStart] [datetime] NOT NULL,
-	[pauseEnd] [datetime] NULL,
-	[slaPauseFlag] [bit] NULL,
-	[pauseNotes] [nvarchar](2000) NULL,
-	[ticketPauseSessionActive] [bit] NULL,
-	[entryDate] [datetime] NULL,
-	[entryData] [nvarchar](20) NULL,
-	[hostName] [nvarchar](200) NULL,
-	[pauseNotes_A] [nvarchar](2000) NULL,
- CONSTRAINT [PK_Tickets_TicketPauseSession] PRIMARY KEY CLUSTERED 
-(
-	[ticketPauseSessionID] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF)
-)
+CREATE TABLE [Tickets].[TicketPauseSession] (
+    [ticketPauseSessionID]             BIGINT          IDENTITY (1, 1) NOT NULL,
+    [ticketID_FK]                      BIGINT          NOT NULL,
+    [idaraID_FK]                       INT             NOT NULL,
+    [pauseReasonID_FK]                 INT             NULL,
+    [relatedChildTicketID_FK]          BIGINT          NULL,
+    [relatedArbitrationCaseID_FK]      BIGINT          NULL,
+    [relatedClarificationRequestID_FK] BIGINT          NULL,
+    [pauseStart]                       DATETIME        NOT NULL,
+    [pauseEnd]                         DATETIME        NULL,
+    [slaPauseFlag]                     BIT             NULL,
+    [pauseNotes]                       NVARCHAR (2000) NULL,
+    [ticketPauseSessionActive]         BIT             NULL,
+    [entryDate]                        DATETIME        CONSTRAINT [DF_Tickets_TicketPauseSession_entryDate] DEFAULT (getdate()) NULL,
+    [entryData]                        NVARCHAR (20)   NULL,
+    [hostName]                         NVARCHAR (200)  NULL,
+    [pauseNotes_A]                     NVARCHAR (2000) NULL,
+    CONSTRAINT [PK_Tickets_TicketPauseSession] PRIMARY KEY CLUSTERED ([ticketPauseSessionID] ASC)
+);
+
+
 GO
 
-ALTER TABLE [Tickets].[TicketPauseSession] ADD  CONSTRAINT [DF_Tickets_TicketPauseSession_entryDate]  DEFAULT (getdate()) FOR [entryDate]
-GO

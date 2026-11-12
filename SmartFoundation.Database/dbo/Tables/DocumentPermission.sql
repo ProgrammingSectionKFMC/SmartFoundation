@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[DocumentPermission] (
+CREATE TABLE [dbo].[DocumentPermission] (
     [documentPermissionID] INT            IDENTITY (1, 1) NOT NULL,
     [distributorID_FK]     INT            NULL,
     [documentTypeID_FK]    INT            NULL,
@@ -7,4 +7,7 @@
     [hostName]             NVARCHAR (200) NULL,
     CONSTRAINT [PK_DocumentPermission] PRIMARY KEY CLUSTERED ([documentPermissionID] ASC)
 );
+
+
+GO
 

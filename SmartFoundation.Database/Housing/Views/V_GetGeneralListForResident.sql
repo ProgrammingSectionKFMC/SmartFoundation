@@ -1,4 +1,4 @@
-﻿CREATE VIEW Housing.V_GetGeneralListForResident
+CREATE VIEW Housing.V_GetGeneralListForResident
 AS
 SELECT        ri.residentInfoID, rd.generalNo_FK, ri.NationalID, ISNULL(RTRIM(LTRIM(rd.firstName_A)), '') + ' ' + ISNULL(RTRIM(LTRIM(rd.secondName_A)), '') + ' ' + ISNULL(RTRIM(LTRIM(rd.thirdName_A)), '') 
                          + ' ' + ISNULL(RTRIM(LTRIM(rd.lastName_A)), '') AS FullNameA, ISNULL(RTRIM(LTRIM(rd.firstName_E)), '') + ' ' + ISNULL(RTRIM(LTRIM(rd.secondName_E)), '') + ' ' + ISNULL(RTRIM(LTRIM(rd.thirdName_E)), '') 
@@ -16,6 +16,7 @@ FROM            Housing.ResidentInfo AS ri INNER JOIN
 WHERE        (1 = 1) AND (ri.residentInfoActive = 1)
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane1', @value = N'[0E232FF0-B466-11cf-A24F-00AA00A3EFFF, 1.00]
 Begin DesignProperties = 
    Begin PaneConfigurations = 
@@ -160,6 +161,7 @@ Begin DesignProperties =
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane2', @value = N'
          Begin Table = "ci"
             Begin Extent = 
@@ -212,5 +214,9 @@ End
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPaneCount', @value = 2, @level0type = N'SCHEMA', @level0name = N'Housing', @level1type = N'VIEW', @level1name = N'V_GetGeneralListForResident';
+
+
+GO
 

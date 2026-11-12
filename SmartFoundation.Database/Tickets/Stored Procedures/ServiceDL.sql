@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [Tickets].[ServiceDL]
+CREATE   PROCEDURE [Tickets].[ServiceDL]
 (
       @pageName_  NVARCHAR(400)
     , @idaraID    INT
@@ -249,3 +249,6 @@ END
 --
 -- ============================================================
 -- ============================================================
+
+GO
+

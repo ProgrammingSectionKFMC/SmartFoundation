@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [MoveData].[usp_MigrateResidents]
+CREATE PROCEDURE [MoveData].[usp_MigrateResidents]
     @IdaraId BIGINT,
     @RollbackAfterTest BIT = 1
 AS
@@ -512,3 +512,6 @@ WHERE r.residentInfoActive = 1
 
     END CATCH;
 END;
+
+GO
+

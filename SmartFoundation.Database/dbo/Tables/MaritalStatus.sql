@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[MaritalStatus] (
+CREATE TABLE [dbo].[MaritalStatus] (
     [maritalStatusID]          INT            IDENTITY (1, 1) NOT NULL,
     [maritalStatusName_A]      NVARCHAR (100) NULL,
     [maritalStatusName_E]      NVARCHAR (100) NULL,
@@ -6,4 +6,7 @@
     [maritalStatusActive]      BIT            NULL,
     CONSTRAINT [PK_MaritalStatus] PRIMARY KEY CLUSTERED ([maritalStatusID] ASC)
 );
+
+
+GO
 

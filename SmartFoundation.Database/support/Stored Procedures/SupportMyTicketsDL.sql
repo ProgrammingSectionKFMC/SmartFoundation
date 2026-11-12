@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [support].[SupportMyTicketsDL]
+CREATE PROCEDURE [support].[SupportMyTicketsDL]
       @pageName_ NVARCHAR(400)
     , @idaraID   INT
     , @entrydata BIGINT
@@ -72,3 +72,6 @@ BEGIN
     WHERE statusActive = 1
     ORDER BY statusID;
 END
+
+GO
+

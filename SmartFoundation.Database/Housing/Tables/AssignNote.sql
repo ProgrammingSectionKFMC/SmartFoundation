@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[AssignNote] (
+CREATE TABLE [Housing].[AssignNote] (
     [AssignNoteID]        BIGINT          IDENTITY (1, 1) NOT NULL,
     [AssignPeriodID_FK]   BIGINT          NULL,
     [residentInfoID_FK]   BIGINT          NULL,
@@ -11,4 +11,7 @@
     [hostName]            NVARCHAR (200)  NULL,
     CONSTRAINT [PK_AssignNote] PRIMARY KEY CLUSTERED ([AssignNoteID] ASC)
 );
+
+
+GO
 

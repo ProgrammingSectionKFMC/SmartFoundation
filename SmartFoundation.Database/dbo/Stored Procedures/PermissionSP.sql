@@ -1,4 +1,4 @@
-﻿
+
 CREATE PROCEDURE [dbo].[PermissionSP]
 (
       @Action                             NVARCHAR(200)
@@ -792,3 +792,6 @@ END
         ;THROW;
     END CATCH
 END
+
+GO
+

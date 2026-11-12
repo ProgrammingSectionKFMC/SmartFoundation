@@ -1,4 +1,4 @@
-﻿CREATE VIEW [Tickets].[V_ServiceFullDefinition]
+CREATE VIEW [Tickets].[V_ServiceFullDefinition]
 AS
 SELECT
       s.[serviceID]
@@ -41,3 +41,6 @@ LEFT JOIN [Tickets].[ServiceSLAPolicy] sp
     AND sp.[slaPolicyActive] = 1
     AND sp.[priorityID_FK] = s.[defaultPriorityID_FK]
 WHERE s.[serviceActive] = 1;
+
+GO
+

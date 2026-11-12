@@ -1,4 +1,4 @@
-﻿
+
 
 CREATE   VIEW [Housing].[V_GetListMeterSlidesPrice]
 AS
@@ -50,3 +50,6 @@ FROM  Housing.MeterSlide ms
 GROUP BY
     ms.buildingUtilityTypeID_FK,
     ms.meterServiceTypeID_FK;
+
+GO
+

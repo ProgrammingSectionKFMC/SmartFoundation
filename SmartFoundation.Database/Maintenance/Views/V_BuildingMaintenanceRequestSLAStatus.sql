@@ -1,4 +1,4 @@
-﻿
+
 CREATE   VIEW [Maintenance].[V_BuildingMaintenanceRequestSLAStatus]
 AS
 SELECT
@@ -34,3 +34,6 @@ LEFT JOIN [Maintenance].[MaintenanceRequestStatus] AS status
     ON status.[StatusID] = request.[StatusID]
 LEFT JOIN [Maintenance].[MaintenancePriority] AS priority
     ON priority.[PriorityID] = request.[PriorityID];
+
+GO
+

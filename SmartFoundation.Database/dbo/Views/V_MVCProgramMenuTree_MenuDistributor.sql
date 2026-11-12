@@ -1,4 +1,4 @@
-﻿
+
 
 CREATE VIEW [dbo].[V_MVCProgramMenuTree_MenuDistributor] AS
 
@@ -25,4 +25,6 @@ left JOIN [Role] AS r ON md.roleID_FK = r.roleID AND md.roleID_FK = r.roleID
 
 select * from  dbo.V_MVCProgramMenuTree m 
 left join cte c on c.menuID_FK = m.menuID
+
+GO
 

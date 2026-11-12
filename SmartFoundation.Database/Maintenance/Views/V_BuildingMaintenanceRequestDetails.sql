@@ -1,4 +1,4 @@
-﻿
+
 CREATE   VIEW [Maintenance].[V_BuildingMaintenanceRequestDetails]
 AS
 SELECT
@@ -55,3 +55,6 @@ LEFT JOIN [Maintenance].[BuildingMaintenanceRequest] AS parentRequest
     ON parentRequest.[RequestID] = request.[ParentRequestID]
 LEFT JOIN [Maintenance].[BuildingMaintenanceRequest] AS rootRequest
     ON rootRequest.[RequestID] = request.[RootRequestID];
+
+GO
+

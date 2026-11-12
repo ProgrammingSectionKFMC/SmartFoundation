@@ -1,4 +1,4 @@
-﻿CREATE TABLE [WH].[Unit] (
+CREATE TABLE [WH].[Unit] (
     [unitID]        INT            IDENTITY (1, 1) NOT NULL,
     [unitName_A]    NVARCHAR (100) NULL,
     [unitName_E]    NVARCHAR (100) NULL,
@@ -12,4 +12,7 @@
     [entryData]     NVARCHAR (20)  NULL,
     CONSTRAINT [PK_Unit] PRIMARY KEY CLUSTERED ([unitID] ASC)
 );
+
+
+GO
 

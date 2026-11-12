@@ -1,4 +1,4 @@
-﻿CREATE TABLE [VIC].[MaintenanceTemplate] (
+CREATE TABLE [VIC].[MaintenanceTemplate] (
     [TemplateID]        INT            IDENTITY (1, 1) NOT NULL,
     [MaintOrdTypeID_FK] INT            NOT NULL,
     [typesID_FK]        INT            NOT NULL,
@@ -9,4 +9,7 @@
     [hostName]          NVARCHAR (400) NULL,
     CONSTRAINT [PK_MaintenanceTemplate] PRIMARY KEY CLUSTERED ([TemplateID] ASC)
 );
+
+
+GO
 

@@ -1,4 +1,4 @@
-﻿
+
 
 
 
@@ -85,4 +85,5 @@ WHERE bd.[buildingDetailsActive] = 1
   AND (bd.buildingDetailsEndDate IS NULL OR bd.buildingDetailsEndDate > GETDATE())
   AND (bu.buildingUtilityTypeEndDate IS NULL OR bu.buildingUtilityTypeEndDate > GETDATE());
 
+GO
 

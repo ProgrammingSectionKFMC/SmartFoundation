@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE [dbo].[GetSessionInfoForMVC]
+CREATE   PROCEDURE [dbo].[GetSessionInfoForMVC]
     @NationalID NVARCHAR(20),
     @Password Nvarchar(200),
     @hostName Nvarchar(200)
@@ -261,3 +261,6 @@ BEGIN
         END
     END
 END;
+
+GO
+

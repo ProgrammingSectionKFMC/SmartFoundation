@@ -1,4 +1,4 @@
-﻿CREATE TABLE [support].[TicketReply] (
+CREATE TABLE [support].[TicketReply] (
     [ticketReplyID]     BIGINT         IDENTITY (1, 1) NOT NULL,
     [ticketID_FK]       BIGINT         NOT NULL,
     [replyText]         NVARCHAR (MAX) NOT NULL,
@@ -12,4 +12,7 @@
     CONSTRAINT [FK_support_TicketReply_Ticket] FOREIGN KEY ([ticketID_FK]) REFERENCES [support].[Ticket] ([ticketID]),
     CONSTRAINT [FK_support_TicketReply_User] FOREIGN KEY ([replyByUserID_FK]) REFERENCES [dbo].[Users] ([usersID])
 );
+
+
+GO
 

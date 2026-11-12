@@ -1,4 +1,4 @@
-﻿CREATE TABLE [support].[Ticket] (
+CREATE TABLE [support].[Ticket] (
     [ticketID]                  BIGINT         IDENTITY (1, 1) NOT NULL,
     [ticketNo]                  NVARCHAR (30)  NOT NULL,
     [ticketTypeID_FK]           TINYINT        NOT NULL,
@@ -29,4 +29,7 @@
     CONSTRAINT [FK_support_Ticket_TicketType] FOREIGN KEY ([ticketTypeID_FK]) REFERENCES [support].[TicketType] ([ticketTypeID]),
     CONSTRAINT [UQ_support_Ticket_ticketNo] UNIQUE NONCLUSTERED ([ticketNo] ASC)
 );
+
+
+GO
 

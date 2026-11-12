@@ -1,8 +1,4 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-CREATE PROCEDURE [Tickets].[TicketDrawerDL]
+CREATE   PROCEDURE [Tickets].[TicketDrawerDL]
 (
       @pageName_   NVARCHAR(400)
     , @idaraID     INT
@@ -362,4 +358,6 @@ BEGIN
          ORDER BY ta.[ticketAttachmentID] DESC;
 
 END
+
 GO
+

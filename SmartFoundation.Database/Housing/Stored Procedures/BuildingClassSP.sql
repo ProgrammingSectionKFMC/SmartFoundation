@@ -1,4 +1,4 @@
-﻿
+
 CREATE PROCEDURE [Housing].[BuildingClassSP] 
 (
       @Action                   NVARCHAR(200)
@@ -259,3 +259,6 @@ BEGIN
         ;THROW;
     END CATCH
 END
+
+GO
+

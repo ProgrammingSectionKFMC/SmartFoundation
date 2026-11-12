@@ -1,4 +1,4 @@
-﻿
+
 
 CREATE   VIEW [Housing].[V_ResidentServiceAverageBills]
 AS
@@ -21,3 +21,6 @@ WHERE b.residentInfoID_FK IS NOT NULL
 GROUP BY 
     b.residentInfoID_FK,
     b.meterServiceTypeID;
+
+GO
+

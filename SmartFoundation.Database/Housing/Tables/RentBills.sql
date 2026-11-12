@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[RentBills] (
+CREATE TABLE [Housing].[RentBills] (
     [rentBillsID]           BIGINT          IDENTITY (1, 1) NOT NULL,
     [residentInfoID_FK]     BIGINT          NULL,
     [buildingDetailsID_FK]  BIGINT          NULL,
@@ -18,7 +18,11 @@
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_RentBills_resident]
     ON [Housing].[RentBills]([residentInfoID_FK] ASC)
     INCLUDE([rentBillsAmount]);
+
+
+GO
 

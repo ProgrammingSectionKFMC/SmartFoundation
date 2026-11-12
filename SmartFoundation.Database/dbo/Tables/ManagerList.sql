@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[ManagerList] (
+CREATE TABLE [dbo].[ManagerList] (
     [ManagerListID]          BIGINT          IDENTITY (1, 1) NOT NULL,
     [ManagerListTypeID_FK]   BIGINT          NULL,
     [ManagerListName]        NVARCHAR (2000) NULL,
@@ -14,4 +14,7 @@
     [hostName]               NVARCHAR (200)  NULL,
     CONSTRAINT [PK_ManagerList] PRIMARY KEY CLUSTERED ([ManagerListID] ASC)
 );
+
+
+GO
 

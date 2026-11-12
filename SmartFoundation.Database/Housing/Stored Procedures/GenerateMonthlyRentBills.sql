@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [Housing].[GenerateMonthlyRentBills]
+CREATE PROCEDURE [Housing].[GenerateMonthlyRentBills]
     @Month int,
     @Year int,
     @entrydata nvarchar(20),
@@ -158,3 +158,6 @@ BEGIN
             THROW;
     END CATCH
 END
+
+GO
+

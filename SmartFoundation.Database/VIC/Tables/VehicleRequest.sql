@@ -1,4 +1,4 @@
-﻿CREATE TABLE [VIC].[VehicleRequest] (
+CREATE TABLE [VIC].[VehicleRequest] (
     [RequestID]             BIGINT          IDENTITY (1, 1) NOT NULL,
     [EmployeeUserID_FK]     BIGINT          NOT NULL,
     [DeptID_FK]             INT             NOT NULL,
@@ -24,4 +24,7 @@
     [hostName]              NVARCHAR (400)  NULL,
     CONSTRAINT [PK_VehicleRequest] PRIMARY KEY CLUSTERED ([RequestID] ASC)
 );
+
+
+GO
 

@@ -1,136 +1,206 @@
-﻿/* =========================================================
-   Description:
-   قائمة / تفاصيل / طباعة محاضر الإتلاف من VIC.VehicleScrap
-
-   Modes:
-   - List  : بدون @scrapID
-   - Get   : مع @scrapID
-   - Print : نفس Get (يستخدم في الطباعة)
-
-   Filters:
-   - chassisNumber
-   - Status
-   - Date range
-
-   Type: READ (LIST / GET / PRINT)
-========================================================= */
 CREATE   PROCEDURE [VIC].[ScrapDL]
-(
-      @scrapID        BIGINT        = NULL
-    , @chassisNumber  NVARCHAR(100) = NULL
-    , @Status         NVARCHAR(40)  = NULL
-    , @DateFrom       DATETIME      = NULL
-    , @DateTo         DATETIME      = NULL
-    , @pageNumber     INT           = 1
-    , @pageSize       INT           = 50
-    , @idaraID_FK     NVARCHAR(10)  = NULL
-)
+    @ActionType    NVARCHAR(100) = N'LIST'
+  , @scrapID       BIGINT        = NULL
+  , @vehicleID     INT           = NULL
+  , @chassisNumber NVARCHAR(200) = NULL
+  , @Status        NVARCHAR(40)  = NULL
+  , @DateFrom      DATETIME      = NULL
+  , @DateTo        DATETIME      = NULL
+  , @pageNumber    INT           = 1
+  , @pageSize      INT           = 50
+  , @idaraID_FK    NVARCHAR(10)  = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
-    SET XACT_ABORT ON;
 
-    DECLARE @IdaraID_BIG BIGINT =
-        TRY_CONVERT(BIGINT, NULLIF(LTRIM(RTRIM(@idaraID_FK)), N''));
+    DECLARE @IdaraID_BIG BIGINT = TRY_CAST(@idaraID_FK AS BIGINT);
 
-    DECLARE @CH NVARCHAR(100) =
-        NULLIF(LTRIM(RTRIM(@chassisNumber)), N'');
+    DECLARE @CH  NVARCHAR(200);
+    DECLARE @VID INT;
 
-    DECLARE @ST NVARCHAR(40) =
-        NULLIF(LTRIM(RTRIM(@Status)), N'');
-
-    IF ISNULL(@pageNumber,0) <= 0 SET @pageNumber = 1;
-    IF ISNULL(@pageSize,0) <= 0 SET @pageSize = 50;
-
-    /* =====================================================
-       1) GET / PRINT
-    ===================================================== */
-    IF @scrapID IS NOT NULL
+    IF @vehicleID IS NOT NULL
     BEGIN
-        IF NOT EXISTS
-        (
-            SELECT 1
-            FROM VIC.VehicleScrap s
-            INNER JOIN VIC.Vehicles v
-                ON v.chassisNumber = s.chassisNumber_FK
-            WHERE s.ScrapID = @scrapID
-              AND (@IdaraID_BIG IS NULL OR v.IdaraID_FK = @IdaraID_BIG)
-        )
+        SELECT @CH = v.chassisNumber,
+               @VID = v.vehicleID
+        FROM VIC.Vehicles v
+        WHERE v.vehicleID = @vehicleID;
+    END
+    ELSE IF @chassisNumber IS NOT NULL
+    BEGIN
+        SET @CH = NULLIF(LTRIM(RTRIM(@chassisNumber)), N'');
+        SELECT @VID = v.vehicleID
+        FROM VIC.Vehicles v
+        WHERE v.chassisNumber = @CH;
+    END
+
+    ----------------------------------------------------------------
+    -- GET
+    ----------------------------------------------------------------
+    IF @ActionType = N'GET'
+    BEGIN
+        IF @IdaraID_BIG IS NULL
         BEGIN
-            ;THROW 50001, N'محضر الإتلاف غير موجود', 1;
-        END;
+            THROW 50001, N'الإدارة مطلوبة', 1;
+            RETURN;
+        END
 
-        SELECT
-              s.ScrapID
-            , s.chassisNumber_FK
-            , s.IdaraID_FK
-            , s.ScrapDate
-            , s.ScrapTypeID_FK
-            , s.RefNo
-            , s.Reason
-            , s.Note
-            , s.Notes
-            , s.Status
-            , s.ApprovedByUserID
-            , s.ApprovedDate
-            , s.entryDate
-            , s.entryData
-            , s.hostName
+        IF @scrapID IS NOT NULL
+        BEGIN
+            SELECT
+                vs.ScrapID,
+                vs.chassisNumber_FK,
+                vs.IdaraID_FK,
+                vs.ScrapDate,
+                vs.ScrapTypeID_FK,
+                vs.RefNo,
+                vs.Reason,
+                vs.Note,
+                vs.ApprovedByUserID,
+                vs.ApprovedDate,
+                vs.Status,
+                vs.entryDate,
+                vs.entryData,
+                vs.hostName,
+                v.vehicleID,
+                v.chassisNumber,
+                v.plateLetters,
+                v.plateNumbers,
+                v.armyNumber,
+                v.vehicleStatusID_FK
+            FROM VIC.VehicleScrap vs
+            INNER JOIN VIC.Vehicles v
+                ON v.chassisNumber = vs.chassisNumber_FK
+               AND v.IdaraID_FK = vs.IdaraID_FK
+            WHERE vs.ScrapID = @scrapID
+              AND vs.IdaraID_FK = @IdaraID_BIG;
 
-            -- بيانات المركبة
-            , v.plateLetters
-            , v.plateNumbers
-            , v.armyNumber
-            , v.vehicleStatusID_FK
+            RETURN;
+        END
 
-        FROM VIC.VehicleScrap s
-        INNER JOIN VIC.Vehicles v
-            ON v.chassisNumber = s.chassisNumber_FK
-        WHERE s.ScrapID = @scrapID
-          AND (@IdaraID_BIG IS NULL OR v.IdaraID_FK = @IdaraID_BIG);
+        IF @VID IS NOT NULL
+        BEGIN
+            SELECT TOP 1
+                vs.ScrapID,
+                vs.chassisNumber_FK,
+                vs.IdaraID_FK,
+                vs.ScrapDate,
+                vs.ScrapTypeID_FK,
+                vs.RefNo,
+                vs.Reason,
+                vs.Note,
+                vs.ApprovedByUserID,
+                vs.ApprovedDate,
+                vs.Status,
+                vs.entryDate,
+                vs.entryData,
+                vs.hostName,
+                v.vehicleID,
+                v.chassisNumber,
+                v.plateLetters,
+                v.plateNumbers,
+                v.armyNumber,
+                v.vehicleStatusID_FK
+            FROM VIC.VehicleScrap vs
+            INNER JOIN VIC.Vehicles v
+                ON v.chassisNumber = vs.chassisNumber_FK
+               AND v.IdaraID_FK = vs.IdaraID_FK
+            WHERE v.vehicleID = @VID
+              AND vs.IdaraID_FK = @IdaraID_BIG
+            ORDER BY vs.ScrapID DESC;
+
+            RETURN;
+        END
 
         RETURN;
-    END;
+    END
 
-    /* =====================================================
-       2) LIST
-    ===================================================== */
-    ;WITH Q AS
-    (
+    ----------------------------------------------------------------
+    -- LIST
+    ----------------------------------------------------------------
+    IF @ActionType = N'LIST'
+    BEGIN
+        IF @IdaraID_BIG IS NULL
+        BEGIN
+            THROW 50001, N'الإدارة مطلوبة', 1;
+            RETURN;
+        END
+
+        DECLARE @chassisFilter NVARCHAR(200) = NULLIF(LTRIM(RTRIM(@chassisNumber)), N'');
+        DECLARE @offset INT = (@pageNumber - 1) * @pageSize;
+
+        ;WITH cte AS (
+            SELECT
+                vs.ScrapID,
+                vs.chassisNumber_FK,
+                vs.IdaraID_FK,
+                vs.ScrapDate,
+                vs.ScrapTypeID_FK,
+                vs.RefNo,
+                vs.Reason,
+                vs.Note,
+                vs.ApprovedByUserID,
+                vs.ApprovedDate,
+                vs.Status,
+                vs.entryDate,
+                vs.entryData,
+                vs.hostName,
+                v.vehicleID,
+                v.chassisNumber,
+                v.plateLetters,
+                v.plateNumbers,
+                v.armyNumber,
+                v.vehicleStatusID_FK,
+                ROW_NUMBER() OVER (ORDER BY vs.ScrapID DESC) AS RowNum,
+                COUNT(*) OVER () AS TotalRows
+            FROM VIC.VehicleScrap vs
+            INNER JOIN VIC.Vehicles v
+                ON v.chassisNumber = vs.chassisNumber_FK
+               AND v.IdaraID_FK = vs.IdaraID_FK
+            WHERE vs.IdaraID_FK = @IdaraID_BIG
+              AND (@Status IS NULL OR vs.Status = @Status)
+              AND (@VID IS NULL OR v.vehicleID = @VID)
+              AND (@chassisFilter IS NULL OR vs.chassisNumber_FK LIKE N'%' + @chassisFilter + N'%')
+              AND (@DateFrom IS NULL OR vs.ScrapDate >= @DateFrom)
+              AND (@DateTo IS NULL OR vs.ScrapDate < DATEADD(DAY, 1, @DateTo))
+        )
         SELECT
-              s.ScrapID
-            , s.chassisNumber_FK
-            , s.IdaraID_FK
-            , s.ScrapDate
-            , s.ScrapTypeID_FK
-            , s.RefNo
-            , s.Reason
-            , s.Status
-            , s.ApprovedDate
+            ScrapID,
+            chassisNumber_FK,
+            IdaraID_FK,
+            ScrapDate,
+            ScrapTypeID_FK,
+            RefNo,
+            Reason,
+            Note,
+            ApprovedByUserID,
+            ApprovedDate,
+            Status,
+            entryDate,
+            entryData,
+            hostName,
+            vehicleID,
+            chassisNumber,
+            plateLetters,
+            plateNumbers,
+            armyNumber,
+            vehicleStatusID_FK,
+            TotalRows
+        FROM cte
+        WHERE RowNum > @offset
+          AND RowNum <= @offset + @pageSize
+        ORDER BY RowNum;
 
-            -- بيانات المركبة
-            , v.plateLetters
-            , v.plateNumbers
-            , v.armyNumber
-            , v.vehicleStatusID_FK
+        RETURN;
+    END
 
-            , ROW_NUMBER() OVER (ORDER BY s.ScrapID DESC) AS RN
-            , COUNT(*) OVER () AS TotalRows
-
-        FROM VIC.VehicleScrap s
-        INNER JOIN VIC.Vehicles v
-            ON v.chassisNumber = s.chassisNumber_FK
-
-        WHERE
-            (@CH IS NULL OR s.chassisNumber_FK LIKE N'%' + @CH + N'%')
-        AND (@ST IS NULL OR s.Status = @ST)
-        AND (@DateFrom IS NULL OR s.ScrapDate >= @DateFrom)
-        AND (@DateTo IS NULL OR s.ScrapDate <= @DateTo)
-        AND (@IdaraID_BIG IS NULL OR v.IdaraID_FK = @IdaraID_BIG)
-    )
-    SELECT *
-    FROM Q
-    WHERE RN BETWEEN ((@pageNumber - 1) * @pageSize) + 1
-                 AND (@pageNumber * @pageSize)
-    ORDER BY RN;
+    ----------------------------------------------------------------
+    -- Unknown
+    ----------------------------------------------------------------
+    BEGIN
+        THROW 50001, N'نوع العملية غير معروف في إجراء بيانات الإتلاف', 1;
+        RETURN;
+    END
 END
+
+GO
+

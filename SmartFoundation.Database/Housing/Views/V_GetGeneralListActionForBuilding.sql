@@ -1,4 +1,4 @@
-﻿
+
 CREATE   VIEW Housing.V_GetGeneralListActionForBuilding
 AS
 SELECT
@@ -39,3 +39,6 @@ INNER JOIN Housing.BuildingAction a
 
 LEFT JOIN Housing.BuildingActionType t
     ON t.buildingActionTypeID = a.buildingActionTypeID_FK;
+
+GO
+

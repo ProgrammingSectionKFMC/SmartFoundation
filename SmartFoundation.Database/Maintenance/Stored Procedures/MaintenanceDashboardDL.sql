@@ -1,4 +1,4 @@
-﻿
+
 CREATE   PROCEDURE [Maintenance].[MaintenanceDashboardDL]
       @pageName_ NVARCHAR(400)
     , @idaraID INT
@@ -95,3 +95,6 @@ BEGIN
       AND [IsSubRequest] = 1
       AND ISNULL([StatusCode], N'') NOT IN (N'CLOSED', N'CANCELLED', N'COMPLETED');
 END;
+
+GO
+

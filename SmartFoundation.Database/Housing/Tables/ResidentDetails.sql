@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[ResidentDetails] (
+CREATE TABLE [Housing].[ResidentDetails] (
     [residentDetailsID]        BIGINT          IDENTITY (1, 1) NOT NULL,
     [residentInfoID_FK]        BIGINT          NOT NULL,
     [generalNo_FK]             BIGINT          NULL,
@@ -37,13 +37,18 @@
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_ResidentDetails_LastActive]
     ON [Housing].[ResidentDetails]([residentInfoID_FK] ASC, [IdaraId_FK] ASC, [residentDetailsActive] ASC, [residentDetailsID] DESC)
     INCLUDE([generalNo_FK], [firstName_A], [secondName_A], [thirdName_A], [lastName_A]);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_ResidentDetails_Resident_Idara_Active_Last]
     ON [Housing].[ResidentDetails]([residentInfoID_FK] ASC, [IdaraId_FK] ASC, [residentDetailsActive] ASC, [residentDetailsID] DESC)
     INCLUDE([generalNo_FK], [firstName_A], [secondName_A], [thirdName_A], [lastName_A]);
+
+
+GO
 

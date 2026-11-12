@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[Department] (
+CREATE TABLE [dbo].[Department] (
     [deptID]          BIGINT         IDENTITY (1, 1) NOT NULL,
     [deptName_A]      NVARCHAR (50)  NULL,
     [deptName_E]      NVARCHAR (50)  NULL,
@@ -16,4 +16,7 @@
     CONSTRAINT [PK_Department] PRIMARY KEY CLUSTERED ([deptID] ASC),
     CONSTRAINT [FK_Department_Idara] FOREIGN KEY ([idaraID_FK]) REFERENCES [dbo].[Idara] ([idaraID])
 );
+
+
+GO
 

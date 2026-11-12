@@ -1,4 +1,4 @@
-﻿
+
 CREATE PROCEDURE [Housing].[HousingCommandCenterDashboardDL]
 
       @pageName_       NVARCHAR(400)
@@ -8458,3 +8458,6 @@ ORDER BY
     DROP TABLE IF EXISTS #HCC_MainOperational;
 
 END
+
+GO
+

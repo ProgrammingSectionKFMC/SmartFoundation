@@ -1,4 +1,4 @@
-﻿
+
 
 CREATE VIEW [dbo].[V_GetFullPermissionDetails]
 AS
@@ -250,3 +250,6 @@ LEFT JOIN ResolvedUsers ru
    AND ISNULL(ru.menuID, -1) = ISNULL(bp.menuID, -1)
 LEFT JOIN dbo.V_GetFullSystemUsersDetails eff
     ON eff.usersID = ru.EffectiveUserID;
+
+GO
+

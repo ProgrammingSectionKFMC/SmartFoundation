@@ -1,4 +1,4 @@
-﻿
+
 CREATE   FUNCTION [dbo].[funcGetDepartmentDistID] (@departmentID INT)
 RETURNS INT
 AS
@@ -14,3 +14,6 @@ BEGIN
 
     RETURN @distributorID
 END
+
+GO
+

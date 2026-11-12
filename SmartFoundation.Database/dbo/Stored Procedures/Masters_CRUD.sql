@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE [dbo].[Masters_CRUD]
+CREATE PROCEDURE [dbo].[Masters_CRUD]
       @pageName_      NVARCHAR(400)
     , @ActionType     NVARCHAR(100)
     , @idaraID        INT
@@ -6174,6 +6174,384 @@ END
 
 
 
+
+        ----------------------------------------------------------------
+        -- Tickets: TicketList (every ticket action)
+        ----------------------------------------------------------------
+        ELSE IF @pageName_ = 'TicketList'
+        BEGIN
+            IF (
+                SELECT COUNT(*) FROM dbo.V_GetListUserPermission v
+                WHERE v.userID = @entrydata
+                  AND v.menuName_E = @pageName_
+                  AND v.permissionTypeName_E = @ActionType
+            ) <= 0
+            BEGIN
+                SET @ok = 0;
+                SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+                GOTO Finish;
+            END
+
+            DELETE FROM @Result;
+
+                        IF @ActionType = 'INSERT_TICKET'
+                        BEGIN
+                                INSERT INTO @Result(IsSuccessful, Message_)
+                                EXEC [Tickets].[TicketSP]
+                                            @Action                         = @ActionType
+                                        , @ticketClassID_FK               = @parameter_01
+                                        , @requesterTypeID_FK             = @parameter_02
+                                        , @requesterUserID_FK             = @parameter_03
+                                        , @requesterResidentID_FK         = @parameter_04
+                                        , @serviceID_FK                   = @parameter_05
+                                        , @title_A                        = @parameter_06
+                                        , @description_A                  = @parameter_07
+                                        , @suggestedPriorityID_FK         = @parameter_08
+                                        , @currentDSDID_FK                = @parameter_09
+                                        , @currentQueueDistributorID_FK   = @parameter_10
+                                        , @assignedUserID_FK              = @parameter_11
+                                        , @locationBuildingNo             = @parameter_12
+                                        , @locationUnitNo                 = @parameter_13
+                                        , @locationArea_A                 = @parameter_14
+                                        , @requiresQualityReview          = @parameter_15
+                                        , @isOtherService                 = @parameter_16
+                                        , @ticketReasonID_FK              = @parameter_17
+                                        , @reporterName                   = @parameter_18
+                                        , @reporterPhone                  = @parameter_19
+                                        , @isUrgent                       = @parameter_20
+                                        , @idaraID_FK                     = @idaraID
+                                        , @entryData                      = @entrydata
+                                        , @hostName                       = @hostName
+                                        , @performerUserID                = @entrydata;
+                        END
+                        ELSE IF @ActionType = 'CREATE_CHILD_TICKET'
+                        BEGIN
+                                INSERT INTO @Result(IsSuccessful, Message_)
+                                EXEC [Tickets].[TicketSP]
+                                            @Action                         = @ActionType
+                                        , @parentTicketID_FK              = @parameter_01
+                                        , @serviceID_FK                   = @parameter_02
+                                        , @ticketClassID_FK               = @parameter_03
+                                        , @requesterTypeID_FK             = @parameter_04
+                                        , @title_A                        = @parameter_07
+                                        , @description_A                  = @parameter_08
+                                        , @suggestedPriorityID_FK         = @parameter_09
+                                        , @currentDSDID_FK                = @parameter_10
+                                        , @idaraID_FK                     = @idaraID
+                                        , @entryData                      = @entrydata
+                                        , @hostName                       = @hostName
+                                        , @performerUserID                = @entrydata;
+                        END
+                        ELSE IF @ActionType = 'ROUTE_TICKET'
+                        BEGIN
+                                INSERT INTO @Result(IsSuccessful, Message_)
+                                EXEC [Tickets].[TicketSP]
+                                            @Action                         = @ActionType
+                                        , @ticketID                       = @parameter_01
+                                        , @currentDSDID_FK                = @parameter_03
+                                        , @idaraID_FK                     = @idaraID
+                                        , @entryData                      = @entrydata
+                                        , @hostName                       = @hostName
+                                        , @performerUserID                = @entrydata;
+                        END
+                        ELSE IF @ActionType = 'ASSIGN_TICKET'
+                        BEGIN
+                                INSERT INTO @Result(IsSuccessful, Message_)
+                                EXEC [Tickets].[TicketSP]
+                                            @Action                         = @ActionType
+                                        , @ticketID                       = @parameter_01
+                                        , @assignedUserID_FK              = @parameter_02
+                                        , @idaraID_FK                     = @idaraID
+                                        , @entryData                      = @entrydata
+                                        , @hostName                       = @hostName
+                                        , @performerUserID                = @entrydata;
+                        END
+                        ELSE IF @ActionType = 'REASSIGN_TICKET'
+                        BEGIN
+                            INSERT INTO @Result(IsSuccessful, Message_)
+                            EXEC [Tickets].[TicketSP]
+                                    @Action                         = @ActionType
+                                , @ticketID                       = @parameter_01
+                                , @assignedUserID_FK              = @parameter_02
+                                , @currentDSDID_FK                = @parameter_03
+                                , @idaraID_FK                     = @idaraID
+                                , @entryData                      = @entrydata
+                                , @hostName                       = @hostName
+                                , @performerUserID                = @entrydata;
+                        END
+                                ELSE IF @ActionType = 'UPDATE_PRIORITY'
+                                BEGIN
+                                    INSERT INTO @Result(IsSuccessful, Message_)
+                                    EXEC [Tickets].[TicketSP]
+                                            @Action                         = @ActionType
+                                        , @ticketID                       = @parameter_01
+                                        , @suggestedPriorityID_FK         = @parameter_02
+                                        , @notes_A                        = @parameter_03
+                                        , @idaraID_FK                     = @idaraID
+                                        , @entryData                      = @entrydata
+                                        , @hostName                       = @hostName
+                                        , @performerUserID                = @entrydata;
+                                END
+                        ELSE IF @ActionType IN ('START_WORK', 'RESOLVE_TICKET', 'RESUME_TICKET', 'CLOSE_TICKET', 'REOPEN_TICKET', 'REJECT_TICKET')
+                        BEGIN
+                                INSERT INTO @Result(IsSuccessful, Message_)
+                                EXEC [Tickets].[TicketSP]
+                                            @Action                         = @ActionType
+                                        , @ticketID                       = @parameter_01
+                                        , @notes_A                        = @parameter_02
+                                        , @idaraID_FK                     = @idaraID
+                                        , @entryData                      = @entrydata
+                                        , @hostName                       = @hostName
+                                        , @performerUserID                = @entrydata;
+                        END
+                        ELSE IF @ActionType = 'PAUSE_TICKET'
+                        BEGIN
+                                INSERT INTO @Result(IsSuccessful, Message_)
+                                EXEC [Tickets].[TicketSP]
+                                            @Action                         = @ActionType
+                                        , @ticketID                       = @parameter_01
+                                        , @pauseReasonID_FK               = @parameter_02
+                                        , @notes_A                        = @parameter_03
+                                        , @idaraID_FK                     = @idaraID
+                                        , @entryData                      = @entrydata
+                                        , @hostName                       = @hostName
+                                        , @performerUserID                = @entrydata;
+                        END
+                                ELSE IF @ActionType = 'REQUEST_CLARIFICATION'
+                                BEGIN
+                                    INSERT INTO @Result(IsSuccessful, Message_)
+                                    EXEC [Tickets].[TicketSP]
+                                            @Action                         = @ActionType
+                                        , @ticketID                       = @parameter_01
+                                        , @requestedFromUserID            = @parameter_02
+                                        , @requestedFromDSDID_FK          = @parameter_03
+                                        , @clarificationReasonID_FK       = @parameter_04
+                                        , @notes_A                        = @parameter_05
+                                        , @idaraID_FK                     = @idaraID
+                                        , @entryData                      = @entrydata
+                                        , @hostName                       = @hostName
+                                        , @performerUserID                = @entrydata;
+                                END
+                                ELSE IF @ActionType = 'RESPOND_CLARIFICATION'
+                                BEGIN
+                                    INSERT INTO @Result(IsSuccessful, Message_)
+                                    EXEC [Tickets].[TicketSP]
+                                            @Action                         = @ActionType
+                                        , @clarificationRequestID         = @parameter_01
+                                        , @notes_A                        = @parameter_02
+                                        , @idaraID_FK                     = @idaraID
+                                        , @entryData                      = @entrydata
+                                        , @hostName                       = @hostName
+                                        , @performerUserID                = @entrydata;
+                                END
+                        ELSE IF @ActionType = 'RAISE_ARBITRATION'
+                        BEGIN
+                                INSERT INTO @Result(IsSuccessful, Message_)
+                                EXEC [Tickets].[TicketSP]
+                                            @Action                         = @ActionType
+                                        , @ticketID                       = @parameter_01
+                                        , @arbitrationReasonID_FK         = @parameter_02
+                                        , @notes_A                        = @parameter_04
+                                        , @idaraID_FK                     = @idaraID
+                                        , @entryData                      = @entrydata
+                                        , @hostName                       = @hostName
+                                        , @performerUserID                = @entrydata;
+                        END
+                        ELSE IF @ActionType = 'SUBMIT_QUALITY_REVIEW'
+                        BEGIN
+                                INSERT INTO @Result(IsSuccessful, Message_)
+                                EXEC [Tickets].[TicketSP]
+                                            @Action                         = @ActionType
+                                        , @ticketID                       = @parameter_01
+                                        , @qualityReviewResultID_FK       = @parameter_02
+                                        , @reviewScope                    = @parameter_03
+                                        , @reviewNotes                    = @parameter_04
+                                        , @idaraID_FK                     = @idaraID
+                                        , @entryData                      = @entrydata
+                                        , @hostName                       = @hostName
+                                        , @performerUserID                = @entrydata;
+                        END
+                        ELSE IF @ActionType = 'FINALIZE_QUALITY_REVIEW'
+                        BEGIN
+                                INSERT INTO @Result(IsSuccessful, Message_)
+                                EXEC [Tickets].[TicketSP]
+                                            @Action                         = @ActionType
+                                        , @ticketID                       = @parameter_01
+                                        , @reviewNotes                    = @parameter_02
+                                        , @idaraID_FK                     = @idaraID
+                                        , @entryData                      = @entrydata
+                                        , @hostName                       = @hostName
+                                        , @performerUserID                = @entrydata;
+                        END
+                        ELSE IF @ActionType = 'UPLOAD_ATTACHMENT'
+                        BEGIN
+                                INSERT INTO @Result(IsSuccessful, Message_)
+                                EXEC [Tickets].[TicketSP]
+                                            @Action                         = @ActionType
+                                        , @ticketID                       = @parameter_01
+                                        , @fileName                       = @parameter_02
+                                        , @storedFileName                 = @parameter_03
+                                        , @filePath                       = @parameter_04
+                                        , @fileSizeBytes                  = @parameter_05
+                                        , @contentType                    = @parameter_06
+                                        , @attachmentType                 = @parameter_07
+                                        , @idaraID_FK                     = @idaraID
+                                        , @entryData                      = @entrydata
+                                        , @hostName                       = @hostName
+                                        , @performerUserID                = @entrydata;
+                        END
+                        ELSE
+                        BEGIN
+                                SET @ok = 0;
+                                SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+                                GOTO Finish;
+                        END
+
+            SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+            GOTO Finish;
+        END
+
+                ----------------------------------------------------------------
+                -- Tickets: TicketAdmin (settings tabs, services, arbitration decisions)
+                -- ActionType = permission name (INSERTTICKETCLASS, INSERTSERVICE, DECIDE_ARBITRATION ...).
+                -- TicketAdminSP / ServiceSP use INSERT_xxx action names, so the '_' is added back
+                -- only when calling them, after the standard permission check.
+                ----------------------------------------------------------------
+                ELSE IF @pageName_ = 'TicketAdmin'
+                BEGIN
+                        IF (
+                                SELECT COUNT(*) FROM dbo.V_GetListUserPermission v
+                                WHERE v.userID = @entrydata
+                                    AND v.menuName_E = @pageName_
+                                    AND v.permissionTypeName_E = @ActionType
+                        ) <= 0
+                        BEGIN
+                                SET @ok = 0;
+                                SET @msg = N'عفوا لاتملك صلاحية لهذه العملية';
+                                GOTO Finish;
+                        END
+
+                        DELETE FROM @Result;
+
+                        IF @ActionType = 'DECIDE_ARBITRATION'
+                        BEGIN
+                                INSERT INTO @Result(IsSuccessful, Message_)
+                                EXEC [Tickets].[TicketSP]
+                                          @Action                 = @ActionType
+                                        , @arbitrationCaseID      = @parameter_01
+                                        , @decisionType           = @parameter_02
+                                        , @decisionTargetDSDID_FK = @parameter_03
+                                        , @decisionNotes          = @parameter_04
+                                        , @idaraID_FK             = @idaraID
+                                        , @entryData              = @entrydata
+                                        , @hostName               = @hostName
+                                        , @performerUserID        = @entrydata;
+                        END
+                        ELSE IF @ActionType = 'CANCEL_ARBITRATION'
+                        BEGIN
+                                INSERT INTO @Result(IsSuccessful, Message_)
+                                EXEC [Tickets].[TicketSP]
+                                          @Action                 = @ActionType
+                                        , @arbitrationCaseID      = @parameter_01
+                                        , @decisionNotes          = @parameter_02
+                                        , @idaraID_FK             = @idaraID
+                                        , @entryData              = @entrydata
+                                        , @hostName               = @hostName
+                                        , @performerUserID        = @entrydata;
+                        END
+                        ELSE IF @ActionType IN ('INSERTSERVICE', 'UPDATESERVICE', 'DELETESERVICE')
+                        BEGIN
+                                -- Responsible unit chosen in the service form: section (p13), else branch (p12), else department (p11).
+                                DECLARE @ServiceTargetDSDID INT = COALESCE(
+                                      TRY_CAST(NULLIF(NULLIF(NULLIF(LTRIM(RTRIM(@parameter_13)), N''), N'-99999'), N'-1') AS INT)
+                                    , TRY_CAST(NULLIF(NULLIF(NULLIF(LTRIM(RTRIM(@parameter_12)), N''), N'-99999'), N'-1') AS INT)
+                                    , TRY_CAST(NULLIF(NULLIF(NULLIF(LTRIM(RTRIM(@parameter_11)), N''), N'-99999'), N'-1') AS INT));
+                                DECLARE @ServiceSpAction NVARCHAR(50) = STUFF(@ActionType, 7, 0, N'_'); -- INSERTSERVICE -> INSERT_SERVICE
+
+                                IF @ActionType = 'DELETESERVICE'
+                                BEGIN
+                                        INSERT INTO @Result(IsSuccessful, Message_)
+                                        EXEC [Tickets].[ServiceSP]
+                                                  @Action     = @ServiceSpAction
+                                                , @idaraID_FK = @idaraID
+                                                , @serviceID  = @parameter_01
+                                                , @entryData  = @entrydata
+                                                , @hostName   = @hostName;
+                                END
+                                ELSE IF @ActionType = 'INSERTSERVICE'
+                                BEGIN
+                                        INSERT INTO @Result(IsSuccessful, Message_)
+                                        EXEC [Tickets].[ServiceSP]
+                                                  @Action                = @ServiceSpAction
+                                                , @idaraID_FK            = @idaraID
+                                                , @serviceCode           = @parameter_02
+                                                , @serviceName_A         = @parameter_03
+                                                , @serviceName_E         = @parameter_04
+                                                , @serviceDesc           = @parameter_05
+                                                , @ticketClassID_FK      = @parameter_06
+                                                , @defaultPriorityID_FK  = @parameter_07
+                                                , @requiresLocation      = @parameter_08
+                                                , @allowsChildTickets    = @parameter_09
+                                                , @requiresQualityReview = @parameter_10
+                                                , @targetDSDID_FK        = @ServiceTargetDSDID
+                                                , @entryData             = @entrydata
+                                                , @hostName              = @hostName;
+                                END
+                                ELSE
+                                BEGIN
+                                        INSERT INTO @Result(IsSuccessful, Message_)
+                                        EXEC [Tickets].[ServiceSP]
+                                                  @Action                = @ServiceSpAction
+                                                , @idaraID_FK            = @idaraID
+                                                , @serviceID             = @parameter_01
+                                                , @serviceCode           = @parameter_02
+                                                , @serviceName_A         = @parameter_03
+                                                , @serviceName_E         = @parameter_04
+                                                , @serviceDesc           = @parameter_05
+                                                , @ticketClassID_FK      = @parameter_06
+                                                , @defaultPriorityID_FK  = @parameter_07
+                                                , @requiresLocation      = @parameter_08
+                                                , @allowsChildTickets    = @parameter_09
+                                                , @requiresQualityReview = @parameter_10
+                                                , @targetDSDID_FK        = @ServiceTargetDSDID
+                                                , @entryData             = @entrydata
+                                                , @hostName              = @hostName;
+                                END
+                        END
+                        ELSE IF @ActionType IN (
+                                  'INSERTTICKETCLASS', 'UPDATETICKETCLASS', 'DELETETICKETCLASS'
+                                , 'INSERTPRIORITY', 'UPDATEPRIORITY', 'DELETEPRIORITY'
+                                , 'INSERTTICKETSTATUS', 'UPDATETICKETSTATUS', 'DELETETICKETSTATUS'
+                                , 'INSERTPAUSEREASON', 'UPDATEPAUSEREASON', 'DELETEPAUSEREASON'
+                                , 'INSERTARBITRATIONREASON', 'UPDATEARBITRATIONREASON', 'DELETEARBITRATIONREASON'
+                                , 'INSERTQUALITYREVIEWRESULT', 'UPDATEQUALITYREVIEWRESULT', 'DELETEQUALITYREVIEWRESULT')
+                        BEGIN
+                                DECLARE @AdminSpAction NVARCHAR(50) = STUFF(@ActionType, 7, 0, N'_'); -- INSERTTICKETCLASS -> INSERT_TICKETCLASS
+
+                                INSERT INTO @Result(IsSuccessful, Message_)
+                                EXEC [Tickets].[TicketAdminSP]
+                                          @Action      = @AdminSpAction
+                                        , @recordID    = @parameter_01
+                                        , @code        = @parameter_02
+                                        , @name_A      = @parameter_03
+                                        , @name_E      = @parameter_04
+                                        , @desc        = @parameter_05
+                                        , @level       = @parameter_06
+                                        , @idaraID_FK  = @idaraID
+                                        , @entryData   = @entrydata
+                                        , @hostName    = @hostName;
+                        END
+                        ELSE
+                        BEGIN
+                                SET @ok = 0;
+                                SET @msg = N'نوع العملية المطلوبة غير معروف. ActionType';
+                                GOTO Finish;
+                        END
+
+                        SELECT TOP 1 @ok = IsSuccessful, @msg = Message_ FROM @Result;
+                        GOTO Finish;
+                END
+
         ----------------------------------------------------------------
         -- DO NOT TOUCH BELOW THIS LINE
         ----------------------------------------------------------------
@@ -6290,3 +6668,6 @@ Finish:
                    N'حصل خطأ غير معروف ولم يتم تسجيله في ErrorLog' AS Message_;
     END CATCH
 END
+
+GO
+

@@ -1,4 +1,4 @@
-﻿
+
 -- =============================================
 -- Author:		<Author,,Name>
 -- Create date: <Create Date, ,>
@@ -30,3 +30,6 @@ BEGIN
 	RETURN  coalesce (@Result,8)
 
 END
+
+GO
+

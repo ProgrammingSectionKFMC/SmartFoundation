@@ -1,5 +1,5 @@
-﻿
-CREATE PROCEDURE [Housing].[BuildingRentForOneMonth]
+
+CREATE   PROCEDURE [Housing].[BuildingRentForOneMonth]
     @Month int,
     @Year int,
     @entrydata Nvarchar(20),
@@ -109,3 +109,6 @@ BEGIN
     ORDER BY o.buildingDetailsID ASC;
 
 END
+
+GO
+

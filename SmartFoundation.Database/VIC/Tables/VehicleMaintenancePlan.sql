@@ -1,4 +1,4 @@
-﻿CREATE TABLE [VIC].[VehicleMaintenancePlan] (
+CREATE TABLE [VIC].[VehicleMaintenancePlan] (
     [PlanID]           INT            IDENTITY (1, 1) NOT NULL,
     [chassisNumber_FK] NVARCHAR (100) NOT NULL,
     [periodMonths]     INT            NOT NULL,
@@ -12,4 +12,7 @@
     CONSTRAINT [CK_VehicleMaintenancePlan_PeriodMonths] CHECK ([periodMonths]>(0)),
     CONSTRAINT [FK_VehicleMaintenancePlan_Vehicles] FOREIGN KEY ([chassisNumber_FK]) REFERENCES [VIC].[Vehicles] ([chassisNumber])
 );
+
+
+GO
 

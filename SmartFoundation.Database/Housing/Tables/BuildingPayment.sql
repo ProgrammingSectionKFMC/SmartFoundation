@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BuildingPayment] (
+CREATE TABLE [Housing].[BuildingPayment] (
     [paymentID]                      BIGINT           IDENTITY (1, 1) NOT NULL,
     [PaymentUID]                     UNIQUEIDENTIFIER CONSTRAINT [DF_BuildingPayment_PaymentUID] DEFAULT (newid()) NOT NULL,
     [buildingPaymentTypeID_FK]       INT              NULL,
@@ -28,22 +28,24 @@
 );
 
 
-
-
-
-
-
-
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingPayment_user]
     ON [Housing].[BuildingPayment]([generalNo_FK] ASC)
     INCLUDE([amount]);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingPayment_LinkStatus]
     ON [Housing].[BuildingPayment]([buildingPaymentLinkStatusID_FK] ASC, [residentInfoID_FK] ASC, [BillChargeTypeID_FK] ASC, [buildingPayementActive] ASC)
     INCLUDE([buildingDetailsID_FK], [amount], [deductListID_FK], [IdaraId_FK]);
+
+
+GO
+
+CREATE UNIQUE NONCLUSTERED INDEX [UX_BuildingPayment_UnallocatedRefundID]
+    ON [Housing].[BuildingPayment]([UnallocatedRefundID_FK] ASC) WHERE ([UnallocatedRefundID_FK] IS NOT NULL);
 
 
 GO
@@ -53,7 +55,7 @@ GO
    لا يغير حالة تم إرسالها صراحة من أي إجراء.
 */
 CREATE   TRIGGER [Housing].[TR_BuildingPayment_SetLinkStatus]
-ON [Housing].[BuildingPayment]
+ON Housing.BuildingPayment
 AFTER INSERT, UPDATE
 AS
 BEGIN
@@ -70,7 +72,6 @@ BEGIN
     JOIN inserted insertedRow ON insertedRow.[paymentID] = paymentRow.[paymentID]
     WHERE paymentRow.[buildingPaymentLinkStatusID_FK] IS NULL;
 END;
+
 GO
-CREATE UNIQUE NONCLUSTERED INDEX [UX_BuildingPayment_UnallocatedRefundID]
-    ON [Housing].[BuildingPayment]([UnallocatedRefundID_FK] ASC) WHERE ([UnallocatedRefundID_FK] IS NOT NULL);
 

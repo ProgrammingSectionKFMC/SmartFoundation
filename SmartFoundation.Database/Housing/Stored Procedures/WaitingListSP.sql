@@ -1,4 +1,4 @@
-﻿
+
 CREATE PROCEDURE [Housing].[WaitingListSP] 
 (
       @Action                       NVARCHAR(200)
@@ -258,3 +258,6 @@ BEGIN
         ;THROW;
     END CATCH
 END
+
+GO
+

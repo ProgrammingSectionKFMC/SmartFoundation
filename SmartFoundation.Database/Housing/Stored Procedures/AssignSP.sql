@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [Housing].[AssignSP] 
+CREATE PROCEDURE [Housing].[AssignSP] 
 (
       @Action                               NVARCHAR(200)
     , @ActionID                             BIGINT          = NULL
@@ -1414,3 +1414,6 @@ INSERT INTO  Housing.BuildingAction
         ;THROW;
     END CATCH
 END
+
+GO
+

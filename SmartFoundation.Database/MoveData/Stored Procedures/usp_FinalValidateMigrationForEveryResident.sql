@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [MoveData].[usp_FinalValidateMigrationForEveryResident]
+CREATE PROCEDURE [MoveData].[usp_FinalValidateMigrationForEveryResident]
       @IdaraId            BIGINT = 1
     , @GeneralNo          BIGINT = NULL
     , @CutoverDate        DATE = NULL
@@ -12500,3 +12500,6 @@ END AS ScopeStatus
     END;
 
 END;
+
+GO
+

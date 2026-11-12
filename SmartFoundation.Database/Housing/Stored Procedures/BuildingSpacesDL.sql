@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [Housing].[BuildingSpacesDL]
+CREATE PROCEDURE [Housing].[BuildingSpacesDL]
     @pageName_ NVARCHAR(400),
     @idaraID INT,
     @entrydata INT,
@@ -78,3 +78,6 @@ BEGIN
     WHERE bst.BuildingSpaceTypeActive = 1
     ORDER BY bst.BuildingSpaceTypeName_A;
 END
+
+GO
+

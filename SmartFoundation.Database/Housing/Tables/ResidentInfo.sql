@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[ResidentInfo] (
+CREATE TABLE [Housing].[ResidentInfo] (
     [residentInfoID]     BIGINT           IDENTITY (1, 1) NOT NULL,
     [residentInfoUID]    UNIQUEIDENTIFIER CONSTRAINT [DF_ResidentInfo_residentInfoUID] DEFAULT (newid()) NOT NULL,
     [NationalID]         NVARCHAR (50)    NULL,
@@ -8,4 +8,7 @@
     [hostName]           NVARCHAR (200)   NULL,
     CONSTRAINT [PK_ResidentInfo_1] PRIMARY KEY CLUSTERED ([residentInfoID] ASC)
 );
+
+
+GO
 

@@ -1,4 +1,4 @@
-﻿-- =============================================
+-- =============================================
 -- Author:		<Author,,Name>
 -- Create date: <Create Date, ,>
 -- Description:	<Description, ,>
@@ -31,3 +31,6 @@ BEGIN
 	RETURN  coalesce (@Result,CAST(GETDATE() AS date))
 
 END
+
+GO
+

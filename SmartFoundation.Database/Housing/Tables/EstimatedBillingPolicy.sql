@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[EstimatedBillingPolicy] (
+CREATE TABLE [Housing].[EstimatedBillingPolicy] (
     [EstimatedBillingPolicyID]          BIGINT          IDENTITY (1, 1) NOT NULL,
     [EstimatedBillingPolicyName_A]      NVARCHAR (200)  NOT NULL,
     [EstimatedBillingPolicyName_E]      NVARCHAR (200)  NULL,
@@ -21,9 +21,12 @@
 );
 
 
-
-
 GO
+
 CREATE NONCLUSTERED INDEX [IX_EstimatedBillingPolicy_Resolution]
     ON [Housing].[EstimatedBillingPolicy]([IdaraID_FK] ASC, [EstimatedBillingPolicyActive] ASC, [EffectiveFrom] DESC, [EffectiveTo] ASC)
     INCLUDE([TaxApplicable], [TaxInclusive]);
+
+
+GO
+

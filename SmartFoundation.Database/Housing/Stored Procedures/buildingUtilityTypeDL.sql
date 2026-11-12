@@ -1,4 +1,4 @@
-﻿-- =============================================
+-- =============================================
 -- Author:		<Author,,Name>
 -- Create date: <Create Date,,>
 -- Description:	<Description,,>
@@ -36,3 +36,6 @@ BEGIN
             ORDER BY t.buildingUtilityTypeID asc;
     -- Insert statements for procedure here
 END
+
+GO
+

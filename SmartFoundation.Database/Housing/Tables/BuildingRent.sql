@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BuildingRent] (
+CREATE TABLE [Housing].[BuildingRent] (
     [buildingRentID]          INT             IDENTITY (1, 1) NOT NULL,
     [buildingRentTypeID_FK]   INT             NULL,
     [buildingDetailsID_FK]    BIGINT          NULL,
@@ -17,13 +17,18 @@
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingRent_Details_Dates]
     ON [Housing].[BuildingRent]([buildingDetailsID_FK] ASC, [buildingRentStartDate] ASC, [buildingRentEndDate] ASC)
     INCLUDE([buildingRentAmount]);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BuildingRent_Building_Start]
     ON [Housing].[BuildingRent]([buildingDetailsID_FK] ASC, [buildingRentStartDate] ASC)
     INCLUDE([buildingRentEndDate], [buildingRentAmount], [buildingRentID]);
+
+
+GO
 

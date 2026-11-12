@@ -1,4 +1,4 @@
-﻿-- =============================================
+-- =============================================
 -- Author:		<Author,,Name>
 -- Create date: <Create Date,,>
 -- Description:	<Description,,>
@@ -72,3 +72,6 @@ FROM Housing.V_WaitingList w
 
    
 END
+
+GO
+

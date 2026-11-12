@@ -1,4 +1,4 @@
-﻿
+
 
 
 
@@ -181,3 +181,6 @@ LEFT JOIN dbo.Idara toidara
 WHERE b.buildingActionTypeID_FK in(1,7,25)
   AND b.buildingActionActive = 1
   AND b.residentInfoID_FK is not null;
+
+GO
+

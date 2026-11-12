@@ -1,4 +1,4 @@
-﻿
+
 CREATE VIEW [Housing].[V_LastActionTypeForBuilding]
 AS
 SELECT
@@ -20,3 +20,6 @@ FROM
     WHERE b.buildingActionActive = 1 and b.buildingDetailsID_FK is not null and b.buildingActionActive = 1
 ) x
 WHERE x.rn = 1
+
+GO
+

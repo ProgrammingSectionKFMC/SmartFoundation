@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE [Housing].[DeductListReportDL] 
+CREATE   PROCEDURE [Housing].[DeductListReportDL] 
 
       @pageName_      NVARCHAR(400)
     , @idaraID        INT
@@ -167,3 +167,6 @@ ORDER BY
 
 
 END;
+
+GO
+

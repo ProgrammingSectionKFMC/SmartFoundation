@@ -1,4 +1,4 @@
-﻿CREATE TABLE [WH].[WarehousePart1] (
+CREATE TABLE [WH].[WarehousePart1] (
     [warehousePartID]             BIGINT         IDENTITY (1, 1) NOT NULL,
     [warehousePartTypeID_FK]      INT            NULL,
     [warehousePartName]           NVARCHAR (100) NULL,
@@ -13,4 +13,7 @@
     [entryDate]                   DATETIME       NULL,
     [entryData]                   NVARCHAR (20)  NULL
 );
+
+
+GO
 

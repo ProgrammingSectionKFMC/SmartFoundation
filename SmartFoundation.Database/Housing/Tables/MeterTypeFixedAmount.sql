@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[MeterTypeFixedAmount] (
+CREATE TABLE [Housing].[MeterTypeFixedAmount] (
     [MeterTypeFixedAmountID]        INT             IDENTITY (1, 1) NOT NULL,
     [MeterTypeID_FK]                INT             NULL,
     [FixedAmount]                   DECIMAL (18, 2) NULL,
@@ -14,7 +14,11 @@
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_MeterTypeFixedAmount_Search]
     ON [Housing].[MeterTypeFixedAmount]([idaraID_FK] ASC, [MeterTypeFixedAmountActive] ASC, [MeterTypeID_FK] ASC, [MeterTypeFixedAmountID] DESC)
     INCLUDE([FixedAmount]);
+
+
+GO
 

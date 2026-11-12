@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[AssignPeriodMember] (
+CREATE TABLE [Housing].[AssignPeriodMember] (
     [AssignPeriodMemberID]   BIGINT        IDENTITY (1, 1) NOT NULL,
     [AssignPeriodID_FK]      BIGINT        NOT NULL,
     [WaitingRootActionID_FK] BIGINT        NOT NULL,
@@ -17,7 +17,11 @@
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_AssignPeriodMember_Resident]
     ON [Housing].[AssignPeriodMember]([ResidentInfoID_FK] ASC, [AssignPeriodID_FK] ASC)
     INCLUDE([WaitingRootActionID_FK]);
+
+
+GO
 

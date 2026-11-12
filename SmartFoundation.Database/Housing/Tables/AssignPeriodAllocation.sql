@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[AssignPeriodAllocation] (
+CREATE TABLE [Housing].[AssignPeriodAllocation] (
     [AssignPeriodAllocationID] BIGINT        IDENTITY (1, 1) NOT NULL,
     [AssignPeriodMemberID_FK]  BIGINT        NOT NULL,
     [AllocationActionID_FK]    BIGINT        NOT NULL,
@@ -19,17 +19,23 @@
 
 
 GO
+
+CREATE UNIQUE NONCLUSTERED INDEX [UX_AssignPeriodAllocation_Confirmation]
+    ON [Housing].[AssignPeriodAllocation]([ConfirmationActionID_FK] ASC) WHERE ([ConfirmationActionID_FK] IS NOT NULL);
+
+
+GO
+
+CREATE UNIQUE NONCLUSTERED INDEX [UX_AssignPeriodAllocation_Outcome]
+    ON [Housing].[AssignPeriodAllocation]([OutcomeActionID_FK] ASC) WHERE ([OutcomeActionID_FK] IS NOT NULL);
+
+
+GO
+
 CREATE NONCLUSTERED INDEX [IX_AssignPeriodAllocation_Member]
     ON [Housing].[AssignPeriodAllocation]([AssignPeriodMemberID_FK] ASC, [AllocationActionID_FK] ASC)
     INCLUDE([ConfirmationActionID_FK], [OutcomeActionID_FK], [AllocationTypeID]);
 
 
 GO
-CREATE UNIQUE NONCLUSTERED INDEX [UX_AssignPeriodAllocation_Outcome]
-    ON [Housing].[AssignPeriodAllocation]([OutcomeActionID_FK] ASC) WHERE ([OutcomeActionID_FK] IS NOT NULL);
-
-
-GO
-CREATE UNIQUE NONCLUSTERED INDEX [UX_AssignPeriodAllocation_Confirmation]
-    ON [Housing].[AssignPeriodAllocation]([ConfirmationActionID_FK] ASC) WHERE ([ConfirmationActionID_FK] IS NOT NULL);
 

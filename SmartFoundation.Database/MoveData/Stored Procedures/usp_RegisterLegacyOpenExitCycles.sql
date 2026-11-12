@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [MoveData].[usp_RegisterLegacyOpenExitCycles]
+CREATE PROCEDURE [MoveData].[usp_RegisterLegacyOpenExitCycles]
     @IdaraId BIGINT,
     @RollbackAfterTest BIT = 1
 AS
@@ -184,3 +184,6 @@ BEGIN
         THROW;
     END CATCH;
 END;
+
+GO
+

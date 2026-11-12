@@ -1,4 +1,4 @@
-﻿CREATE VIEW dbo.V_GetListUsersInDSD
+CREATE VIEW dbo.V_GetListUsersInDSD
 AS
 SELECT DISTINCT 
                          u.usersID, u.nationalID, ue.GeneralNo, Concat_Ws(' ', ue.firstName_A, ue.secondName_A, ue.thirdName_A, ue.lastName_A) AS FullName, ds.distributorName_A AS distributorName, ud.distributorID_FK AS DistributorID, 
@@ -15,6 +15,7 @@ WHERE        (1 = 1) AND (ud.UDActive = 1) AND (ud.UDStartDate IS NOT NULL) AND 
                           AS date))
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane1', @value = N'[0E232FF0-B466-11cf-A24F-00AA00A3EFFF, 1.00]
 Begin DesignProperties = 
    Begin PaneConfigurations = 
@@ -164,6 +165,7 @@ Begin DesignProperties =
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane2', @value = N' = 720
          Append = 1400
          NewValue = 1170
@@ -181,5 +183,9 @@ End
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPaneCount', @value = 2, @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'VIEW', @level1name = N'V_GetListUsersInDSD';
+
+
+GO
 

@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[MilitaryAreaCity] (
+CREATE TABLE [Housing].[MilitaryAreaCity] (
     [militaryAreaCityID]          INT            IDENTITY (1, 1) NOT NULL,
     [militaryAreaCityCode]        NVARCHAR (10)  NULL,
     [militaryAreaID_FK]           INT            NULL,
@@ -12,4 +12,7 @@
     CONSTRAINT [PK_MilitaryAreaCity] PRIMARY KEY CLUSTERED ([militaryAreaCityID] ASC),
     CONSTRAINT [FK_MilitaryAreaCity_MilitaryArea] FOREIGN KEY ([militaryAreaID_FK]) REFERENCES [Housing].[MilitaryArea] ([militaryAreaID])
 );
+
+
+GO
 

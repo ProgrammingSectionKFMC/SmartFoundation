@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[_GregorianHijriDate] (
+CREATE TABLE [dbo].[_GregorianHijriDate] (
     [gregorianDate]          DATETIME      NULL,
     [hijriDateddmmyyyy]      NVARCHAR (10) NULL,
     [hijriDateyyyymmdd]      NVARCHAR (10) NULL,
@@ -15,4 +15,7 @@
     [yearH_char]             NVARCHAR (4)  NULL,
     [SQLServerGregorianDate] DATETIME      NULL
 );
+
+
+GO
 

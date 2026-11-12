@@ -1,4 +1,4 @@
-﻿CREATE FUNCTION [dbo].[minutesToHours]
+CREATE FUNCTION [dbo].[minutesToHours]
 (
  	@minutes INT , @type NVARCHAR(100) =NULL
 )
@@ -13,3 +13,6 @@ BEGIN
 			END 
 		END 
 END
+
+GO
+

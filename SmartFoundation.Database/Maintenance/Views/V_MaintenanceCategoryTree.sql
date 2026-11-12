@@ -1,4 +1,4 @@
-﻿
+
 CREATE   VIEW [Maintenance].[V_MaintenanceCategoryTree]
 AS
 WITH CategoryTree AS
@@ -56,3 +56,6 @@ SELECT
         ELSE 0
     END AS [HasChildren]
 FROM CategoryTree;
+
+GO
+

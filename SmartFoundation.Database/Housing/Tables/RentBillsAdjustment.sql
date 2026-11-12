@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[RentBillsAdjustment] (
+CREATE TABLE [Housing].[RentBillsAdjustment] (
     [rentBillsAdjustmentID]          BIGINT          IDENTITY (1, 1) NOT NULL,
     [residentInfoID_FK]              BIGINT          NULL,
     [buildingDetailsID_FK]           BIGINT          NULL,
@@ -16,4 +16,7 @@
     CONSTRAINT [FK_RentBillsAdjustment_RentBills] FOREIGN KEY ([rentBillsID_FK]) REFERENCES [Housing].[RentBills] ([rentBillsID]),
     CONSTRAINT [FK_RentBillsAdjustment_ResidentInfo] FOREIGN KEY ([residentInfoID_FK]) REFERENCES [Housing].[ResidentInfo] ([residentInfoID])
 );
+
+
+GO
 

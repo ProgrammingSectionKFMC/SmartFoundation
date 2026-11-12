@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[DocumentState] (
+CREATE TABLE [dbo].[DocumentState] (
     [documentStateID]          INT            IDENTITY (1, 1) NOT NULL,
     [documentStateName_A]      NVARCHAR (50)  NULL,
     [documentStateName_E]      NVARCHAR (50)  NULL,
@@ -9,4 +9,7 @@
     [hostName]                 NVARCHAR (200) CONSTRAINT [DF_DocumentState_hostName] DEFAULT (host_name()) NULL,
     CONSTRAINT [PK_DocumentState] PRIMARY KEY CLUSTERED ([documentStateID] ASC)
 );
+
+
+GO
 

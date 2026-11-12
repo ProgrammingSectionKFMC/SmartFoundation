@@ -1,4 +1,4 @@
-﻿
+
 CREATE VIEW [dbo].[V_DSD]
 AS
 SELECT       dsd.DSDID, dp.deptID, dp.deptName_A, dp.deptName_E, dp.deptDescription, s.secID, s.secName_A, s.secName_E, s.secDescription, d.divID, d.divName_A, d.divName_E, d.divDescription
@@ -10,6 +10,7 @@ WHERE        (1 = 1) AND (dp.deptStartDate IS NOT NULL) AND (dp.deptEndDate IS N
                          (d.divStartDate IS NOT NULL) AND (d.divEndDate IS NULL) AND (d.divActive = 1)
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane1', @value = N'[0E232FF0-B466-11cf-A24F-00AA00A3EFFF, 1.00]
 Begin DesignProperties = 
    Begin PaneConfigurations = 
@@ -151,5 +152,9 @@ End
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPaneCount', @value = 1, @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'VIEW', @level1name = N'V_DSD';
+
+
+GO
 

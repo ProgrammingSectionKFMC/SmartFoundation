@@ -1,4 +1,4 @@
-﻿
+
 CREATE   PROCEDURE [MoveData].[usp_MigrateMilitaryUnits]
     @RollbackAfterTest bit = 1
 AS
@@ -94,3 +94,6 @@ BEGIN
         THROW;
     END CATCH;
 END;
+
+GO
+

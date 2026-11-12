@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[DocumentCategory] (
+CREATE TABLE [dbo].[DocumentCategory] (
     [documentCategoryID]     INT            IDENTITY (1, 1) NOT NULL,
     [documentCatName_A]      NVARCHAR (50)  NULL,
     [documentCatName_E]      NVARCHAR (50)  NULL,
@@ -11,4 +11,7 @@
     CONSTRAINT [PK_DocumentCategory] PRIMARY KEY CLUSTERED ([documentCategoryID] ASC),
     CONSTRAINT [FK_DocumentCategory_Department] FOREIGN KEY ([documentCatForDept_FK]) REFERENCES [dbo].[Department] ([deptID])
 );
+
+
+GO
 

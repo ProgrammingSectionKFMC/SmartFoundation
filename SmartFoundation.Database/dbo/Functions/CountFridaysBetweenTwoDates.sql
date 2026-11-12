@@ -1,4 +1,4 @@
-﻿
+
 -- =============================================
 -- Author:		<Author,,Name>
 -- Create date: <Create Date, ,>
@@ -22,3 +22,6 @@ BEGIN
 
     RETURN @NumberOfFridays;
 END;
+
+GO
+

@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE [dbo].[SetUserPassword]
+CREATE   PROCEDURE [dbo].[SetUserPassword]
 (
     @NationalID          NVARCHAR(20),     -- الرقم العام / رقم المستخدم
     @PlainPassword   NVARCHAR(200),    -- كلمة المرور الجديدة
@@ -176,3 +176,6 @@ RETURN;
         
     END CATCH
 END
+
+GO
+

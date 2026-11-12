@@ -1,4 +1,4 @@
-﻿CREATE TABLE [VIC].[HandoverType] (
+CREATE TABLE [VIC].[HandoverType] (
     [handOverTypeID]     INT            IDENTITY (1, 1) NOT NULL,
     [handOverTypeName_A] NVARCHAR (50)  NULL,
     [handOverTypeName_E] NVARCHAR (50)  NULL,
@@ -8,4 +8,7 @@
     [hostName]           NVARCHAR (400) NULL,
     CONSTRAINT [PK_HandoverType] PRIMARY KEY CLUSTERED ([handOverTypeID] ASC)
 );
+
+
+GO
 

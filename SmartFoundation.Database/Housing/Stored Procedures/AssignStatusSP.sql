@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [Housing].[AssignStatusSP] 
+CREATE PROCEDURE [Housing].[AssignStatusSP] 
 (
       @Action                               NVARCHAR(200)
     , @ActionID                             BIGINT          = NULL
@@ -362,3 +362,6 @@ BEGIN
         ;THROW;
     END CATCH
 END
+
+GO
+

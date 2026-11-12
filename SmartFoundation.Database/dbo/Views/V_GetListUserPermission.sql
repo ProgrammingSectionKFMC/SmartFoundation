@@ -1,4 +1,4 @@
-﻿
+
 CREATE VIEW [dbo].[V_GetListUserPermission]
 AS
 SELECT        p.UsersID_FK AS userID, m.menuName_A, m.menuName_E, pt.permissionTypeName_A, pt.permissionTypeName_E, m.menuID, md.menuDistributorID, d.distributorID, dpt.distributorPermissionTypeID, p.permissionID, 
@@ -29,6 +29,7 @@ WHERE        (m.menuActive = 1) AND (md.menuDistributorActive = 1) AND (d.distri
                          (CAST(dpt.distributorPermissionTypeEndDate AS date) >= CAST(GETDATE() AS date)) AND (p.permissionEndDate IS NULL)
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane1', @value = N'[0E232FF0-B466-11cf-A24F-00AA00A3EFFF, 1.00]
 Begin DesignProperties = 
    Begin PaneConfigurations = 
@@ -173,6 +174,7 @@ Begin DesignProperties =
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane2', @value = N'nd
          Begin Table = "DE"
             Begin Extent = 
@@ -291,5 +293,9 @@ End
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPaneCount', @value = 2, @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'VIEW', @level1name = N'V_GetListUserPermission';
+
+
+GO
 

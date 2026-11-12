@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[ErrorLog] (
+CREATE TABLE [dbo].[ErrorLog] (
     [ErrorLogID]      INT             IDENTITY (1, 1) NOT NULL,
     [ERROR_MESSAGE_]  NVARCHAR (4000) NULL,
     [ERROR_SEVERITY_] NVARCHAR (4000) NULL,
@@ -13,4 +13,7 @@
     [HttpMethod]      NVARCHAR (20)   NULL,
     CONSTRAINT [PK_ErrorLog] PRIMARY KEY CLUSTERED ([ErrorLogID] ASC)
 );
+
+
+GO
 

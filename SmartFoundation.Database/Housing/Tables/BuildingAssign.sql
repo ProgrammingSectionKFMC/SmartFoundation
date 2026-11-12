@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BuildingAssign] (
+CREATE TABLE [Housing].[BuildingAssign] (
     [BuildingAssignID]           INT             IDENTITY (1, 1) NOT NULL,
     [GeneralNo]                  INT             NULL,
     [BuildingActionID_FK]        INT             NULL,
@@ -21,4 +21,7 @@
     [hostName]                   NVARCHAR (2000) NULL,
     CONSTRAINT [PK_BuildingAssign] PRIMARY KEY CLUSTERED ([BuildingAssignID] ASC)
 );
+
+
+GO
 

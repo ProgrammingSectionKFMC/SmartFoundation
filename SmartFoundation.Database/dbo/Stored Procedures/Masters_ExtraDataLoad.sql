@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Masters_ExtraDataLoad]
+CREATE PROCEDURE [dbo].[Masters_ExtraDataLoad]
       @pageName_      NVARCHAR(400)
     , @ActionType     NVARCHAR(100)
     , @idaraID        INT
@@ -1451,3 +1451,6 @@ END
               N'حصل خطأ غير معروف رمز الخطأ : ' + CAST(@IdentityCatchError AS NVARCHAR(200)) AS Message_;
     END CATCH
 END
+
+GO
+

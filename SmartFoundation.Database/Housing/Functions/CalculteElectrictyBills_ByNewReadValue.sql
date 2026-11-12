@@ -1,4 +1,4 @@
-﻿CREATE FUNCTION [Housing].[CalculteElectrictyBills_ByNewReadValue]
+CREATE FUNCTION [Housing].[CalculteElectrictyBills_ByNewReadValue]
 (
     @MeterID BIGINT,
     @NewReadValue INT
@@ -385,3 +385,6 @@ SELECT
 FROM FinalPrice fp
 LEFT JOIN Housing.MeterServiceType mst
     ON mst.meterServiceTypeID = fp.meterServiceTypeID;
+
+GO
+

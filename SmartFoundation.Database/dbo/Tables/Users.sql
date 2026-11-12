@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[Users] (
+CREATE TABLE [dbo].[Users] (
     [usersID]             BIGINT          IDENTITY (1, 1) NOT NULL,
     [nationalID]          NVARCHAR (20)   NOT NULL,
     [nationalIDTypeID_FK] INT             NULL,
@@ -14,4 +14,7 @@
     CONSTRAINT [PK_Users] PRIMARY KEY CLUSTERED ([usersID] ASC),
     CONSTRAINT [FK_Users_NationalIDType] FOREIGN KEY ([nationalIDTypeID_FK]) REFERENCES [dbo].[NationalIDType] ([nationalIDTypeID])
 );
+
+
+GO
 

@@ -1,4 +1,4 @@
-﻿create FUNCTION [dbo].[GetUserTypeID]
+create FUNCTION [dbo].[GetUserTypeID]
 (
 	-- Add the parameters for the function here
 	@userID int 
@@ -22,3 +22,6 @@ BEGIN
 	RETURN  @Result
 
 END
+
+GO
+

@@ -1,4 +1,4 @@
-﻿CREATE VIEW dbo.V_GetFullStructureForDSD
+CREATE VIEW dbo.V_GetFullStructureForDSD
 AS
 SELECT        dsd.DSDID, o.OrganizationID, o.OrganizationName, I.IdaraID, I.IdaraName, d.DepartmentID, d.DepartmentName, s.SectionID, s.SectionName, v.DivisonID, v.DivisonName, CASE WHEN (v.DivisonID IS NULL) AND 
                          (s.SectionID IS NULL) AND (d .DepartmentID IS NULL) AND (i.IdaraID IS NULL) AND (o.OrganizationID IS NOT NULL) THEN 1 WHEN (v.DivisonID IS NULL) AND (s.SectionID IS NULL) AND (d .DepartmentID IS NULL) AND 
@@ -21,6 +21,7 @@ WHERE        (1 = 1) AND (d.deptActive = 1) AND (d.deptStartDate IS NOT NULL) AN
                          (dsd.idaraID_FK IS NULL) AND (dsd.deptID_FK IS NULL) AND (dsd.secID_FK IS NULL) AND (dsd.divID_FK IS NULL) AND (dsd.OrganizationID_FK IS NOT NULL)
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane1', @value = N'[0E232FF0-B466-11cf-A24F-00AA00A3EFFF, 1.00]
 Begin DesignProperties = 
    Begin PaneConfigurations = 
@@ -168,6 +169,7 @@ Begin DesignProperties =
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane2', @value = N'00
          Width = 1500
          Width = 1500
@@ -207,5 +209,9 @@ End
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPaneCount', @value = 2, @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'VIEW', @level1name = N'V_GetFullStructureForDSD';
+
+
+GO
 

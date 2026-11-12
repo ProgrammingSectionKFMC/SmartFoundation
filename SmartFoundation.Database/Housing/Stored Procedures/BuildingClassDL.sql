@@ -1,4 +1,4 @@
-﻿-- =============================================
+-- =============================================
 -- Author:		<Author,,Name>
 -- Create date: <Create Date,,>
 -- Description:	<Description,,>
@@ -30,3 +30,6 @@ BEGIN
             order by c.buildingClassID desc;
     -- Insert statements for procedure here
 END
+
+GO
+

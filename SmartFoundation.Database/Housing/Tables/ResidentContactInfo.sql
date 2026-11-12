@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[ResidentContactInfo] (
+CREATE TABLE [Housing].[ResidentContactInfo] (
     [residentcontactInfoID]        BIGINT          IDENTITY (1, 1) NOT NULL,
     [residentInfoID_FK]            BIGINT          NULL,
     [residentcontanctTypeID_FK]    INT             NULL,
@@ -14,4 +14,7 @@
     CONSTRAINT [FK_ResidentContactInfo_ResidentContactType] FOREIGN KEY ([residentcontanctTypeID_FK]) REFERENCES [Housing].[ResidentContactType] ([residentcontanctTypeID]),
     CONSTRAINT [FK_ResidentContactInfo_ResidentInfo] FOREIGN KEY ([residentInfoID_FK]) REFERENCES [Housing].[ResidentInfo] ([residentInfoID])
 );
+
+
+GO
 

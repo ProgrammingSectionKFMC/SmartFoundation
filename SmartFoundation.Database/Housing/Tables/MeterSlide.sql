@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[MeterSlide] (
+CREATE TABLE [Housing].[MeterSlide] (
     [meterSlideID]             INT             IDENTITY (1, 1) NOT NULL,
     [buildingUtilityTypeID_FK] BIGINT          NULL,
     [meterServiceTypeID_FK]    INT             NULL,
@@ -22,13 +22,18 @@
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_MeterSlide_Service_Utility_Seq]
     ON [Housing].[MeterSlide]([meterServiceTypeID_FK] ASC, [buildingUtilityTypeID_FK] ASC, [meterSlideSequence] ASC)
     INCLUDE([meterSlideMinValue], [meterSlideMaxValue], [meterSlidePriceFactor]);
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_MeterSlide_Utility_Service_Seq]
     ON [Housing].[MeterSlide]([buildingUtilityTypeID_FK] ASC, [meterServiceTypeID_FK] ASC, [meterSlideSequence] ASC)
     INCLUDE([meterSlideMinValue], [meterSlideMaxValue], [meterSlidePriceFactor]);
+
+
+GO
 

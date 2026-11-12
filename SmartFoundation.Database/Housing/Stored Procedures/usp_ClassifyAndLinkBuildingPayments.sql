@@ -1,4 +1,4 @@
-﻿
+
 /*
    يعرض الاقتراحات عند @ApplyChanges=0، ويطبقها عند @ApplyChanges=1.
    مصدر التاريخ: paymentDate، ثم شهر/سنة المسير إذا كانت سنة ميلادية.
@@ -270,3 +270,6 @@ BEGIN
         THROW;
     END CATCH;
 END;
+
+GO
+

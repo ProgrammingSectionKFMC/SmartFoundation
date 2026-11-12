@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [Housing].[GenerateExitServiceBillsForRequest]
+CREATE PROCEDURE [Housing].[GenerateExitServiceBillsForRequest]
 (
       @Action NVARCHAR(20)
     , @ResidentInfoID BIGINT
@@ -911,3 +911,6 @@ IF EXISTS
         END CATCH;
     END;
 END;
+
+GO
+

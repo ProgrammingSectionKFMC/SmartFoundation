@@ -1,4 +1,4 @@
-﻿
+
 CREATE VIEW [Housing].[V_buildingWithRent]
 AS
 SELECT        b.buildingDetailsID, b.buildingDetailsNo, b.buildingDetailsRooms, b.buildingLevelsCount, b.buildingDetailsArea, b.buildingDetailsCoordinates, b.buildingTypeID_FK, b.buildingUtilityTypeID_FK, b.militaryLocationID_FK, 
@@ -9,6 +9,7 @@ FROM            Housing.BuildingDetails AS b LEFT OUTER JOIN
 WHERE        (r.buildingRentActive = 1) AND (r.buildingRentEndDate IS NULL) AND (r.buildingRentID IS NOT NULL)
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane1', @value = N'[0E232FF0-B466-11cf-A24F-00AA00A3EFFF, 1.00]
 Begin DesignProperties = 
    Begin PaneConfigurations = 
@@ -141,5 +142,9 @@ End
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPaneCount', @value = 1, @level0type = N'SCHEMA', @level0name = N'Housing', @level1type = N'VIEW', @level1name = N'V_buildingWithRent';
+
+
+GO
 

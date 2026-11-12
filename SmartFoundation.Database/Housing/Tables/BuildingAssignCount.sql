@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BuildingAssignCount] (
+CREATE TABLE [Housing].[BuildingAssignCount] (
     [BuildingAssignCountID]         INT             IDENTITY (1, 1) NOT NULL,
     [BuildingAssignCount]           INT             CONSTRAINT [DF_BuildingAssignCount_BuildingAssignCount] DEFAULT ((1)) NOT NULL,
     [BuildingAssignCountLetterNo]   NVARCHAR (100)  NULL,
@@ -9,4 +9,7 @@
     [entryData]                     NVARCHAR (20)   NULL,
     [hostName]                      NVARCHAR (200)  NULL
 );
+
+
+GO
 

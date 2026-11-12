@@ -1,4 +1,4 @@
-﻿
+
 CREATE   PROCEDURE [Maintenance].[MaintenanceCategoryDL]
       @pageName_ NVARCHAR(400)
     , @idaraID BIGINT
@@ -147,3 +147,6 @@ BEGIN
     WHERE routing.[IdaraId_FK] = @idaraID
     ORDER BY category.[FullPath_A], routing.[MaintenanceCategoryRoutingID];
 END
+
+GO
+

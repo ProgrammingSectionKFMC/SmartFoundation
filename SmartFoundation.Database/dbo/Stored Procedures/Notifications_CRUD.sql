@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Notifications_CRUD]
+CREATE PROCEDURE [dbo].[Notifications_CRUD]
     @UserID NVARCHAR(50),
     @Type NVARCHAR(20) = NULL,
     @UserNotificationId BIGINT = NULL
@@ -105,3 +105,6 @@ BEGIN
         SELECT @@ROWCOUNT AS RowsAffected;
     END
 END
+
+GO
+

@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[elecrtecityCuting] (
+CREATE TABLE [Housing].[elecrtecityCuting] (
     [ID]         INT             IDENTITY (1, 1) NOT NULL,
     [userid]     INT             NULL,
     [natoinalID] BIGINT          NULL,
@@ -12,4 +12,7 @@
     [cutingType] NVARCHAR (1000) NULL,
     CONSTRAINT [PK_elecrtecityCuting] PRIMARY KEY CLUSTERED ([ID] ASC)
 );
+
+
+GO
 

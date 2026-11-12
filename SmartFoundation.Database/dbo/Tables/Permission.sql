@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[Permission] (
+CREATE TABLE [dbo].[Permission] (
     [permissionID]                   BIGINT          IDENTITY (1, 1) NOT NULL,
     [DistributorPermissionTypeID_FK] BIGINT          NULL,
     [UsersID_FK]                     BIGINT          NULL,
@@ -23,4 +23,7 @@
     CONSTRAINT [FK_Permission_Role1] FOREIGN KEY ([RoleID_FK]) REFERENCES [dbo].[Role] ([roleID]),
     CONSTRAINT [FK_Permission_Users] FOREIGN KEY ([UsersID_FK]) REFERENCES [dbo].[Users] ([usersID])
 );
+
+
+GO
 

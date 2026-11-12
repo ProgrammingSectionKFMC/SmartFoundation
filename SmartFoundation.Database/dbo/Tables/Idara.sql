@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[Idara] (
+CREATE TABLE [dbo].[Idara] (
     [idaraID]                  BIGINT         IDENTITY (1, 1) NOT NULL,
     [idaraClass_A]             NVARCHAR (10)  NULL,
     [idaraClass_E]             NVARCHAR (10)  NULL,
@@ -15,4 +15,7 @@
     [idaraShowInCommandCenter] BIT            CONSTRAINT [DF_Idara_idaraShowInCommandCenter] DEFAULT ((0)) NOT NULL,
     CONSTRAINT [PK_Idara] PRIMARY KEY CLUSTERED ([idaraID] ASC)
 );
+
+
+GO
 

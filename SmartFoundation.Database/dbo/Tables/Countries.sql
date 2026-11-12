@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[Countries] (
+CREATE TABLE [dbo].[Countries] (
     [countryID]          INT            IDENTITY (1, 1) NOT NULL,
     [countryName_A]      NVARCHAR (100) NULL,
     [countryName_E]      NVARCHAR (100) NULL,
@@ -10,4 +10,7 @@
     PRIMARY KEY CLUSTERED ([countryID] ASC),
     CONSTRAINT [FK_Countries_Continents_FK] FOREIGN KEY ([continentID_FK]) REFERENCES [dbo].[Continents] ([continentID])
 );
+
+
+GO
 

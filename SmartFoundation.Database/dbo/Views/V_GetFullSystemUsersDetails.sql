@@ -1,4 +1,4 @@
-﻿
+
 CREATE VIEW [dbo].[V_GetFullSystemUsersDetails]
 AS
 WITH LastUserDetails AS
@@ -148,3 +148,6 @@ LEFT JOIN dbo.Users eu
 LEFT JOIN LastEntryUserDetails leud
     ON eu.usersID = leud.usersID_FK
    AND leud.rn = 1;
+
+GO
+

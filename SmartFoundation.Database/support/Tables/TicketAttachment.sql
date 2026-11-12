@@ -1,4 +1,4 @@
-﻿CREATE TABLE [support].[TicketAttachment] (
+CREATE TABLE [support].[TicketAttachment] (
     [ticketAttachmentID]     BIGINT          IDENTITY (1, 1) NOT NULL,
     [ticketID_FK]            BIGINT          NOT NULL,
     [fileName]               NVARCHAR (260)  NOT NULL,
@@ -16,4 +16,7 @@
     CONSTRAINT [FK_support_TicketAttachment_Ticket] FOREIGN KEY ([ticketID_FK]) REFERENCES [support].[Ticket] ([ticketID]),
     CONSTRAINT [FK_support_TicketAttachment_User] FOREIGN KEY ([uploadedByUserID_FK]) REFERENCES [dbo].[Users] ([usersID])
 );
+
+
+GO
 

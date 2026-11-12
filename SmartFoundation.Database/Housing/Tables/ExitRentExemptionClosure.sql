@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[ExitRentExemptionClosure] (
+CREATE TABLE [Housing].[ExitRentExemptionClosure] (
     [ExitRentExemptionClosureID] BIGINT         IDENTITY (1, 1) NOT NULL,
     [ExitRequestActionID_FK]     BIGINT         NOT NULL,
     [ResidentRentExemptionID_FK] BIGINT         NOT NULL,
@@ -20,11 +20,16 @@
 
 
 GO
+
+CREATE UNIQUE NONCLUSTERED INDEX [UX_ExitExemptionClosure_Cycle_Open]
+    ON [Housing].[ExitRentExemptionClosure]([ExitRequestActionID_FK] ASC, [ResidentRentExemptionID_FK] ASC) WHERE ([RestoredAt] IS NULL);
+
+
+GO
+
 CREATE UNIQUE NONCLUSTERED INDEX [UX_ExitExemptionClosure_Open]
     ON [Housing].[ExitRentExemptionClosure]([ResidentRentExemptionID_FK] ASC) WHERE ([RestoredAt] IS NULL);
 
 
 GO
-CREATE UNIQUE NONCLUSTERED INDEX [UX_ExitExemptionClosure_Cycle_Open]
-    ON [Housing].[ExitRentExemptionClosure]([ExitRequestActionID_FK] ASC, [ResidentRentExemptionID_FK] ASC) WHERE ([RestoredAt] IS NULL);
 

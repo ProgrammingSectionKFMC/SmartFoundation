@@ -1,4 +1,4 @@
-﻿
+
 
 CREATE VIEW [Housing].[V_GetFullResidentDetails]
 AS
@@ -85,6 +85,7 @@ INNER JOIN dbo.Idara i
 WHERE ri.residentInfoActive = 1;
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane1', @value = N'[0E232FF0-B466-11cf-A24F-00AA00A3EFFF, 1.00]
 Begin DesignProperties = 
    Begin PaneConfigurations = 
@@ -228,6 +229,7 @@ Begin DesignProperties =
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane2', @value = N'
          End
          Begin Table = "m"
@@ -343,5 +345,9 @@ End
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPaneCount', @value = 2, @level0type = N'SCHEMA', @level0name = N'Housing', @level1type = N'VIEW', @level1name = N'V_GetFullResidentDetails';
+
+
+GO
 

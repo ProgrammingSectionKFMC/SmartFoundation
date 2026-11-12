@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [Housing].[HousingExitSP] 
+CREATE PROCEDURE [Housing].[HousingExitSP] 
 (
       @Action                               NVARCHAR(200)
     , @ActionID                             BIGINT          = NULL
@@ -3450,3 +3450,6 @@ END;
         ;THROW;
     END CATCH
 END
+
+GO
+

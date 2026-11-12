@@ -1,4 +1,4 @@
-﻿
+
 
 
 CREATE VIEW [Housing].[V_GetGeneralListForBuilding_20261110]
@@ -105,3 +105,6 @@ WHERE bd.[buildingDetailsActive] = 1
   AND bu.buildingUtilityTypeStartDate IS NOT NULL
   AND (bd.buildingDetailsEndDate IS NULL OR bd.buildingDetailsEndDate > GETDATE())
   AND (bu.buildingUtilityTypeEndDate IS NULL OR bu.buildingUtilityTypeEndDate > GETDATE());
+
+GO
+

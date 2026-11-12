@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[MonthlyBillingQueue] (
+CREATE TABLE [Housing].[MonthlyBillingQueue] (
     [QueueID]       BIGINT          IDENTITY (1, 1) NOT NULL,
     [IdaraID]       BIGINT          NOT NULL,
     [PeriodYear]    INT             NOT NULL,
@@ -20,6 +20,10 @@
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_MBQ_Claim]
     ON [Housing].[MonthlyBillingQueue]([Status] ASC, [HeartbeatAt] ASC, [QueueID] ASC);
+
+
+GO
 

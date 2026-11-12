@@ -1,4 +1,4 @@
-﻿
+
 CREATE FUNCTION [Housing].[GetCountBuildingForActionTypeWithClassID]
 (
     @buildingActionTypeID INT,
@@ -21,3 +21,6 @@ BEGIN
     RETURN @Result
 
 END
+
+GO
+

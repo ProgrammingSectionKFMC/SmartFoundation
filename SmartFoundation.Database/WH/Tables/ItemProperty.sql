@@ -1,4 +1,4 @@
-﻿CREATE TABLE [WH].[ItemProperty] (
+CREATE TABLE [WH].[ItemProperty] (
     [itemPropertyID]        BIGINT         IDENTITY (1, 1) NOT NULL,
     [itemID_FK]             BIGINT         NULL,
     [itemPropertyTypeID_FK] INT            NULL,
@@ -11,4 +11,7 @@
     CONSTRAINT [FK_ItemProperty_Item] FOREIGN KEY ([itemID_FK]) REFERENCES [WH].[Item] ([itemID]),
     CONSTRAINT [FK_ItemProperty_ItemPropertyType] FOREIGN KEY ([itemPropertyTypeID_FK]) REFERENCES [WH].[ItemPropertyType] ([itemPropertyTypeID])
 );
+
+
+GO
 

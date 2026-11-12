@@ -1,20 +1,17 @@
-﻿CREATE TABLE [Tickets].[TicketClass](
-	[ticketClassID] [int] IDENTITY(1,1) NOT NULL,
-	[ticketClassCode] [nvarchar](50) NOT NULL,
-	[ticketClassName_A] [nvarchar](200) NULL,
-	[ticketClassName_E] [nvarchar](200) NULL,
-	[ticketClassDesc] [nvarchar](1000) NULL,
-	[ticketClassActive] [bit] NULL,
-	[entryDate] [datetime] NULL,
-	[entryData] [nvarchar](20) NULL,
-	[hostName] [nvarchar](200) NULL,
-	[ticketClassDesc_A] [nvarchar](1000) NULL,
- CONSTRAINT [PK_Tickets_TicketClass] PRIMARY KEY CLUSTERED 
-(
-	[ticketClassID] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF)
-)
+CREATE TABLE [Tickets].[TicketClass] (
+    [ticketClassID]     INT             IDENTITY (1, 1) NOT NULL,
+    [ticketClassCode]   NVARCHAR (50)   NOT NULL,
+    [ticketClassName_A] NVARCHAR (200)  NULL,
+    [ticketClassName_E] NVARCHAR (200)  NULL,
+    [ticketClassDesc]   NVARCHAR (1000) NULL,
+    [ticketClassActive] BIT             NULL,
+    [entryDate]         DATETIME        CONSTRAINT [DF_Tickets_TicketClass_entryDate] DEFAULT (getdate()) NULL,
+    [entryData]         NVARCHAR (20)   NULL,
+    [hostName]          NVARCHAR (200)  NULL,
+    [ticketClassDesc_A] NVARCHAR (1000) NULL,
+    CONSTRAINT [PK_Tickets_TicketClass] PRIMARY KEY CLUSTERED ([ticketClassID] ASC)
+);
+
+
 GO
 
-ALTER TABLE [Tickets].[TicketClass] ADD  CONSTRAINT [DF_Tickets_TicketClass_entryDate]  DEFAULT (getdate()) FOR [entryDate]
-GO

@@ -1,4 +1,4 @@
-﻿
+
 CREATE   PROCEDURE [support].[SupportPhoneTicketsDL]
       @pageName_         NVARCHAR(400)
     , @idaraID           INT
@@ -104,3 +104,6 @@ BEGIN
     WHERE statusActive = 1
     ORDER BY statusID;
 END
+
+GO
+

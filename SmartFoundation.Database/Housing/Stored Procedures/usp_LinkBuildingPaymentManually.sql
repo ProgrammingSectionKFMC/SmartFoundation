@@ -1,4 +1,4 @@
-﻿
+
 /* ربط يدوي بعد تحقق الموظف من المبنى. */
 CREATE   PROCEDURE [Housing].[usp_LinkBuildingPaymentManually]
     @PaymentID bigint,
@@ -60,3 +60,6 @@ BEGIN
         THROW;
     END CATCH;
 END;
+
+GO
+

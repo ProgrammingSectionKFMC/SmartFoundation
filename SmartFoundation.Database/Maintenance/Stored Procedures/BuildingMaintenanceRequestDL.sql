@@ -1,4 +1,4 @@
-﻿
+
 CREATE   PROCEDURE [Maintenance].[BuildingMaintenanceRequestDL]
       @pageName_ NVARCHAR(200) = NULL
     , @idaraID NVARCHAR(10) = NULL
@@ -132,3 +132,6 @@ BEGIN
       AND (IdaraId_FK IS NULL OR IdaraId_FK = @IdaraID_BIGINT)
     ORDER BY DisplayOrder, StatusID;
 END
+
+GO
+

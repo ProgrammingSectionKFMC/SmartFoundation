@@ -1,5 +1,4 @@
-﻿
-CREATE PROCEDURE [dbo].[UsersSP] 
+CREATE   PROCEDURE [dbo].[UsersSP] 
 (
       @Action                                NVARCHAR(200)
     , @usersID                               NVARCHAR(200)   = NULL
@@ -1362,3 +1361,6 @@ END
         ;THROW;
     END CATCH
 END
+
+GO
+

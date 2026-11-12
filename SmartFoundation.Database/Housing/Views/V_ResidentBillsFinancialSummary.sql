@@ -1,4 +1,4 @@
-﻿
+
 
 CREATE   VIEW [Housing].[V_ResidentBillsFinancialSummary]
 AS
@@ -115,3 +115,6 @@ SELECT
  
 
 FROM Housing.V_GetFullResidentDetails f;
+
+GO
+

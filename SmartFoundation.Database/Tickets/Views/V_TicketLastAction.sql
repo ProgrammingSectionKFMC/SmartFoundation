@@ -1,4 +1,4 @@
-﻿CREATE VIEW [Tickets].[V_TicketLastAction]
+CREATE VIEW [Tickets].[V_TicketLastAction]
 AS
 SELECT
       th.[ticketID_FK]       AS [ticketID]
@@ -27,3 +27,6 @@ WHERE th.[ticketHistoryID] = (
     FROM [Tickets].[TicketHistory] th2
     WHERE th2.[ticketID_FK] = th.[ticketID_FK]
 );
+
+GO
+

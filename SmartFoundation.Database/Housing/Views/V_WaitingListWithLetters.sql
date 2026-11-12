@@ -1,4 +1,4 @@
-﻿
+
 
 CREATE   VIEW [Housing].[V_WaitingListWithLetters]
 AS
@@ -143,3 +143,6 @@ LEFT JOIN dbo.Idara toidara
     ON la.buildingActionExtraInt1 = toidara.idaraID
 WHERE b.buildingActionTypeID_FK IN (1,7)
   AND b.buildingActionActive = 1;
+
+GO
+

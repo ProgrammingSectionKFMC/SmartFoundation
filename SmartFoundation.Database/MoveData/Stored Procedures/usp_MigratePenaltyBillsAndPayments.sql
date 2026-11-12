@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [MoveData].[usp_MigratePenaltyBillsAndPayments]
+CREATE PROCEDURE [MoveData].[usp_MigratePenaltyBillsAndPayments]
     @IdaraId bigint,
     @RollbackAfterTest bit = 1
 AS
@@ -284,3 +284,6 @@ BEGIN
         THROW;
     END CATCH;
 END;
+
+GO
+

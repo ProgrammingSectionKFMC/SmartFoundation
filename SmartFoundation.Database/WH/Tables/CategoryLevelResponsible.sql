@@ -1,4 +1,4 @@
-﻿CREATE TABLE [WH].[CategoryLevelResponsible] (
+CREATE TABLE [WH].[CategoryLevelResponsible] (
     [categoryLevelResponsibleID]        INT            NOT NULL,
     [categoryLevelID_FK]                BIGINT         NULL,
     [distributorID_FK]                  INT            NULL,
@@ -11,4 +11,7 @@
     CONSTRAINT [PK_CategoryLevelResponsible] PRIMARY KEY CLUSTERED ([categoryLevelResponsibleID] ASC),
     CONSTRAINT [FK_CategoryLevelResponsible_CategoryLevel] FOREIGN KEY ([categoryLevelID_FK]) REFERENCES [WH].[CategoryLevel] ([categoryLevelID])
 );
+
+
+GO
 

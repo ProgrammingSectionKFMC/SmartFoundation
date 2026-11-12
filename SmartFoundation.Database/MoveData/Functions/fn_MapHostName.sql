@@ -1,4 +1,4 @@
-﻿
+
 /*
     When entryData is resolved to a target usersID, keep the old executor
     general number visible in hostName as: oldHostName-oldEntryData.
@@ -19,3 +19,6 @@ BEGIN
 
     RETURN CONCAT(ISNULL(@SourceHostName, N''), N'-', NULLIF(LTRIM(RTRIM(@SourceEntryData)), N''));
 END;
+
+GO
+

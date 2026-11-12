@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [support].[SupportTeamManagementSP]
+CREATE PROCEDURE [support].[SupportTeamManagementSP]
 (
       @Action             NVARCHAR(200)
     , @teamMemberID       BIGINT        = NULL
@@ -259,3 +259,6 @@ BEGIN
         ;THROW;
     END CATCH
 END
+
+GO
+

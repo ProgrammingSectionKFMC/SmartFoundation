@@ -1,4 +1,4 @@
-﻿CREATE   FUNCTION [Housing].[FN_EligibleMeters]
+CREATE   FUNCTION [Housing].[FN_EligibleMeters]
 (
     @idaraID int,
     @MonthStart date,
@@ -30,3 +30,6 @@ RETURN
     AND (mfb.meterForBuildingEndDate IS NULL OR mfb.meterForBuildingEndDate >= @MonthStart)
     GROUP BY md.meterID, md.meterNo, md.meterServiceTypeID_FK,md.MeterCalculateTypeID
 );
+
+GO
+

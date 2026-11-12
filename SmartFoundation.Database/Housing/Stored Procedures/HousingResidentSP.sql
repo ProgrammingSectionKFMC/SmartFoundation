@@ -1,4 +1,4 @@
-﻿
+
 CREATE   PROCEDURE [Housing].[HousingResidentSP] 
 (
       @Action                               NVARCHAR(200)
@@ -1776,3 +1776,6 @@ END;
         ;THROW;
     END CATCH
 END
+
+GO
+

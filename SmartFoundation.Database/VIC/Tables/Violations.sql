@@ -1,4 +1,4 @@
-﻿CREATE TABLE [VIC].[Violations] (
+CREATE TABLE [VIC].[Violations] (
     [violationID]          INT             IDENTITY (1, 1) NOT NULL,
     [violationTypeRoot_FK] INT             NULL,
     [chassisNumber_FK]     NVARCHAR (100)  NULL,
@@ -14,4 +14,7 @@
     CONSTRAINT [PK_Violations] PRIMARY KEY CLUSTERED ([violationID] ASC),
     CONSTRAINT [FK_Violations_Idara] FOREIGN KEY ([IdaraID_FK]) REFERENCES [dbo].[Idara] ([idaraID])
 );
+
+
+GO
 

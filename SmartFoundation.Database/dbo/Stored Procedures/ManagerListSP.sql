@@ -1,4 +1,4 @@
-﻿
+
 CREATE PROCEDURE [dbo].[ManagerListSP] 
 (
       @Action                   NVARCHAR(200)
@@ -390,3 +390,6 @@ BEGIN
         ;THROW;
     END CATCH
 END
+
+GO
+

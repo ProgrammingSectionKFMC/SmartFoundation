@@ -1,4 +1,4 @@
-﻿CREATE TABLE [WH].[Item] (
+CREATE TABLE [WH].[Item] (
     [itemID]               BIGINT           IDENTITY (1, 1) NOT NULL,
     [itemUID]              UNIQUEIDENTIFIER NULL,
     [categoryLevelID_FK]   BIGINT           NULL,
@@ -17,4 +17,7 @@
     CONSTRAINT [PK_Item] PRIMARY KEY CLUSTERED ([itemID] ASC),
     CONSTRAINT [FK_Item_CategoryLevel] FOREIGN KEY ([categoryLevelID_FK]) REFERENCES [WH].[CategoryLevel] ([categoryLevelID])
 );
+
+
+GO
 

@@ -1,4 +1,4 @@
-﻿CREATE TABLE [VIC].[VehicleTransferRequestType] (
+CREATE TABLE [VIC].[VehicleTransferRequestType] (
     [VehicleTransferRequestTypeID]    INT            IDENTITY (1, 1) NOT NULL,
     [VehicleTransferRequestTypeNameA] NVARCHAR (50)  NULL,
     [VehicleTransferRequestTypeNameE] NVARCHAR (50)  NULL,
@@ -8,4 +8,7 @@
     [hostName]                        NVARCHAR (400) NULL,
     CONSTRAINT [PK_VehicleTransferRequestType] PRIMARY KEY CLUSTERED ([VehicleTransferRequestTypeID] ASC)
 );
+
+
+GO
 

@@ -17,16 +17,21 @@ CREATE TABLE [Housing].[BillCalculationDetails] (
     [entryData]                NVARCHAR (20)   NULL,
     [hostName]                 NVARCHAR (200)  NULL,
     CONSTRAINT [PK_BillCalculationDetails] PRIMARY KEY CLUSTERED ([BillCalculationDetailsID] ASC),
+    CONSTRAINT [CK_BillCalculationDetails_Amounts] CHECK ([AmountBeforeTax]>=(0) AND [TaxAmount]>=(0) AND [TotalAmount]>=(0)),
+    CONSTRAINT [CK_BillCalculationDetails_Days] CHECK ([BillingDays]>=(1) AND [BillingDays]<=(30)),
+    CONSTRAINT [CK_BillCalculationDetails_SpaceCount] CHECK ([SpaceCount]>(0)),
+    CONSTRAINT [CK_BillCalculationDetails_Values] CHECK ([AverageDailyConsumption]>=(0) AND [UsageFactor]>=(0) AND [UnitPrice]>=(0)),
     CONSTRAINT [FK_BillCalculationDetails_Calculation] FOREIGN KEY ([BillCalculationID_FK]) REFERENCES [Housing].[BillCalculation] ([BillCalculationID]),
-    CONSTRAINT [FK_BillCalculationDetails_SpaceType] FOREIGN KEY ([BuildingSpaceTypeID_FK]) REFERENCES [Housing].[BuildingSpaceType] ([BuildingSpaceTypeID]),
-    CONSTRAINT [CK_BillCalculationDetails_SpaceCount] CHECK ([SpaceCount] > (0)),
-    CONSTRAINT [CK_BillCalculationDetails_Days] CHECK ([BillingDays] >= (1) AND [BillingDays] <= (30)),
-    CONSTRAINT [CK_BillCalculationDetails_Values] CHECK ([AverageDailyConsumption] >= (0) AND [UsageFactor] >= (0) AND [UnitPrice] >= (0)),
-    CONSTRAINT [CK_BillCalculationDetails_Amounts] CHECK ([AmountBeforeTax] >= (0) AND [TaxAmount] >= (0) AND [TotalAmount] >= (0))
+    CONSTRAINT [FK_BillCalculationDetails_SpaceType] FOREIGN KEY ([BuildingSpaceTypeID_FK]) REFERENCES [Housing].[BuildingSpaceType] ([BuildingSpaceTypeID])
 );
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_BillCalculationDetails_Calculation]
     ON [Housing].[BillCalculationDetails]([BillCalculationID_FK] ASC)
     INCLUDE([BuildingSpaceTypeID_FK], [SpaceCount], [BillingDays], [AmountBeforeTax], [TaxAmount], [TotalAmount]);
+
+
+GO
+

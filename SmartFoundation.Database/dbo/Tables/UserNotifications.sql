@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[UserNotifications] (
+CREATE TABLE [dbo].[UserNotifications] (
     [UserNotificationId] BIGINT         IDENTITY (1, 1) NOT NULL,
     [NotificationId_FK]  BIGINT         NOT NULL,
     [UserId_FK]          BIGINT         NOT NULL,
@@ -18,6 +18,10 @@
 
 
 GO
+
 CREATE NONCLUSTERED INDEX [IX_UserNotifications_User_IsRead]
     ON [dbo].[UserNotifications]([UserId_FK] ASC, [IsRead] ASC, [DeliveredUtc] DESC);
+
+
+GO
 

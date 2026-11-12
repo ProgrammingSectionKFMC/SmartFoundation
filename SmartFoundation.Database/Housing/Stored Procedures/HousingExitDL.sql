@@ -1,4 +1,4 @@
-﻿-- =============================================
+-- =============================================
 -- Author:		<Author,,Name>
 -- Create date: <Create Date,,>
 -- Description:	<Description,,>
@@ -161,3 +161,6 @@ IF @MatchedResidentCount = 0
 
 
 END
+
+GO
+

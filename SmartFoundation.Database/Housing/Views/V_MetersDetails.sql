@@ -1,4 +1,4 @@
-﻿
+
 
 CREATE VIEW [Housing].[V_MetersDetails]
 AS
@@ -15,6 +15,7 @@ FROM   Housing.Meter AS m INNER JOIN
              Housing.MeterCalculateType mct on mt.MeterCalculateTypeID_FK = mct.MeterCalculateTypeID
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane1', @value = N'[0E232FF0-B466-11cf-A24F-00AA00A3EFFF, 1.00]
 Begin DesignProperties = 
    Begin PaneConfigurations = 
@@ -164,6 +165,7 @@ Begin DesignProperties =
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane2', @value = N'olumn = 2600
          Alias = 3140
          Table = 1170
@@ -184,5 +186,9 @@ End
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPaneCount', @value = 2, @level0type = N'SCHEMA', @level0name = N'Housing', @level1type = N'VIEW', @level1name = N'V_MetersDetails';
+
+
+GO
 

@@ -1,4 +1,4 @@
-﻿
+
 -- =============================================
 -- Author:		<Author,,Name>
 -- Create date: <Create Date,,>
@@ -153,3 +153,6 @@ where ms33.buildingUtilityTypeID_FK = mss.buildingUtilityTypeID_FK and ms33.mete
 from  Housing.MeterSlide mss
 where mss.meterServiceTypeID_FK = 1 and mss.buildingUtilityTypeID_FK in(4,12,14)
 )
+
+GO
+

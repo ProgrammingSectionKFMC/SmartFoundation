@@ -1,4 +1,4 @@
-﻿ CREATE PROCEDURE [Tickets].[ServiceSP]
+ CREATE   PROCEDURE [Tickets].[ServiceSP]
  (
        @Action                      NVARCHAR(200)
      , @serviceID                   BIGINT          = NULL
@@ -646,3 +646,6 @@
          ;THROW;
      END CATCH
  END
+
+GO
+

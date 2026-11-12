@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Maintenance].[MaintenanceActionReason] (
+CREATE TABLE [Maintenance].[MaintenanceActionReason] (
     [ReasonID]     INT            IDENTITY (1, 1) NOT NULL,
     [ReasonName_A] NVARCHAR (200) NOT NULL,
     [ReasonCode]   NVARCHAR (80)  NULL,
@@ -10,4 +10,7 @@
     CONSTRAINT [PK_MaintenanceActionReason] PRIMARY KEY CLUSTERED ([ReasonID] ASC),
     CONSTRAINT [UQ_MaintenanceActionReason_ReasonName_A] UNIQUE NONCLUSTERED ([ReasonName_A] ASC)
 );
+
+
+GO
 

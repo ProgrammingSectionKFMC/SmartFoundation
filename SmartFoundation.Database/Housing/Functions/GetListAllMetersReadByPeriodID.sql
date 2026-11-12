@@ -1,4 +1,4 @@
-﻿
+
 
 CREATE   FUNCTION [Housing].[GetListAllMetersReadByPeriodID]
 (
@@ -120,3 +120,6 @@ LEFT JOIN LastRead lr
     ON lr.meterID_FK = m.meterID
 LEFT JOIN Slides s
     ON s.buildingUtilityTypeID_FK = m.buildingUtilityTypeID_FK;
+
+GO
+

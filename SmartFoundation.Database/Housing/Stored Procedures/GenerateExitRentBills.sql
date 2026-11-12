@@ -1,4 +1,4 @@
-CREATE PROCEDURE [Housing].[GenerateExitRentBills]
+CREATE   PROCEDURE [Housing].[GenerateExitRentBills]
 (
       @Action             NVARCHAR(20)
     , @ResidentInfoID     BIGINT
@@ -408,3 +408,6 @@ BEGIN
         THROW;
     END CATCH;
 END;
+
+GO
+

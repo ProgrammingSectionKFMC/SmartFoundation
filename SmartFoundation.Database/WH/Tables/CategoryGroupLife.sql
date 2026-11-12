@@ -1,4 +1,4 @@
-﻿CREATE TABLE [WH].[CategoryGroupLife] (
+CREATE TABLE [WH].[CategoryGroupLife] (
     [categoryGroupLifeID]        INT            IDENTITY (1, 1) NOT NULL,
     [categoryGroupLifeTypeID_FK] INT            NULL,
     [categoryGroupID_FK]         INT            NULL,
@@ -12,4 +12,7 @@
     CONSTRAINT [PK_CategoryGroupLife] PRIMARY KEY CLUSTERED ([categoryGroupLifeID] ASC),
     CONSTRAINT [FK_CategoryGroupLife_CategoryGroupLifeType] FOREIGN KEY ([categoryGroupLifeTypeID_FK]) REFERENCES [WH].[CategoryGroupLifeType] ([categoryGroupLifeTypeID])
 );
+
+
+GO
 

@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Maintenance].[BuildingMaintenanceRequestAssignment] (
+CREATE TABLE [Maintenance].[BuildingMaintenanceRequestAssignment] (
     [AssignmentID]       BIGINT         IDENTITY (1, 1) NOT NULL,
     [RequestID]          BIGINT         NOT NULL,
     [AssignedToUserID]   BIGINT         NOT NULL,
@@ -23,4 +23,7 @@
     CONSTRAINT [FK_BuildingMaintenanceRequestAssignment_DeptSecDiv_Assigned] FOREIGN KEY ([AssignedDSDID]) REFERENCES [dbo].[DeptSecDiv] ([DSDID]),
     CONSTRAINT [FK_BuildingMaintenanceRequestAssignment_Request] FOREIGN KEY ([RequestID]) REFERENCES [Maintenance].[BuildingMaintenanceRequest] ([RequestID])
 );
+
+
+GO
 

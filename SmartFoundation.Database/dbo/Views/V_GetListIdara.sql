@@ -1,4 +1,4 @@
-﻿CREATE VIEW dbo.V_GetListIdara
+CREATE VIEW dbo.V_GetListIdara
 AS
 SELECT        ds.distributorID, dsd.DSDID, dsd.idaraID_FK AS IdaraID, LTRIM(RTRIM(i.idaraLongName_A)) AS IdaraName, NULL AS idaraDescription, i.organizationID_FK
 FROM            dbo.Organization AS O INNER JOIN
@@ -9,6 +9,7 @@ WHERE        (dsd.secID_FK IS NULL) AND (dsd.divID_FK IS NULL) AND (dsd.deptID_F
                          (ds.distributorType_FK = 1) AND (dsd.OrganizationID_FK IS NOT NULL)
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPane1', @value = N'[0E232FF0-B466-11cf-A24F-00AA00A3EFFF, 1.00]
 Begin DesignProperties = 
    Begin PaneConfigurations = 
@@ -161,5 +162,9 @@ End
 
 
 GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPaneCount', @value = 1, @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'VIEW', @level1name = N'V_GetListIdara';
+
+
+GO
 

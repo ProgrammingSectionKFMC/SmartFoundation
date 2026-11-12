@@ -1,4 +1,4 @@
-﻿
+
 
 -- =============================================
 -- Author:		<Author,,Name>
@@ -30,3 +30,6 @@ BEGIN
 	RETURN @Result
 
 END
+
+GO
+

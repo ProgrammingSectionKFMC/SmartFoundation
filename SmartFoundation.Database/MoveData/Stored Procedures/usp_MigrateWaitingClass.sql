@@ -1,4 +1,4 @@
-﻿/* REVIEW ONLY. Installs a procedure definition; does not execute migration.
+/* REVIEW ONLY. Installs a procedure definition; does not execute migration.
    Based on live definition supplied 2026-11-07. */
 CREATE PROCEDURE [MoveData].[usp_MigrateWaitingClass]
     @IdaraId bigint = 1,
@@ -142,3 +142,6 @@ BEGIN
         THROW;
     END CATCH;
 END;
+
+GO
+

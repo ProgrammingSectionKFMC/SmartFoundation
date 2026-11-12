@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Maintenance].[BuildingMaintenanceRequestAction] (
+CREATE TABLE [Maintenance].[BuildingMaintenanceRequestAction] (
     [ActionID]     BIGINT         IDENTITY (1, 1) NOT NULL,
     [RequestID]    BIGINT         NOT NULL,
     [ActionTypeID] INT            NOT NULL,
@@ -28,4 +28,7 @@
     CONSTRAINT [FK_BuildingMaintenanceRequestAction_Reason] FOREIGN KEY ([ReasonID]) REFERENCES [Maintenance].[MaintenanceActionReason] ([ReasonID]),
     CONSTRAINT [FK_BuildingMaintenanceRequestAction_Request] FOREIGN KEY ([RequestID]) REFERENCES [Maintenance].[BuildingMaintenanceRequest] ([RequestID])
 );
+
+
+GO
 

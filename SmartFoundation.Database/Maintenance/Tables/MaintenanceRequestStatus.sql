@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Maintenance].[MaintenanceRequestStatus] (
+CREATE TABLE [Maintenance].[MaintenanceRequestStatus] (
     [StatusID]     INT            NOT NULL,
     [StatusName_A] NVARCHAR (100) NOT NULL,
     [StatusCode]   NVARCHAR (50)  NOT NULL,
@@ -12,4 +12,7 @@
     CONSTRAINT [PK_MaintenanceRequestStatus] PRIMARY KEY CLUSTERED ([StatusID] ASC),
     CONSTRAINT [UQ_MaintenanceRequestStatus_StatusCode] UNIQUE NONCLUSTERED ([StatusCode] ASC)
 );
+
+
+GO
 

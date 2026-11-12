@@ -1,4 +1,4 @@
-﻿
+
 CREATE PROCEDURE [Housing].[HousingHandoverDL]
       @pageName_         NVARCHAR(400)
     , @idaraID           INT
@@ -195,3 +195,6 @@ BEGIN
     ORDER BY h.NextBuildingActionTypeID_FK ASC;
 
 END;
+
+GO
+

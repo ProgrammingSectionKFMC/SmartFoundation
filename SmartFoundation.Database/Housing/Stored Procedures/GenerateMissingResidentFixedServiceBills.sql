@@ -28,3 +28,6 @@ BEGIN
         , @EntryData = @EntryData
         , @HostName = @HostName;
 END;
+
+GO
+

@@ -1,4 +1,4 @@
-﻿
+
 CREATE   VIEW [Maintenance].[V_BuildingMaintenanceRequestDisputes]
 AS
 SELECT
@@ -16,3 +16,6 @@ SELECT
     dispute.[DisputeStatusID],
     dispute.[IsActive]
 FROM [Maintenance].[BuildingMaintenanceRequestDispute] AS dispute;
+
+GO
+

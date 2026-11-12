@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[BuildingPaymentType] (
+CREATE TABLE [Housing].[BuildingPaymentType] (
     [buildingPaymentTypeID]            INT             IDENTITY (1, 1) NOT NULL,
     [buildingPaymentDestainationID_FK] INT             NULL,
     [buildingPaymentTypeName_A]        NVARCHAR (100)  NULL,
@@ -12,4 +12,7 @@
     CONSTRAINT [PK_BuildingPaymentType] PRIMARY KEY CLUSTERED ([buildingPaymentTypeID] ASC),
     CONSTRAINT [FK_BuildingPaymentType_BuildingPaymentDestaination] FOREIGN KEY ([buildingPaymentDestainationID_FK]) REFERENCES [Housing].[BuildingPaymentDestaination] ([buildingPaymentDestainationID])
 );
+
+
+GO
 

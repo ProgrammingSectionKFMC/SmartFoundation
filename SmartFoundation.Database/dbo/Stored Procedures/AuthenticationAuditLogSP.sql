@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[AuthenticationAuditLogSP]
+CREATE   PROCEDURE [dbo].[AuthenticationAuditLogSP]
       @EventType          NVARCHAR(50)
     , @UsersID_FK         BIGINT = NULL
     , @LoginIdentifier    NVARCHAR(20) = NULL
@@ -164,4 +164,6 @@ BEGIN
         THROW;
     END CATCH;
 END;
+
+GO
 

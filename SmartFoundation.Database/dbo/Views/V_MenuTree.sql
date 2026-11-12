@@ -1,4 +1,4 @@
-﻿
+
 CREATE VIEW [dbo].[V_MenuTree]
 AS
 WITH MenuTree AS
@@ -90,3 +90,6 @@ WITH MenuTree AS
 )
 SELECT *
 FROM MenuTree;
+
+GO
+

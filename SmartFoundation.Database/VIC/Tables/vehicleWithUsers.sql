@@ -1,29 +1,52 @@
-﻿CREATE TABLE [VIC].[vehicleWithUsers] (
-    [vehicleWithUsersID]      INT             IDENTITY (1, 1) NOT NULL,
-    [userID_FK]               BIGINT          NULL,
-    [RequestID_FK]            INT             NULL,
-    [startDate]               DATETIME        NULL,
-    [endDate]                 DATETIME        NULL,
-    [note]                    NVARCHAR (1002) NULL,
-    [entryDate]               DATETIME        CONSTRAINT [DF_vehicleWithUsers_entryDate] DEFAULT (getdate()) NULL,
-    [entryData]               NVARCHAR (20)   NULL,
-    [hostName]                NVARCHAR (200)  NULL,
-    [chassisNumber_FK]        NVARCHAR (100)  NULL,
-    [GeneralNo_Snapshot]      NVARCHAR (50)   NULL,
-    [UserFullName_Snapshot]   NVARCHAR (200)  NULL,
-    [DeptID_Snapshot]         INT             NULL,
-    [DeptName_Snapshot]       NVARCHAR (200)  NULL,
-    [SectionID_Snapshot]      INT             NULL,
-    [SectionName_Snapshot]    NVARCHAR (200)  NULL,
-    [OrgSnapshotDate]         DATETIME        CONSTRAINT [DF_vehicleWithUsers_OrgSnapshotDate] DEFAULT (getdate()) NULL,
-    [DSDID_Snapshot]          INT             NULL,
-    [OrganizationID_Snapshot] INT             NULL,
-    [OrganizationName_Snap]   NVARCHAR (300)  NULL,
-    [IdaraID_Snapshot]        INT             NULL,
-    [IdaraName_Snap]          NVARCHAR (300)  NULL,
-    [DivisonID_Snapshot]      INT             NULL,
-    [DivisonName_Snap]        NVARCHAR (300)  NULL,
+CREATE TABLE [VIC].[vehicleWithUsers] (
+    [vehicleWithUsersID]        INT             IDENTITY (1, 1) NOT NULL,
+    [startDate]                 DATETIME        NULL,
+    [endDate]                   DATETIME        NULL,
+    [note]                      NVARCHAR (1002) NULL,
+    [entryDate]                 DATETIME        CONSTRAINT [DF_vehicleWithUsers_entryDate] DEFAULT (getdate()) NULL,
+    [entryData]                 NVARCHAR (20)   NULL,
+    [hostName]                  NVARCHAR (200)  NULL,
+    [chassisNumber_FK]          NVARCHAR (100)  NULL,
+    [GeneralNo_Snapshot]        NVARCHAR (50)   NULL,
+    [UserFullName_Snapshot]     NVARCHAR (200)  NULL,
+    [DeptID_Snapshot]           INT             NULL,
+    [DeptName_Snapshot]         NVARCHAR (200)  NULL,
+    [SectionID_Snapshot]        INT             NULL,
+    [SectionName_Snapshot]      NVARCHAR (200)  NULL,
+    [OrgSnapshotDate]           DATETIME        CONSTRAINT [DF_vehicleWithUsers_OrgSnapshotDate] DEFAULT (getdate()) NULL,
+    [DSDID_Snapshot]            INT             NULL,
+    [OrganizationID_Snapshot]   INT             NULL,
+    [OrganizationName_Snap]     NVARCHAR (300)  NULL,
+    [IdaraID_Snapshot]          INT             NULL,
+    [IdaraName_Snap]            NVARCHAR (300)  NULL,
+    [DivisonID_Snapshot]        INT             NULL,
+    [DivisonName_Snap]          NVARCHAR (300)  NULL,
+    [vehicleUserID_FK]          INT             NULL,
+    [vehicleID_FK]              INT             NULL,
+    [RankName_Snapshot]         NVARCHAR (200)  NULL,
+    [MilitaryUnitName_Snapshot] NVARCHAR (200)  NULL,
     CONSTRAINT [PK_vehicleWithUsers] PRIMARY KEY CLUSTERED ([vehicleWithUsersID] ASC),
     CONSTRAINT [FK_vehicleWithUsers_Vehicles] FOREIGN KEY ([chassisNumber_FK]) REFERENCES [VIC].[Vehicles] ([chassisNumber])
 );
+
+
+GO
+
+CREATE NONCLUSTERED INDEX [IX_vehicleWithUsers_active_chassis]
+    ON [VIC].[vehicleWithUsers]([chassisNumber_FK] ASC, [endDate] ASC);
+
+
+GO
+
+CREATE NONCLUSTERED INDEX [IX_vehicleWithUsers_vehicleID]
+    ON [VIC].[vehicleWithUsers]([vehicleID_FK] ASC);
+
+
+GO
+
+CREATE NONCLUSTERED INDEX [IX_vehicleWithUsers_vehicleUserID]
+    ON [VIC].[vehicleWithUsers]([vehicleUserID_FK] ASC);
+
+
+GO
 

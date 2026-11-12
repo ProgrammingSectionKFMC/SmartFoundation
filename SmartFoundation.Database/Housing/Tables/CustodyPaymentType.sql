@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[CustodyPaymentType] (
+CREATE TABLE [Housing].[CustodyPaymentType] (
     [custodyPaymentTypeID]            INT             IDENTITY (1, 1) NOT NULL,
     [custodyPaymentDestainationID_FK] INT             NULL,
     [custodyPaymentTypeName_A]        NVARCHAR (100)  NULL,
@@ -9,4 +9,7 @@
     [entryData]                       NVARCHAR (20)   NULL,
     [hostName]                        NVARCHAR (200)  NULL
 );
+
+
+GO
 

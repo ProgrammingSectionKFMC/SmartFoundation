@@ -1,4 +1,4 @@
-﻿
+
 CREATE   VIEW [Maintenance].[V_BuildingMaintenanceRequestDocuments]
 AS
 SELECT
@@ -21,3 +21,6 @@ INNER JOIN [dbo].[Document] AS document
 LEFT JOIN [dbo].[Attachment] AS attachment
     ON attachment.[DocumentID_FK] = document.[documentID]
     AND attachment.[transactionID_FK] = document.[transactionID_FK];
+
+GO
+

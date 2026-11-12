@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [Housing].[GenerateAllAdministrationsMonthlyBills]
+CREATE   PROCEDURE [Housing].[GenerateAllAdministrationsMonthlyBills]
 (
       @Month INT = NULL
     , @Year INT = NULL
@@ -245,3 +245,6 @@ BEGIN
     ELSE
         SELECT 1 IsSuccessful,N'تمت إعادة تشغيل نطاق الرصد بنجاح' Message_;
 END;
+
+GO
+

@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[ExitMeterBillProration] (
+CREATE TABLE [Housing].[ExitMeterBillProration] (
     [ProrationID]            BIGINT          IDENTITY (1, 1) NOT NULL,
     [ExitRequestActionID_FK] BIGINT          NOT NULL,
     [OriginalBillsID_FK]     BIGINT          NOT NULL,
@@ -28,11 +28,16 @@
 
 
 GO
+
+CREATE UNIQUE NONCLUSTERED INDEX [UX_ExitMeterBillProration_Active]
+    ON [Housing].[ExitMeterBillProration]([OriginalBillsID_FK] ASC) WHERE ([CorrectionStatus]=(1));
+
+
+GO
+
 CREATE UNIQUE NONCLUSTERED INDEX [UX_ExitMeterBillProration_Revision]
     ON [Housing].[ExitMeterBillProration]([ExitRequestActionID_FK] ASC, [OriginalBillsID_FK] ASC, [RevisionNo] ASC);
 
 
 GO
-CREATE UNIQUE NONCLUSTERED INDEX [UX_ExitMeterBillProration_Active]
-    ON [Housing].[ExitMeterBillProration]([OriginalBillsID_FK] ASC) WHERE ([CorrectionStatus]=(1));
 

@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [MoveData].[usp_MigrateBuildings]
+CREATE PROCEDURE [MoveData].[usp_MigrateBuildings]
     @IdaraId bigint,
     @RollbackAfterTest bit = 1
 AS
@@ -206,3 +206,6 @@ BEGIN
         THROW;
     END CATCH;
 END;
+
+GO
+

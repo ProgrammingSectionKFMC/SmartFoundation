@@ -1,4 +1,4 @@
-﻿
+
 CREATE PROCEDURE [Housing].[OtherWaitingListSP] 
 (
       @Action                       NVARCHAR(200)
@@ -392,3 +392,6 @@ if(@ActionTypeID Not in (7))
         ;THROW;
     END CATCH
 END
+
+GO
+

@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[billPaymentType] (
+CREATE TABLE [Housing].[billPaymentType] (
     [billPaymentTypeID]            INT             IDENTITY (1, 1) NOT NULL,
     [billPaymentDestainationID_FK] INT             NULL,
     [billPaymentTypeName_A]        NVARCHAR (100)  NULL,
@@ -11,4 +11,7 @@
     [hostName]                     NVARCHAR (200)  NULL,
     CONSTRAINT [PK_billPaymentType] PRIMARY KEY CLUSTERED ([billPaymentTypeID] ASC)
 );
+
+
+GO
 

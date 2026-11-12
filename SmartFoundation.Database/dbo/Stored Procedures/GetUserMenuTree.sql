@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE [dbo].[GetUserMenuTree]
+CREATE   PROCEDURE [dbo].[GetUserMenuTree]
     @UsersID int
 AS
 BEGIN
@@ -291,3 +291,6 @@ BEGIN
         SortKey, LevelNo
     OPTION (MAXRECURSION 50);
 END
+
+GO
+

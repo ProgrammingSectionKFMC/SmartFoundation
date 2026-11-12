@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[DeductListReport] (
+CREATE TABLE [Housing].[DeductListReport] (
     [DeductListReportID]    BIGINT          IDENTITY (1, 1) NOT NULL,
     [IdaraID_FK]            BIGINT          NOT NULL,
     [PeriodYear]            INT             NOT NULL,
@@ -33,8 +33,16 @@
 
 
 GO
-CREATE UNIQUE INDEX UX_DeductListReport_CurrentScope ON Housing.DeductListReport
-(IdaraID_FK,PeriodYear,PeriodMonth,BillingType,MeterServiceTypeID_FK,CalculationMethod)
-WHERE IsCurrent=1;
+
+CREATE UNIQUE NONCLUSTERED INDEX [UX_DeductListReport_CurrentScope]
+    ON [Housing].[DeductListReport]([IdaraID_FK] ASC, [PeriodYear] ASC, [PeriodMonth] ASC, [BillingType] ASC, [MeterServiceTypeID_FK] ASC, [CalculationMethod] ASC) WHERE ([IsCurrent]=(1));
+
+
 GO
-CREATE UNIQUE INDEX UX_DeductListReport_ReportNo ON Housing.DeductListReport(ReportNo);
+
+CREATE UNIQUE NONCLUSTERED INDEX [UX_DeductListReport_ReportNo]
+    ON [Housing].[DeductListReport]([ReportNo] ASC);
+
+
+GO
+

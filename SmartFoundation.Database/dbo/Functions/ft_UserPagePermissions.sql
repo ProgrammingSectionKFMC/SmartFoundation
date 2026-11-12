@@ -1,4 +1,4 @@
-﻿
+
 
 CREATE   FUNCTION [dbo].[ft_UserPagePermissions]
 (
@@ -64,3 +64,6 @@ RETURN
         AND CAST(v.permissionStartDate AS DATE) <= CAST(GETDATE() AS DATE)
         AND (v.permissionEndDate IS NULL OR CAST(v.permissionEndDate AS DATE) > CAST(GETDATE() AS DATE))
 );
+
+GO
+

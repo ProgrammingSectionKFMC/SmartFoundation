@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE Housing.SyncAssignPeriodHistory
+CREATE   PROCEDURE Housing.SyncAssignPeriodHistory
     @AssignPeriodID BIGINT,
     @ApplyChanges BIT = 0
 AS
@@ -293,3 +293,6 @@ BEGIN
         THROW;
     END CATCH
 END;
+
+GO
+

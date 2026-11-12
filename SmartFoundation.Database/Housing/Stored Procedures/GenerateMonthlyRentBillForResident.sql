@@ -1,4 +1,4 @@
-﻿CREATE   PROCEDURE [Housing].[GenerateMonthlyRentBillForResident]
+CREATE   PROCEDURE [Housing].[GenerateMonthlyRentBillForResident]
 (
       @ResidentInfoID    BIGINT
     , @GeneralNo         BIGINT
@@ -321,3 +321,6 @@ CROSS APPLY Housing.fn_CalcBuildingRent_ForOneMonth
         THROW;
     END CATCH;
 END;
+
+GO
+

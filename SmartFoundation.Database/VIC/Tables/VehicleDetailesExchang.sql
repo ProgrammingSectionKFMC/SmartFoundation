@@ -1,4 +1,4 @@
-﻿CREATE TABLE [VIC].[VehicleDetailesExchang] (
+CREATE TABLE [VIC].[VehicleDetailesExchang] (
     [VehicleDetailesExchangID] INT            IDENTITY (1, 1) NOT NULL,
     [VehicleHandoverID_FK]     INT            NULL,
     [DetailesNote]             NVARCHAR (500) NULL,
@@ -7,4 +7,7 @@
     [hostName]                 NVARCHAR (200) NULL,
     CONSTRAINT [PK_VehicleDetailesExchang] PRIMARY KEY CLUSTERED ([VehicleDetailesExchangID] ASC)
 );
+
+
+GO
 

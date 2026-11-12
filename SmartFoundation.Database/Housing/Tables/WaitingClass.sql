@@ -1,4 +1,4 @@
-﻿CREATE TABLE [Housing].[WaitingClass] (
+CREATE TABLE [Housing].[WaitingClass] (
     [waitingClassID]          INT             IDENTITY (1, 1) NOT NULL,
     [waitingClassName_A]      NVARCHAR (100)  NULL,
     [waitingClassName_E]      NVARCHAR (100)  NULL,
@@ -16,4 +16,7 @@
     [hostName]                NVARCHAR (200)  NULL,
     CONSTRAINT [PK_WaitingClass] PRIMARY KEY CLUSTERED ([waitingClassID] ASC)
 );
+
+
+GO
 

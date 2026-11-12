@@ -1,4 +1,4 @@
-﻿
+
 /* الرصيد العام للمستفيد: الحالة 2 فقط ولا يدخل في إخلاء مبنى. */
 CREATE   VIEW [Housing].[V_SumUnallocatedPaymentsForResident]
 AS
@@ -16,3 +16,6 @@ WHERE deductRow.[deductActive] = 1
   AND paymentRow.[residentInfoID_FK] IS NOT NULL
 GROUP BY paymentRow.[residentInfoID_FK], paymentRow.[BillChargeTypeID_FK],
          paymentRow.[IdaraId_FK];
+
+GO
+

@@ -1,4 +1,4 @@
-﻿CREATE TABLE [dbo].[NationalIDType] (
+CREATE TABLE [dbo].[NationalIDType] (
     [nationalIDTypeID]        INT            IDENTITY (1, 1) NOT NULL,
     [nationalIDTypeName_A]    NVARCHAR (200) NULL,
     [nationalIDTypeName_E]    NVARCHAR (200) NULL,
@@ -10,4 +10,7 @@
     [hostName]                NVARCHAR (200) CONSTRAINT [DF_NationalIDType_hostName] DEFAULT (host_name()) NULL,
     CONSTRAINT [PK_NationalIDType] PRIMARY KEY CLUSTERED ([nationalIDTypeID] ASC)
 );
+
+
+GO
 

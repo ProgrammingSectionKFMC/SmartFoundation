@@ -1,4 +1,4 @@
-﻿-- =============================================
+-- =============================================
 -- Author:		<Author,,Name>
 -- Create date: <Create Date,,>
 -- Description:	<Description,,>
@@ -135,3 +135,6 @@ BEGIN
   where w.IdaraID_FK = @idaraID
            
 END
+
+GO
+
