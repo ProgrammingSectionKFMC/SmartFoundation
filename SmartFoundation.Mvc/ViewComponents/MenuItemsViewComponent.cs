@@ -39,7 +39,8 @@ namespace SmartFoundation.Mvc.ViewComponents
             var response = JsonSerializer.Deserialize<JsonElement>(jsonResult);
 
             var menuItems = response.GetProperty("success").GetBoolean()
-                ? response.GetProperty("data").EnumerateArray().Select(MapToMenuItem).ToList()
+                ? response.GetProperty("data").EnumerateArray().Select(MapToMenuItem)
+                    .Where(x => !IsHiddenMenuItem(x)).ToList()
                 : new List<MenuItem>();
 
             //var menuTree = BuildMenuHierarchy(menuItems);
@@ -49,6 +50,18 @@ namespace SmartFoundation.Mvc.ViewComponents
             return View("~/Views/Shared/_SidebarNavbar.cshtml", menuTree);
 
         }
+
+        /// <summary>
+        /// Ticket menu rows that must stay active in dbo.Menu because TicketList/TicketAdmin
+        /// read their permissions and gateway routing through these page names, but which
+        /// have no page of their own and must not appear in the sidebar.
+        /// </summary>
+        private static readonly HashSet<string> HiddenTicketMenuLinks =
+            new(StringComparer.OrdinalIgnoreCase) { "TicketDetails", "ServiceCatalogueList" };
+
+        private static bool IsHiddenMenuItem(MenuItem item) =>
+            string.Equals(item.ProgramLink?.Trim(), "Ticket", StringComparison.OrdinalIgnoreCase)
+            && HiddenTicketMenuLinks.Contains(item.MenuLink ?? "");
 
         private async Task RefreshDashboardPermissionAsync(string usersID)
         {

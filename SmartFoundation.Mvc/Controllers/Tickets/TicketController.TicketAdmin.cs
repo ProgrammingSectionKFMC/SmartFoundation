@@ -353,7 +353,7 @@ namespace SmartFoundation.Mvc.Controllers.Tickets
                 }.Concat(ServiceUnitFields()).ToList(),
                 new List<FieldConfig>
                 {
-                    new() { Label = "كود الخدمة (تلقائي)", Name = "p02", Type = "text", Readonly = true, ColCss = "6" },
+                    new() { Label = "كود الخدمة (تلقائي)", Name = "p02", Type = "text", Readonly = true, ColCss = "6", Tooltip = CodeColumnHint("serviceCode") },
                     new() { Label = "اسم الخدمة (عربي)", Name = "p03", Type = "text", Required = true, ColCss = "6", MaxLength = 200 },
                     new() { Label = "اسم الخدمة (إنجليزي) — اختياري", Name = "p04", Type = "text", ColCss = "6", MaxLength = 200 },
                     new() { Label = "الوصف", Name = "p05", Type = "textarea", ColCss = "12", MaxLength = 1000 },
@@ -453,7 +453,7 @@ namespace SmartFoundation.Mvc.Controllers.Tickets
                 },
                 new List<FieldConfig>
                 {
-                    new() { Label = "الكود (تلقائي)", Name = "p02", Type = "text", Readonly = true, ColCss = "6" },
+                    new() { Label = "الكود (تلقائي)", Name = "p02", Type = "text", Readonly = true, ColCss = "6", Tooltip = CodeColumnHint("ticketClassCode") },
                     new() { Label = "الاسم (عربي)", Name = "p03", Type = "text", Required = true, ColCss = "6", MaxLength = 200 },
                     new() { Label = "الاسم (إنجليزي)", Name = "p04", Type = "text", ColCss = "6", MaxLength = 200 },
                     new() { Label = "الوصف", Name = "p05", Type = "textarea", ColCss = "12", MaxLength = 1000 }
@@ -490,7 +490,7 @@ namespace SmartFoundation.Mvc.Controllers.Tickets
                 },
                 new List<FieldConfig>
                 {
-                    new() { Label = "الكود (تلقائي)", Name = "p02", Type = "text", Readonly = true, ColCss = "4" },
+                    new() { Label = "الكود (تلقائي)", Name = "p02", Type = "text", Readonly = true, ColCss = "4", Tooltip = CodeColumnHint("priorityCode") },
                     new() { Label = "الاسم (عربي)", Name = "p03", Type = "text", Required = true, ColCss = "4", MaxLength = 200 },
                     new() { Label = "الاسم (إنجليزي)", Name = "p04", Type = "text", ColCss = "4", MaxLength = 200 },
                     new() { Label = "الوصف", Name = "p05", Type = "textarea", ColCss = "12", MaxLength = 1000 },
@@ -545,7 +545,7 @@ namespace SmartFoundation.Mvc.Controllers.Tickets
                 },
                 new List<FieldConfig>
                 {
-                    new() { Label = "الكود (تلقائي)", Name = "p02", Type = "text", Readonly = true, ColCss = "6" },
+                    new() { Label = "الكود (تلقائي)", Name = "p02", Type = "text", Readonly = true, ColCss = "6", Tooltip = CodeColumnHint("ticketStatusCode") },
                     new() { Label = "الاسم (عربي)", Name = "p03", Type = "text", Required = true, ColCss = "6", MaxLength = 200 },
                     new() { Label = "الاسم (إنجليزي)", Name = "p04", Type = "text", ColCss = "6", MaxLength = 200 },
                     new() { Label = "الوصف", Name = "p05", Type = "textarea", ColCss = "12", MaxLength = 1000 }
@@ -605,7 +605,7 @@ namespace SmartFoundation.Mvc.Controllers.Tickets
                 },
                 new List<FieldConfig>
                 {
-                    new() { Label = "الكود (تلقائي)", Name = "p02", Type = "text", Readonly = true, ColCss = "6" },
+                    new() { Label = "الكود (تلقائي)", Name = "p02", Type = "text", Readonly = true, ColCss = "6", Tooltip = CodeColumnHint("pauseReasonCode") },
                     new() { Label = "الاسم (عربي)", Name = "p03", Type = "text", Required = true, ColCss = "6", MaxLength = 200 },
                     new() { Label = "الاسم (إنجليزي)", Name = "p04", Type = "text", ColCss = "6", MaxLength = 200 },
                     new() { Label = "الوصف", Name = "p05", Type = "textarea", ColCss = "12", MaxLength = 1000 }
@@ -641,7 +641,7 @@ namespace SmartFoundation.Mvc.Controllers.Tickets
                 },
                 new List<FieldConfig>
                 {
-                    new() { Label = "الكود (تلقائي)", Name = "p02", Type = "text", Readonly = true, ColCss = "6" },
+                    new() { Label = "الكود (تلقائي)", Name = "p02", Type = "text", Readonly = true, ColCss = "6", Tooltip = CodeColumnHint("arbitrationReasonCode") },
                     new() { Label = "الاسم (عربي)", Name = "p03", Type = "text", Required = true, ColCss = "6", MaxLength = 200 },
                     new() { Label = "الاسم (إنجليزي)", Name = "p04", Type = "text", ColCss = "6", MaxLength = 200 },
                     new() { Label = "الوصف", Name = "p05", Type = "textarea", ColCss = "12", MaxLength = 1000 }
@@ -677,7 +677,7 @@ namespace SmartFoundation.Mvc.Controllers.Tickets
                 },
                 new List<FieldConfig>
                 {
-                    new() { Label = "الكود (تلقائي)", Name = "p02", Type = "text", Readonly = true, ColCss = "6" },
+                    new() { Label = "الكود (تلقائي)", Name = "p02", Type = "text", Readonly = true, ColCss = "6", Tooltip = CodeColumnHint("qualityReviewResultCode") },
                     new() { Label = "الاسم (عربي)", Name = "p03", Type = "text", Required = true, ColCss = "6", MaxLength = 200 },
                     new() { Label = "الاسم (إنجليزي)", Name = "p04", Type = "text", ColCss = "6", MaxLength = 200 },
                     new() { Label = "الوصف", Name = "p05", Type = "textarea", ColCss = "12", MaxLength = 1000 }
